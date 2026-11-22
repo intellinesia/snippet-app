@@ -530,7 +530,7 @@ List<String> _tail(ToolStep s, {int n = 3}) {
   final d = s.data;
   final r = s.result;
   final raw = [
-    (d?['stdout'] ?? d?['output'] ?? '').toString(),
+    s.stdout,
     (d?['stderr'] ?? '').toString(),
     if (r is Map && r['error'] is Map)
       ((r['error'] as Map)['message'] ?? '').toString(),

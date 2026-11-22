@@ -83,9 +83,14 @@ class ToolStep {
   }
 
   int? get exitCode {
-    final v = data?['exit_code'];
+    final v = data?['exit_code'] ?? data?['exitCode'];
     return v is num ? v.toInt() : null;
   }
+
+  /// Command output; CLI-agent sessions store it as a flat `output` string.
+  String get stdout =>
+      (data?['stdout'] ?? data?['output_so_far'] ?? data?['output'] ?? '')
+          .toString();
 
   bool get failed {
     final r = result;

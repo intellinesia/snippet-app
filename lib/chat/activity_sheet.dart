@@ -381,7 +381,7 @@ List<String> _errorLines(ToolStep s) {
   final err = s.result is Map ? (s.result as Map)['error'] : null;
   if (text.trim().isEmpty && err is Map)
     text = (err['message'] ?? '').toString();
-  if (text.trim().isEmpty) text = (d?['stdout'] ?? '').toString();
+  if (text.trim().isEmpty) text = s.stdout;
   final lines = text
       .split('\n')
       .map((l) => l.trimRight())
@@ -601,7 +601,7 @@ String _copyText(ToolStep s) {
   if (toolBaseName(s.tool) == 'bash') {
     return [
       (a['command'] ?? '').toString(),
-      (d?['stdout'] ?? d?['output_so_far'] ?? '').toString(),
+      s.stdout,
       (d?['stderr'] ?? '').toString(),
     ].where((p) => p.trim().isNotEmpty).join('\n');
   }

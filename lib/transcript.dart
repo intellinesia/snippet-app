@@ -661,7 +661,7 @@ class _TerminalBlockState extends State<TerminalBlock> {
     final a = step.args is Map ? step.args as Map : const {};
     final d = step.data;
     final cmd = _clean(a['command'] ?? d?['command']);
-    final stdout = _clean(d?['stdout'] ?? d?['output_so_far']);
+    final stdout = _clean(step.stdout);
     var stderr = _clean(d?['stderr']);
     final err = step.result is Map ? (step.result as Map)['error'] : null;
     if (err is Map && step.failed && stderr.isEmpty && stdout.isEmpty) {

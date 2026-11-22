@@ -58,6 +58,31 @@ bool? coordinationHasDetail(String tool, Map? a, Map? d) {
       return text(a?['summary']);
     case 'create_recurring_job':
       return text(a?['prompt']) || text(a?['schedule']);
+    case 'post_chat':
+    case 'group_thread':
+      return text(a?['body']);
+    case 'delegate_task':
+      return text(a?['description']);
+    case 'cancel_delegated_task':
+      return text(a?['reason']);
+    case 'invite_task_agent':
+      return text(a?['ask']);
+    case 'file_follow_up_task':
+      return text(a?['description']);
+    case 'hand_off_session':
+      return text(a?['note']);
+    case 'pass_turn':
+      return text(a?['done']) || text(a?['next']);
+    case 'submit_review':
+      return list(a?['findings']);
+    case 'report_progress':
+      return text(a?['summary']);
+    case 'wake_schedule':
+      return text(a?['brief']);
+    case 'watch':
+      return text(a?['script']);
+    case 'read_chat':
+      return list(d?['messages']) || list(d?['events']);
   }
   return null;
 }
@@ -181,6 +206,61 @@ String _count(int n, String one, String many) => '$n ${n == 1 ? one : many}';
       return (running ? 'Starting a session' : 'Started a session', '');
     case 'register_agent':
       return (running ? 'Registering an agent' : 'Registered an agent', '');
+    case 'post_chat':
+      return (running ? 'Posting to' : 'Posted to', arg('thread_id'));
+    case 'group_thread':
+      final title = arg('title').isNotEmpty ? arg('title') : arg('thread_id');
+      return switch (arg('action')) {
+        'create' => (running ? 'Starting group' : 'Started group', title),
+        'post' => (running ? 'Posting to group' : 'Posted to group', title),
+        'list' => (running ? 'Listing groups' : 'Listed groups', ''),
+        'read' => (running ? 'Reading group' : 'Read group', title),
+        'add_member' => (running ? 'Adding to group' : 'Added to group', arg('agent')),
+        'set_lead' => (running ? 'Setting group lead' : 'Set group lead', arg('agent')),
+        _ => (running ? 'Updating group' : 'Updated group', title),
+      };
+    case 'chats':
+      return (running ? 'Checking chats' : 'Checked chats', '');
+    case 'read_chat':
+      final peer = arg('peer').isNotEmpty ? arg('peer') : arg('thread_id');
+      return (running ? 'Reading chat with' : 'Read chat with', peer);
+    case 'delegate_task':
+      final title = arg('title').isNotEmpty ? arg('title') : arg('lane_id');
+      return arg('lane_id').isNotEmpty && arg('title').isEmpty
+          ? (running ? 'Messaging lane' : 'Messaged lane', _short(title))
+          : (running ? 'Starting lane' : 'Started lane', title);
+    case 'cancel_delegated_task':
+      return (running ? 'Stopping lane' : 'Stopped lane', _short(arg('lane_id')));
+    case 'task_ledger':
+      return (running ? 'Reading the task ledger' : 'Read the task ledger', '');
+    case 'update_task_state':
+      return (running ? 'Updating the task ledger' : 'Updated the task ledger', '');
+    case 'view_task_board':
+      return (running ? 'Checking the task board' : 'Checked the task board', '');
+    case 'pass_turn':
+      return (running ? 'Passing the turn to' : 'Passed the turn to', arg('to_agent_id'));
+    case 'invite_task_agent':
+      return (running ? 'Inviting' : 'Invited', arg('agent_id'));
+    case 'submit_review':
+      return (
+        running ? 'Reviewing' : 'Reviewed',
+        arg('verdict') == 'approve' ? 'approved' : arg('verdict') == 'changes' ? 'changes requested' : ''
+      );
+    case 'file_follow_up_task':
+      return (running ? 'Filing follow-up' : 'Filed follow-up', arg('title'));
+    case 'hand_off_session':
+      return (running ? 'Handing the session to' : 'Handed the session to', arg('to_agent'));
+    case 'report_progress':
+      return (running ? 'Logging progress' : 'Logged progress', '');
+    case 'wake_schedule':
+      final name = arg('name');
+      return switch (arg('action')) {
+        'set' => (running ? 'Scheduling' : 'Scheduled', [name, arg('schedule')].where((v) => v.isNotEmpty).join(' · ')),
+        'clear' => (running ? 'Clearing wake' : 'Cleared wake', name),
+        _ => (running ? 'Checking wakes' : 'Checked wakes', name),
+      };
+    case 'watch':
+      return (running ? 'Updating watch' : 'Updated watch', arg('name'));
   }
   return null;
 }
@@ -293,7 +373,33 @@ List<Widget>? coordinationToolBody(
     case 'message_mission_control':
       return [_Markdown(arg('message'))];
     case 'record_coordination_note':
+    case 'report_progress':
       return [_Markdown(arg('summary'))];
+    case 'post_chat':
+    case 'group_thread':
+      if (arg('body').isEmpty) return null;
+      return [_Markdown(arg('body'))];
+    case 'delegate_task':
+    case 'file_follow_up_task':
+      return [_Markdown(arg('description'))];
+    case 'cancel_delegated_task':
+      return [_Markdown(arg('reason'))];
+    case 'invite_task_agent':
+      return [_Markdown(arg('ask'))];
+    case 'hand_off_session':
+      return [_Markdown(arg('note'))];
+    case 'wake_schedule':
+      if (arg('brief').isEmpty) return null;
+      return [_Markdown(arg('brief'))];
+    case 'pass_turn':
+      return [
+        if (arg('done').isNotEmpty) _Section('Done', _Markdown(arg('done'))),
+        if (arg('next').isNotEmpty) _Section('Next', _Markdown(arg('next'))),
+        if (arg('risks').isNotEmpty) _Section('Risks', _Markdown(arg('risks'))),
+      ];
+    case 'submit_review':
+      final findings = a?['findings'] is List ? a!['findings'] as List : const [];
+      return [_Markdown([for (final f in findings) '- $f'].join('\n'))];
     case 'create_recurring_job':
       return [
         _Header(

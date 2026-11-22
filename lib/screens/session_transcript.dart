@@ -981,14 +981,16 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
   // Meta-tools have dedicated event rendering, so their generic tool lines are skipped.
   bool _isSpeakTool(String n) => n == 'speak' || n.endsWith('__speak');
 
-  bool _isMetaTool(String n) =>
-      n == 'update_plan' ||
-      n == 'ask_user' ||
-      n == 'delegate_task' ||
-      n == 'cancel_delegated_task' ||
-      n == 'complete_goal' ||
-      n == 'monitor' ||
-      n == 'present_file';
+  bool _isMetaTool(String raw) {
+    final n = toolBaseName(raw);
+    return n == 'update_plan' ||
+        n == 'ask_user' ||
+        n == 'delegate_task' ||
+        n == 'cancel_delegated_task' ||
+        n == 'complete_goal' ||
+        n == 'monitor' ||
+        n == 'present_file';
+  }
 
   Future<void> _switchModel([BuildContext? anchor]) async {
     ServerConfig cfg;

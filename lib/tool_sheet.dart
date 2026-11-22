@@ -467,7 +467,7 @@ class _TimelineStep extends StatelessWidget {
       ]));
     }
     final d = _data(step);
-    final exit = (d['exit_code'] as num?)?.toInt();
+    final exit = step.exitCode;
     if (step.tool == 'bash' && d['background'] == true) {
       final moved = (d['moved_after_secs'] as num?)?.toInt();
       return Text(moved != null ? 'background after ${moved}s' : 'background',

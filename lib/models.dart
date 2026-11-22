@@ -3,6 +3,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'markdown_preview.dart';
+import 'tool_surface.dart';
 
 /// A saved daemon connection (one `snippet serve` instance).
 class Instance {
@@ -861,7 +862,7 @@ class HarnessState {
       status: asString(j['status']) ?? 'idle',
       workspace: asString(j['workspace']) ?? '',
       title: title,
-      events: mapList(j['events']),
+      events: lowerToolEvents(mapList(j['events'])),
       finalText: asString(j['final_text']),
       approvalMode: asString(j['approval_mode']) ?? 'auto',
       pendingQuestion: j['pending_question'] is Map
@@ -905,9 +906,10 @@ class HarnessState {
     final rawAdded = d['new_events'];
     if (rawAdded is List) {
       for (final e in rawAdded) {
-        if (e is Map) added.add(e.cast<String, dynamic>());
+        if (e is Map) added.add(Map<String, dynamic>.from(e));
       }
     }
+    lowerToolEvents(added, prior: events);
     return HarnessState(
       status: base.status,
       workspace: base.workspace,
@@ -942,7 +944,9 @@ class HarnessState {
   }
 
   HarnessState prependEvents(List<Map<String, dynamic>> older) =>
-      older.isEmpty ? this : _withEvents([...older, ...events]);
+      older.isEmpty
+          ? this
+          : _withEvents([...lowerToolEvents([...older]), ...events]);
 
   HarnessState _withEvents(List<Map<String, dynamic>> next) => HarnessState(
         status: status,

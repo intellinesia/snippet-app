@@ -30,7 +30,11 @@ String toolIcon(String tool) => switch (toolBaseName(tool)) {
       'manage_process' => 'cpu',
       'share_artifact' => 'file',
       'delegate_task' => 'users',
-      'send_agent_message' => 'message-square',
+      'send_agent_message' ||
+      'post_chat' ||
+      'group_thread' ||
+      'post_task_coordination' =>
+        'message-square',
       'ask_user' => 'help-circle',
       _ => 'code',
     };
@@ -158,6 +162,8 @@ bool toolHasDetail(ToolStep step) {
       return resultHasBody();
     case 'read_file':
       return true;
+    case 'manage_process':
+      return (data?['log'] ?? '').toString().trim().isNotEmpty;
     default:
       final shown = toolArgSummary(tool, args);
       return shown.contains('…') || resultHasBody();
@@ -319,6 +325,16 @@ List<Widget> _toolBody(BuildContext context, String tool, Map? a, Map? d,
       return _presentView(context, a, d);
     case 'read_file':
       return _readFileView(a, d);
+    case 'manage_process':
+      final log = d?['log']?.toString() ?? '';
+      if (log.trim().isNotEmpty) {
+        return _bashView(null, {'stdout': log}, running: running);
+      }
+      final note = d?['note']?.toString() ?? '';
+      if (note.isNotEmpty) {
+        return [Text(note, style: sans(_bodySize, color: AppColors.fg2))];
+      }
+      return _simpleFallback(a, d);
     default:
       if (d?['custom_tool'] != null) {
         return _bashView({'command': d?['command'], 'label': tool}, d,
@@ -366,6 +382,12 @@ List<String> toolMetaParts(ToolStep step) {
     case 'web_read':
       final date = d?['published_date']?.toString() ?? '';
       return [if (date.isNotEmpty) date];
+    case 'manage_process':
+      final code = (d?['exit_status'] as num?)?.toInt();
+      return [
+        if (d?['outcome'] == 'timeout') 'still running',
+        if (code != null && code != 0) 'exit $code',
+      ];
   }
   return const [];
 }
@@ -451,9 +473,8 @@ final errorLineMarker = RegExp(
 
 List<Widget> _bashView(Map? a, Map? d, {required bool running, String? error}) {
   final cmd = _displayText(a?['command']?.toString() ?? '').trimRight();
-  final stdout =
-      _displayText((d?['stdout'] ?? d?['output_so_far'])?.toString() ?? '')
-          .trimRight();
+  final raw = d?['stdout'] ?? d?['output_so_far'] ?? d?['output'];
+  final stdout = _displayText(raw?.toString() ?? '').trimRight();
   var stderr = _displayText(d?['stderr']?.toString() ?? '').trimRight();
   if (error != null && error.trim().isNotEmpty) {
     final e = _displayText(error).trimRight();
