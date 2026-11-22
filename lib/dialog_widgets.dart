@@ -142,14 +142,18 @@ class _DialogFrame extends StatelessWidget {
   const _DialogFrame({
     required this.title,
     required this.child,
+    this.subtitle,
+    this.headerActions = const [],
     this.icon,
     this.iconColor,
     this.onClose,
-    this.maxWidth = 400,
+    this.maxWidth = 460,
     this.maxHeight,
   });
 
   final String title;
+  final String? subtitle;
+  final List<Widget> headerActions;
   final Widget child;
   final String? icon;
   final Color? iconColor;
@@ -158,63 +162,107 @@ class _DialogFrame extends StatelessWidget {
   final double? maxHeight;
 
   @override
-  Widget build(BuildContext context) => Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        insetPadding: EdgeInsets.symmetric(horizontal: S.s40, vertical: S.s24),
-        child: Container(
-          constraints: BoxConstraints(
-              maxWidth: maxWidth, maxHeight: maxHeight ?? double.infinity),
-          decoration: BoxDecoration(
-            color: AppColors.surface1,
-            borderRadius: BorderRadius.circular(R.card),
-            border: Border.all(color: AppColors.border),
-            boxShadow: overlayShadow,
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Material(
-            type: MaterialType.transparency,
-            child: Padding(
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(R.card);
+    final hasHeader =
+        title.isNotEmpty || (subtitle != null && subtitle!.isNotEmpty);
+    final glass = !kMobile && Glass.effectiveEnabled;
+    final surface = glass
+        ? AppColors.surface1.withValues(alpha: 0.94)
+        : AppColors.surface1;
+
+    Widget card = Material(
+      type: MaterialType.transparency,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (hasHeader || headerActions.isNotEmpty || onClose != null) ...[
+            Padding(
               padding: EdgeInsets.fromLTRB(
-                  S.s20, S.s16, onClose == null ? S.s20 : S.s12, S.s16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                  S.s20, S.of(14), onClose == null ? S.s20 : S.s12, S.s12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Row(children: [
-                    if (icon != null) ...[
-                      AppIcon(icon!,
-                          size: 16, color: iconColor ?? AppColors.fg2),
-                      SizedBox(width: S.s8),
-                    ],
-                    Expanded(
-                      child: Text(title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(kMobile ? 15 : 14,
-                              weight: W.label, color: AppColors.fg1)),
-                    ),
-                    if (onClose != null)
-                      IconBtn('x',
-                          size: 28,
-                          iconSize: 14,
-                          tooltip: 'Close',
-                          onTap: onClose),
-                  ]),
-                  SizedBox(height: S.of(10)),
-                  Flexible(
-                    child: Padding(
-                      padding:
-                          EdgeInsets.only(right: onClose == null ? 0 : S.s8),
-                      child: child,
+                  if (icon != null) ...[
+                    AppIcon(icon!,
+                        size: 16, color: iconColor ?? AppColors.fg2),
+                    SizedBox(width: S.s8),
+                  ],
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (title.isNotEmpty)
+                          Text(title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: sans(kMobile ? 15 : 14.5,
+                                  weight: W.strong, color: AppColors.fg1)),
+                        if (subtitle != null && subtitle!.isNotEmpty) ...[
+                          SizedBox(height: S.s2),
+                          Text(subtitle!,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: sans(12, color: AppColors.fg3)),
+                        ],
+                      ],
                     ),
                   ),
+                  for (final action in headerActions) ...[
+                    SizedBox(width: S.s6),
+                    action,
+                  ],
+                  if (onClose != null) ...[
+                    SizedBox(width: S.s4),
+                    IconBtn('x',
+                        size: 28,
+                        iconSize: 14,
+                        tooltip: 'Close',
+                        onTap: onClose),
+                  ],
                 ],
               ),
             ),
+            if (hasHeader)
+              Divider(height: 1, thickness: 1, color: AppColors.line),
+          ],
+          Flexible(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                  S.s20, hasHeader ? S.of(14) : S.s16, S.s20, S.s16),
+              child: child,
+            ),
           ),
+        ],
+      ),
+    );
+
+    if (glass) {
+      card = BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24), child: card);
+    }
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: EdgeInsets.symmetric(horizontal: S.s40, vertical: S.s24),
+      child: Container(
+        constraints: BoxConstraints(
+            maxWidth: maxWidth, maxHeight: maxHeight ?? double.infinity),
+        decoration: BoxDecoration(
+          color: surface,
+          borderRadius: radius,
+          border: Border.all(
+              color: glass ? AppColors.glassBorder : AppColors.border),
+          boxShadow: overlayShadow,
         ),
-      );
+        clipBehavior: Clip.antiAlias,
+        child: card,
+      ),
+    );
+  }
 }
 
 /// Cancel and confirm, laid out for the platform: right-aligned and compact on
@@ -592,10 +640,10 @@ Future<T?> showAppSheet<T>(BuildContext context,
     {required String title,
     String? subtitle,
     required Widget child,
-    // Per-caller sizing. A dialog has room for a wider sheet than the 340px
-    // default, which is what the agent picker uses to fit names and roles.
-    double maxWidth = 340,
-    double maxHeight = 520}) {
+    List<Widget> headerActions = const [],
+    // Desktop dialogs default to a comfortable 460px column rather than phone width.
+    double maxWidth = 460,
+    double maxHeight = 600}) {
   if (!kMobile) {
     return showDialog<T>(
       context: context,
@@ -603,6 +651,8 @@ Future<T?> showAppSheet<T>(BuildContext context,
       builder: (ctx) => ModalGlass(
           child: _DialogFrame(
         title: title,
+        subtitle: subtitle,
+        headerActions: headerActions,
         maxWidth: maxWidth,
         maxHeight: maxHeight,
         onClose: () => Navigator.pop(ctx),

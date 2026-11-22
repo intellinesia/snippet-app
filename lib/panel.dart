@@ -84,10 +84,14 @@ Future<T?> presentScreen<T>(
             ),
           );
         }
+        final drawerMax = maxWidth.clamp(460.0, 640.0);
+        final drawerW = c.maxWidth < 500
+            ? c.maxWidth
+            : (c.maxWidth * 0.36).clamp(460.0, drawerMax);
         return Align(
           alignment: Alignment.centerRight,
           child: SizedBox(
-              width: c.maxWidth < 500 ? c.maxWidth : 460.0,
+              width: drawerW,
               height: double.infinity,
               child: _frame(content, rounded: false, edge: true)),
         );

@@ -1657,6 +1657,7 @@ void _messageActions(BuildContext context, String text) {
           Navigator.pop(context);
           showAppSheet(context,
               title: 'Select text',
+              maxWidth: 620,
               maxHeight: 640,
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: S.s4),

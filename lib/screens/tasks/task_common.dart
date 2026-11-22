@@ -202,6 +202,8 @@ Future<bool> showCreateTask(BuildContext context, DaemonClient client) async {
   final created = await showAppSheet<bool>(
     context,
     title: 'New task',
+    maxWidth: 540,
+    maxHeight: 640,
     child: CreateTaskForm(client: client),
   );
   return created == true;

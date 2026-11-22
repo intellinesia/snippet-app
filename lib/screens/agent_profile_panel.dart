@@ -542,8 +542,8 @@ class _AgentModelRowsState extends State<AgentModelRows> {
       picked = await showAppSheet<String>(
         context,
         title: title,
-        maxWidth: 340,
-        maxHeight: 460,
+        maxWidth: 420,
+        maxHeight: 480,
         child: Builder(
           builder: (ctx) => _pickOptions(ctx, cfg,
               desk: desk, onPick: (v) => Navigator.pop(ctx, v)),

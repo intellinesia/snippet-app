@@ -2047,6 +2047,8 @@ Future<bool> showAgentWorkSheet(
   final done = await showAppSheet<bool>(
     context,
     title: 'Message an agent',
+    maxWidth: 520,
+    maxHeight: 620,
     child: AgentWorkSheet(
       client: client,
       sessionId: sessionId,

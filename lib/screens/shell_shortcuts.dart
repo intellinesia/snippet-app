@@ -246,6 +246,8 @@ void showDesktopShortcutsDialog(BuildContext context) {
   showAppSheet(
     context,
     title: 'Keyboard shortcuts',
+    maxWidth: 480,
+    maxHeight: 620,
     child: Column(mainAxisSize: MainAxisSize.min, children: [
       shortcutRow('⌘/Ctrl N · ⌘/Ctrl T', 'New session'),
       shortcutRow('⌘/Ctrl B', 'Toggle left sidebar'),

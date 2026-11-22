@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../api.dart';
 import '../desktop_pick.dart';
+import '../glass.dart' show ModalGlass;
 import '../mochi.dart';
 import '../models.dart';
 import '../settings_form.dart';
@@ -182,21 +183,40 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
   }
 
   Future<void> _openFolderSheet() async {
-    final result = await showModalBottomSheet<_FolderPickResult>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      barrierColor: AppColors.scrim,
-      isScrollControlled: true,
-      useSafeArea: false,
-      sheetAnimationStyle: sheetMotion,
-      builder: (_) => _FolderBrowserSheet(
-        client: widget.client,
-        startPath: _existing?.path ?? _folder ?? widget.startPath,
-        homePath: _homePath,
-        initialMode: _mode,
-        initialExisting: _existing,
-      ),
-    );
+    Widget browser() => _FolderBrowserSheet(
+          client: widget.client,
+          startPath: _existing?.path ?? _folder ?? widget.startPath,
+          homePath: _homePath,
+          initialMode: _mode,
+          initialExisting: _existing,
+        );
+    final result = kMobile
+        ? await showModalBottomSheet<_FolderPickResult>(
+            context: context,
+            backgroundColor: Colors.transparent,
+            barrierColor: AppColors.scrim,
+            isScrollControlled: true,
+            useSafeArea: false,
+            sheetAnimationStyle: sheetMotion,
+            builder: (_) => browser(),
+          )
+        : await showDialog<_FolderPickResult>(
+            context: context,
+            barrierColor: AppColors.modalScrim,
+            builder: (_) => ModalGlass(
+              child: Dialog(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                insetPadding:
+                    EdgeInsets.symmetric(horizontal: S.s40, vertical: S.s24),
+                child: ConstrainedBox(
+                  constraints:
+                      const BoxConstraints(maxWidth: 580, maxHeight: 620),
+                  child: browser(),
+                ),
+              ),
+            ),
+          );
     if (result == null || !mounted) return;
     setState(() {
       _folder = result.folder;
@@ -936,6 +956,60 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
     final limit = (media.size.height * 0.84).clamp(320.0, 680.0);
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+              kMobile ? M.gutter : S.s20,
+              kMobile ? S.s4 : S.of(14),
+              kMobile ? S.s8 : S.s12,
+              kMobile ? S.s6 : S.s12),
+          child: Row(children: [
+            Expanded(
+              child: Text('Choose folder',
+                  style: kMobile
+                      ? TS.sectionTitle()
+                      : sans(14.5, weight: W.strong, color: AppColors.fg1)),
+            ),
+            IconBtn('x',
+                size: kMobile ? M.minTarget : 28,
+                iconSize: kMobile ? 18 : 14,
+                tooltip: 'Close',
+                onTap: () => Navigator.of(context).pop()),
+          ]),
+        ),
+        if (!kMobile) Divider(height: 1, thickness: 1, color: AppColors.line),
+        if (_error != null)
+          Expanded(child: _errorState())
+        else ...[
+          if (!kMobile) SizedBox(height: S.s8),
+          _breadcrumbs(),
+          Expanded(
+            child: _loading && _listing == null
+                ? const Center(child: Spinner(size: 20))
+                : PullToRefresh(
+                    onRefresh: () async => _go(_here),
+                    child: _folderList(),
+                  ),
+          ),
+          if (_repo != null) _workspaceChoice(),
+          _actionBar(kMobile ? media.padding.bottom : 0),
+        ],
+      ],
+    );
+    if (!kMobile) {
+      return Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(R.card),
+          border: Border.all(color: AppColors.glassBorder),
+          boxShadow: overlayShadow,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Material(type: MaterialType.transparency, child: content),
+      );
+    }
     return Align(
       alignment: Alignment.bottomCenter,
       heightFactor: 1,
@@ -943,42 +1017,7 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
         type: MaterialType.transparency,
         child: AppSheetSurface(
           color: AppColors.bg,
-          child: SizedBox(
-            height: limit,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: EdgeInsets.fromLTRB(M.gutter, S.s4, S.s8, S.s6),
-                  child: Row(children: [
-                    Expanded(
-                      child: Text('Choose folder', style: TS.sectionTitle()),
-                    ),
-                    IconBtn('x',
-                        size: M.minTarget,
-                        iconSize: 18,
-                        tooltip: 'Close',
-                        onTap: () => Navigator.of(context).pop()),
-                  ]),
-                ),
-                if (_error != null)
-                  Expanded(child: _errorState())
-                else ...[
-                  _breadcrumbs(),
-                  Expanded(
-                    child: _loading && _listing == null
-                        ? const Center(child: Spinner(size: 20))
-                        : PullToRefresh(
-                            onRefresh: () async => _go(_here),
-                            child: _folderList(),
-                          ),
-                  ),
-                  if (_repo != null) _workspaceChoice(),
-                  _actionBar(media.padding.bottom),
-                ],
-              ],
-            ),
-          ),
+          child: SizedBox(height: limit, child: content),
         ),
       ),
     );

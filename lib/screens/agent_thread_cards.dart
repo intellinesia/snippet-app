@@ -744,6 +744,7 @@ class _TaskThreadCardState extends State<_TaskThreadCard> {
     final finding = await showAppSheet<String>(
       context,
       title: 'Send back',
+      maxWidth: 500,
       child: const _SendBackSheet(),
     );
     if (!mounted || finding == null || finding.trim().isEmpty) return;

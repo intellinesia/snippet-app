@@ -4,6 +4,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../api.dart' show DaemonClient;
 import '../envelope.dart';
@@ -338,33 +339,61 @@ EnvelopeSignal envelopeSignal(CoordinationEnvelope env, String sender) {
 }
 
 /// The full text behind a signal row, in a sheet.
+bool _looksCodeOrError(String title, String body) {
+  final t = title.toLowerCase();
+  if (t.contains('error') || t.contains('stderr') || t.contains('trace')) {
+    return true;
+  }
+  final b = body.trimLeft();
+  return b.startsWith('{') || b.startsWith('[') || b.contains('\n#0 ');
+}
+
 Future<void> showSignalDetails(BuildContext context,
     {required String title, required String body}) {
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: AppColors.surface1,
-    shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.sheetTop))),
-    builder: (ctx) => SafeArea(
-      child: ConstrainedBox(
-        constraints:
-            BoxConstraints(maxHeight: MediaQuery.sizeOf(ctx).height * 0.7),
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(S.s16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(title,
-                  style: sans(16, weight: W.strong, color: AppColors.fg1)),
-              SizedBox(height: S.s8),
-              SelectableText(body,
-                  style: codeMono(13, height: 1.5, color: AppColors.fg2)),
-            ],
-          ),
+  final isCode = _looksCodeOrError(title, body);
+  final textStyle = isCode
+      ? codeMono(kMobile ? 13 : 12.5, height: 1.55, color: AppColors.fg2)
+      : sans(kMobile ? 14 : 13.5, height: 1.6, color: AppColors.fg2);
+
+  void copy(BuildContext ctx) {
+    Clipboard.setData(ClipboardData(text: body));
+    toast(ctx, 'Copied');
+  }
+
+  return showAppSheet<void>(
+    context,
+    title: title,
+    maxWidth: 640,
+    maxHeight: 580,
+    headerActions: [
+      if (body.trim().isNotEmpty)
+        Builder(
+          builder: (ctx) => IconBtn('clipboard',
+              size: 28,
+              iconSize: 14,
+              tooltip: 'Copy',
+              onTap: () => copy(ctx)),
         ),
-      ),
+    ],
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SelectableText(body, style: textStyle),
+        if (kMobile && body.trim().isNotEmpty) ...[
+          SizedBox(height: S.s16),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Builder(
+              builder: (ctx) => Btn('Copy',
+                  icon: 'clipboard',
+                  small: true,
+                  variant: BtnVariant.surface,
+                  onTap: () => copy(ctx)),
+            ),
+          ),
+        ],
+      ],
     ),
   );
 }

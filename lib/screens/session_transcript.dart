@@ -1179,6 +1179,8 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
     final cps = s.checkpoints.reversed.toList();
     showAppSheet(context,
         title: 'Fork conversation',
+        maxWidth: 500,
+        maxHeight: 600,
         child: Column(children: [
           Padding(
             padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s12),
