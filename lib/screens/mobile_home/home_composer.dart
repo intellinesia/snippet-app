@@ -24,6 +24,7 @@ class HomeComposer extends StatefulWidget {
     required this.onPlus,
     this.onSent,
     this.onOpenChat,
+    this.openOnFocus = false,
   });
 
   final DaemonClient client;
@@ -37,6 +38,10 @@ class HomeComposer extends StatefulWidget {
 
   /// Opens the target agent's chat directly without sending a message.
   final VoidCallback? onOpenChat;
+
+  /// Tapping the field opens the chat instead of typing here, so the thread
+  /// (with its keyboard and Back) is where the message gets written.
+  final bool openOnFocus;
 
   @override
   State<HomeComposer> createState() => _HomeComposerState();
@@ -67,7 +72,21 @@ class _HomeComposerState extends State<HomeComposer> {
   );
 
   @override
+  void initState() {
+    super.initState();
+    _focus.addListener(_onFocus);
+  }
+
+  void _onFocus() {
+    final open = widget.onOpenChat;
+    if (!widget.openOnFocus || open == null || !_focus.hasFocus) return;
+    _focus.unfocus();
+    open();
+  }
+
+  @override
   void dispose() {
+    _focus.removeListener(_onFocus);
     _input.dispose();
     _focus.dispose();
     _attachments.dispose();

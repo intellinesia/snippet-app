@@ -38,6 +38,9 @@ class EveryoneSheet extends StatelessWidget {
     required this.onOpenManaged,
     required this.onOpenSession,
     required this.onClose,
+    required this.progress,
+    required this.onDrag,
+    required this.onRelease,
     this.onSessionActions,
     this.onRefresh,
   });
@@ -57,6 +60,13 @@ class EveryoneSheet extends StatelessWidget {
   final void Function(SessionInfo s)? onSessionActions;
   final VoidCallback onClose;
   final VoidCallback? onRefresh;
+
+  /// 0 closed, 1 open; may pass either end while the finger rubber-bands.
+  final Animation<double> progress;
+
+  /// Finger drag in pixels (positive is down) and the release velocity in px/s.
+  final void Function(double dy) onDrag;
+  final void Function(double velocity) onRelease;
 
   Widget _hairline({double inset = kHomeMargin}) => Padding(
         padding: EdgeInsets.only(left: inset, right: kHomeMargin),
@@ -84,7 +94,7 @@ class EveryoneSheet extends StatelessWidget {
 
     final listContent = SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.only(bottom: 120 + bottom),
+      padding: EdgeInsets.only(bottom: 168 + bottom),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -235,9 +245,9 @@ class EveryoneSheet extends StatelessWidget {
                   tapHaptic();
                   onClose();
                 },
-                onVerticalDragEnd: (d) {
-                  if ((d.primaryVelocity ?? 0) > 160) onClose();
-                },
+                onVerticalDragUpdate: (d) => onDrag(d.delta.dy),
+                onVerticalDragEnd: (d) => onRelease(d.primaryVelocity ?? 0),
+                onVerticalDragCancel: () => onRelease(0),
                 child: SizedBox(
                   width: 128,
                   height: 44,
@@ -288,23 +298,37 @@ class EveryoneSheet extends StatelessWidget {
       );
     }
 
+    final height = mq.size.height - top;
     return Stack(children: [
       Positioned.fill(
-        child: GestureDetector(
-          key: const ValueKey('everyone-sheet-scrim'),
-          behavior: HitTestBehavior.opaque,
-          onTap: onClose,
-          child: ColoredBox(color: Colors.black.withValues(alpha: 0.55)),
+        child: AnimatedBuilder(
+          animation: progress,
+          builder: (_, child) => IgnorePointer(
+            ignoring: progress.value < 0.5,
+            child: GestureDetector(
+              key: const ValueKey('everyone-sheet-scrim'),
+              behavior: HitTestBehavior.opaque,
+              onTap: onClose,
+              child: ColoredBox(
+                  color: Colors.black.withValues(
+                      alpha: 0.55 * progress.value.clamp(0.0, 1.0))),
+            ),
+          ),
         ),
       ),
       Positioned(
         top: top,
         left: 0,
         right: 0,
-        bottom: 0,
-        child: ClipRRect(
-          borderRadius: radius,
-          child: surface,
+        // Extra height so an overshoot never shows a gap under the sheet.
+        height: height + 48,
+        child: AnimatedBuilder(
+          animation: progress,
+          child: ClipRRect(borderRadius: radius, child: surface),
+          builder: (_, child) => Transform.translate(
+            offset: Offset(0, (1 - progress.value) * (height + 48)),
+            child: child,
+          ),
         ),
       ),
     ]);

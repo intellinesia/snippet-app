@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 
 import '../../api.dart';
 import '../../glass.dart';
@@ -14,6 +16,7 @@ import 'agents_group.dart';
 import 'everyone_sheet.dart';
 import 'home_composer.dart';
 import 'home_data.dart';
+import 'home_resting.dart';
 import 'home_style.dart';
 import 'managed_view.dart';
 import 'one_thing_ask.dart';
@@ -64,13 +67,24 @@ class MobileHomeScreen extends StatefulWidget {
   State<MobileHomeScreen> createState() => _MobileHomeScreenState();
 }
 
-class _MobileHomeScreenState extends State<MobileHomeScreen> {
+class _MobileHomeScreenState extends State<MobileHomeScreen>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _search = TextEditingController();
   final FocusNode _searchFocus = FocusNode();
   late final ValueNotifier<List<SessionInfo>> _live =
       ValueNotifier(widget.sessions);
   bool _searching = false;
   bool _everyoneOpen = false;
+  bool _sheetShown = false;
+  LocalHistoryEntry? _backEntry;
+  late final AnimationController _sheet;
+
+  @override
+  void initState() {
+    super.initState();
+    _sheet = AnimationController.unbounded(vsync: this, value: 0)
+      ..addStatusListener(_sheetStatus);
+  }
   bool _asleepOpen = false;
   bool _settledOpen = false;
 
@@ -84,6 +98,8 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
 
   @override
   void dispose() {
+    _backEntry = null;
+    _sheet.dispose();
     _search.dispose();
     _searchFocus.dispose();
     _live.dispose();
@@ -99,10 +115,8 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
       (s.branch?.toLowerCase().contains(_q) ?? false);
 
   void _openSearch() {
-    setState(() {
-      _searching = true;
-      _everyoneOpen = false;
-    });
+    if (_everyoneOpen) _settleSheet(open: false);
+    setState(() => _searching = true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _searchFocus.requestFocus();
     });
@@ -114,14 +128,88 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
     setState(() => _searching = false);
   }
 
+  double get _sheetHeight {
+    final mq = MediaQuery.of(context);
+    return mq.size.height - math.max(132.0, mq.padding.top + 72.0);
+  }
+
+  void _sheetStatus(AnimationStatus status) {
+    if (status != AnimationStatus.completed) return;
+    if (!_everyoneOpen && _sheetShown && _sheet.value <= 0.001) {
+      setState(() => _sheetShown = false);
+    }
+  }
+
+  /// Hold a local history entry while the sheet is open, so the shell's Back
+  /// handling closes the sheet before it pops anything.
+  void _holdBack() {
+    if (_backEntry != null) return;
+    final entry = LocalHistoryEntry(onRemove: () {
+      _backEntry = null;
+      if (_everyoneOpen && mounted) _settleSheet(open: false, fromBack: true);
+    });
+    _backEntry = entry;
+    ModalRoute.of(context)?.addLocalHistoryEntry(entry);
+  }
+
+  void _releaseBack() {
+    final e = _backEntry;
+    _backEntry = null;
+    e?.remove();
+  }
+
+  void _settleSheet({required bool open, double velocity = 0, bool fromBack = false}) {
+    if (open) {
+      _holdBack();
+    } else if (!fromBack) {
+      _releaseBack();
+    }
+    final changed = _everyoneOpen != open;
+    setState(() {
+      _everyoneOpen = open;
+      if (open) _sheetShown = true;
+    });
+    if (changed) tapHaptic();
+    final target = open ? 1.0 : 0.0;
+    if (reduceMotion(context)) {
+      _sheet.animateTo(target,
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOut);
+      return;
+    }
+    final v = velocity / _sheetHeight;
+    _sheet.animateWith(SpringSimulation(
+        const SpringDescription(mass: 1, stiffness: 380, damping: 34),
+        _sheet.value,
+        target,
+        v));
+  }
+
   void _openEveryone() {
     if (_everyoneOpen) return;
-    setState(() => _everyoneOpen = true);
+    _settleSheet(open: true);
   }
 
   void _closeEveryone() {
     if (!_everyoneOpen) return;
-    setState(() => _everyoneOpen = false);
+    _settleSheet(open: false);
+  }
+
+  void _dragSheet(double dy) {
+    if (!_sheetShown) setState(() => _sheetShown = true);
+    _sheet.stop();
+    final step = -dy / _sheetHeight;
+    final next = _sheet.value + step;
+    // Past either end the finger moves the sheet 30% as far.
+    final v = next < 0 || next > 1 ? _sheet.value + step * 0.3 : next;
+    _sheet.value = v;
+  }
+
+  void _releaseSheet(double vy) {
+    // vy is px/s downward; progress velocity is the opposite.
+    final up = -vy;
+    final open = up.abs() >= 700 ? up > 0 : _sheet.value > 0.5;
+    _settleSheet(open: open, velocity: up);
   }
 
   void _openManaged(CoordinationAgent agent) {
@@ -162,7 +250,6 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
     final human = humanSessions(sessions);
     final working = rows.working.length;
     final bottom = MediaQuery.paddingOf(context).bottom;
-    final reduce = reduceMotion(context);
     final statusDot = working > 0
         ? AppColors.ok
         : (asks.isNotEmpty ? askAmber : AppColors.ok);
@@ -179,11 +266,11 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
       Positioned.fill(
         child: GestureDetector(
           behavior: HitTestBehavior.translucent,
+          onVerticalDragUpdate:
+              _searching || _everyoneOpen ? null : (d) => _dragSheet(d.delta.dy),
           onVerticalDragEnd: _searching || _everyoneOpen
               ? null
-              : (d) {
-                  if ((d.primaryVelocity ?? 0) < -220) _openEveryone();
-                },
+              : (d) => _releaseSheet(d.primaryVelocity ?? 0),
           child: Padding(
             padding: EdgeInsets.only(
               top: 76,
@@ -191,7 +278,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
               left: kHomeMargin,
               right: kHomeMargin,
             ),
-            child: _centerStage(asks, names),
+            child: _centerStage(asks, names, rows, managed, human),
           ),
         ),
       ),
@@ -285,51 +372,30 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
         ),
 
       // 5. Pull-up "Everyone" sheet over dimmed home (composer stays above it).
-      Positioned.fill(
-        child: IgnorePointer(
-          ignoring: !_everyoneOpen || _searching,
-          child: AnimatedSwitcher(
-            duration: reduce ? Duration.zero : Motion.base,
-            switchInCurve: Curves.easeOutCubic,
-            switchOutCurve: Curves.easeInCubic,
-            transitionBuilder: (child, anim) {
-              if (reduce) return FadeTransition(opacity: anim, child: child);
-              return FadeTransition(
-                opacity: CurvedAnimation(
-                    parent: anim, curve: const Interval(0, 0.7)),
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 0.08),
-                    end: Offset.zero,
-                  ).animate(anim),
-                  child: child,
-                ),
-              );
-            },
-            child: _everyoneOpen && !_searching
-                ? EveryoneSheet(
-                    key: const ValueKey('everyone-sheet'),
-                    rows: rows,
-                    managed: managed,
-                    mainSessions: human.main,
-                    settledSessions: human.settled,
-                    asleepOpen: _asleepOpen,
-                    settledOpen: _settledOpen,
-                    onToggleAsleep: () =>
-                        setState(() => _asleepOpen = !_asleepOpen),
-                    onToggleSettled: () =>
-                        setState(() => _settledOpen = !_settledOpen),
-                    onOpenAgent: widget.onOpenAgent,
-                    onOpenManaged: _openManaged,
-                    onOpenSession: widget.onOpenSession,
-                    onSessionActions: widget.onSessionActions,
-                    onClose: _closeEveryone,
-                    onRefresh: widget.onRefresh,
-                  )
-                : const SizedBox.shrink(key: ValueKey('everyone-closed')),
+      if (_sheetShown && !_searching)
+        Positioned.fill(
+          child: EveryoneSheet(
+            key: const ValueKey('everyone-sheet'),
+            rows: rows,
+            managed: managed,
+            mainSessions: human.main,
+            settledSessions: human.settled,
+            asleepOpen: _asleepOpen,
+            settledOpen: _settledOpen,
+            onToggleAsleep: () => setState(() => _asleepOpen = !_asleepOpen),
+            onToggleSettled: () =>
+                setState(() => _settledOpen = !_settledOpen),
+            onOpenAgent: widget.onOpenAgent,
+            onOpenManaged: _openManaged,
+            onOpenSession: widget.onOpenSession,
+            onSessionActions: widget.onSessionActions,
+            onClose: _closeEveryone,
+            onRefresh: widget.onRefresh,
+            progress: _sheet,
+            onDrag: _dragSheet,
+            onRelease: _releaseSheet,
           ),
         ),
-      ),
 
       // 6. Search overlay (pinned frosted pill bar + live filtered results).
       if (_searching)
@@ -351,12 +417,19 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
             onPlus: widget.onPlus,
             onSent: widget.onOpenMissionControl,
             onOpenChat: widget.onOpenMissionControl,
+            openOnFocus: true,
           ),
         ),
     ]);
   }
 
-  Widget _centerStage(List<AskItem> asks, Map<String, String> names) {
+  Widget _centerStage(
+    List<AskItem> asks,
+    Map<String, String> names,
+    ({List<AgentRow> working, List<AgentRow> needs, List<AgentRow> asleep})
+        rows,
+    Map<String, List<SessionInfo>> managed,
+    ({List<SessionInfo> main, List<SessionInfo> settled}) human) {
     if (asks.isNotEmpty) {
       return LayoutBuilder(
         builder: (context, box) => SingleChildScrollView(
@@ -391,8 +464,17 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
         ),
       );
     }
-    // Quiet state: let Silk and the composer rest cleanly.
-    return const SizedBox.expand();
+    return HomeResting(
+      working: rows.working,
+      sessions: widget.sessions,
+      managed: managed,
+      asleepCount: rows.asleep.length,
+      settledCount: human.settled.length,
+      onOpenSession: widget.onOpenSession,
+      onOpenAgent: widget.onOpenAgent,
+      onOpenManaged: _openManaged,
+      onOpenEveryone: _openEveryone,
+    );
   }
 
   Widget _everyoneHandle() => Semantics(
@@ -406,9 +488,9 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
               tapHaptic();
               _openEveryone();
             },
-            onVerticalDragEnd: (d) {
-              if ((d.primaryVelocity ?? 0) < -120) _openEveryone();
-            },
+            onVerticalDragUpdate: (d) => _dragSheet(d.delta.dy),
+            onVerticalDragEnd: (d) => _releaseSheet(d.primaryVelocity ?? 0),
+            onVerticalDragCancel: () => _releaseSheet(0),
             child: SizedBox(
               width: 128,
               height: 44,

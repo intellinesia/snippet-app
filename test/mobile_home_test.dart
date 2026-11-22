@@ -300,6 +300,27 @@ void main() {
       expect(find.text('Deny'), findsNothing);
     });
 
+    testWidgets('Back closes the Everyone sheet before anything else',
+        (tester) async {
+      await pumpHome(tester, base);
+      await tester.tap(find.byKey(const ValueKey('everyone-handle')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(find.byType(EveryoneSheet), findsOneWidget);
+
+      final nav = Navigator.of(tester.element(find.byType(EveryoneSheet)));
+      expect(await nav.maybePop(), isTrue);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 900));
+      expect(find.byType(EveryoneSheet), findsNothing);
+    });
+
+    testWidgets('quiet state names Mission Control and never an empty centre',
+        (tester) async {
+      await pumpHome(tester, [_s('h0')]);
+      expect(find.text('Nothing needs you.'), findsOneWidget);
+    });
+
     testWidgets(
         'Everyone pull-up sheet shows Working with managed pills, Your sessions, Asleep, and opens ManagedView',
         (tester) async {
