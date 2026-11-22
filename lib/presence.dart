@@ -81,6 +81,21 @@ class PresenceStore extends ChangeNotifier {
     return best;
   }
 
+  /// The session behind [presenceForAgentId], so a stop reaches the work.
+  String? sessionForAgentId(String agentId) {
+    String? best;
+    var since = -1;
+    for (final e in _agentOf.entries) {
+      if (e.value != agentId) continue;
+      final p = forSession(e.key);
+      if (p != null && p.since > since) {
+        since = p.since;
+        best = e.key;
+      }
+    }
+    return best;
+  }
+
   /// Lower-case status word for a header: thinking, running bash, ...
   static String word(Presence p) => switch (p.state) {
         'tool' => p.detail.isEmpty ? 'running' : 'running ${p.detail}',

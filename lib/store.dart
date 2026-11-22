@@ -122,13 +122,21 @@ class InstanceStore {
     if (raw == null) return const OpenTabsState([], -1);
     try {
       final j = jsonDecode(raw) as Map<String, dynamic>;
-      final tabs = ((j['tabs'] as List?) ?? const [])
+      final all = ((j['tabs'] as List?) ?? const [])
           .map((e) => OpenTabDescriptor.fromJson(e as Map<String, dynamic>))
-          .where((t) =>
-              t.instanceUrl.isNotEmpty &&
-              (t.sessionId != null || t.filePath != null))
           .toList();
-      final active = (j['active_index'] as num?)?.toInt() ?? -1;
+      final saved = (j['active_index'] as num?)?.toInt() ?? -1;
+      final tabs = <OpenTabDescriptor>[];
+      var active = -1;
+      for (var i = 0; i < all.length; i++) {
+        final t = all[i];
+        if (t.instanceUrl.isEmpty ||
+            (t.sessionId == null && t.filePath == null && t.chat == null)) {
+          continue;
+        }
+        if (i == saved) active = tabs.length;
+        tabs.add(t);
+      }
       return OpenTabsState(tabs, active);
     } catch (_) {
       return const OpenTabsState([], -1);

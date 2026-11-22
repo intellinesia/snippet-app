@@ -571,6 +571,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
       _groupRootKey[_Pane.left] = t.key;
       _activeKey[_Pane.left] = t.key;
     });
+    _persistTabs();
     _syncPage();
   }
 

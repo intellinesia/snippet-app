@@ -1959,7 +1959,9 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       highlight: _kit.dragging.value,
       shortcuts: _kit.shortcuts(canSend: canSend, onSend: () => unawaited(_send())),
       contentInsertion: _kit.keyboardContent,
-      running: _busyPresence(presence.presenceForAgentId(widget.agentId)),
+      running: (presence.presenceForAgentId(widget.agentId)?.state ??
+              'waiting') !=
+          'waiting',
       onStop: _stopAgent,
       voice: _voice,
       listen: _attachments,
@@ -1977,11 +1979,13 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     );
   }
 
-  // The agent's desk session is where it works between messages.
   Future<void> _stopAgent() async {
+    final session =
+        widget.client.presence.sessionForAgentId(widget.agentId) ??
+            'inbox-${widget.agentId}';
     final ok = await quickSend(
         client: widget.client,
-        session: 'inbox-${widget.agentId}',
+        session: session,
         action: const QuickInterrupt());
     if (!ok && mounted) toast(context, "Couldn't stop ${widget.agentName}");
   }
