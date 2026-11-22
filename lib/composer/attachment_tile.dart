@@ -6,6 +6,7 @@ import '../media_views.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import '../tap_detector.dart';
+import 'attachment_hover_preview.dart';
 
 class ComposerAttachmentBar extends StatelessWidget {
   const ComposerAttachmentBar({super.key, required this.tiles});
@@ -56,6 +57,9 @@ class ComposerAttachmentTile extends StatelessWidget {
     this.onOpen,
     this.localPath,
     this.body,
+    this.sizeBytes,
+    this.pastedText,
+    this.imageProvider,
   });
 
   final String name;
@@ -68,6 +72,11 @@ class ComposerAttachmentTile extends StatelessWidget {
   final VoidCallback? onOpen;
   final String? localPath;
   final Widget? body;
+
+  /// Data for the desktop hover card.
+  final int? sizeBytes;
+  final String? pastedText;
+  final ImageProvider? imageProvider;
 
   static const side = 56.0;
 
@@ -190,7 +199,17 @@ class ComposerAttachmentTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => isAudio && body == null
       ? _voiceRow()
-      : Stack(clipBehavior: Clip.none, children: [
+      : AttachmentHoverPreview(
+          name: name,
+          isImage: isImage,
+          localPath: localPath,
+          sizeBytes: sizeBytes,
+          pastedText: pastedText,
+          imageProvider: imageProvider,
+          child: _tile(),
+        );
+
+  Widget _tile() => Stack(clipBehavior: Clip.none, children: [
         onOpen == null
             ? (body ?? _defaultBody())
             : Semantics(

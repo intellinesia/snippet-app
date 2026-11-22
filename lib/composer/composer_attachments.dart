@@ -29,7 +29,7 @@ class ComposerAttachment {
   bool uploading;
 
   /// Text pasted into the composer, kept as a card and sent inline.
-  final String? pastedText;
+  String? pastedText;
 
   ComposerAttachment({
     required this.name,
@@ -289,7 +289,9 @@ class ComposerAttachmentController extends ChangeNotifier {
     return trimmed.isEmpty ? m.join('\n\n') : '$trimmed\n\n${m.join('\n\n')}';
   }
 
-  Widget buildBar(BuildContext context) => ComposerAttachmentBar(tiles: [
+  Widget buildBar(BuildContext context,
+          {void Function(String text)? onInsertText}) =>
+      ComposerAttachmentBar(tiles: [
         for (final a in items)
           ComposerAttachmentTile(
             name: a.name,
@@ -297,22 +299,28 @@ class ComposerAttachmentController extends ChangeNotifier {
             isAudio: a.isAudio,
             uploading: a.uploading,
             localPath: a.localPath,
+            pastedText: a.pastedText,
+            imageProvider: a.remotePath == null
+                ? null
+                : client.imageProvider(a.remotePath!),
             body: a.pastedText == null
                 ? null
                 : PastedAttachmentBody(text: a.pastedText!),
-            onOpen: a.pastedText == null ? () => preview(context, a) : null,
+            onOpen: () => preview(context, a, onInsertText: onInsertText),
             onRemove: () => remove(a),
           ),
       ]);
 
-  Future<void> preview(BuildContext context, ComposerAttachment a) {
+  Future<void> preview(BuildContext context, ComposerAttachment a,
+      {void Function(String text)? onInsertText}) {
     final pairs = {
-      for (final x in items.where((x) => x.pastedText == null))
+      for (final x in items)
         PreviewAttachment(
           name: x.name,
           isImage: x.isImage,
           isAudio: x.isAudio,
           localPath: x.localPath,
+          pastedText: x.pastedText,
           imageProvider: x.remotePath == null
               ? null
               : client.imageProvider(x.remotePath!),
@@ -326,6 +334,23 @@ class ComposerAttachmentController extends ChangeNotifier {
         final target = pairs[p];
         if (target != null) remove(target);
       },
+      onEditText: (p, text) {
+        final t = pairs[p];
+        if (t == null) return;
+        if (text.trim().isEmpty) {
+          remove(t);
+        } else {
+          t.pastedText = text;
+          notifyListeners();
+        }
+      },
+      onInsertText: onInsertText == null
+          ? null
+          : (p, text) {
+              final t = pairs[p];
+              if (t != null) remove(t);
+              onInsertText(text);
+            },
     );
   }
 }
