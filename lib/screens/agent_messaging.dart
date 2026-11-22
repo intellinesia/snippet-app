@@ -1435,7 +1435,9 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
               child: RowSizeWatch(
                 onResize: _rowResized,
                 child: MessageEnter(
-                  animate: fresh && _bottom.stickToBottom,
+                  animate: fresh &&
+                      _bottom.stickToBottom &&
+                      !(kMobile && _sendInIds.contains(rowId)),
                   child: Padding(
                     padding: EdgeInsets.only(top: topGap),
                     child: !kMobile && _turnSpace && at == lastHumanIdx

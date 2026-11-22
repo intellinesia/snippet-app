@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/api.dart';
-import 'package:snippet/motion.dart';
+import 'package:snippet/chat/message_enter.dart';
 import 'package:snippet/screens/session.dart';
 import 'package:snippet/theme.dart';
 import 'package:stream_channel/stream_channel.dart';
@@ -60,7 +60,7 @@ void main() {
       State rowOf(String text) => tester.state(find
           .ancestor(
               of: find.textContaining(text, findRichText: true).first,
-              matching: find.byType(Appear))
+              matching: find.byType(MessageEnter))
           .first);
       final before = rowOf('first reply');
 

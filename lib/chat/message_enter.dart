@@ -31,6 +31,7 @@ class _MessageEnterState extends State<MessageEnter>
     with SingleTickerProviderStateMixin {
   AnimationController? _c;
   Animation<double>? _curve;
+  Animation<double>? _size;
   Animation<double>? _fade;
   bool _started = false;
 
@@ -46,7 +47,10 @@ class _MessageEnterState extends State<MessageEnter>
     }
     final c = AnimationController(vsync: this, duration: widget.duration);
     _c = c;
-    _curve = CurvedAnimation(parent: c, curve: Curves.easeOutCubic);
+    final curve = CurvedAnimation(parent: c, curve: Curves.easeOutCubic);
+    _curve = curve;
+    // Start at a tiny non-zero factor so the child stays laid out on frame 0.
+    _size = Tween<double>(begin: 0.01, end: 1).animate(curve);
     _fade = CurvedAnimation(
         parent: c, curve: const Interval(0, 0.85, curve: Curves.easeOut));
     c.forward();
@@ -61,12 +65,13 @@ class _MessageEnterState extends State<MessageEnter>
   @override
   Widget build(BuildContext context) {
     final curve = _curve;
+    final size = _size;
     final fade = _fade;
     // Keep the tree shape constant for the widget's lifetime so stateful
     // children (popovers, expanded cards, images) never remount on completion.
-    if (curve == null || fade == null) return widget.child;
+    if (curve == null || size == null || fade == null) return widget.child;
     return SizeTransition(
-      sizeFactor: curve,
+      sizeFactor: size,
       alignment: Alignment.topCenter,
       child: FadeTransition(
         opacity: fade,

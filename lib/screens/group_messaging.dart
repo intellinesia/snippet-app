@@ -1714,7 +1714,9 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
             child: RowSizeWatch(
               onResize: _rowResized,
               child: MessageEnter(
-                animate: fresh && _bottom.stickToBottom,
+                animate: fresh &&
+                    _bottom.stickToBottom &&
+                    !(kMobile && _sendInIds.contains(rowId)),
                 child: _wideCap(
                   _item(
                     e,
