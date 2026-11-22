@@ -117,18 +117,17 @@ void main() {
         );
       }
 
-      // Render with 15 sessions
+      // Render with 15 sessions: resting One thing screen keeps rows tucked in Everyone.
       await tester.pumpWidget(buildWidget(allSessions));
       await tester.pumpAndSettle();
-
-      // One Sessions group counts every human-managed session once.
       expect(find.text('Recent'), findsNothing);
-      final label = find.widgetWithText(HomeLabel, 'Sessions');
-      expect(label, findsOneWidget);
-      expect(find.descendant(of: label, matching: find.text('15')),
-          findsOneWidget);
+      expect(find.text('Session Title 0'), findsNothing);
 
-      // Top recent items are visible once each:
+      // Open Everyone sheet to inspect all 15 human-managed sessions in order.
+      await tester.tap(find.byKey(const ValueKey('everyone-handle')));
+      await tester.pumpAndSettle();
+      expect(find.text('Your sessions'), findsOneWidget);
+      expect(find.text('15'), findsOneWidget);
       expect(find.text('Session Title 0'), findsOneWidget);
       expect(find.text('Session Title 1'), findsOneWidget);
       expect(find.text('Session Title 2'), findsOneWidget);
@@ -137,10 +136,13 @@ void main() {
           tester.getTopLeft(find.text('Session Title $i')).dy
       ];
       for (var i = 1; i < ys.length; i++) {
-        expect(ys[i], greaterThan(ys[i - 1]), reason: 'row $i after row ${i - 1}');
+        expect(ys[i], greaterThan(ys[i - 1]),
+            reason: 'row $i after row ${i - 1}');
       }
+      await tester.tap(find.byKey(const ValueKey('everyone-sheet-handle')));
+      await tester.pumpAndSettle();
 
-      // Search reaches past the visible rows to every matching chat.
+      // Search reaches past the resting screen to every matching chat.
       await tester.tap(find.byTooltip('Search'));
       await tester.pumpAndSettle();
       await tester.enterText(_field('Search agents and sessions'), 'Title 13');
@@ -148,13 +150,14 @@ void main() {
       expect(find.text('Session Title 13'), findsOneWidget);
 
       // Search for nonexistent chat
-      await tester.enterText(_field('Search agents and sessions'), 'Session Title 99');
+      await tester.enterText(
+          _field('Search agents and sessions'), 'Session Title 99');
       await tester.pumpAndSettle();
       expect(find.text('Nothing matches'), findsOneWidget);
       await tester.enterText(_field('Search agents and sessions'), '');
       await tester.pumpAndSettle();
 
-      // When all sessions are older than 12 hours, Recent header is absent but folder shows them
+      // Older sessions still show inside Search/Everyone without a Recent header.
       final oldSessionsOnly = [
         SessionInfo.fromJson({
           'id': 'old-1',
@@ -231,6 +234,11 @@ void main() {
       ),
     ));
     await tester.pumpAndSettle();
+
+    if (find.byKey(const ValueKey('everyone-handle')).evaluate().isNotEmpty) {
+      await tester.tap(find.byKey(const ValueKey('everyone-handle')));
+      await tester.pumpAndSettle();
+    }
 
     expect(find.text('Real User Chat'), findsWidgets);
     expect(find.text('Agent Mailbox'), findsNothing);

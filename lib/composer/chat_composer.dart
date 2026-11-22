@@ -49,6 +49,7 @@ class ChatComposer extends StatelessWidget {
     this.highlight = false,
     this.attentionExclude,
     this.besideCard,
+    this.hintColor,
   });
 
   final TextEditingController input;
@@ -97,8 +98,9 @@ class ChatComposer extends StatelessWidget {
   final bool highlight;
   final String? attentionExclude;
 
-  /// Optional control anchored beside the composer pill (e.g. home MC button).
+  /// Optional control anchored beside the composer pill.
   final Widget? besideCard;
+  final Color? hintColor;
 
   Map<ShortcutActivator, VoidCallback> get _bindings =>
       shortcuts ??
@@ -130,8 +132,8 @@ class ChatComposer extends StatelessWidget {
             cursorColor: AppColors.accent,
             onSubmitted: (_) => _submit(),
             style: ComposerCard.fieldStyle,
-            decoration:
-                ComposerCard.decoration(hint, style: ComposerCard.fieldStyle),
+            decoration: ComposerCard.decoration(hint,
+                style: ComposerCard.fieldStyle, hintColor: hintColor),
           ),
         ),
         attach: attach ??

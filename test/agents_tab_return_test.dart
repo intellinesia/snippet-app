@@ -9,7 +9,6 @@ import 'package:snippet/models.dart';
 import 'package:snippet/screens/agent_card.dart';
 import 'package:snippet/screens/agents_sidebar_panel.dart';
 import 'package:snippet/screens/desktop_shell.dart';
-import 'package:snippet/screens/mobile_home/agents_group.dart';
 import 'package:snippet/screens/mobile_home/mobile_home_screen.dart';
 import 'package:snippet/screens/mission_control/coordination_agent_detail.dart';
 import 'package:snippet/swr.dart';
@@ -92,9 +91,12 @@ void main() {
     final client = _Client('https://return-a.invalid');
     await tester.pumpWidget(_sidebar(client));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('everyone-handle')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('asleep-fold')));
     await tester.pumpAndSettle();
-    expect(find.byType(AgentTile), findsNWidgets(2));
+    expect(find.byKey(const ValueKey('agent-row-ada')), findsOneWidget);
+    expect(find.byKey(const ValueKey('agent-row-bo')), findsOneWidget);
     final before = tester.state(find.byType(MobileHomeScreen));
 
     await tester.pumpWidget(_sidebar(client,
@@ -102,12 +104,14 @@ void main() {
             {'id': 'ada', 'display_name': 'Ada', 'handle': 'ada'})));
     await tester.pump();
     expect(find.byType(CoordinationAgentDetail), findsOneWidget);
-    expect(find.byType(AgentTile).hitTestable(), findsNothing);
+    expect(
+        find.byKey(const ValueKey('agent-row-ada')).hitTestable(), findsNothing);
 
     client.hold = Completer();
     await tester.pumpWidget(_sidebar(client));
     await tester.pump();
-    expect(find.byType(AgentTile), findsNWidgets(2));
+    expect(find.byKey(const ValueKey('agent-row-ada')), findsOneWidget);
+    expect(find.byKey(const ValueKey('agent-row-bo')), findsOneWidget);
     expect(identical(tester.state(find.byType(MobileHomeScreen)), before),
         isTrue);
     client.hold!.complete([]);

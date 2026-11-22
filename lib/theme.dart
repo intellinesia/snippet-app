@@ -1852,11 +1852,15 @@ const kSerifFamily = 'Literata';
 /// The agent's own writing on a phone: a screen serif at a reading size, so a
 /// long answer reads like a page rather than a wall of UI text.
 TextStyle serif(double size,
-        {FontWeight? weight, double? height, Color? color}) =>
+        {FontWeight? weight,
+        double? height,
+        Color? color,
+        FontStyle? fontStyle}) =>
     TextStyle(
       fontFamily: kSerifFamily,
       fontSize: size,
       fontWeight: weightFor(weight ?? W.body),
+      fontStyle: fontStyle,
       height: height ?? 1.6,
       color: color ?? AppColors.fg1,
     );

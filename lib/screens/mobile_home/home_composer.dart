@@ -5,12 +5,11 @@ import 'package:flutter/material.dart';
 import '../../api.dart';
 import '../../composer/chat_composer.dart';
 import '../../composer/composer_attachments.dart';
-import '../../composer/composer_card.dart'
-    show C7, ComposerIconButton, ComposerPillSurface;
+import '../../composer/composer_card.dart' show ComposerIconButton;
 import '../../composer/voice_note.dart';
-import '../../desktop_look.dart';
 import '../../mochi.dart';
 import '../../tap_detector.dart';
+import '../../theme.dart';
 import '../../widgets.dart';
 
 /// The shared floating composer on the phone home and the managed view. It
@@ -113,9 +112,9 @@ class _HomeComposerState extends State<HomeComposer> {
   Widget? _openButton() {
     final open = widget.onOpenChat;
     if (open == null) return null;
-    final label = widget.agentName;
+    final label = '${widget.agentName}, open chat';
     return Tooltip(
-      message: label,
+      message: widget.agentName,
       child: Semantics(
         button: true,
         label: label,
@@ -127,14 +126,10 @@ class _HomeComposerState extends State<HomeComposer> {
               tapHaptic();
               open();
             },
-            child: Tactile(
-              radius: BorderRadius.circular(C7.pillRadius),
-              child: ComposerPillSurface(
-                child: SizedBox.square(
-                  dimension: C7.btn,
-                  child: Center(child: AgentMochi(widget.agentId, size: 28)),
-                ),
-              ),
+            child: SizedBox(
+              width: 44,
+              height: 44,
+              child: Center(child: AgentMochi(widget.agentId, size: 30)),
             ),
           ),
         ),
@@ -143,30 +138,39 @@ class _HomeComposerState extends State<HomeComposer> {
   }
 
   @override
-  Widget build(BuildContext context) => ChatComposer(
-        input: _input,
-        focus: _focus,
-        hint: widget.hint,
-        voice: _voice,
-        listen: _attachments,
-        recipient: widget.agentName,
-        besideCard: _openButton(),
-        attachments: () =>
-            _attachments.isNotEmpty ? _attachments.buildBar(context,
-                onInsertText: (t) => appendToInput(_input, t)) : null,
-        attach: Builder(
-          builder: (ctx) => ComposerIconButton('plus',
-              tooltip: 'New session, agent or group',
-              onTap: () => widget.onPlus(ctx)),
-        ),
-        onAttach: () => unawaited(_attachments.pickFromSheet(context)),
-        sending: _sending,
-        hasDraft: () => _input.text.trim().isNotEmpty || _attachments.isNotEmpty,
-        canSend: () =>
-            (_input.text.trim().isNotEmpty ||
-                _attachments.isNotEmpty ||
-                _voice.isActive) &&
-            !_sending,
-        onSend: () => unawaited(_send()),
-      );
+  Widget build(BuildContext context) {
+    final openBtn = _openButton();
+    final plus = Builder(
+      builder: (ctx) => ComposerIconButton('plus',
+          tooltip: 'New session, agent or group',
+          onTap: () => widget.onPlus(ctx)),
+    );
+    return ChatComposer(
+      input: _input,
+      focus: _focus,
+      hint: widget.hint,
+      hintColor: AppColors.fg3,
+      voice: _voice,
+      listen: _attachments,
+      recipient: widget.agentName,
+      attachments: () => _attachments.isNotEmpty
+          ? _attachments.buildBar(context,
+              onInsertText: (t) => appendToInput(_input, t))
+          : null,
+      attach: openBtn == null
+          ? plus
+          : Row(mainAxisSize: MainAxisSize.min, children: [openBtn, plus]),
+      onAttach: () => unawaited(_attachments.pickFromSheet(context)),
+      sending: _sending,
+      hasDraft: () => _input.text.trim().isNotEmpty || _attachments.isNotEmpty,
+      canSend: () =>
+          (_input.text.trim().isNotEmpty ||
+              _attachments.isNotEmpty ||
+              _voice.isActive) &&
+          !_sending,
+      onSend: () => unawaited(_send()),
+    );
+  }
 }
+
+

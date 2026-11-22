@@ -224,7 +224,7 @@ class ComposerPillSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       constraints: const BoxConstraints(minHeight: C7.pill),
-      padding: const EdgeInsets.all(6),
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: C7.row,
         borderRadius: BorderRadius.circular(C7.pillRadius),

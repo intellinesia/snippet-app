@@ -45,15 +45,17 @@ class ComposerCard extends StatelessWidget {
   static TextStyle get fieldStyle =>
       sans(C7.field, height: 22 / C7.field, color: AppColors.fg1);
 
-  static InputDecoration decoration(String hint, {TextStyle? style}) =>
+  static InputDecoration decoration(String hint,
+          {TextStyle? style, Color? hintColor}) =>
       InputDecoration(
         isCollapsed: true,
         contentPadding: const EdgeInsets.fromLTRB(4, 9, 4, 9),
         border: InputBorder.none,
         hintText: hint,
         hintMaxLines: 1,
-        hintStyle: (style ?? TS.body())
-            .copyWith(color: AppColors.fg4, overflow: TextOverflow.ellipsis),
+        hintStyle: (style ?? TS.body()).copyWith(
+            color: hintColor ?? AppColors.fg4,
+            overflow: TextOverflow.ellipsis),
       );
 
   bool _compact(double width, String draft) {
@@ -76,8 +78,9 @@ class ComposerCard extends StatelessWidget {
           valueListenable: text ?? ValueNotifier(TextEditingValue.empty),
           builder: (context, v, _) {
             final compact = _compact(box.maxWidth, v.text);
-            Widget inSlot(Widget w) =>
-                SizedBox(height: C7.btn, child: Center(child: w));
+            Widget inSlot(Widget w) => ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: C7.btn),
+                child: Center(child: w));
             return Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,

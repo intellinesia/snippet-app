@@ -2,22 +2,20 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart' hide testWidgets;
 import 'package:flutter_test/flutter_test.dart' as flutter_test show testWidgets;
-import 'package:progressive_background_blur/progressive_background_blur.dart';
 import 'package:snippet/agent_character.dart';
 import 'package:snippet/api.dart';
-import 'package:snippet/glass.dart';
 import 'package:snippet/ink.dart';
 import 'package:snippet/mochi.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/mobile_home/agents_group.dart';
+import 'package:snippet/screens/mobile_home/everyone_sheet.dart';
 import 'package:snippet/screens/mobile_home/home_data.dart';
 import 'package:snippet/screens/mobile_home/home_style.dart';
 import 'package:snippet/screens/mobile_home/mobile_home_screen.dart';
-import 'package:snippet/screens/mobile_home/needs_you_pager.dart';
+import 'package:snippet/screens/mobile_home/one_thing_ask.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/theme.dart';
 
@@ -44,7 +42,7 @@ SessionInfo _s(String id, {Map<String, dynamic> extra = const {}}) =>
     });
 
 SessionInfo _approval(String id, int minutes,
-        {String? agent, bool managed = false}) =>
+        {String? agent, bool managed = false, String? label}) =>
     _s(id, extra: {
       'status': 'waiting_for_input',
       'last_active': _ago(minutes),
@@ -53,20 +51,24 @@ SessionInfo _approval(String id, int minutes,
       'attention': {
         'type': 'approval',
         'tool': 'bash',
-        'label': 'Push $id to origin?',
-        'text': 'git push origin $id',
+        'label': label ?? 'Push fix/$id to origin?',
+        'text': 'git push origin fix/$id',
       },
     });
 
-SessionInfo _question(String id, int minutes) => _s(id, extra: {
+SessionInfo _question(String id, int minutes, {String agent = 'rust'}) =>
+    _s(id, extra: {
       'status': 'waiting_for_input',
       'last_active': _ago(minutes),
+      'worker_agent_id': agent,
       'attention': {'type': 'question', 'text': 'Which branch?'},
     });
 
-SessionInfo _handoff(String id, int minutes) => _s(id, extra: {
+SessionInfo _handoff(String id, int minutes, {String agent = 'rust'}) =>
+    _s(id, extra: {
       'status': 'waiting_for_input',
       'last_active': _ago(minutes),
+      'worker_agent_id': agent,
       'attention': {'type': 'handoff', 'text': 'Take over the review'},
     });
 
@@ -130,6 +132,18 @@ void main() {
           ['a-managed', 'a-old', 'q-new', 'q-old', 'h']);
       expect(items.first.session.agentManaged, isTrue);
     });
+
+    test('askHeadlineSpans italicises branch names and code tokens', () {
+      const base = TextStyle(fontFamily: 'Literata', fontSize: 30);
+      final spans =
+          askHeadlineSpans('Push fix/handoff-sweep to origin?', base);
+      final texts = [for (final s in spans.cast<TextSpan>()) s.text];
+      final styles = [
+        for (final s in spans.cast<TextSpan>()) s.style?.fontStyle
+      ];
+      expect(texts, ['Push ', 'fix/handoff-sweep', ' to origin?']);
+      expect(styles, [null, FontStyle.italic, null]);
+    });
   });
 
   group('ink', () {
@@ -140,7 +154,7 @@ void main() {
       expect(inkOn(const Color(0xFF1B2A8C)), Colors.white);
     });
 
-    test('every roster colour keeps Approve ink readable', () {
+    test('every roster colour keeps high-contrast ink readable', () {
       final j = jsonDecode(File('assets/avatars/roster.json').readAsStringSync())
           as Map<String, dynamic>;
       final colours = [
@@ -148,15 +162,13 @@ void main() {
           CharacterSpec.fromJson(c as Map<String, dynamic>).color,
       ];
       expect(colours, isNotEmpty);
-      // Neither ink reaches 4.5:1 on the mid-blue characters; about 4.3 to 4.4:1 is
-      // the best either ink can do there.
       for (final c in colours) {
         expect(inkContrast(c), greaterThanOrEqualTo(4.3), reason: '$c');
       }
     });
   });
 
-  group('screen', () {
+  group('One thing screen', () {
     late List<String> decided;
     late List<String> opened;
 
@@ -172,7 +184,8 @@ void main() {
       await tester.pumpWidget(MaterialApp(
         theme: buildAppTheme(),
         builder: (c, child) => MediaQuery(
-          data: MediaQuery.of(c).copyWith(textScaler: TextScaler.linear(textScale)),
+          data: MediaQuery.of(c)
+              .copyWith(textScaler: TextScaler.linear(textScale)),
           child: child!,
         ),
         home: Scaffold(
@@ -205,7 +218,6 @@ void main() {
       opened = [];
     });
 
-    // The platform override must be cleared before the test ends.
     void testWidgets(String name, Future<void> Function(WidgetTester) body) =>
         flutter_test.testWidgets(name, (tester) async {
           debugDefaultTargetPlatformOverride = TargetPlatform.android;
@@ -217,36 +229,101 @@ void main() {
         });
 
     final base = [
-      _approval('p1', 2),
+      _approval('p1', 2, managed: true),
       _question('p2', 10),
       _handoff('p3', 12),
       for (var i = 0; i < 4; i++)
         _managed('m$i', 'snippet', status: i < 2 ? 'running' : 'idle'),
       _managed('mm', 'mobile', status: 'running'),
-      for (var i = 0; i < 12; i++) _s('h$i'),
+      for (var i = 0; i < 6; i++) _s('h$i'),
     ];
 
-    testWidgets('managed sessions stay off the list and the pill counts them',
-        (tester) async {
-      await pumpHome(tester, base);
-      expect(find.text('Session m0'), findsNothing);
-      expect(find.text('4 managed'), findsOneWidget);
-      expect(find.text('1 managed'), findsOneWidget);
-      expect(find.bySemanticsLabel('Snippet, 4 managed sessions'),
-          findsOneWidget);
-      expect(find.text('Session h0'), findsOneWidget);
-    });
-
-    testWidgets('an agent with no managed sessions has no pill',
+    testWidgets('quiet state rests cleanly with bare top bar and Everyone handle',
         (tester) async {
       await pumpHome(tester, [_s('h0')]);
-      expect(find.byType(ManagedPill), findsNothing);
-      expect(find.textContaining('0 managed'), findsNothing);
+      expect(find.text('Snippet'), findsOneWidget);
+      expect(find.text('All quiet'), findsOneWidget);
+      expect(find.byType(OneThingAsk), findsNothing);
+      expect(find.text('Session h0'), findsNothing);
+      expect(find.byKey(const ValueKey('everyone-handle')), findsOneWidget);
+      expect(find.text('Everyone'), findsOneWidget);
     });
 
-    testWidgets('the pill opens the managed view with Running and Idle',
+    testWidgets('busy state centres the top ask (even managed), Approve advances and 2 more cycles',
         (tester) async {
       await pumpHome(tester, base);
+      expect(find.text('2 working'), findsOneWidget);
+      expect(find.text('Rust PR Reviewer asks'), findsOneWidget);
+      expect(find.text('Push fix/p1 to origin?', findRichText: true),
+          findsOneWidget);
+      // No kind pills or command boxes on the resting home.
+      expect(find.text('Approval'), findsNothing);
+      expect(find.byKey(const ValueKey('ask-command')), findsNothing);
+      // Sessions and agents stay tucked in Everyone.
+      expect(find.text('Session h0'), findsNothing);
+      expect(find.text('2 more'), findsOneWidget);
+
+      // Tapping "2 more" cycles to the next ask (question).
+      await tester.tap(find.text('2 more'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(find.text('Which branch?', findRichText: true), findsOneWidget);
+      expect(find.text('Answer'), findsOneWidget);
+
+      // Swipe right returns to the approval ask.
+      await tester.fling(find.byType(OneThingAsk), const Offset(200, 0), 800);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(find.text('Approve'), findsOneWidget);
+
+      // Approving removes it and updates the remaining count to "1 more".
+      await tester.tap(find.text('Approve'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(decided, ['approve:p1']);
+      expect(find.text('1 more'), findsOneWidget);
+      expect(find.text('Which branch?', findRichText: true), findsOneWidget);
+    });
+
+    testWidgets('denying the last ask settles cleanly into Quiet state',
+        (tester) async {
+      await pumpHome(tester, [_approval('p1', 2), _s('h0')]);
+      expect(find.text('1 more'), findsNothing);
+      await tester.tap(find.text('Deny'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(decided, ['deny:p1']);
+      expect(find.byType(OneThingAsk), findsOneWidget);
+      expect(find.text('Approve'), findsNothing);
+      expect(find.text('Deny'), findsNothing);
+    });
+
+    testWidgets(
+        'Everyone pull-up sheet shows Working with managed pills, Your sessions, Asleep, and opens ManagedView',
+        (tester) async {
+      await pumpHome(tester, base);
+      await tester.tap(find.byKey(const ValueKey('everyone-handle')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+
+      expect(find.byType(EveryoneSheet), findsOneWidget);
+      expect(find.text('Working'), findsOneWidget);
+      expect(find.text('Your sessions'), findsOneWidget);
+      expect(find.text('Session h0'), findsOneWidget);
+      // Agent-managed sessions never appear as rows under Your sessions (count = 6 human).
+      expect(find.text('6'), findsOneWidget);
+      expect(find.text('Session m1'), findsNothing);
+      expect(find.text('4 managed'), findsOneWidget);
+      expect(find.text('1 managed'), findsNWidgets(2));
+      expect(find.bySemanticsLabel('Snippet, 4 managed sessions'),
+          findsOneWidget);
+      // Composer stays on top of the Everyone sheet.
+      expect(find.byKey(const ValueKey('home-open-mission-control')),
+          findsOneWidget);
+
+      // Tapping the managed pill opens ManagedView with Running and Idle.
       await tester.tap(find.text('4 managed'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
@@ -258,76 +335,50 @@ void main() {
       expect(find.text('Message Snippet'), findsOneWidget);
     });
 
-    testWidgets('three asks page, and Approve clears the card', (tester) async {
-      await pumpHome(tester, base);
-      expect(find.text('Needs you'), findsOneWidget);
-      expect(find.text('1 of 3'), findsOneWidget);
-      expect(find.text('Push p1 to origin?'), findsOneWidget);
-      expect(find.bySemanticsLabel(RegExp('Needs you, 3 items, item 1')),
-          findsOneWidget);
-      await tester.tap(find.text('Approve'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.pump(const Duration(milliseconds: 400));
-      expect(decided, ['approve:p1']);
-      expect(find.text('Push p1 to origin?'), findsNothing);
-      expect(find.text('1 of 2'), findsOneWidget);
-    });
-
-    testWidgets('one ask is a full card with no dots or count',
+    testWidgets('agent with no managed sessions shows no pill in Everyone',
         (tester) async {
-      await pumpHome(tester, [_approval('p1', 2), _s('h0')]);
-      expect(find.textContaining(' of '), findsNothing);
-      expect(find.byType(PageView), findsNothing);
-      await tester.tap(find.text('Deny'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.pump(const Duration(milliseconds: 400));
-      expect(decided, ['deny:p1']);
-      expect(find.text('Needs you'), findsNothing);
-    });
-
-    testWidgets('with none the section is gone', (tester) async {
       await pumpHome(tester, [_s('h0')]);
-      expect(find.text('Needs you'), findsNothing);
-      expect(find.byType(NeedsYouSection), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('everyone-handle')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('asleep-fold')));
+      await tester.pumpAndSettle();
+      expect(find.byType(ManagedPill), findsNothing);
+      expect(find.textContaining('0 managed'), findsNothing);
     });
 
-    testWidgets('a horizontal swipe pages without scrolling the list and a '
-        'vertical drag on a card scrolls it', (tester) async {
-      await pumpHome(tester, base);
-      final scroll = tester.state<ScrollableState>(find
-          .descendant(
-              of: find.byType(MobileHomeScreen),
-              matching: find.byType(Scrollable))
-          .first);
-      expect(scroll.position.pixels, 0);
-      await tester.drag(find.byType(PageView), const Offset(-200, 4));
-      await tester.pump(const Duration(seconds: 1));
-      expect(find.text('2 of 3'), findsOneWidget);
-      expect(scroll.position.pixels, 0);
-      await tester.drag(find.byType(PageView), const Offset(0, -240));
-      await tester.pump(const Duration(seconds: 1));
-      expect(scroll.position.pixels, greaterThan(0));
+    testWidgets('Mission Control button sits inside composer left edge and opens MC chat directly',
+        (tester) async {
+      await pumpHome(tester, [_s('h0')]);
+      final btn = find.byKey(const ValueKey('home-open-mission-control'));
+      expect(btn, findsOneWidget);
+      final rect = tester.getRect(btn);
+      expect(rect.width, inInclusiveRange(44, 52));
+      expect(rect.height, inInclusiveRange(44, 52));
+      expect(find.bySemanticsLabel('Mission Control, open chat'),
+          findsOneWidget);
+      await tester.tap(btn);
+      await tester.pump();
+      expect(opened, ['mission-control']);
     });
 
-    testWidgets('controls are 44 to 52 high, 44 wide and never overlap',
+    testWidgets('controls are 44 to 52 high, at least 44 wide, and never overlap',
         (tester) async {
       await pumpHome(tester, base);
-      final boxes = <String, Rect>{};
       Rect rectOf(Finder f) => tester.getRect(f.first);
       Finder hit(String tooltip) => find.ancestor(
           of: find.byTooltip(tooltip), matching: find.byType(Hit44));
-      boxes['search'] = rectOf(hit('Search'));
-      boxes['settings'] = rectOf(hit('Settings'));
-      boxes['pill'] = rectOf(find.descendant(
-          of: find.byType(ManagedPill).first, matching: find.byType(Hit44)));
-      boxes['pill2'] = rectOf(find.descendant(
-          of: find.byType(ManagedPill).last, matching: find.byType(Hit44)));
-      boxes['deny'] = rectOf(find.ancestor(
-          of: find.text('Deny'), matching: find.byType(InkWell)));
-      boxes['approve'] = rectOf(find.ancestor(
-          of: find.text('Approve'), matching: find.byType(InkWell)));
+      final boxes = <String, Rect>{
+        'search': rectOf(hit('Search')),
+        'settings': rectOf(hit('Settings')),
+        'deny': rectOf(find.ancestor(
+            of: find.text('Deny'), matching: find.byType(InkWell))),
+        'approve': rectOf(find.ancestor(
+            of: find.text('Approve'), matching: find.byType(InkWell))),
+        'more': rectOf(find.ancestor(
+            of: find.text('2 more'), matching: find.byType(InkWell))),
+        'everyone': rectOf(find.byKey(const ValueKey('everyone-handle'))),
+        'mc': rectOf(find.byKey(const ValueKey('home-open-mission-control'))),
+      };
       for (final e in boxes.entries) {
         expect(e.value.width, greaterThanOrEqualTo(44), reason: e.key);
         expect(e.value.height, inInclusiveRange(44, 52), reason: e.key);
@@ -339,31 +390,38 @@ void main() {
               reason: '${keys[i]} overlaps ${keys[j]}');
         }
       }
-      // The row's own hit area stops at the pill.
-      final row = tester.getRect(find.byKey(const ValueKey('agent-row-snippet')));
-      expect(boxes['pill']!.left, greaterThanOrEqualTo(row.left));
+
+      // Check managed pill hit box inside Everyone sheet too.
+      await tester.tap(find.byKey(const ValueKey('everyone-handle')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      final pill = rectOf(find.descendant(
+          of: find.byType(ManagedPill).first, matching: find.byType(Hit44)));
+      expect(pill.width, greaterThanOrEqualTo(44));
+      expect(pill.height, inInclusiveRange(44, 52));
+      final row =
+          tester.getRect(find.byKey(const ValueKey('agent-row-snippet')));
+      expect(pill.left, greaterThanOrEqualTo(row.left));
       final tap = find.descendant(
           of: find.byKey(const ValueKey('agent-row-snippet')),
           matching: find.byType(InkWell));
-      expect(tester.getRect(tap.first).right,
-          lessThanOrEqualTo(boxes['pill']!.left + 0.5));
+      expect(tester.getRect(tap.first).right, lessThanOrEqualTo(pill.left + 0.5));
     });
 
-    testWidgets('at 1.3x text the card grows and the pill keeps its count',
+    testWidgets('at 1.3x text scale ask and Everyone sheet render cleanly',
         (tester) async {
       await pumpHome(tester, base, textScale: 1.3);
       expect(find.text('Approve'), findsOneWidget);
       expect(tester.takeException(), isNull);
-      final card = tester.getRect(find.byType(AskCard).first);
-      expect(card.height, greaterThan(kAskCardHeight));
-      final approve = tester.getRect(find
-          .ancestor(of: find.text('Approve'), matching: find.byType(InkWell))
-          .first);
-      expect(approve.bottom, lessThanOrEqualTo(card.bottom));
+      await tester.tap(find.byKey(const ValueKey('everyone-handle')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
       expect(find.text('4 managed'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
 
-    testWidgets('reduced motion keeps the removal to a fade', (tester) async {
+    testWidgets('reduced motion keeps ask removal and Everyone sheet calm',
+        (tester) async {
       tester.platformDispatcher.accessibilityFeaturesTestValue =
           const FakeAccessibilityFeatures(disableAnimations: true);
       addTearDown(
@@ -372,38 +430,13 @@ void main() {
       await tester.tap(find.text('Approve'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
-      await tester.pump(const Duration(milliseconds: 50));
-      expect(find.text('Needs you'), findsNothing);
-    });
-
-    testWidgets('tone pills keep cream characters warm', (tester) async {
-      expect(pillTone(const Color(0xFFD9D4C8)), const Color(0xFFD9C9A0));
-      expect(pillTone(const Color(0xFF1FB6B6)), const Color(0xFF1FB6B6));
-    });
-
-    testWidgets('header frost stops above body labels', (tester) async {
-      await pumpHome(tester, [_s('h0')]);
-      final frame = tester.getRect(find.byType(GlassTopFrame));
-      final blur = tester.getRect(find.byType(ProgressiveBlur));
-      final agents = tester.getRect(find.text('Agents'));
-      expect(blur.bottom, lessThanOrEqualTo(frame.bottom + 0.5));
-      expect(blur.bottom, lessThan(agents.top));
-    });
-
-    testWidgets('Mission Control button opens MC chat directly',
-        (tester) async {
-      await pumpHome(tester, [_s('h0')]);
-      final btn = find.byKey(const ValueKey('home-open-mission-control'));
-      expect(btn, findsOneWidget);
-      final rect = tester.getRect(btn);
-      expect(rect.width, inInclusiveRange(44, 56));
-      expect(rect.height, inInclusiveRange(44, 56));
-      await tester.tap(btn);
+      expect(find.text('Approve'), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('everyone-handle')));
       await tester.pump();
-      expect(opened, ['mission-control']);
+      expect(find.byType(EveryoneSheet), findsOneWidget);
     });
 
-    testWidgets('search swaps top bar for a pinned pill with clear and close',
+    testWidgets('search swaps to pinned pill bar with clear and close',
         (tester) async {
       await pumpHome(tester, base);
       await tester.tap(find.byTooltip('Search'));
@@ -419,6 +452,11 @@ void main() {
       await tester.tap(find.byTooltip('Close search'));
       await tester.pump(const Duration(milliseconds: 250));
       expect(find.byKey(const ValueKey('home-stage-bar')), findsOneWidget);
+    });
+
+    testWidgets('tone pills keep cream characters warm', (tester) async {
+      expect(pillTone(const Color(0xFFD9D4C8)), const Color(0xFFD9C9A0));
+      expect(pillTone(const Color(0xFF1FB6B6)), const Color(0xFF1FB6B6));
     });
   });
 }
