@@ -562,6 +562,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
     final settled = human.settled.where(_matches).toList();
     final sessionCount = main.length + settled.length;
     final empty = agentCount == 0 && sessionCount == 0;
+    final flatSettled = settledOnly(live: main.length, settled: settled.length);
 
     return ColoredBox(
       color: AppColors.bg,
@@ -591,13 +592,16 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
                   ),
                 ],
                 if (sessionCount > 0) ...[
-                  HomeLabel('Your sessions',
-                      count: sessionCount, top: agentCount > 0 ? 18 : 0),
+                  if (!flatSettled)
+                    HomeLabel('Your sessions',
+                        count: sessionCount, top: agentCount > 0 ? 18 : 0)
+                  else if (agentCount > 0)
+                    const SizedBox(height: 18),
                   SessionsGroup(
                     main: main,
                     settled: settled,
-                    settledOpen:
-                        q.isNotEmpty || _settledOpenFor(main.isEmpty),
+                    flat: flatSettled,
+                    settledOpen: q.isNotEmpty || _settledOpenFor(main.isEmpty),
                     onToggleSettled: () => setState(
                         () => _settledUser = !_settledOpenFor(main.isEmpty)),
                     onOpen: (s) {

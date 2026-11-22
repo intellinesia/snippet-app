@@ -142,7 +142,21 @@ class EveryoneSheet extends StatelessWidget {
             ],
             SizedBox(height: S.of(14)),
           ],
-          if (mainSessions.isNotEmpty) ...[
+          if (settledOnly(
+              live: mainSessions.length, settled: settledSessions.length)) ...[
+            for (var i = 0; i < settledSessions.length; i++) ...[
+              if (i > 0) _hairline(inset: kHomeMargin + 44),
+              _SheetSessionRow(
+                key: ValueKey('session-row-${settledSessions[i].id}'),
+                session: settledSessions[i],
+                onOpen: () => onOpenSession(settledSessions[i]),
+                onLongPress: onSessionActions == null
+                    ? null
+                    : () => onSessionActions!(settledSessions[i]),
+              ),
+            ],
+            SizedBox(height: S.of(10)),
+          ] else if (mainSessions.isNotEmpty) ...[
             _SectionHeader('Your sessions', count: mainSessions.length),
             for (var i = 0; i < mainSessions.length; i++) ...[
               if (i > 0) _hairline(inset: kHomeMargin + 44),
@@ -206,7 +220,9 @@ class EveryoneSheet extends StatelessWidget {
                   : const SizedBox(width: double.infinity),
             ),
           ],
-          if (settledSessions.isNotEmpty) ...[
+          if (settledSessions.isNotEmpty &&
+              !settledOnly(
+                  live: mainSessions.length, settled: settledSessions.length)) ...[
             _hairline(),
             _SheetFoldRow(
               key: const ValueKey('settled-fold'),

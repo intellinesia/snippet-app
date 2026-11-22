@@ -148,3 +148,8 @@ class AgentRow {
   asleep.sort(byRecent);
   return (working: working, needs: needs, asleep: asleep);
 }
+
+/// With no live sessions the settled ones are the whole list: no "Your
+/// sessions" heading and no nested Settled fold.
+bool settledOnly({required int live, required int settled}) =>
+    live == 0 && settled > 0;

@@ -19,8 +19,11 @@ class SessionsGroup extends StatelessWidget {
     required this.onToggleSettled,
     required this.onOpen,
     this.onLongPress,
+    this.flat = false,
   });
 
+  /// Settled sessions only, as plain rows with no fold.
+  final bool flat;
   final List<SessionInfo> main;
   final List<SessionInfo> settled;
   final bool settledOpen;
@@ -38,6 +41,9 @@ class SessionsGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final reduce = reduceMotion(context);
+    if (flat) {
+      return HomeCard(children: withDividers([for (final s in settled) _row(s)]));
+    }
     return HomeCard(children: [
       ...withDividers([for (final s in main) _row(s)]),
       if (settled.isNotEmpty) ...[

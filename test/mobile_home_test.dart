@@ -360,7 +360,13 @@ void main() {
       expect(top, greaterThan(bar + 24));
     });
 
-    testWidgets('Settled starts open with no live sessions and still collapses',
+    test('settled sessions stand alone only when nothing is live', () {
+      expect(settledOnly(live: 0, settled: 3), isTrue);
+      expect(settledOnly(live: 1, settled: 3), isFalse);
+      expect(settledOnly(live: 0, settled: 0), isFalse);
+    });
+
+    testWidgets('with no live sessions the sheet lists settled rows directly',
         (tester) async {
       await pumpHome(tester, [
         for (var i = 0; i < 3; i++) _s('s$i', extra: {'settled': true}),
@@ -369,16 +375,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
       expect(find.text('Session s0'), findsOneWidget);
-
-      await tester.tap(find.byKey(const ValueKey('settled-fold')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
-      expect(find.text('Session s0'), findsNothing);
-
-      await tester.tap(find.byKey(const ValueKey('settled-fold')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
-      expect(find.text('Session s0'), findsOneWidget);
+      expect(find.text('Your sessions'), findsNothing);
+      expect(find.byKey(const ValueKey('settled-fold')), findsNothing);
     });
 
     testWidgets('quiet state names Mission Control and never an empty centre',
