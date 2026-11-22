@@ -352,7 +352,7 @@ void main() {
       tester.view.physicalSize = const Size(360, 740) * 3;
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.textContaining('is working'), findsOneWidget);
-      expect(find.text('Step 2 of 4'), findsOneWidget);
+      expect(find.text('1 of 4 done'), findsOneWidget);
       expect(find.text('Last result'), findsNothing);
       expect(tester.takeException(), isNull);
       final top = tester.getTopLeft(find.textContaining('is working')).dy;

@@ -329,16 +329,13 @@ class HomeWorkingBlock extends StatelessWidget {
               const SizedBox(height: 14),
               _SegBar(done: plan.done, total: plan.total),
               const SizedBox(height: 9),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                      'Step ${(plan.done + 1).clamp(1, plan.total)} of ${plan.total}',
-                      style: sans(13, color: AppColors.fg3)),
-                  Text('${plan.done} done',
-                      style: sans(13, color: AppColors.fg3)),
-                ],
-              ),
+              Text(
+                  plan.done >= plan.total
+                      ? 'All ${plan.total} done'
+                      : plan.done == 0
+                          ? 'Step 1 of ${plan.total}'
+                          : '${plan.done} of ${plan.total} done',
+                  style: sans(13, color: AppColors.fg3)),
             ],
           ],
         ),
@@ -389,29 +386,65 @@ class HomeWorkingBlock extends StatelessWidget {
 }
 
 /// Segmented plan progress, 4 pt high and 150 pt wide.
-class _SegBar extends StatelessWidget {
+/// One segment per step (capped at 12): done filled, the current one breathing.
+class _SegBar extends StatefulWidget {
   const _SegBar({required this.done, required this.total});
 
   final int done;
   final int total;
 
   @override
+  State<_SegBar> createState() => _SegBarState();
+}
+
+class _SegBarState extends State<_SegBar> with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse =
+      AnimationController(vsync: this, duration: Motion.pulse * 2);
+
+  bool get _active => widget.done < widget.total;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    if (_active && !still) {
+      if (!_pulse.isAnimating) _pulse.repeat(reverse: true);
+    } else {
+      _pulse.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final total = widget.total;
     final n = total.clamp(1, 12);
-    final filled = (done * n / total).round().clamp(0, n);
+    final filled = (widget.done * n / total).round().clamp(0, n);
+    final current = _active ? filled.clamp(0, n - 1) : -1;
     return SizedBox(
       width: double.infinity,
       height: 4,
-      child: Row(children: [
+      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         for (var i = 0; i < n; i++) ...[
           if (i > 0) const SizedBox(width: 2),
           Expanded(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: i < filled
-                    ? AppColors.ok
-                    : AppColors.fg1.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(2),
+            child: AnimatedBuilder(
+              animation: _pulse,
+              builder: (_, __) => DecoratedBox(
+                decoration: BoxDecoration(
+                  color: i < filled
+                      ? AppColors.ok
+                      : i == current
+                          ? AppColors.ok
+                              .withValues(alpha: 0.25 + 0.35 * _pulse.value)
+                          : AppColors.fg1.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
           ),
