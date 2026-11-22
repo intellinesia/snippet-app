@@ -56,7 +56,7 @@ class TopWorkspaceTabChip extends StatefulWidget {
   final String? folder;
   final int attentionCount;
 
-  /// Width of a regular tab; Mission Control is always its compact form.
+  /// Width of a regular tab; Lead is always its compact form.
   final double width;
 
   const TopWorkspaceTabChip({
@@ -145,7 +145,7 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
           ),
         );
 
-    if (t.isMissionControl) {
+    if (t.isLead) {
       return Tooltip(
         message: title,
         waitDuration: const Duration(milliseconds: 600),
@@ -166,7 +166,7 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
                 borderRadius: BorderRadius.circular(R.of(6)),
               ),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                AgentMochi('mission-control', size: 18),
+                AgentMochi('lead', size: 18),
                 if (widget.attentionCount > 0) ...[
                   SizedBox(width: S.s6),
                   Text('${widget.attentionCount}',
@@ -310,7 +310,7 @@ class _MainTabsStripState extends State<MainTabsStrip> {
   void didUpdateWidget(MainTabsStrip old) {
     super.didUpdateWidget(old);
     final now = {for (final t in widget.tabs) t.key};
-    final before = old.tabs.where((t) => !t.isMissionControl).toList();
+    final before = old.tabs.where((t) => !t.isLead).toList();
     for (var i = 0; i < before.length; i++) {
       final t = before[i];
       if (!now.contains(t.key)) _leaving[t.key] = (t, i);
@@ -365,8 +365,8 @@ class _MainTabsStripState extends State<MainTabsStrip> {
 
   @override
   Widget build(BuildContext context) {
-    final mc = widget.tabs.where((t) => t.isMissionControl).toList();
-    final rest = widget.tabs.where((t) => !t.isMissionControl).toList();
+    final mc = widget.tabs.where((t) => t.isLead).toList();
+    final rest = widget.tabs.where((t) => !t.isLead).toList();
     return LayoutBuilder(builder: (context, box) {
       const plusW = 28.0 + _gap;
       const moreW = 64.0 + _gap;
@@ -423,7 +423,7 @@ class _MainTabsStripState extends State<MainTabsStrip> {
                 onClose: () => widget.onCloseTab(t),
                 chipKey: widget.chipKeyFor(t.key),
                 attentionCount:
-                    t.isMissionControl ? widget.mcAttentionCount : 0,
+                    t.isLead ? widget.mcAttentionCount : 0,
               ),
             ),
           ));

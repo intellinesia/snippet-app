@@ -47,7 +47,7 @@ class AgentPanelBody extends StatefulWidget {
     this.onModel,
   });
 
-  /// Mission Control's session, for its model and cold-resume rows.
+  /// Lead's session, for its model and cold-resume rows.
   final String? sessionId;
   final VoidCallback? onModel;
   final DaemonClient client;
@@ -57,7 +57,7 @@ class AgentPanelBody extends StatefulWidget {
   final CoordinationAgent? agent;
   final List<AgentSettingRow> settings;
 
-  /// Shown above the presence card (Mission Control's context meter).
+  /// Shown above the presence card (Lead's context meter).
   final Widget? header;
   final VoidCallback? onInbox;
   final VoidCallback? onBoard;
@@ -173,8 +173,8 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
   }
 
   bool get _mc =>
-      widget.agentId == 'mission-control' ||
-      (widget.agent?.isMissionControl ?? false);
+      widget.agentId == 'lead' ||
+      (widget.agent?.isLead ?? false);
 
   // ---- header ---------------------------------------------------------
 
@@ -434,7 +434,7 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
     ]);
   }
 
-  // ---- Mission Control -------------------------------------------------
+  // ---- Lead ------------------------------------------------------------
 
   AgentSettingRow? get _wakesSetting {
     for (final s in widget.settings) {

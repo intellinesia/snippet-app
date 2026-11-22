@@ -147,9 +147,9 @@ void main() {
     await _unmount(tester);
   });
 
-  testWidgets('Mission Control session pins the same card with the new fields',
+  testWidgets('Lead session pins the same card with the new fields',
       (tester) async {
-    await _pumpSession(tester, sessionId: 'mission-control', events: [
+    await _pumpSession(tester, sessionId: 'lead', events: [
       _request(
         title: 'Push the rebased branch',
         reason: 'Rewrites lane/sidebar-polish on origin.',

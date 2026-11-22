@@ -9,7 +9,7 @@ import '../theme.dart';
 import '../widgets.dart';
 
 const _routeDefs = <(String, String, String)>[
-  ('mission', 'Mission Control', 'Plans and dispatches work'),
+  ('mission', 'Lead', 'Plans and dispatches work'),
   ('inbox', 'Agent inboxes', 'Answers messages and claims tasks'),
   ('lanes', 'Lanes', 'Work a session hands off'),
   ('memory', 'Memory', 'Reflection and compaction notes'),

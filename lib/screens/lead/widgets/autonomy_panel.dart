@@ -24,10 +24,10 @@ String _relative(int? epoch, {bool future = false}) {
 }
 
 Future<Map<String, dynamic>> loadAutonomy(DaemonClient client) async {
-  final loaded = await client.mcAutonomy();
+  final loaded = await client.leadAutonomy();
   final local = DateTime.now().timeZoneOffset.inMinutes;
   if ((loaded['utc_offset_minutes'] as num?)?.toInt() != local) {
-    return client.mcSetAutonomy({});
+    return client.leadSetAutonomy({});
   }
   return loaded;
 }
@@ -53,7 +53,7 @@ String autonomyStatusLine(Map<String, dynamic>? autonomy) {
   return parts.join(' · ');
 }
 
-/// Header chip: shows whether Mission Control is autonomous and opens the panel.
+/// Header chip: shows whether Lead is autonomous and opens the panel.
 class AutonomyChip extends StatefulWidget {
   final DaemonClient client;
   final void Function(Widget panel) open;
@@ -76,7 +76,7 @@ class _AutonomyChipState extends State<AutonomyChip> {
         on: (e) =>
             Swr.coordination(e) ||
             e['kind'] == 'config' ||
-            e['session'] == 'mission-control',
+            e['session'] == 'lead',
         debounce: const Duration(seconds: 2),
         onRevalidate: ({required bool force}) => _load());
   }
@@ -150,7 +150,7 @@ class AutonomyPanel extends StatefulWidget {
 
 class _AutonomyPanelState extends State<AutonomyPanel> {
   late Map<String, dynamic> _autonomy =
-      widget.initial ?? widget.client.cachedMcAutonomy() ?? const {};
+      widget.initial ?? widget.client.cachedLeadAutonomy() ?? const {};
 
   @override
   void initState() {
@@ -162,7 +162,7 @@ class _AutonomyPanelState extends State<AutonomyPanel> {
   void didUpdateWidget(covariant AutonomyPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.client.baseUrl != widget.client.baseUrl) {
-      _autonomy = widget.initial ?? widget.client.cachedMcAutonomy() ?? const {};
+      _autonomy = widget.initial ?? widget.client.cachedLeadAutonomy() ?? const {};
       _error = null;
       _load();
     }
@@ -199,7 +199,7 @@ class _AutonomyPanelState extends State<AutonomyPanel> {
       _error = null;
     });
     try {
-      final saved = await widget.client.mcSetAutonomy(changes);
+      final saved = await widget.client.leadSetAutonomy(changes);
       if (!mounted) return;
       setState(() => _autonomy = saved);
       widget.onChanged?.call(saved);
@@ -295,7 +295,7 @@ class _AutonomyPanelState extends State<AutonomyPanel> {
       ],
       if (!kMobile) ...[
         Text(
-            'With automated wakes on, Mission Control is woken on a schedule while you are away, like a chief of staff checking in: it looks at running work, verifies results, retries and re-routes, answers workers when it can, and pings your phone only for decisions, finished work and problems.',
+            'With automated wakes on, Lead is woken on a schedule while you are away, like a chief of staff checking in: it looks at running work, verifies results, retries and re-routes, answers workers when it can, and pings your phone only for decisions, finished work and problems.',
             style: TS.meta().copyWith(height: 1.45)),
         SizedBox(height: S.s16),
       ],
@@ -312,7 +312,7 @@ class _AutonomyPanelState extends State<AutonomyPanel> {
                     ? 'Checks in on running work while you are away'
                     : detail;
               }()
-            : 'Mission Control only acts when you message it',
+            : 'Lead only acts when you message it',
       ),
       SizedBox(height: S.s20),
       Text('Wake every', style: TS.label(AppColors.fg2)),

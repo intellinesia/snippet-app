@@ -165,9 +165,9 @@ void main() {
     );
     expect(
       PresenceStore.chatWord(
-        const Presence(state: 'waiting', detail: 'mission-control'),
+        const Presence(state: 'waiting', detail: 'lead'),
       ),
-      'waiting on mission-control',
+      'waiting on lead',
     );
     expect(PresenceStore.chatWord(const Presence(state: 'idle')), '');
     expect(PresenceStore.chatWord(const Presence(state: 'thinking')), '');

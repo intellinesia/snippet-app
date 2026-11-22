@@ -142,7 +142,7 @@ extension _DesktopShellMobileExt on _DesktopShellState {
       drilledDown: _mobileDrilledDown,
       mobileHome: _mobileHome,
       missionPair: tab != null &&
-          tab.isMissionControl &&
+          tab.isLead &&
           _mobileHome == MobileHome.chats &&
           !_mobileDrilledDown,
       onSwipeToSessions: () => _goMobileHome(MobileHome.chats),

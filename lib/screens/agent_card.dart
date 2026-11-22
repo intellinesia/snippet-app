@@ -143,7 +143,7 @@ String agentRowClock(DateTime? at, {DateTime? now}) {
   return today ? '' : clock12(at);
 }
 
-/// One agent on the phone's Agents page, in the Mission Control card's shape:
+/// One agent on the phone's Agents page, in the Lead card's shape:
 /// who it is, whether it is working, and its task counts.
 class AgentCard extends StatefulWidget {
   final DaemonClient client;
@@ -251,7 +251,7 @@ class _AgentCardState extends State<AgentCard> {
           title: name,
           subtitle: 'Agent',
           child: SheetActions([
-            if (!widget.agent.isMissionControl)
+            if (!widget.agent.isLead)
               SheetAction(
                 pinned ? 'pin-off' : 'pin',
                 pinned ? 'Unpin' : 'Pin',
@@ -263,7 +263,7 @@ class _AgentCardState extends State<AgentCard> {
                     ? 'Remove from the top of the list'
                     : 'Keep at the top of the list',
               ),
-            if (!widget.agent.isMissionControl)
+            if (!widget.agent.isLead)
               SheetAction('edit', _nicknameLabel, () {
                 Navigator.pop(context);
                 _editNickname();
@@ -273,12 +273,12 @@ class _AgentCardState extends State<AgentCard> {
               showAgentAppearance(
                   context, widget.client, widget.agent.id, name);
             }, detail: 'Avatar and colour across the app'),
-            if (!widget.agent.isMissionControl)
+            if (!widget.agent.isLead)
               SheetAction('calendar-clock', 'Wakes and reporting', () {
                 Navigator.pop(context);
                 _openWakes(name, null);
               }, detail: 'When it wakes and where it reports'),
-            if (!widget.agent.isMissionControl)
+            if (!widget.agent.isLead)
               SheetAction('cpu', 'Change inference profile', () {
                 Navigator.pop(context);
                 _pickProfile(name);
@@ -295,12 +295,12 @@ class _AgentCardState extends State<AgentCard> {
     }
     // Desktop keeps the quick actions here; settings live in the side panel.
     final items = [
-      if (!widget.agent.isMissionControl)
+      if (!widget.agent.isLead)
         appMenuItem(
             value: 'pin',
             icon: pinned ? 'pin-off' : 'pin',
             label: pinned ? 'Unpin' : 'Pin'),
-      if (!widget.agent.isMissionControl)
+      if (!widget.agent.isLead)
         appMenuItem(value: 'nickname', icon: 'edit', label: _nicknameLabel),
       if (widget.onDelete != null)
         appMenuItem(
@@ -579,7 +579,7 @@ class _AgentCardState extends State<AgentCard> {
   }
 }
 
-/// Desktop sidebar row for an agent or Mission Control: 28 px rounded-square
+/// Desktop sidebar row for an agent or Lead: 28 px rounded-square
 /// avatar with a status dot, name and time, one preview line.
 class AgentRowShell extends StatefulWidget {
   const AgentRowShell({

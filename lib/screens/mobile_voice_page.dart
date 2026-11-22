@@ -279,7 +279,7 @@ class _MobileVoicePageState extends State<MobileVoicePage>
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('Mission Control',
+                          Text('Lead',
                               style: sans(15, weight: W.label)),
                           if (live)
                             Text(modeLabel,
@@ -436,7 +436,7 @@ class _MobileVoicePageState extends State<MobileVoicePage>
                 height: 96,
                 decoration: avatarDecoration(96, color: AppColors.surface2),
                 alignment: Alignment.center,
-                child: const AgentMochi('mission-control', size: 48),
+                child: const AgentMochi('lead', size: 48),
               ),
             ),
           ),

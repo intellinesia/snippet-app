@@ -54,7 +54,7 @@ void main() {
           onRefreshSessions: () {},
           onNewSession: () {},
           onSelectInstance: (_) {},
-          onOpenMissionControl: () {},
+          onOpenLead: () {},
           onOpenSession: (_, __, ___) {},
           onAddInstance: () {},
           onRenameInstance: (_, name) {},

@@ -45,7 +45,7 @@ class MissionBoardPanel extends StatefulWidget {
 }
 
 class _MissionBoardPanelState extends State<MissionBoardPanel> {
-  List<MissionControlTask> _tasks = const [];
+  List<LeadTask> _tasks = const [];
   List<RecurringJob> _jobs = const [];
   List<Goal> _goals = const [];
   bool _loaded = false;
@@ -85,7 +85,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
 
   Future<void> _load() async {
     try {
-      final o = await widget.client.mcOverview();
+      final o = await widget.client.leadOverview();
       List<RecurringJob> jobs = const [];
       try {
         jobs = await widget.client.recurringJobs();
@@ -126,7 +126,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
         child: Text(text, style: sans(13, color: AppColors.fg3)),
       );
 
-  TaskNote _note(MissionControlTask t) {
+  TaskNote _note(LeadTask t) {
     final titles = {for (final x in _tasks) x.id: x.title};
     return taskNote(
       status: t.status,
@@ -138,7 +138,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
     );
   }
 
-  (String, Color, Color) _pill(MissionControlTask t) => switch (t.status) {
+  (String, Color, Color) _pill(LeadTask t) => switch (t.status) {
         'in_review' => ('In review', AppColors.accent, AppColors.accentBg),
         'blocked' => ('Blocked', AppColors.danger, AppColors.dangerBg),
         'done' => ('Done', AppColors.ok, AppColors.okBg),
@@ -150,7 +150,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
         _ => ('Working', AppColors.run, AppColors.runBg),
       };
 
-  String _when(MissionControlTask t) {
+  String _when(LeadTask t) {
     if (t.status == 'done' || t.status == 'in_review') return _at(t.updatedAt);
     final m = DateTime.now()
         .difference(DateTime.fromMillisecondsSinceEpoch(t.updatedAt * 1000))
@@ -159,7 +159,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
     return m < 60 ? '$m min' : _at(t.updatedAt);
   }
 
-  Widget _taskCard(MissionControlTask t) {
+  Widget _taskCard(LeadTask t) {
     final sid = t.sessionId;
     final open = sid == null ? null : () => widget.onOpenSession(sid, t.title);
     final review = t.status == 'in_review';
@@ -453,7 +453,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                   Padding(
                     padding: EdgeInsets.fromLTRB(S.s24, 120, S.s24, 0),
                     child: Column(children: [
-                      const AgentMochi('mission-control', size: 72),
+                      const AgentMochi('lead', size: 72),
                       SizedBox(height: S.of(18)),
                       Text('All quiet', style: sans(15, color: AppColors.fg1)),
                       SizedBox(height: S.s6),

@@ -127,7 +127,7 @@ void main() {
         t,
         RecordingPolicy.fromJson(
             {'retention_days': 0, 'rules': [], 'windows': [], 'recordings': []}));
-    expect(find.textContaining('Ask Mission Control, for example'),
+    expect(find.textContaining('Ask Lead, for example'),
         findsOneWidget);
     expect(find.text('Forever'), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;

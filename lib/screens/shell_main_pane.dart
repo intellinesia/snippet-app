@@ -77,7 +77,7 @@ class MainPaneView extends StatelessWidget {
                   final t = tabs[i];
                   return ShellKeepAlive(
                     key: ValueKey(t.key),
-                    keep: t.isMissionControl || i == activeIndex,
+                    keep: t.isLead || i == activeIndex,
                     // Same body builder as the split panes, so a terminal
                     // or a diff renders identically whether it is in a pane or
                     // the narrow single-column layout.

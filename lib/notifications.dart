@@ -667,7 +667,7 @@ Future<void> initNotifications() async {
         'done' => ('${inst.label} finished', title, null),
         'error' => ('${inst.label} hit an error', title, null),
         'idle' => (named, stoppedSummary(e['lanes_running']), null),
-        'ping' => (title.isEmpty ? 'Mission Control' : title, message, null),
+        'ping' => (title.isEmpty ? 'Lead' : title, message, null),
         'group_mention' => (title, _payloadBody(e), null),
         'direct_message.sent' || 'task.message' => (
             'Message',

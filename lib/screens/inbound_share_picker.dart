@@ -7,7 +7,7 @@ import '../widgets.dart';
 import 'shell_models.dart';
 import '../platform.dart';
 
-/// Modal bottom sheet allowing the user to select which session or Mission Control receives incoming shared content.
+/// Modal bottom sheet allowing the user to select which session or Lead receives incoming shared content.
 Future<String?> showInboundSharePicker({
   required BuildContext context,
   required List<ShellTab> openTabs,
@@ -25,34 +25,34 @@ Future<String?> showInboundSharePicker({
             contentPadding: EdgeInsets.zero,
             leading: AppIcon(tabIconKind(t),
                 size: 18,
-                color: t.isMissionControl ? AppColors.accent : AppColors.fg3),
+                color: t.isLead ? AppColors.accent : AppColors.fg3),
             title: Text(
-                t.isMissionControl
-                    ? 'Mission Control'
+                t.isLead
+                    ? 'Lead'
                     : (t.title.trim().isEmpty ? '(untitled)' : t.title),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: sans(kMobile ? 16 : 14,
-                    weight: t.isMissionControl
+                    weight: t.isLead
                         ? W.label
                         : W.body,
                     color: AppColors.fg1)),
             subtitle: Text(
-                t.isMissionControl ? machineLabel : 'Open tab',
+                t.isLead ? machineLabel : 'Open tab',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TS.meta()),
             onTap: () => Navigator.pop(
-                context, t.isMissionControl ? 'mission-control' : t.sessionId),
+                context, t.isLead ? 'lead' : t.sessionId),
           ),
         if (openTabs.isEmpty)
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: AppIcon('layers', size: 18, color: AppColors.accent),
-            title: Text('Mission Control',
+            title: Text('Lead',
                 style: TS.sectionTitle()),
             subtitle: Text(machineLabel, style: TS.meta()),
-            onTap: () => Navigator.pop(context, 'mission-control'),
+            onTap: () => Navigator.pop(context, 'lead'),
           ),
         for (final s in restSessions)
           ListTile(

@@ -283,7 +283,7 @@ Map<String, dynamic> buildModel({
   targets.clear();
   final crew = deriveCrew(
       agents
-          .where((a) => !a.isMissionControl && a.status != 'archived')
+          .where((a) => !a.isLead && a.status != 'archived')
           .toList(),
       sessions,
       presence: presence);

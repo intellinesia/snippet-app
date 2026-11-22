@@ -248,7 +248,7 @@ class TaskList extends StatelessWidget {
       return const EmptyState(
         icon: 'layers',
         title: 'No tasks yet',
-        body: 'File a task and Mission Control routes it to a session.',
+        body: 'File a task and Lead routes it to a session.',
       );
     }
     if (query.trim().isNotEmpty) {

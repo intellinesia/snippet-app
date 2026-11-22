@@ -89,7 +89,7 @@ class _WakesScreenState extends State<WakesScreen> {
   }
 
   String _name(String owner, List<CoordinationAgent> agents) {
-    if (owner == 'mission-control') return 'Mission Control';
+    if (owner == 'lead') return 'Lead';
     final title = _sessionTitles[owner];
     if (title != null) return title;
     for (final a in agents) {
@@ -384,7 +384,7 @@ class _WakesScreenState extends State<WakesScreen> {
     );
   }
 
-  /// A new wake starts from its owner: an agent, Mission Control or a session
+  /// A new wake starts from its owner: an agent, Lead or a session
   /// is picked, then the owner's wake panel takes the schedule.
   Future<void> _newWake(
       BuildContext ctx, List<CoordinationAgent> agents) async {
@@ -394,8 +394,8 @@ class _WakesScreenState extends State<WakesScreen> {
         items: [
           appMenuHeading<String>('Wake who?'),
           appMenuItem(
-              value: 'mission-control',
-              label: 'Mission Control',
+              value: 'lead',
+              label: 'Lead',
               icon: 'sparkles'),
           for (final a in agents)
             appMenuItem(

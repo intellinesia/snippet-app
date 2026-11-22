@@ -27,10 +27,10 @@ class _FakeTestClient extends DaemonClient {
   };
 
   @override
-  Future<Map<String, dynamic>> mcAutonomy() async => {...autonomy};
+  Future<Map<String, dynamic>> leadAutonomy() async => {...autonomy};
 
   @override
-  Future<Map<String, dynamic>> mcSetAutonomy(
+  Future<Map<String, dynamic>> leadSetAutonomy(
       Map<String, dynamic> changes) async {
     autonomy = {
       ...autonomy,
@@ -104,7 +104,7 @@ void main() {
               onRemoveInstance: (_) {},
               onSessionDeleted: (_) {},
               onRefreshHealth: () {},
-              onOpenMissionControl: () {},
+              onOpenLead: () {},
               topInset: false,
               mobileHome: MobileHome.chats,
               onMobileHome: (_) {},
@@ -223,7 +223,7 @@ void main() {
           onRemoveInstance: (_) {},
           onSessionDeleted: (_) {},
           onRefreshHealth: () {},
-          onOpenMissionControl: () {},
+          onOpenLead: () {},
           topInset: false,
           mobileHome: MobileHome.chats,
           onMobileHome: (_) {},

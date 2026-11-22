@@ -76,7 +76,7 @@ Color sessionStateColor(String? status) {
 
 /// A conversation's leading glyph, tinted by run state.
 ///
-/// [Mission Control] keeps its own `layers` glyph; every chat is a
+/// [Lead] keeps its own `layers` glyph; every chat is a
 /// `chat-thread`, matching the sidebar's icon vocabulary. The glyph itself
 /// never changes with state — only its colour (and a subtle pulse while
 /// working), so the row does not reflow or swap identity when a run starts.

@@ -123,9 +123,9 @@ void main() {
 
   test('notch channel names the source', () {
     expect(
-        notchChannel({'session': 'mission-control'}, 'x'), 'Mission Control');
+        notchChannel({'session': 'lead'}, 'x'), 'Lead');
     expect(notchChannel({'kind': 'ping', 'session': 's'}, 'Deploy done'),
-        'Mission Control');
+        'Lead');
     expect(notchChannel({'session': 's'}, 'Fix login redirect'),
         'Fix login redirect');
     expect(notchChannel({'session': 's', 'workspace': '/home/u/code/app'}, ''),

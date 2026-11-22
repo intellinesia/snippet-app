@@ -96,11 +96,11 @@ import 'mobile_voice_page.dart' show startMobileVoice;
 import 'session_panels.dart';
 import 'session_coordination_cards.dart';
 import 'session_handoff.dart';
-import 'mission_control/widgets/autonomy_panel.dart';
+import 'lead/widgets/autonomy_panel.dart';
 import '../tap_detector.dart';
-import 'mission_control/mission_control_state.dart'
+import 'lead/lead_state.dart'
     show
-        isDedicatedMcSession,
+        isDedicatedLeadSession,
         parseTaskOffer,
         queuedEnvelopeLabel,
         parseMissionEnvelope,
@@ -197,7 +197,7 @@ class SessionScreen extends StatefulWidget {
   /// Desktop: toggle the shell's right panel from the floating header.
   final VoidCallback? onTogglePanel;
 
-  /// Desktop Mission Control: the header title opens the docked agent info.
+  /// Desktop Lead: the header title opens the docked agent info.
   final VoidCallback? onDeskInfo;
 
   /// Desktop: the shell's actions menu, shown in the header instead of the sheet.
@@ -364,7 +364,7 @@ class _SessionScreenState extends State<SessionScreen>
     _github = null;
     _githubKnown = false;
     widget.onGithubReady?.call(false);
-    if (_isMissionControl) return;
+    if (_isLead) return;
     widget.client.githubStatus(widget.sessionId).then((status) {
       if (!mounted || gen != _githubGen || status == null) return;
       setState(() {
@@ -927,7 +927,7 @@ class _SessionScreenState extends State<SessionScreen>
   }
 
   void _loadSettled() {
-    if (_isMissionControl) {
+    if (_isLead) {
       _loadMcInFlight();
       return;
     }
@@ -973,7 +973,7 @@ class _SessionScreenState extends State<SessionScreen>
   /// Came back row leaves immediately. Best-effort: an older daemon 404s and
   /// the next sessions fetch simply disagrees.
   void _postSeen() {
-    if (_isMissionControl) return;
+    if (_isLead) return;
     pingSessionSeen(widget.sessionId);
     unawaited(widget.client.sessionSeen(widget.sessionId).catchError((_) {}));
   }
@@ -1029,7 +1029,7 @@ class _SessionScreenState extends State<SessionScreen>
   void initState() {
     super.initState();
     Diag.crumb('session open ${widget.sessionId} "${widget.title}"');
-    _title = _isMissionControl ? 'Mission Control' : widget.title;
+    _title = _isLead ? 'Lead' : widget.title;
     if (!kMobile) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _publishTerminals();
@@ -1073,7 +1073,7 @@ class _SessionScreenState extends State<SessionScreen>
     }
   }
 
-  bool get _isMissionControl => isDedicatedMcSession(widget.sessionId);
+  bool get _isLead => isDedicatedLeadSession(widget.sessionId);
 
   /// Watch the device event stream for coordination activity about THIS session:
   /// work dispatched into it, and — when this session is an agent's inbox —
@@ -1149,8 +1149,8 @@ class _SessionScreenState extends State<SessionScreen>
               ? 'Work dispatched here'
               : 'Work dispatched to $agent',
           detail: profile == null || profile.isEmpty
-              ? 'from Mission Control'
-              : 'from Mission Control · profile $profile',
+              ? 'from Lead'
+              : 'from Lead · profile $profile',
         ),
       );
     }
@@ -1168,9 +1168,9 @@ class _SessionScreenState extends State<SessionScreen>
 
   Future<void> _startSession() async {
     _connect();
-    if (_isMissionControl) {
+    if (_isLead) {
       unawaited(widget.client
-          .mcOpen()
+          .leadOpen()
           .timeout(const Duration(seconds: 8))
           .catchError((_) => ''));
     }
@@ -1184,8 +1184,8 @@ class _SessionScreenState extends State<SessionScreen>
     if (sameSession && !identical(oldWidget.client, widget.client)) {
       _startAgentEvents();
     }
-    if (_isMissionControl && _title != 'Mission Control') {
-      _title = 'Mission Control';
+    if (_isLead && _title != 'Lead') {
+      _title = 'Lead';
     }
     if (sameSession && _live != (oldWidget.live ?? oldWidget.acceptDrops)) {
       if (_live) {
@@ -1206,7 +1206,7 @@ class _SessionScreenState extends State<SessionScreen>
           _currentDraft(),
           now: true);
       _parked = !_live;
-      _title = _isMissionControl ? 'Mission Control' : widget.title;
+      _title = _isLead ? 'Lead' : widget.title;
       // PageView normally keys each session, but a parent may reuse this State
       // while switching tabs. Never carry composer/upload state across sessions.
       // Invalidate completions from an upload started by the previous session.
@@ -1359,7 +1359,7 @@ class _SessionScreenState extends State<SessionScreen>
   }
 
   void _publishTitle(String title) {
-    if (_isMissionControl) return;
+    if (_isLead) return;
     if (title == _title) {
       widget.onTitle?.call(title);
       return;
@@ -1514,8 +1514,8 @@ class _SessionScreenState extends State<SessionScreen>
   double _composerH = 0;
 
   @override
-  // Phones keep Mission Control as a chat; desktop reads it like any session.
-  Widget build(BuildContext context) => _isMissionControl && kMobile
+  // Phones keep Lead as a chat; desktop reads it like any session.
+  Widget build(BuildContext context) => _isLead && kMobile
       ? ChatBubbleScope(child: _buildScreen(context))
       : _buildScreen(context);
 
@@ -1694,7 +1694,7 @@ class _SessionScreenState extends State<SessionScreen>
                                         if (widget.readOnly &&
                                             widget.banner != null)
                                           _centerWide(widget.banner!),
-                                        // Mission Control's mobile top bar has no status line.
+                                        // Lead's mobile top bar has no status line.
                                         // Desktop shows it above the composer instead.
                                         if (_connError != null &&
                                             (kMobile
@@ -1748,8 +1748,8 @@ class _SessionScreenState extends State<SessionScreen>
                                                                               color: AppColors.fg1)),
                                                                     ]),
                                                               ),
-                                                            // Desktop: Mission Control's identity tops its history, like an agent thread.
-                                                            if (_isMissionControl &&
+                                                            // Desktop: Lead's identity tops its history, like an agent thread.
+                                                            if (_isLead &&
                                                                 !kMobile &&
                                                                 _transcriptStart ==
                                                                     0 &&
@@ -1759,9 +1759,9 @@ class _SessionScreenState extends State<SessionScreen>
                                                                   key: ValueKey(
                                                                       'mc-head'),
                                                                   agentId:
-                                                                      'mission-control',
+                                                                      'lead',
                                                                   name:
-                                                                      'Mission Control',
+                                                                      'Lead',
                                                                   purpose:
                                                                       'Coordinates your agents and sessions'),
                                                             if (_transcriptStart >

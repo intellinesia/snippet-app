@@ -65,8 +65,8 @@ List<Widget> buildShellRailTools({
   final tab = activeTab;
   // Agent options live in the docked info panel, opened from the title.
   if (tab != null && tab.readout?.isAgent == true) return const [];
-  final mc = tab?.isMissionControl ?? false;
-  // Mission Control's options live in its docked details panel.
+  final mc = tab?.isLead ?? false;
+  // Lead's options live in its docked details panel.
   if (mc) return const [];
   final s = macSessionStatus?.state;
   final goalRunning = s?.goal?.ongoing ?? false;

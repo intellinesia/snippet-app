@@ -297,7 +297,7 @@ void main() {
     final client = _FakeDaemon(const []);
     final tab = ShellTab.board(client: client, instanceUrl: 'http://m');
     expect(tab.key, 'http://m|tasks-board');
-    expect(tab.isMissionControl, isFalse);
+    expect(tab.isLead, isFalse);
     expect(tabIconKind(tab), 'kanban');
 
     final saved = OpenTabDescriptor(

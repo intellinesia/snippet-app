@@ -129,12 +129,12 @@ void main() {
   test('attention tuning parses profile, expiry and origin', () {
     final t = AmbientTuning.fromJson({
       'tuning': {'profile': 'meeting', 'expires_at': 1800000000},
-      'set_by': 'mission-control',
+      'set_by': 'lead',
       'reason': 'in a meeting until three',
     });
     expect(t.profile, 'meeting');
     expect(t.expiresAt, 1800000000);
-    expect(t.setBy, 'mission-control');
+    expect(t.setBy, 'lead');
     expect(ambientProfileLabel('with_people'), 'With people');
   });
 }

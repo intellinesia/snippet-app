@@ -6,7 +6,7 @@ import 'package:snippet/api.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/screens/group_messaging.dart';
-import 'package:snippet/screens/mission_control/mission_control_state.dart';
+import 'package:snippet/screens/lead/lead_state.dart';
 import 'package:snippet/screens/session_coordination_cards.dart';
 
 const _post = '''<group_message thread_id="group:1" title="jh" from="human:human" mentions="x-scout" reply_expected="true">

@@ -53,8 +53,8 @@ Future<void> _pump(WidgetTester t, _Client c) async {
       body: SingleChildScrollView(
         child: AgentPanelBody(
           client: c,
-          agentId: 'mission-control',
-          name: 'Mission Control',
+          agentId: 'lead',
+          name: 'Lead',
           sub: 'Coordinator',
           header: const Text('Context 98k / 556k'),
           onInbox: () {},

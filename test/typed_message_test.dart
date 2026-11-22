@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:snippet/screens/mission_control/mission_control_state.dart';
+import 'package:snippet/screens/lead/lead_state.dart';
 
 void main() {
   test('direct message envelope carries kind and urgency', () {

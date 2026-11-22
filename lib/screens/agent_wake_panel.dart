@@ -217,7 +217,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
   bool _editing = false;
   bool _saving = false;
   bool _enabled = true;
-  String _reportTo = 'mission_control';
+  String _reportTo = 'lead';
   bool _onlyOnChange = true;
   final _schedule = TextEditingController();
   final _brief = TextEditingController();
@@ -363,7 +363,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
     _group = w?.report.group;
     _cap.text = '${w?.maxRunsPerDay ?? _wakeLimits.defaultMaxRunsPerDay}';
     _enabled = w?.enabled ?? true;
-    _reportTo = w?.report.to ?? 'mission_control';
+    _reportTo = w?.report.to ?? 'lead';
     _onlyOnChange = w?.report.onlyOnChange ?? true;
   }
 
@@ -475,7 +475,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
 
   Future<void> _pickReport(BuildContext anchor) async {
     const reports = [
-      ('mission_control', 'Mission Control', 'Summarised in its feed'),
+      ('lead', 'Lead', 'Summarised in its feed'),
       ('user', 'You', 'Sent as a notification'),
       ('task_room', 'Task room', 'Posted on a task'),
       ('group', 'Group', 'Posted in a group'),
@@ -797,7 +797,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
       );
 
   static const _reports = [
-    ('mission_control', 'Mission Control', 'Summarised in its feed'),
+    ('lead', 'Lead', 'Summarised in its feed'),
     ('user', 'You', 'Sent as a notification'),
     ('task_room', 'Task room', 'Posted on a task'),
     ('group', 'Group', 'Posted in a group'),

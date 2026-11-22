@@ -331,7 +331,7 @@ extension _SessionScreenSocketExt on _SessionScreenState {
       }
       _setState(() {
         _state = next;
-        if (!_isMissionControl) {
+        if (!_isLead) {
           final nextTitle = next.title ?? widget.title;
           if (nextTitle != _title && nextTitle.isNotEmpty) {
             _title = nextTitle;
@@ -362,7 +362,7 @@ extension _SessionScreenSocketExt on _SessionScreenState {
           next.status != 'running' &&
           _live &&
           !_parked &&
-          !_isMissionControl) {
+          !_isLead) {
         final lc = WidgetsBinding.instance.lifecycleState;
         if (lc == null ||
             lc == AppLifecycleState.resumed ||
@@ -388,8 +388,8 @@ extension _SessionScreenSocketExt on _SessionScreenState {
             }
             if (msgText.isNotEmpty) {
               final cleaned = msgText.replaceAll(RegExp(r'\s+'), ' ').trim();
-              final title = _isMissionControl
-                  ? 'Mission Control'
+              final title = _isLead
+                  ? 'Lead'
                   : (_title.trim().isEmpty ? 'Snippet' : _title.trim());
               MacosNotch.showNotification(
                 title: title,

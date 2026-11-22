@@ -203,10 +203,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     final agents = await widget.client.coordinationAgents();
     if (!mounted) return;
     final onTask = roster.where((r) => r.active).map((r) => r.agentId).toSet();
-    // Mission Control is not a task agent — it coordinates — so it is not
+    // Lead is not a task agent; it coordinates, so it is not
     // offered for membership either.
     final candidates = agents
-        .where((a) => !onTask.contains(a.id) && !a.isMissionControl)
+        .where((a) => !onTask.contains(a.id) && !a.isLead)
         .toList();
     if (candidates.isEmpty) {
       toast(context, 'Every agent is already on this task');
@@ -346,7 +346,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         for (final (value, label) in [
           ('', _defaultAddressee),
           for (final m in members) (m, m),
-          ('mission-control', 'Mission Control'),
+          ('lead', 'Lead'),
         ])
           InkWell(
             onTap: () => Navigator.of(context).pop(value),

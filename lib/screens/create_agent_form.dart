@@ -9,7 +9,7 @@ import '../tap_detector.dart';
 
 /// Describe an agent in prose; the runtime researches and builds it.
 ///
-/// ONE form, two hosts: Mission Control's agent directory presents it as a
+/// ONE form, two hosts: Lead's agent directory presents it as a
 /// sheet, and the shell's agents panel opens it as a popover under its "+".
 /// It lives here rather than inside either host because a second copy is how
 /// the two drift — the panel briefly grew its own variant that could not even

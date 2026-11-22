@@ -748,7 +748,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                   time: formatEventTime(e['at'] ?? e['created_at'])));
         case 'turn_changes':
           endTools(key);
-          if (isDedicatedMcSession(widget.sessionId)) break;
+          if (isDedicatedLeadSession(widget.sessionId)) break;
           addEvent(
               key,
               TurnChangesCard(
@@ -886,7 +886,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
     final byRaw = _s(e['by']).trim();
     final actor = switch (byRaw) {
       '' || 'human' => 'You',
-      'mission-control' || 'mission_control' => 'Mission Control',
+      'lead' => 'Lead',
       _ => byRaw,
     };
     final at = (e['at'] as num?)?.toInt() ?? 0;
@@ -1077,7 +1077,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
   ///
   /// The message carries this session as its origin, so the agent knows which
   /// session to reply in and which session to request dispatch on. Nothing here
-  /// creates work: dispatching belongs to Mission Control.
+  /// creates work: dispatching belongs to Lead.
   Future<void> _giveWork() async {
     final sent = await showAgentWorkSheet(
       context,

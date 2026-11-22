@@ -8,7 +8,7 @@ import 'package:snippet/presence.dart';
 import 'package:snippet/screens/agent_card.dart';
 import 'package:snippet/screens/agent_questions_card.dart';
 import 'package:snippet/screens/session_coordination_cards.dart';
-import 'package:snippet/screens/mission_control/mission_control_state.dart'
+import 'package:snippet/screens/lead/lead_state.dart'
     show WorkerQuestion;
 import 'package:snippet/theme.dart';
 
@@ -242,7 +242,7 @@ void main() {
       expect(find.text('1 of 1'), findsOneWidget);
       expect(find.text('Review #131'), findsOneWidget);
       expect(find.text('Merge or hold?'), findsOneWidget);
-      expect(find.textContaining('Mission Control answers'), findsOneWidget);
+      expect(find.textContaining('Lead answers'), findsOneWidget);
     });
   });
 }

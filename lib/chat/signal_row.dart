@@ -191,7 +191,7 @@ String _titleCaseWords(String id) => id
     .join(' ');
 
 /// A person's name for an agent id: the coordination display name when known,
-/// else the id title-cased (`mission-control` is Mission Control).
+/// else the id title-cased (`lead` is Lead).
 String agentDisplayName(String raw, [Map<String, String>? known]) {
   var id = raw.trim();
   if (id.startsWith('agent:')) id = id.substring(6);
@@ -200,8 +200,8 @@ String agentDisplayName(String raw, [Map<String, String>? known]) {
   final map = known ?? agentNames.value;
   final hit = map[id];
   if (hit != null && hit.trim().isNotEmpty) return hit.trim();
-  if (id == 'mission-control' || id == 'mission_control') {
-    return 'Mission Control';
+  if (id == 'lead') {
+    return 'Lead';
   }
   return _titleCaseWords(id);
 }
@@ -305,7 +305,7 @@ EnvelopeSignal envelopeSignal(CoordinationEnvelope env, String sender) {
       return EnvelopeSignal('x', SignalTone.danger, '$who cancelled $subject',
           sub: _firstLine(env.field('reason')));
     case 'task_dispatched':
-    case 'mission_control_task':
+    case 'lead_task':
       return EnvelopeSignal('send', SignalTone.accent, '$who sent $subject',
           sub: _firstLine(env.field('scope')));
     case 'task_offer':

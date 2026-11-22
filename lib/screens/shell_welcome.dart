@@ -860,7 +860,7 @@ class ShellRecentPlaceholder extends StatelessWidget {
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           hint([mod, 'N'], 'new session'),
           SizedBox(width: S.s20),
-          hint([mod, '1'], 'Mission Control'),
+          hint([mod, '1'], 'Lead'),
           SizedBox(width: S.s20),
           hint([mod, 'B'], 'sidebar'),
         ]),

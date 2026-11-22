@@ -13,8 +13,8 @@ import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'agents_sidebar_panel.dart';
-import 'mission_control.dart';
-import 'mission_control/coordination_agent_detail.dart';
+import 'lead.dart';
+import 'lead/coordination_agent_detail.dart';
 import 'settings_panel.dart';
 import 'group_messaging.dart' show createAndOpenGroup;
 import 'mobile_home/mobile_home_screen.dart';
@@ -50,7 +50,7 @@ class Sidebar extends StatefulWidget {
   final VoidCallback onNewSession;
   final ValueChanged<String>? onNewSessionIn;
   final void Function(Instance) onSelectInstance;
-  final VoidCallback onOpenMissionControl;
+  final VoidCallback onOpenLead;
   final ValueChanged<CoordinationAgent>? onOpenAgent;
   final VoidCallback? onOpenPalette;
   final VoidCallback? onOpenTasks;
@@ -98,7 +98,7 @@ class Sidebar extends StatefulWidget {
     required this.onNewSession,
     this.onNewSessionIn,
     required this.onSelectInstance,
-    required this.onOpenMissionControl,
+    required this.onOpenLead,
     this.onOpenAgent,
     this.onOpenPalette,
     this.onOpenTasks,
@@ -588,7 +588,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         client: client,
         sessions: [
           for (final s in _sessions ?? const <SessionInfo>[])
-            if (!isDedicatedMcSession(s.id) && !isInboxSessionRow(s)) s,
+            if (!isDedicatedLeadSession(s.id) && !isInboxSessionRow(s)) s,
         ],
         agents: _heroAgents,
         loading: _loading,
@@ -596,7 +596,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         onRefresh: widget.onRefreshSessions,
         onOpenSession: (s) => widget.onOpenSession(s.id, s.title, s.profile),
         onOpenAgent: widget.onAgent,
-        onOpenMissionControl: widget.onOpenMissionControl,
+        onOpenLead: widget.onOpenLead,
         onSettings: () => widget.onMobileHome(MobileHome.settings),
         onPlus: _openNewMenu,
         onDecide: _decideHero,
@@ -748,16 +748,16 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   }
 
   Widget _agentList(DaemonClient client,
-          {SessionInfo? missionControl,
-          VoidCallback? onOpenMissionControl,
+          {SessionInfo? lead,
+          VoidCallback? onOpenLead,
           bool mirror = false,
           bool embedded = false}) =>
       AgentsSidebarPanel(
         embedded: embedded,
         key: mirror ? _agentsMirrorKey : _agentsPanelKey,
         client: client,
-        missionControl: missionControl,
-        onOpenMissionControl: onOpenMissionControl,
+        lead: lead,
+        onOpenLead: onOpenLead,
         searchQuery: _agentFilterQuery,
         bottomPadding: _scrollBottomPad,
         groupsKey: mirror ? 'groups-mirror' : null,
@@ -930,7 +930,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           children: [_emptySessions()]);
     }
     final split = splitSettled(_sortSessionsByRecency(all.where((s) =>
-        !isDedicatedMcSession(s.id) &&
+        !isDedicatedLeadSession(s.id) &&
         !isInboxSessionRow(s) &&
         _matchesQuery(s))));
     final children = <Widget>[
@@ -1387,10 +1387,10 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       leading: _agentBadge(s),
       provider: kMobile ? null : _providerOf(s),
       machine: kMobile ? null : widget.active?.label,
-      onTogglePin: kMobile || isDedicatedMcSession(s.id)
+      onTogglePin: kMobile || isDedicatedLeadSession(s.id)
           ? null
           : () => Pins.instance.toggle(Pins.session, s.id, host: _pinHost),
-      onMore: kMobile || isDedicatedMcSession(s.id)
+      onMore: kMobile || isDedicatedLeadSession(s.id)
           ? null
           : (p) => _sessionActions(s, position: p),
       onDecide: kMobile || widget.client == null
@@ -1536,19 +1536,19 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     );
   }
 
-  /// Desktop sidebar: one scroll holding the agents (Mission Control first,
+  /// Desktop sidebar: one scroll holding the agents (Lead first,
   /// then groups) and the recency-ordered sessions. Workspace is metadata on
   /// each row, never a grouping or sort key.
   Widget _sectionedSidebar() {
     final hasClient = widget.client != null;
     final all = _sessions ?? const <SessionInfo>[];
     final split = splitSettled(_sortSessionsByRecency(all.where((s) =>
-        !isDedicatedMcSession(s.id) &&
+        !isDedicatedLeadSession(s.id) &&
         !isInboxSessionRow(s) &&
         _matchesQuery(s))));
     final list = split.main;
     final settledRows = split.settled;
-    final mc = all.where((s) => isDedicatedMcSession(s.id)).firstOrNull;
+    final mc = all.where((s) => isDedicatedLeadSession(s.id)).firstOrNull;
     _chatsShownAt ??= DateTime.now();
     final rows = _groupedRows(list, attentionFirst: true);
     final searching = _filterQuery.trim().isNotEmpty;
@@ -1574,8 +1574,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                       // New agents and sessions come from the top + menu.
                       const SidebarSectionHeader('Agents'),
                       _agentList(widget.client!,
-                          missionControl: mc,
-                          onOpenMissionControl: widget.onOpenMissionControl,
+                          lead: mc,
+                          onOpenLead: widget.onOpenLead,
                           embedded: true),
                     ],
                     // Desktop selects from a row's right-click menu instead.
@@ -1616,7 +1616,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
 
   // Long-press / right-click a session → pin, rename, settle or delete.
   Future<void> _sessionActions(SessionInfo s, {Offset? position}) async {
-    if (isDedicatedMcSession(s.id)) return;
+    if (isDedicatedLeadSession(s.id)) return;
     final pinned = _isPinnedSession(s);
     if (!kMobile) {
       final overlay =
@@ -1692,7 +1692,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   }
 
   void _enterSelect({String? seed}) {
-    if (seed != null && isDedicatedMcSession(seed)) return;
+    if (seed != null && isDedicatedLeadSession(seed)) return;
     setState(() {
       _selecting = true;
       _renamingId = null;
@@ -1708,7 +1708,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   }
 
   void _toggleSelected(String id) {
-    if (isDedicatedMcSession(id)) return;
+    if (isDedicatedLeadSession(id)) return;
     setState(() {
       if (!_selected.add(id)) _selected.remove(id);
     });
@@ -1721,7 +1721,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   /// that was never on screen.
   List<SessionInfo> get _visibleSessions => [
         for (final s in _sessions ?? const <SessionInfo>[])
-          if (!isDedicatedMcSession(s.id) &&
+          if (!isDedicatedLeadSession(s.id) &&
               !isInboxSessionRow(s) &&
               _matchesQuery(s))
             s,
@@ -1836,7 +1836,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   }
 
   void _beginRename(SessionInfo s) {
-    if (isDedicatedMcSession(s.id)) return;
+    if (isDedicatedLeadSession(s.id)) return;
     _renameCtl.text = s.title;
     _renameCtl.selection =
         TextSelection(baseOffset: 0, extentOffset: _renameCtl.text.length);

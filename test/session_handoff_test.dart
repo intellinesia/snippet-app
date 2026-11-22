@@ -56,10 +56,10 @@ class _FakeHandoffClient extends DaemonClient {
         CoordinationAgent.fromJson(
             {'id': 'paused', 'display_name': 'Paused', 'status': 'paused'}),
         CoordinationAgent.fromJson({
-          'id': 'mission-control',
-          'display_name': 'MC',
+          'id': 'lead',
+          'display_name': 'Lead',
           'status': 'active',
-          'kind': 'mission_control',
+          'kind': 'lead',
         }),
       ];
 
@@ -239,7 +239,7 @@ void main() {
               onRefreshSessions: () {},
               onNewSession: () {},
               onSelectInstance: (_) {},
-              onOpenMissionControl: () {},
+              onOpenLead: () {},
               onOpenSession: (_, __, ___) {},
               onAddInstance: () {},
               onRenameInstance: (_, __) {},

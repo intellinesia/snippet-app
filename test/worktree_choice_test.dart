@@ -173,7 +173,7 @@ void main() {
     final client = _FakeDaemon(
       repo: true,
       sessionList: [
-        _session('mission-control', '/home/mc', 100),
+        _session('lead', '/home/lead', 100),
         _session('s1', '/code/snippet-service', 90),
         _session('s2', '/code/snippet-service', 85),
         _session('s3', '/code/technoxi', 80),

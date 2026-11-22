@@ -222,7 +222,7 @@ void main() {
 
   test('default characters match the daemon hash and skip 01 and 14', () {
     expect(defaultAgentCharacter('snippet'), '01');
-    expect(defaultAgentCharacter('mission-control'), '14');
+    expect(defaultAgentCharacter('lead'), '14');
     expect(defaultAgentCharacter('deep-researcher'), '17');
     expect(defaultAgentCharacter('rook'), '29');
     for (var i = 0; i < 200; i++) {

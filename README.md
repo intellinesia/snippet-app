@@ -13,7 +13,7 @@ The Android, macOS, Linux and Windows client for [snippet](https://github.com/in
 
 <p align="center">
   <img src="assets/screenshots/desktop.png" alt="Desktop app: a session transcript beside the file tree" width="73%" valign="middle" />
-  <img src="assets/screenshots/mobile.png" alt="Phone app: a voice conversation with Mission Control" width="23.7%" valign="middle" />
+  <img src="assets/screenshots/mobile.png" alt="Phone app: a voice conversation with Lead" width="23.7%" valign="middle" />
 </p>
 
 The app connects to a `snippet serve` daemon running on your own machine. The code, the shell and the model keys stay on that machine; the app only attaches to its sessions over an authenticated WebSocket.
@@ -24,7 +24,7 @@ The app connects to a `snippet serve` daemon running on your own machine. The co
 - Resume, rename and rewind sessions from any device.
 - Run delegated lanes, each in its own git worktree, and follow their progress.
 - Browse the file tree, review changes, stage files and open terminals.
-- Talk to Mission Control by voice, with spoken replies (optional, set up in Settings).
+- Talk to Lead by voice, with spoken replies (optional, set up in Settings).
 - Switch between several machines.
 
 ## Install

@@ -9,7 +9,7 @@ import 'agents_sidebar_panel.dart';
 import 'file_tree_sidebar_panel.dart';
 import 'git.dart';
 import 'git_diff_sidebar_panel.dart';
-import 'mission_control/mission_control_state.dart' show isDedicatedMcSession;
+import 'lead/lead_state.dart' show isDedicatedLeadSession;
 import 'session.dart' show TerminalInfo;
 import 'settings_panel.dart' show SettingsPage;
 import 'shell_models.dart';
@@ -51,7 +51,7 @@ class ShellSidebarHost extends StatelessWidget {
     required this.onNewSession,
     this.onNewSessionIn,
     required this.onSelectInstance,
-    required this.onOpenMissionControl,
+    required this.onOpenLead,
     this.onOpenPalette,
     this.onOpenTasks,
     this.onOpenPullRequests,
@@ -110,7 +110,7 @@ class ShellSidebarHost extends StatelessWidget {
   final VoidCallback onNewSession;
   final ValueChanged<String>? onNewSessionIn;
   final ValueChanged<Instance> onSelectInstance;
-  final VoidCallback onOpenMissionControl;
+  final VoidCallback onOpenLead;
   final VoidCallback? onOpenPalette;
   final VoidCallback? onOpenTasks;
   final VoidCallback? onOpenPullRequests;
@@ -172,9 +172,9 @@ class ShellSidebarHost extends StatelessWidget {
           : AgentsSidebarPanel(
               client: c,
               onOpenAgent: onOpenRightAgent,
-              onOpenMissionControl: onOpenMissionControl,
-              missionControl: sessions
-                  ?.where((s) => isDedicatedMcSession(s.id))
+              onOpenLead: onOpenLead,
+              lead: sessions
+                  ?.where((s) => isDedicatedLeadSession(s.id))
                   .firstOrNull,
             );
     }
@@ -247,8 +247,8 @@ class ShellSidebarHost extends StatelessWidget {
       },
       onNewSessionIn: onNewSessionIn,
       onSelectInstance: onSelectInstance,
-      onOpenMissionControl: () {
-        onOpenMissionControl();
+      onOpenLead: () {
+        onOpenLead();
         onAfterPick?.call();
       },
       onOpenSession: (id, title, profile) {

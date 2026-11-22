@@ -44,8 +44,8 @@ import 'editor.dart';
 import 'files.dart';
 import 'git.dart';
 import 'inbound_share_picker.dart';
-import 'mission_control.dart';
-import 'mission_control/widgets/ambient_stage.dart' show showAmbientStage;
+import 'lead.dart';
+import 'lead/widgets/ambient_stage.dart' show showAmbientStage;
 import 'tasks/task_kanban.dart';
 import 'tasks/task_board.dart';
 import 'mobile_chrome.dart';
@@ -404,7 +404,7 @@ class _DesktopShellState extends State<DesktopShell>
   /// LHS panels do NOT provide: Git, Files and Terminals have panels of their
   /// own, so repeating them here would be two doors to one room.
   ///
-  /// The cluster is inline for EVERY session, including Mission Control: a "⋯"
+  /// The cluster is inline for EVERY session, including Lead: a "⋯"
   /// that hides four one-tap actions behind a menu is friction, and it made MC
   /// the only session whose controls were not visible.
   ///
@@ -414,17 +414,17 @@ class _DesktopShellState extends State<DesktopShell>
   /// working tree, and MC's own menus never offered them.
   /// Sections the sidebar strip hides for the ACTIVE session.
   ///
-  /// Mission Control has no working tree — it orchestrates other sessions — so
+  /// Lead has no working tree — it orchestrates other sessions — so
   /// its Terminal and Git Diff are two buttons that open empty panels. Hiding
   /// them is honest about what MC can do.
   Set<ShellSection> get _hiddenSections =>
-      (_activeTab?.isMissionControl ?? false)
+      (_activeTab?.isLead ?? false)
           ? const {ShellSection.terminal, ShellSection.git, ShellSection.files}
           : const {ShellSection.terminal, ShellSection.files};
 
   /// The section actually rendered.
   ///
-  /// `_section` is sticky, so switching to Mission Control while Terminal is
+  /// `_section` is sticky, so switching to Lead while Terminal is
   /// selected would leave a hidden section live — the strip would show no lit
   /// button while the panel below still rendered a terminal MC cannot have. The
   /// clamp falls back to Sessions, which is never hidden.
@@ -438,9 +438,9 @@ class _DesktopShellState extends State<DesktopShell>
 
   CoordinationAgent? get _activeAgent =>
       _activeTab?.readout?.agent ??
-      (!kMobile && _activeTab?.isMissionControl == true ? _mcAgent : null);
+      (!kMobile && _activeTab?.isLead == true ? _mcAgent : null);
 
-  /// The active tab docks an info panel (agent, Mission Control or group chat).
+  /// The active tab docks an info panel (agent, Lead or group chat).
   bool get _dockedInfo =>
       _activeAgent != null || _activeTab?.readout?.request?.sidePanel != null;
 
@@ -458,7 +458,7 @@ class _DesktopShellState extends State<DesktopShell>
     final a = _activeAgent;
     if (tab == null || a == null) return;
     final name = a.displayName.trim().isEmpty ? a.id : a.displayName.trim();
-    if (action == 'delete' && a.id == 'mission-control') return;
+    if (action == 'delete' && a.id == 'lead') return;
     if (action == 'desk') {
       setAgentWorkView(a.id, true);
     } else if (action == 'delete') {
@@ -902,7 +902,7 @@ class _DesktopShellState extends State<DesktopShell>
   void _openActiveWorkspace() {
     final tab = _activeTab;
     final id = tab?.sessionId;
-    if (tab == null || id == null || tab.isMissionControl) return;
+    if (tab == null || id == null || tab.isLead) return;
     final ws = _macSessionStatuses[tab.key]?.state?.workspace.trim() ?? '';
     final path = ws.isNotEmpty ? ws : (_activeWorkspaceFolder() ?? '');
     _openWorkspaceTab(tab.client, tab.instanceUrl, id,
@@ -919,7 +919,7 @@ class _DesktopShellState extends State<DesktopShell>
     final url = _active?.url ?? '';
     final sessionId = tab?.sessionId;
     final inSession = tab != null && sessionId != null;
-    final mc = tab?.isMissionControl ?? false;
+    final mc = tab?.isLead ?? false;
     final state = tab == null ? null : _macSessionStatuses[tab.key]?.state;
     final workspace = state?.workspace ?? '';
     final running =
@@ -987,14 +987,14 @@ class _DesktopShellState extends State<DesktopShell>
       ],
       if (inSession && mc) ...[
         act('autonomy', 'activity', 'Automated wakes', keywords: const [
-          'mission control',
+          'lead',
           'settings',
           'quiet hours',
           'autonomous',
           'wake'
         ]),
         act('compact', 'wrap', 'Compact history'),
-        act('memory', 'brain', 'Mission Control memory'),
+        act('memory', 'brain', 'Lead memory'),
       ],
       if (inSession && !mc)
         cmd('open-workspace', 'folder', 'Open workspace', _openActiveWorkspace,
@@ -1003,10 +1003,10 @@ class _DesktopShellState extends State<DesktopShell>
       cmd('new-session', 'plus', 'New chat', _newSessionFlow,
           shortcut: kMacOS ? '⌘ N' : 'Ctrl+N',
           keywords: const ['session', 'create', 'new']),
-      cmd('mission-control', 'layers', 'Mission Control',
-          _openMissionControlTab,
+      cmd('lead', 'layers', 'Lead',
+          _openLeadTab,
           subtitle: _mcAttentionCount > 0 ? '$_mcAttentionCount need you' : '',
-          keywords: const ['mc', 'orchestrator', 'tasks']),
+          keywords: const ['lead', 'orchestrator', 'tasks']),
       cmd(
         'toggle-sidebar',
         'sidebar',
@@ -1097,7 +1097,7 @@ class _DesktopShellState extends State<DesktopShell>
           PaletteItem(
             id: 'tab:${t.key}',
             kind: PaletteKind.tab,
-            icon: t.isMissionControl ? 'activity' : 'message-text',
+            icon: t.isLead ? 'activity' : 'message-text',
             title: t.title.isEmpty ? 'Untitled' : t.title,
             run: () => _activateTabAt(t),
           ),
@@ -1191,7 +1191,7 @@ class _DesktopShellState extends State<DesktopShell>
                 title: t.title,
                 subtitle: t.status.label,
                 run: () {
-                  if (!inSession) _openMissionControlTab();
+                  if (!inSession) _openLeadTab();
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     _dispatchSessionAction('task', t.id);
                   });
@@ -1312,7 +1312,7 @@ class _DesktopShellState extends State<DesktopShell>
     // local row with no pty behind it — a black pane with only a caret.
     _shells.setClient(_client);
     await _restoreTabs(items);
-    _ensurePinnedMissionControl();
+    _ensurePinnedLead();
     _startOnChats();
     _connectEventsWatch();
     _loadSessions();
@@ -1335,7 +1335,7 @@ class _DesktopShellState extends State<DesktopShell>
     _loadTabProviders(c);
     final statusRevision = _liveStatus.revision;
     unawaited(c.coordinationAgents().then((all) {
-      final mc = all.where((a) => a.id == 'mission-control').firstOrNull;
+      final mc = all.where((a) => a.id == 'lead').firstOrNull;
       if (mounted && mc != null) setState(() => _mcAgent = mc);
     }, onError: (_) {}));
     setState(() => _sessionsLoading = true);
@@ -1344,15 +1344,15 @@ class _DesktopShellState extends State<DesktopShell>
       // A slow response for a PREVIOUS instance must not render under (or route
       // taps to) the one selected since.
       if (!identical(c, _client)) return;
-      // Mission Control stays pinned at the top of the list; leftover titled
+      // Lead stays pinned at the top of the list; leftover titled
       // chats that alias it are still collapsed so it isn't listed twice.
       // Agent inboxes are mailboxes, never human chat sessions.
       s.removeWhere((row) =>
-          (isMissionControlListRow(row) && !isDedicatedMcSession(row.id)) ||
+          (isLeadListRow(row) && !isDedicatedLeadSession(row.id)) ||
           isInboxSessionRow(row));
       s.sort((a, b) {
-        final am = isDedicatedMcSession(a.id);
-        final bm = isDedicatedMcSession(b.id);
+        final am = isDedicatedLeadSession(a.id);
+        final bm = isDedicatedLeadSession(b.id);
         if (am != bm) return am ? -1 : 1;
         return b.lastActive.compareTo(a.lastActive);
       });
@@ -1564,7 +1564,7 @@ class _DesktopShellState extends State<DesktopShell>
     });
     // See `_onInboundShare`: must follow the setState block.
     _shells.setClient(_client);
-    _ensurePinnedMissionControl();
+    _ensurePinnedLead();
     _startOnChats();
     _connectEventsWatch();
     _loadSessions();
@@ -1572,8 +1572,8 @@ class _DesktopShellState extends State<DesktopShell>
 
   void _openSession(String id, String title, String? profile,
       {SharedInbound? share, bool fromNotification = false}) {
-    if (isMissionControlTab(sessionId: id, title: title)) {
-      _openMissionControlTab();
+    if (isLeadTab(sessionId: id, title: title)) {
+      _openLeadTab();
       _attachShareToActive(share);
       return;
     }
@@ -1708,7 +1708,7 @@ class _DesktopShellState extends State<DesktopShell>
     final open = _shareTargets();
     final openIds = {
       for (final t in open)
-        if (!t.isMissionControl) t.sessionId,
+        if (!t.isLead) t.sessionId,
     };
     final rest = cached.where((s) => !openIds.contains(s.id)).toList();
     final picked = await showInboundSharePicker(
@@ -1718,8 +1718,8 @@ class _DesktopShellState extends State<DesktopShell>
       machineLabel: _active?.label ?? 'this machine',
     );
     if (!mounted || picked == null || picked.isEmpty) return;
-    if (picked == 'mission-control') {
-      _openSession('mission-control', 'Mission Control', null, share: share);
+    if (picked == 'lead') {
+      _openSession('lead', 'Lead', null, share: share);
       return;
     }
     SessionInfo? match;
@@ -1779,7 +1779,7 @@ class _DesktopShellState extends State<DesktopShell>
         onNewSession: _newSessionFlow,
         onNewSessionIn: kMobile ? null : _openDraftTab,
         onSelectInstance: _selectInstance,
-        onOpenMissionControl: _openMissionControlTab,
+        onOpenLead: _openLeadTab,
         onOpenPalette: kMobile ? null : _openCommandPalette,
         onOpenTasks: kMobile ? null : _openTasksTab,
         onOpenPullRequests: kMobile ? null : _openPullRequestsTile,
@@ -1831,7 +1831,7 @@ class _DesktopShellState extends State<DesktopShell>
       );
 
   void _onSessionDeleted(String id) {
-    if (isDedicatedMcSession(id)) return;
+    if (isDedicatedLeadSession(id)) return;
     final i = _tabs.indexWhere((t) => t.sessionId == id);
     if (i >= 0) _closeTab(i);
     _loadSessions();
@@ -1933,7 +1933,7 @@ class _DesktopShellState extends State<DesktopShell>
                   final visible = _appForeground &&
                       visibleTab != null &&
                       !_isAuxiliary(visibleTab) &&
-                      !visibleTab.isMissionControl;
+                      !visibleTab.isLead;
                   reportVisibleNotificationSession(
                       visible ? visibleTab.instanceUrl : null,
                       visible ? visibleTab.sessionId : null);

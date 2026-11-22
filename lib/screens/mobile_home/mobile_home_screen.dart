@@ -41,7 +41,7 @@ class MobileHomeScreen extends StatefulWidget {
     required this.agents,
     required this.onOpenSession,
     required this.onOpenAgent,
-    required this.onOpenMissionControl,
+    required this.onOpenLead,
     required this.onSettings,
     required this.onPlus,
     this.loading = false,
@@ -59,7 +59,7 @@ class MobileHomeScreen extends StatefulWidget {
   final VoidCallback? onRefresh;
   final void Function(SessionInfo s) onOpenSession;
   final void Function(CoordinationAgent a) onOpenAgent;
-  final VoidCallback onOpenMissionControl;
+  final VoidCallback onOpenLead;
   final VoidCallback onSettings;
   final void Function(BuildContext anchor) onPlus;
 
@@ -513,12 +513,12 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
           bottom: 0,
           child: HomeComposer(
             client: widget.client,
-            agentId: 'mission-control',
-            agentName: 'Mission Control',
-            hint: 'Ask Mission Control',
+            agentId: 'lead',
+            agentName: 'Lead',
+            hint: 'Ask Lead',
             onPlus: widget.onPlus,
-            onSent: widget.onOpenMissionControl,
-            onOpenChat: widget.onOpenMissionControl,
+            onSent: widget.onOpenLead,
+            onOpenChat: widget.onOpenLead,
             openOnFocus: true,
           ),
         ),

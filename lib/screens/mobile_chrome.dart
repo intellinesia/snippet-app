@@ -221,11 +221,11 @@ class MobileHomeHeader extends StatelessWidget {
                   )
                 else
                   RoundBtn(
-                    tooltip: 'Mission Control',
+                    tooltip: 'Lead',
                     size: 40,
                     badgeCount: mcBadgeCount,
                     onTap: onMc,
-                    child: AgentMochi('mission-control', size: 26),
+                    child: AgentMochi('lead', size: 26),
                   ),
                 const Spacer(),
                 if (listening) ...[
@@ -271,7 +271,7 @@ class MobileMissionBar extends StatelessWidget {
             child: Center(
               child: Semantics(
                 button: onActions != null,
-                label: 'Mission Control',
+                label: 'Lead',
                 hint: 'Session actions',
                 child: TapDetector(
                   behavior: HitTestBehavior.opaque,
@@ -282,11 +282,11 @@ class MobileMissionBar extends StatelessWidget {
                       height: 40,
                       padding: EdgeInsets.symmetric(horizontal: S.s16),
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        AgentMochi('mission-control', size: 22),
+                        AgentMochi('lead', size: 22),
                         SizedBox(width: S.of(7)),
                         Flexible(
                           child: Text(
-                            'Mission Control',
+                            'Lead',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TS.ui(AppColors.fg1).copyWith(

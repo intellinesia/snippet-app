@@ -1115,9 +1115,9 @@ class DaemonClient {
   Future<Map<String, dynamic>> gitInit(String session) =>
       _gitPost('init', {'session': session});
 
-  // ---- Mission Control ----
+  // ---- Lead ----
 
-  /// GET /mission-control/autonomy — whether Mission Control is autonomous, its rhythm
+  /// GET /lead/autonomy: whether Lead is autonomous, its rhythm
   /// and quiet hours, and when it last and next checks in.
   /// GET /github/status — whether pull request review is available here, or
   /// null when the daemon couldn't be asked (so the caller can retry rather
@@ -1397,43 +1397,43 @@ class DaemonClient {
         .toList();
   }
 
-  Future<Map<String, dynamic>> mcAutonomy() async {
-    final r = await _get(_uri('/mission-control/autonomy'));
-    if (r.statusCode != 200) throw _err('get Mission Control autonomy', r);
-    _remember('mc-autonomy', r.body);
+  Future<Map<String, dynamic>> leadAutonomy() async {
+    final r = await _get(_uri('/lead/autonomy'));
+    if (r.statusCode != 200) throw _err('get Lead autonomy', r);
+    _remember('lead-autonomy', r.body);
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
 
-  /// POST /mission-control/autonomy — change any of on / round_minutes / quiet hours.
-  Future<Map<String, dynamic>> mcSetAutonomy(
+  /// POST /lead/autonomy: change any of on / round_minutes / quiet hours.
+  Future<Map<String, dynamic>> leadSetAutonomy(
       Map<String, dynamic> changes) async {
-    final r = await _post(_uri('/mission-control/autonomy'),
+    final r = await _post(_uri('/lead/autonomy'),
         headers: _json,
         body: jsonEncode({
           ...changes,
           'utc_offset_minutes': DateTime.now().timeZoneOffset.inMinutes,
         }));
-    if (r.statusCode != 200) throw _err('set Mission Control autonomy', r);
-    _remember('mc-autonomy', r.body);
+    if (r.statusCode != 200) throw _err('set Lead autonomy', r);
+    _remember('lead-autonomy', r.body);
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
 
-  /// POST /mission-control/open — open the dedicated Mission Control session.
-  Future<String> mcOpen({String? profile}) async {
+  /// POST /lead/open: open the dedicated Lead session.
+  Future<String> leadOpen({String? profile}) async {
     final body = <String, dynamic>{};
     if (profile != null && profile.isNotEmpty) body['profile'] = profile;
-    final r = await _post(_uri('/mission-control/open'),
+    final r = await _post(_uri('/lead/open'),
         headers: _json, body: jsonEncode(body), timeout: _long);
-    if (r.statusCode != 200) throw _err('open Mission Control', r);
+    if (r.statusCode != 200) throw _err('open Lead', r);
     return (jsonDecode(r.body) as Map<String, dynamic>)['id'] as String;
   }
 
-  /// GET /mission-control/overview — dashboard summary.
-  Future<MissionControlOverview> mcOverview() async {
-    final r = await _get(_uri('/mission-control/overview'));
-    if (r.statusCode != 200) throw _err('mission control overview', r);
-    _remember('mc-overview', r.body);
-    return MissionControlOverview.fromJson(
+  /// GET /lead/overview: dashboard summary.
+  Future<LeadOverview> leadOverview() async {
+    final r = await _get(_uri('/lead/overview'));
+    if (r.statusCode != 200) throw _err('lead overview', r);
+    _remember('lead-overview', r.body);
+    return LeadOverview.fromJson(
         jsonDecode(r.body) as Map<String, dynamic>);
   }
 
@@ -1450,8 +1450,8 @@ class DaemonClient {
     }
   }
 
-  Map<String, dynamic>? cachedMcAutonomy() =>
-      _recall('mc-autonomy', (j) => j as Map<String, dynamic>);
+  Map<String, dynamic>? cachedLeadAutonomy() =>
+      _recall('lead-autonomy', (j) => j as Map<String, dynamic>);
 
   List<CoordinationAgent>? cachedCoordinationAgents() => _recall(
       'agents',

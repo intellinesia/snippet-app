@@ -16,8 +16,8 @@ void main() {
     final mc = ShellTab.session(
       client: client,
       instanceUrl: 'https://daemon.invalid',
-      sessionId: 'mission-control',
-      title: 'Mission Control',
+      sessionId: 'lead',
+      title: 'Lead',
     );
     final s1 = ShellTab.session(
       client: client,
@@ -46,7 +46,7 @@ void main() {
             tabs: [mc, s1, s2],
             activeTab: s1,
             statusForTab: (_) => null,
-            canCloseTab: (t) => !t.isMissionControl,
+            canCloseTab: (t) => !t.isLead,
             onActivateTab: (_) {},
             onCloseTab: (t) => closed.add(t.sessionId ?? t.key),
             onNewSession: () => newSessionCalls++,
@@ -65,7 +65,7 @@ void main() {
     expect(
       tabTips.map((t) => t.message).toList(),
       [
-        'Mission Control',
+        'Lead',
         'Very Long Session Title That Truncates\nsnippet-mobile',
         'Second Session',
       ],

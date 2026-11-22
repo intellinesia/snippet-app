@@ -1634,7 +1634,7 @@ void _messageActions(BuildContext context, String text) {
 }
 
 /// Draws a transcript's replies and sent messages as chat bubbles, the way
-/// agent chat does (Mission Control).
+/// agent chat does (Lead).
 class ChatBubbleScope extends InheritedWidget {
   const ChatBubbleScope({super.key, required super.child});
 

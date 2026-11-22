@@ -10,7 +10,7 @@ import 'package:snippet/screens/agent_card.dart';
 import 'package:snippet/screens/agents_sidebar_panel.dart';
 import 'package:snippet/screens/desktop_shell.dart';
 import 'package:snippet/screens/mobile_home/mobile_home_screen.dart';
-import 'package:snippet/screens/mission_control/coordination_agent_detail.dart';
+import 'package:snippet/screens/lead/coordination_agent_detail.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/theme.dart';
 import 'package:snippet/widgets.dart';
@@ -58,7 +58,7 @@ Widget _sidebar(_Client client, {CoordinationAgent? agent}) => MaterialApp(
           onRefreshSessions: () {},
           onNewSession: () {},
           onSelectInstance: (_) {},
-          onOpenMissionControl: () {},
+          onOpenLead: () {},
           onOpenSession: (_, __, ___) {},
           onAddInstance: () {},
           onRenameInstance: (_, __) {},

@@ -25,7 +25,7 @@ SessionInfo? workingSessionOf(String agentId, Iterable<SessionInfo> sessions) {
   return busy;
 }
 
-/// Round 7 resting screen when nothing needs the user: Mission Control and one
+/// Round 7 resting screen when nothing needs the user: Lead and one
 /// line, plus who is working. Never an empty centre.
 class HomeResting extends StatelessWidget {
   const HomeResting({
@@ -90,7 +90,7 @@ class HomeResting extends StatelessWidget {
                   ]),
                 ),
               ),
-            const AgentMochi('mission-control', size: 88),
+            const AgentMochi('lead', size: 88),
           ]),
         ),
         const SizedBox(height: 16),
@@ -136,7 +136,7 @@ class HomeResting extends StatelessWidget {
                       ]),
                     ),
                   ),
-                const AgentMochi('mission-control', size: 96),
+                const AgentMochi('lead', size: 96),
               ]),
             ),
             Text(headline,

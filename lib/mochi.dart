@@ -15,7 +15,7 @@ String? agentCharacterFor(String agentId) => agentCharacters.value[agentId];
 /// 14 reserved) so an agent looks the same before its row has loaded.
 String defaultAgentCharacter(String agentId) {
   switch (agentId) {
-    case 'mission-control':
+    case 'lead':
       return '14';
     case 'snippet':
     case '':

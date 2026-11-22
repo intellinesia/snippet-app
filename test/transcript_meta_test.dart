@@ -189,14 +189,14 @@ void main() {
 
     test('become one sentence naming the sender', () {
       final sig =
-          envelopeSignal(parseCoordinationEnvelope(body)!, 'Mission Control');
+          envelopeSignal(parseCoordinationEnvelope(body)!, 'Lead');
       expect(signalPlain(sig.text),
-          'Mission Control cancelled Daily LinkedIn sync');
+          'Lead cancelled Daily LinkedIn sync');
       expect(sig.sub, 'Moot: run 3 completed.');
     });
 
     test('display names never show raw ids', () {
-      expect(agentDisplayName('mission-control'), 'Mission Control');
+      expect(agentDisplayName('lead'), 'Lead');
       expect(agentDisplayName('agent:moss'), 'Moss');
       expect(agentDisplayName('moss', {'moss': 'Moss the Builder'}),
           'Moss the Builder');
@@ -237,7 +237,7 @@ void main() {
             meId: 'rook',
             meName: 'Rook'),
         AgentMessageCard(
-            agentId: 'mission-control',
+            agentId: 'lead',
             body:
                 '<task_cancelled title="Sync">\n<reason>Moot.</reason>\n</task_cancelled>',
             outbound: false),
@@ -245,8 +245,8 @@ void main() {
       expect(find.text('Moss'), findsOneWidget);
       expect(find.text('Rook to Moss'), findsOneWidget);
       expect(find.textContaining('moss'), findsNothing);
-      expect(find.textContaining('mission-control'), findsNothing);
-      expect(find.text('Mission Control cancelled Sync', findRichText: true),
+      expect(find.textContaining('lead'), findsNothing);
+      expect(find.text('Lead cancelled Sync', findRichText: true),
           findsOneWidget);
       expect(find.text('Moot.'), findsOneWidget);
     });

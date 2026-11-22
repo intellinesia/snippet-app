@@ -126,18 +126,18 @@ extension _DesktopShellTabsExt on _DesktopShellState {
           groupSessionKey: descriptor.groupSessionKey,
         ));
       } else if (descriptor.sessionId != null) {
-        final mc = isMissionControlTab(
+        final mc = isLeadTab(
             sessionId: descriptor.sessionId, title: descriptor.title);
         if (mc &&
             restored
-                .any((t) => t.isMissionControl && t.instanceUrl == inst.url)) {
+                .any((t) => t.isLead && t.instanceUrl == inst.url)) {
           continue;
         }
         restored.add(_ShellTab.session(
           client: client,
           instanceUrl: inst.url,
-          sessionId: mc ? 'mission-control' : descriptor.sessionId,
-          title: mc ? 'Mission Control' : descriptor.title,
+          sessionId: mc ? 'lead' : descriptor.sessionId,
+          title: mc ? 'Lead' : descriptor.title,
           profile: descriptor.profile,
           pane: pane,
           groupSessionKey: descriptor.groupSessionKey,
@@ -165,7 +165,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
       }
     });
     if (chats.isNotEmpty) _chatRestorePending[this] = true;
-    _ensurePinnedMissionControl();
+    _ensurePinnedLead();
     _persistTabs();
     _syncPage();
     if (chats.isEmpty) return;
@@ -242,28 +242,28 @@ extension _DesktopShellTabsExt on _DesktopShellState {
   _ShellTab _mcTabFor(Instance inst) => _ShellTab.session(
         client: DaemonClient(inst.url, inst.token),
         instanceUrl: inst.url,
-        sessionId: 'mission-control',
-        title: 'Mission Control',
+        sessionId: 'lead',
+        title: 'Lead',
       );
 
-  void _ensurePinnedMissionControl() {
+  void _ensurePinnedLead() {
     final inst = _active;
     final client = _client;
     if (inst == null) return;
-    if (client != null) unawaited(client.mcOpen().catchError((_) => ''));
+    if (client != null) unawaited(client.leadOpen().catchError((_) => ''));
     var same = 0;
     var foreign = 0;
     var extras = 0;
     var leftover = false;
     for (final t in _tabs) {
-      if (!t.isMissionControl) continue;
+      if (!t.isLead) continue;
       if (t.instanceUrl != inst.url) {
         foreign++;
         continue;
       }
       if (same == 0) {
         leftover =
-            !isDedicatedMcSession(t.sessionId) || t.title != 'Mission Control';
+            !isDedicatedLeadSession(t.sessionId) || t.title != 'Lead';
       } else {
         extras++;
       }
@@ -274,7 +274,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
         foreign == 0 &&
         !leftover &&
         _tabs.isNotEmpty &&
-        _tabs.first.isMissionControl &&
+        _tabs.first.isLead &&
         _tabs.first.instanceUrl == inst.url;
     if (alreadyPinned) {
       if (_activeIndex < 0) {
@@ -295,7 +295,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
       _ShellTab? kept;
       final next = <_ShellTab>[];
       for (final t in _tabs) {
-        if (!t.isMissionControl) {
+        if (!t.isLead) {
           next.add(t);
           continue;
         }
@@ -311,8 +311,8 @@ extension _DesktopShellTabsExt on _DesktopShellState {
         }
       }
       if (kept == null ||
-          !isDedicatedMcSession(kept.sessionId) ||
-          kept.title != 'Mission Control') {
+          !isDedicatedLeadSession(kept.sessionId) ||
+          kept.title != 'Lead') {
         kept = _mcTabFor(inst)..inboundShare = share ?? kept?.inboundShare;
       }
       next.insert(0, kept);
@@ -327,12 +327,12 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     _syncPage();
   }
 
-  void _openMissionControlTab() {
+  void _openLeadTab() {
     final inst = _active;
     if (inst == null) return;
-    _ensurePinnedMissionControl();
+    _ensurePinnedLead();
     final i = _tabs
-        .indexWhere((t) => t.isMissionControl && t.instanceUrl == inst.url);
+        .indexWhere((t) => t.isLead && t.instanceUrl == inst.url);
     if (i >= 0) {
       _activateTab(i);
       if (kMobile) {
@@ -355,7 +355,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     final kept = _tabs[keep];
     final url = _active?.url;
     final pinned = _tabs
-        .where((tab) => tab.isMissionControl && tab.instanceUrl == url)
+        .where((tab) => tab.isLead && tab.instanceUrl == url)
         .toList();
     final survivors = <_ShellTab>[
       ...pinned.where((tab) => !identical(tab, kept)),
@@ -376,7 +376,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
         _clearTabState(key);
       }
     });
-    _ensurePinnedMissionControl();
+    _ensurePinnedLead();
     _persistTabs();
     _syncPage();
   }
@@ -385,14 +385,14 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     final url = _active?.url;
     _setState(() {
       for (final tab in _tabs.where((t) =>
-          !t.isMissionControl || (url != null && t.instanceUrl != url))) {
+          !t.isLead || (url != null && t.instanceUrl != url))) {
         _clearTabState(tab.key);
       }
       _tabs.removeWhere(
-          (t) => !t.isMissionControl || (url != null && t.instanceUrl != url));
+          (t) => !t.isLead || (url != null && t.instanceUrl != url));
       _activeIndex = _tabs.isEmpty ? -1 : 0;
     });
-    _ensurePinnedMissionControl();
+    _ensurePinnedLead();
     _persistTabs();
     _syncPage();
   }
@@ -410,7 +410,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
       context: context,
       tab: t,
       index: i,
-      hasNonMissionControlTabs: _tabs.any((tab) => !tab.isMissionControl),
+      hasNonLeadTabs: _tabs.any((tab) => !tab.isLead),
       onCloseTab: () => _closeTab(i),
       onCloseOthers: () => _closeOthers(i),
       onCloseAll: _closeAllTabs,
@@ -426,7 +426,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
       t.isSettings ||
       t.isBoard;
 
-  bool _canCloseTopTab(_ShellTab t) => !t.isMissionControl;
+  bool _canCloseTopTab(_ShellTab t) => !t.isLead;
 
   void _closeTab(int i, {bool force = false}) {
     if (i < 0 || i >= _tabs.length) return;
@@ -878,7 +878,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
   /// chat, else the newest session in the list.
   String? _tileSessionId() {
     final t = _activeTab;
-    if (t != null && t.sessionId != null && !t.isMissionControl) {
+    if (t != null && t.sessionId != null && !t.isLead) {
       return t.sessionId;
     }
     final list = _sessions ?? const <SessionInfo>[];
@@ -961,14 +961,14 @@ extension _DesktopShellTabsExt on _DesktopShellState {
   }
 
   /// Sessions carrying attention (waiting on input, in review, or flagged),
-  /// for the Mission Control tab badge.
+  /// for the Lead tab badge.
   int get _mcAttentionCount => [
         for (final s in _sessions ?? const <SessionInfo>[])
           if (sessionNeedsYou(s)) s,
       ].length;
 
   String? _folderForTab(_ShellTab t) {
-    if (t.isMissionControl || t.isBoard || t.isReadout || t.isSettings) {
+    if (t.isLead || t.isBoard || t.isReadout || t.isSettings) {
       return null;
     }
     if (t.isDraft) {

@@ -77,7 +77,7 @@ void main() {
           'answer': null,
           'tool_name': 'bash',
           'summary': 'rm -rf build',
-          'by': 'mission-control',
+          'by': 'lead',
           'via': 'agent',
           'at': ts,
         },
@@ -120,7 +120,7 @@ void main() {
 
     expect(find.text('You approved · git push --force-with-lease · 9:52'),
         findsOneWidget);
-    expect(find.text('Mission Control denied · rm -rf build · 9:52'),
+    expect(find.text('Lead denied · rm -rf build · 9:52'),
         findsOneWidget);
     expect(find.text('You answered: Blue · 9:52'), findsOneWidget);
     expect(find.text('You skipped the question · 9:52'), findsOneWidget);

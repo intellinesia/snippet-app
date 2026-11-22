@@ -32,7 +32,7 @@ Map<String, dynamic> wakeJson({
       'quiet_hours': {'start': '22:00', 'end': '07:00'},
       'utc_offset_minutes': 60,
       'report': {
-        'to': 'mission_control',
+        'to': 'lead',
         'task_id': null,
         'only_on_change': true
       },
@@ -84,7 +84,7 @@ List<WakeRun> sampleRuns() => [
         'finished_at': nowSecs - 7100,
         'status': 'ok',
         'summary': 'Two deals stalled',
-        'reported_to': 'mission_control',
+        'reported_to': 'lead',
       }),
       WakeRun.fromJson({
         'id': 11,

@@ -11,7 +11,7 @@ import '../platform.dart';
 import '../pull_refresh.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import 'mission_control/mission_control_state.dart' show isDedicatedMcSession;
+import 'lead/lead_state.dart' show isDedicatedLeadSession;
 import 'mobile_chrome.dart';
 import '../chat_scene.dart' show SceneBackdrop;
 import '../chat/signal_row.dart' show agentDisplayName;
@@ -136,7 +136,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
       final seen = <String>{};
       final folders = <String>[];
       for (final s in sorted) {
-        if (isDedicatedMcSession(s.id)) continue;
+        if (isDedicatedLeadSession(s.id)) continue;
         final f = s.projectFolder;
         if (f.isEmpty || !seen.add(f)) continue;
         folders.add(f);

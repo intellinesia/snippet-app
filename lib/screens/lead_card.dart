@@ -13,9 +13,9 @@ import '../motion.dart';
 import '../swr.dart';
 import 'shell_nav.dart' show sessionIsActive;
 
-/// Mission Control pinned at the top of the Chats list: what it is doing, one
+/// Lead pinned at the top of the Chats list: what it is doing, one
 /// tap from opening it.
-class MissionControlCard extends StatefulWidget {
+class LeadCard extends StatefulWidget {
   final DaemonClient client;
   final SessionInfo session;
   final VoidCallback onOpen;
@@ -25,7 +25,7 @@ class MissionControlCard extends StatefulWidget {
   /// Desktop: the agent's presence detail, preferred over its last message.
   final String? presenceDetail;
 
-  const MissionControlCard({
+  const LeadCard({
     super.key,
     required this.client,
     required this.session,
@@ -36,23 +36,23 @@ class MissionControlCard extends StatefulWidget {
   });
 
   @override
-  State<MissionControlCard> createState() => _MissionControlCardState();
+  State<LeadCard> createState() => _LeadCardState();
 }
 
-class _MissionControlCardState extends State<MissionControlCard> {
+class _LeadCardState extends State<LeadCard> {
   Map<String, dynamic>? _autonomy;
   Revalidator? _live;
 
   @override
   void initState() {
     super.initState();
-    _autonomy = widget.client.cachedMcAutonomy();
+    _autonomy = widget.client.cachedLeadAutonomy();
     _load();
     _bindLive();
   }
 
   @override
-  void didUpdateWidget(MissionControlCard old) {
+  void didUpdateWidget(LeadCard old) {
     super.didUpdateWidget(old);
     if (old.client != widget.client) {
       _bindLive();
@@ -67,7 +67,7 @@ class _MissionControlCardState extends State<MissionControlCard> {
         on: (e) =>
             Swr.coordination(e) ||
             e['kind'] == 'config' ||
-            e['session'] == 'mission-control',
+            e['session'] == 'lead',
         debounce: const Duration(seconds: 2),
         onRevalidate: ({required bool force}) => _load());
   }
@@ -80,7 +80,7 @@ class _MissionControlCardState extends State<MissionControlCard> {
 
   Future<void> _load() async {
     try {
-      final autonomy = await widget.client.mcAutonomy();
+      final autonomy = await widget.client.leadAutonomy();
       if (!mounted) return;
       setState(() => _autonomy = autonomy);
     } catch (_) {}
@@ -131,15 +131,15 @@ class _MissionControlCardState extends State<MissionControlCard> {
         key: const ValueKey('mc-card-open'),
         selected: widget.selected,
         onTap: widget.onOpen,
-        avatar: const AgentMochi('mission-control', size: 28),
-        tint: agentTintFor('mission-control'),
+        avatar: const AgentMochi('lead', size: 28),
+        tint: agentTintFor('lead'),
         dot: waiting
             ? AppColors.accent
             : working
                 ? AppColors.run
                 : null,
         dotKey: working ? const ValueKey('mc-working') : null,
-        name: 'Mission Control',
+        name: 'Lead',
         time: widget.lastMessage == null
             ? ''
             : agentRowAgo(widget.lastMessage!.at),
@@ -162,13 +162,13 @@ class _MissionControlCardState extends State<MissionControlCard> {
                 kMobile ? S.s12 : S.of(10),
                 kMobile ? S.of(14) : S.of(11)),
             child: Row(children: [
-              const AgentMochi('mission-control', size: 30),
+              const AgentMochi('lead', size: 30),
               SizedBox(width: S.s12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Mission Control',
+                    Text('Lead',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: sans(kMobile ? 16 : 14,

@@ -33,7 +33,7 @@ void main() {
       expect(filterSlash(items(), 'resume').single.cmd, SlashCmd.resume);
       expect(filterSlash(items(), 'zzz'), isEmpty);
     });
-    test('wakes only for Mission Control; goal label flips', () {
+    test('wakes only for Lead; goal label flips', () {
       expect(items().any((i) => i.cmd == SlashCmd.wakes), isFalse);
       expect(items(mc: true).any((i) => i.cmd == SlashCmd.wakes), isTrue);
       expect(items(goal: true).first.label, 'Cancel goal');

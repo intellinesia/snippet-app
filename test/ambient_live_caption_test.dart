@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/ambient/live_caption.dart';
-import 'package:snippet/screens/mission_control/widgets/ambient_stage.dart';
+import 'package:snippet/screens/lead/widgets/ambient_stage.dart';
 import 'package:snippet/swr.dart';
 
 void main() {

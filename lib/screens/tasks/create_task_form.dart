@@ -8,7 +8,7 @@ import '../../theme.dart';
 import '../../widgets.dart';
 import '../../tap_detector.dart';
 
-/// A new task goes to Mission Control as a request: it files the task, picks
+/// A new task goes to Lead as a request: it files the task, picks
 /// or starts the session, and offers it to the chosen agent.
 class CreateTaskForm extends StatefulWidget {
   const CreateTaskForm({
@@ -43,7 +43,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
       if (!mounted) return;
       setState(() => _agents = [
             for (final a in all)
-              if (!a.isMissionControl) a
+              if (!a.isLead) a
           ]);
     } catch (_) {}
   }
@@ -81,7 +81,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
     final root = Navigator.of(context, rootNavigator: true).context;
     try {
       await widget.client.sendAgentMessage(
-        toAgentId: 'mission-control',
+        toAgentId: 'lead',
         body: body,
         idempotencyKey: 'new-task-${title.hashCode}-${DateTime.now().minute}',
       );
@@ -89,7 +89,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
       if (mounted) {
         setState(() {
           _busy = false;
-          _error = "Couldn't reach Mission Control: $e";
+          _error = "Couldn't reach Lead: $e";
         });
       }
       return;
@@ -100,7 +100,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
     } else {
       Navigator.of(context).pop(true);
     }
-    if (root.mounted) toast(root, 'Sent to Mission Control');
+    if (root.mounted) toast(root, 'Sent to Lead');
   }
 
   Widget _agentChip({
@@ -168,8 +168,8 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                 scrollDirection: Axis.horizontal,
                 children: [
                   _agentChip(
-                    id: 'mission-control',
-                    label: 'MC picks',
+                    id: 'lead',
+                    label: 'Lead picks',
                     selected: _agentId == null,
                     onTap: () => setState(() => _agentId = null),
                   ),
@@ -197,13 +197,13 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             ],
             SizedBox(height: S.s12),
             Text(
-              'Mission Control files it, picks or starts the session, and '
+              'Lead files it, picks or starts the session, and '
               'hands it over.',
               style: sans(12, color: AppColors.fg4, height: 1.45),
             ),
             SizedBox(height: S.s12),
             Btn(
-              _busy ? 'Sending…' : 'Send to Mission Control',
+              _busy ? 'Sending…' : 'Send to Lead',
               full: true,
               disabled: _busy,
               icon: 'send',

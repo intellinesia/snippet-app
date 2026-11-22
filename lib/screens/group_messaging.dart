@@ -434,7 +434,7 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
       if (!mounted) return;
       setState(() {
         _agents = all
-            .where((a) => !a.isMissionControl && a.status != 'archived')
+            .where((a) => !a.isLead && a.status != 'archived')
             .toList()
           ..sort((a, b) => a.displayName.compareTo(b.displayName));
         _loading = false;
@@ -782,7 +782,7 @@ class _GroupMembersSheetState extends State<GroupMembersSheet> {
       if (!mounted) return;
       setState(() {
         _agents = all
-            .where((a) => !a.isMissionControl && a.status != 'archived')
+            .where((a) => !a.isLead && a.status != 'archived')
             .toList()
           ..sort((a, b) => a.displayName.compareTo(b.displayName));
         _byId = {for (final a in _agents) a.id: a};

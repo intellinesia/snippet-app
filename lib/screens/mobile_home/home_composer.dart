@@ -89,9 +89,9 @@ class _HomeComposerState extends State<HomeComposer> {
     final open = widget.onOpenChat;
     if (open == null) return;
     final text = _input.text;
-    if (widget.agentId == 'mission-control' && text.trim().isNotEmpty) {
+    if (widget.agentId == 'lead' && text.trim().isNotEmpty) {
       Drafts.instance.save(
-          Drafts.keyFor(widget.client.baseUrl, 'mission-control'),
+          Drafts.keyFor(widget.client.baseUrl, 'lead'),
           Draft(text: text));
       _input.clear();
     }

@@ -15,7 +15,7 @@ import 'agent_card.dart';
 import 'create_agent_form.dart';
 import '../mochi.dart';
 import 'group_messaging.dart';
-import 'mission_control_card.dart';
+import 'lead_card.dart';
 import '../pull_refresh.dart';
 import '../message_reactions.dart' show isReactionEvent;
 import '../motion.dart';
@@ -51,8 +51,8 @@ class AgentsSidebarPanel extends StatefulWidget {
     super.key,
     required this.client,
     this.onOpenAgent,
-    this.onOpenMissionControl,
-    this.missionControl,
+    this.onOpenLead,
+    this.lead,
     this.trailingHeader,
     this.searchQuery,
     this.onSearchChanged,
@@ -63,7 +63,7 @@ class AgentsSidebarPanel extends StatefulWidget {
     this.embedded = false,
   });
 
-  /// Desktop: non-scrolling rows (Mission Control, agents, groups) for a list
+  /// Desktop: non-scrolling rows (Lead, agents, groups) for a list
   /// the sidebar scrolls itself; no hero and no Working/Quiet sections.
   final bool embedded;
 
@@ -78,10 +78,10 @@ class AgentsSidebarPanel extends StatefulWidget {
   /// Called when a row is tapped. The host decides where detail goes.
   final void Function(CoordinationAgent agent)? onOpenAgent;
 
-  /// Open Mission Control chat when tapped.
-  final VoidCallback? onOpenMissionControl;
+  /// Open Lead chat when tapped.
+  final VoidCallback? onOpenLead;
 
-  final SessionInfo? missionControl;
+  final SessionInfo? lead;
 
   /// Rendered in the top mobile header on the right (e.g. machine avatar switcher).
   final Widget? trailingHeader;
@@ -149,8 +149,8 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
       _mcLast = memo.mcLast;
       _mc = memo.mc;
     } else if (cached != null) {
-      agents = cached.where((a) => !a.isMissionControl).toList();
-      _mc = cached.where((a) => a.isMissionControl).firstOrNull;
+      agents = cached.where((a) => !a.isLead).toList();
+      _mc = cached.where((a) => a.isLead).firstOrNull;
       _mcLast = _mc?.lastMessage;
     }
     // Seeded rows were already seen; don't replay the entrance.
@@ -298,14 +298,14 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
       final all = await widget.client.coordinationAgents();
       if (!mounted) return;
       setState(() {
-        // Mission Control is excluded: it has its own pinned chat, so it is not
+        // Lead is excluded: it has its own pinned chat, so it is not
         // one of the workers this panel lists.
         agents = [
           for (final a in all)
-            if (!a.isMissionControl)
+            if (!a.isLead)
               _dmLast == null ? a : a.withLastMessage(_dmLast![a.id]),
         ];
-        _mc = all.where((a) => a.isMissionControl).firstOrNull;
+        _mc = all.where((a) => a.isLead).firstOrNull;
         _mcLast = _mc?.lastMessage;
         error = null;
       });
@@ -408,7 +408,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
         if (!mounted) return;
         try {
           final latest = (await widget.client.coordinationAgents())
-              .where((a) => !a.isMissionControl)
+              .where((a) => !a.isLead)
               .toList();
           if (!mounted) return;
           if (latest.any((a) => !before.contains(a.id))) {
@@ -420,7 +420,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
         } catch (_) {}
       }
       if (mounted) {
-        toast(context, 'Still building — check Mission Control for progress.',
+        toast(context, 'Still building; check Lead for progress.',
             danger: true);
       }
     } finally {
@@ -428,17 +428,17 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
     }
   }
 
-  /// Totals for the Mission Control strip, from the agents' own counts. The
+  /// Totals for the Lead strip, from the agents' own counts. The
   /// daemon keeps finished work for 7 days, so "came back" is null (cell
   /// dropped) when no agent reports counts at all.
   @override
   Widget build(BuildContext context) {
     final q = effectiveQuery.toLowerCase();
-    final mc = widget.missionControl;
-    final onOpenMc = widget.onOpenMissionControl;
-    // Desktop pins Mission Control as a window tab, so the list omits it.
+    final mc = widget.lead;
+    final onOpenMc = widget.onOpenLead;
+    // Desktop pins Lead as a window tab, so the list omits it.
     final mcCard = kMobile && mc != null && onOpenMc != null && q.isEmpty
-        ? MissionControlCard(
+        ? LeadCard(
             key: const ValueKey('agents-mc-card'),
             client: widget.client,
             session: mc,
@@ -628,7 +628,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
           DateTime? latest(DateTime? a, DateTime? b) =>
               a == null ? b : (b == null || a.isAfter(b) ? a : b);
           // Sorted by the time each row shows: last message, or the live
-          // session's activity while it works. Mission Control sorts too.
+          // session's activity while it works. Lead sorts too.
           final ranked = <({Widget row, DateTime? at, int? pinnedAt, int i})>[];
           for (final e in entries) {
             final item = e.item;

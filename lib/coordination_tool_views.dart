@@ -52,7 +52,7 @@ bool? coordinationHasDetail(String tool, Map? a, Map? d) {
     case 'post_coordination_message':
     case 'post_task_coordination':
       return text(a?['body']);
-    case 'message_mission_control':
+    case 'message_lead':
       return text(a?['message']);
     case 'record_coordination_note':
       return text(a?['summary']);
@@ -100,7 +100,7 @@ String _typedTag(String kind, String urgency) {
 
 String _count(int n, String one, String many) => '$n ${n == 1 ? one : many}';
 
-/// The (verb, object) sentence for a Mission Control or coordination tool, or
+/// The (verb, object) sentence for a Lead or coordination tool, or
 /// null when [tool] is not one of them.
 (String, String)? coordinationSentence(String tool, Map? a, Map? d,
     {required bool running}) {
@@ -192,8 +192,8 @@ String _count(int n, String one, String many) => '$n ${n == 1 ? one : many}';
         running ? 'Posting to the task thread' : 'Posted to the task thread',
         _typedTag(arg('kind'), arg('urgency'))
       );
-    case 'message_mission_control':
-      return (running ? 'Messaging Mission Control' : 'Messaged Mission Control', '');
+    case 'message_lead':
+      return (running ? 'Messaging Lead' : 'Messaged Lead', '');
     case 'record_coordination_note':
       return (running ? 'Recording a note' : 'Recorded a coordination note', '');
     case 'create_recurring_job':
@@ -265,7 +265,7 @@ String _count(int n, String one, String many) => '$n ${n == 1 ? one : many}';
   return null;
 }
 
-/// The detail body for Mission Control and coordination tools, or null when
+/// The detail body for Lead and coordination tools, or null when
 /// [tool] is not one of them.
 List<Widget>? coordinationToolBody(
     BuildContext context, String tool, Map? a, Map? d) {
@@ -370,7 +370,7 @@ List<Widget>? coordinationToolBody(
     case 'post_coordination_message':
     case 'post_task_coordination':
       return [_Markdown(arg('body'))];
-    case 'message_mission_control':
+    case 'message_lead':
       return [_Markdown(arg('message'))];
     case 'record_coordination_note':
     case 'report_progress':

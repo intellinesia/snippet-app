@@ -99,8 +99,8 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   }
 
   void _openTerm({bool fresh = false}) {
-    // Mission Control has no working tree to shell into.
-    if (_isMissionControl) return;
+    // Lead has no working tree to shell into.
+    if (_isLead) return;
     // Second click on Shell hides the drawer — keep the pty so reopening is instant.
     if (!fresh && _termOpen && _terms.isNotEmpty) {
       _setState(() => _termOpen = false);
@@ -156,7 +156,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   /// terminal, so this takes an index rather than toggling whatever was last
   /// focused.
   void _focusTerm(int i) {
-    if (_isMissionControl || i < 0 || i >= _terms.length) return;
+    if (_isLead || i < 0 || i >= _terms.length) return;
     _setState(() {
       _termOpen = true;
       _termFocus = i;
@@ -285,7 +285,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   }
 
   Future<void> _renameCurrent() async {
-    if (_isMissionControl) return;
+    if (_isLead) return;
     final title = await promptText(context,
         title: 'Rename session',
         initial: _title,
@@ -451,7 +451,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
 
   double _mobileHeaderTopPad(HarnessState? s) {
     if (widget.mobileTopBar != null) return GlassTopFrame.inset + S.s12;
-    if (_isMissionControl) return StageBar.phoneHeight + S.s8;
+    if (_isLead) return StageBar.phoneHeight + S.s8;
     if (_connError == null && _me != null) {
       final hasLanes = lanePillLabel(s?.lanes ?? const <LaneInfo>[]) != null;
       return StageBar.phoneHeight + (hasLanes ? S.s32 : S.s8);
@@ -463,7 +463,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     final offline = _connError != null;
     final stuck = _connError == _SessionScreenState._unreachable;
     final back = widget.onMenu ?? () => Navigator.maybePop(context);
-    if (_isMissionControl) {
+    if (_isLead) {
       return _mcStageHeader(s, stuck);
     }
     // Stays the same with the keyboard up: swapping headers made it jump.
@@ -525,19 +525,19 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     );
   }
 
-  /// Mission Control on stage; the count is the board's in-progress tasks.
+  /// Lead on stage; the count is the board's in-progress tasks.
   Widget _mcStageHeader(HarnessState? s, bool stuck) {
     final n = _mcInFlight ?? 0;
     final working = s?.status == 'running';
     return StageBar(
       framed: false,
       members: [
-        StageMember('mission-control',
+        StageMember('lead',
             state: working
                 ? AgentCharacterState.working
                 : AgentCharacterState.idle),
       ],
-      title: 'Mission Control',
+      title: 'Lead',
       subtitle: n > 0
           ? 'Coordinator · $n ${n == 1 ? 'task' : 'tasks'} in flight'
           : 'Coordinator',
@@ -610,7 +610,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     );
   }
 
-  bool get _hasTermDock => !kMobile && !_isMissionControl && !widget.readOnly;
+  bool get _hasTermDock => !kMobile && !_isLead && !widget.readOnly;
 
   Widget _withTermDock(Widget chat) {
     if (!_hasTermDock) return chat;
@@ -953,7 +953,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         _showLanes();
         return;
       case 'handoff':
-        if (!_isMissionControl && !widget.readOnly) _showHandOff();
+        if (!_isLead && !widget.readOnly) _showHandOff();
         return;
       case 'files':
         final ws = s?.workspace ?? '';
@@ -973,17 +973,17 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
                 onOpenFile: widget.onOpenFileTab));
         return;
       case 'shell':
-        if (!_isMissionControl) _openTerm();
+        if (!_isLead) _openTerm();
         return;
       case 'shell_new':
-        if (!_isMissionControl) _openTerm(fresh: true);
+        if (!_isLead) _openTerm(fresh: true);
         return;
       // Called from the SIDEBAR's terminal panel. Creating a shell is the
       // sidebar's job; showing the resulting pane is the shell's. Kept separate
       // from `shell_new` so the sidebar's + does not depend on the pane's own
       // toggle logic.
       case 'shell_create':
-        if (!_isMissionControl) _openTerm(fresh: true);
+        if (!_isLead) _openTerm(fresh: true);
         return;
       // Destroy a shell. Only the sidebar can do this — the pane may only
       // minimize, so a pty is never lost by collapsing a view.
@@ -1007,7 +1007,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         _openActions(_state);
         return;
       case 'autonomy':
-        if (_isMissionControl) _openAutonomy();
+        if (_isLead) _openAutonomy();
         return;
       case 'pull_requests':
         final status = _github;
@@ -1200,10 +1200,10 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       providers: _profileProviders,
       header: SettingsHero(
         plate: false,
-        avatar: AgentMochi(_isMissionControl ? 'mission-control' : agentId,
+        avatar: AgentMochi(_isLead ? 'lead' : agentId,
             size: Grouped.avatarCharacter),
         name: _title.isEmpty ? 'Session' : _title,
-        sub: _isMissionControl
+        sub: _isLead
             ? 'Coordinator'
             : [
                 agentName,
@@ -1212,12 +1212,12 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
                   '$changedCount file${changedCount == 1 ? '' : 's'} changed',
               ].join(' \u00b7 '),
       ),
-      onDelete: _isMissionControl ||
+      onDelete: _isLead ||
               widget.readOnly ||
               _inboxAgentId(widget.sessionId) != null
           ? null
           : () => _deleteSession(run),
-      onFork: widget.readOnly || _isMissionControl
+      onFork: widget.readOnly || _isLead
           ? null
           : () => run(() => _confirmFork(null)),
       fileChangeCount: changedCount,
@@ -1227,14 +1227,14 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
                   steps: changeSteps,
                   shell: shell,
                   onOpenFile: _openChangedFile)))),
-      hideWorkspace: _isMissionControl,
-      hideGoal: _isMissionControl,
-      hideCheckpoints: _isMissionControl,
-      autoSettle: _isMissionControl || widget.readOnly ? null : !_keepAwake,
+      hideWorkspace: _isLead,
+      hideGoal: _isLead,
+      hideCheckpoints: _isLead,
+      autoSettle: _isLead || widget.readOnly ? null : !_keepAwake,
       onAutoSettle: _setAutoSettle,
-      resumeMode: _isMissionControl || widget.readOnly ? null : _resumeMode,
+      resumeMode: _isLead || widget.readOnly ? null : _resumeMode,
       onResumeMode: (m) => _setResumeMode(m),
-      onAutonomy: _isMissionControl ? () => navigate!(_openAutonomy) : null,
+      onAutonomy: _isLead ? () => navigate!(_openAutonomy) : null,
       onWakes: () => run(_openWakes),
       onSetGoal: (text) {
         _send({'kind': 'set_goal', 'value': text});
@@ -1244,7 +1244,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       onResumeGoal: _resumeGoal,
       onLanes: () => navigate!(_showLanes),
       onGiveWork: _giveWork,
-      hideShell: _isMissionControl,
+      hideShell: _isLead,
       onTerm: () => run(_openTerm),
       onGit: () => navigate!(() => presentScreen(context,
           builder: (_, close) => GitScreen(
@@ -1273,12 +1273,12 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
           originSessionId: widget.sessionId,
           builder: (_, close) => _activityPanel(close))),
       onRecurring: () => run(_openRecurring),
-      onTasks: kMobile && _isMissionControl
+      onTasks: kMobile && _isLead
           ? () => run(() => openMobileTasksPage(context, widget.client))
           : null,
       onCompact: () => run(_confirmCompact),
       onCheckpoints: () => navigate!(_showCheckpoints),
-      onHandOff: _isMissionControl ||
+      onHandOff: _isLead ||
               widget.readOnly ||
               _inboxAgentId(widget.sessionId) != null
           ? null
@@ -1289,11 +1289,11 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     );
   }
 
-  // Mission Control's panel is the agent panel; it has no session rail.
+  // Lead's panel is the agent panel; it has no session rail.
   bool _railVisible(double columnWidth) =>
       !kMobile &&
       !widget.readOnly &&
-      !_isMissionControl &&
+      !_isLead &&
       _inboxAgentId(widget.sessionId) == null &&
       columnWidth >= kSessionRailMinColumn;
 
@@ -1349,7 +1349,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   /// button and closes on a click away.
   Widget _floatingRail(HarnessState? s, BoxConstraints column) {
     if (_railVisible(column.maxWidth) ||
-        _isMissionControl ||
+        _isLead ||
         widget.readOnly ||
         _inboxAgentId(widget.sessionId) != null) {
       return const SizedBox.shrink();
@@ -1388,7 +1388,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
 
   Widget _sessionRail(HarnessState? s,
       {bool floating = false, double? column}) {
-    final mc = _isMissionControl;
+    final mc = _isLead;
     final open = widget.onOpenRightPanel;
     final goalOn = s?.goal?.ongoing ?? false;
     final profile = (_currentProfile ?? widget.profile ?? '').trim();
@@ -1400,7 +1400,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       client: widget.client,
       sessionId: widget.sessionId,
       state: s,
-      isMissionControl: mc,
+      isLead: mc,
       floating: floating,
       columnWidth: column,
       agentId: _me?.displayAgentId,
@@ -1669,7 +1669,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       builder: (_, __) {
         final docked = rail && !sessionRailCollapsed.value;
         final floating =
-            !rail && !_isMissionControl && sessionRailFloating.value;
+            !rail && !_isLead && sessionRailFloating.value;
         return _deskHeaderBarWith(s, running,
             actions: !docked && !floating);
       },
@@ -1678,7 +1678,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
 
   Widget _deskHeaderBarWith(HarnessState? s, bool running,
       {required bool actions}) {
-    final mc = _isMissionControl;
+    final mc = _isLead;
     final status = s?.pendingQuestion != null
         ? 'needs_you'
         : running
@@ -1742,7 +1742,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
                 builder: (ctx) => IconBtn('more-horizontal',
                     size: 30,
                     iconSize: 15,
-                    tooltip: 'Mission Control actions',
+                    tooltip: 'Lead actions',
                     onTap: () => _openActions(s, anchor: ctx)),
               ),
         ],

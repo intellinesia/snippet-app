@@ -12,7 +12,7 @@ import '../swr.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'files.dart';
-import 'mission_control.dart';
+import 'lead.dart';
 import 'shell_nav.dart';
 
 /// Recurring goals — list, create, pause, and delete jobs that SetGoal a
@@ -23,7 +23,7 @@ class RecurringScreen extends StatefulWidget {
   final DaemonClient client;
   final VoidCallback? onClose;
 
-  /// Target session when creating (this chat, or Mission Control itself).
+  /// Target session when creating (this chat, or Lead itself).
   /// Settings uses [listOnly]. Cross-session jobs are created by the MC agent
   /// via `create_recurring_job` (job files), not this UI.
   final String? sessionId;
@@ -116,7 +116,7 @@ class RecurringScreenState extends State<RecurringScreen>
 
   String get _boundSessionId {
     final id = widget.sessionId?.trim() ?? '';
-    return id.isEmpty ? 'mission-control' : id;
+    return id.isEmpty ? 'lead' : id;
   }
 
   bool get _canAdd => !widget.listOnly;
@@ -980,9 +980,9 @@ class RecurringScreenState extends State<RecurringScreen>
         final bound = widget.sessionId?.trim();
         final jobs = (bound != null && bound.isNotEmpty)
             ? allJobs.where((j) {
-                if (isDedicatedMcSession(bound) || bound == 'mission-control') {
-                  return j.sessionId == 'mission-control' ||
-                      isDedicatedMcSession(j.sessionId);
+                if (isDedicatedLeadSession(bound) || bound == 'lead') {
+                  return j.sessionId == 'lead' ||
+                      isDedicatedLeadSession(j.sessionId);
                 }
                 return j.sessionId == bound || j.sessionId.contains(bound);
               }).toList()
@@ -1105,9 +1105,9 @@ class RecurringScreenState extends State<RecurringScreen>
   }
 
   String _targetLabel(RecurringJob job) {
-    if (job.sessionId == 'mission-control' ||
-        isDedicatedMcSession(job.sessionId)) {
-      return 'Mission Control';
+    if (job.sessionId == 'lead' ||
+        isDedicatedLeadSession(job.sessionId)) {
+      return 'Lead';
     }
     final match = _sessions
         ?.where((s) => s.id == job.sessionId || job.sessionId.contains(s.id))

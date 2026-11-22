@@ -14,7 +14,7 @@ import '../chat/signal_row.dart';
 import '../chat/system_notice.dart';
 import '../mochi.dart';
 import '../tap_detector.dart';
-import 'mission_control/mission_control_state.dart'
+import 'lead/lead_state.dart'
     show
         QuietWakeRun,
         GroupMessage,
@@ -410,7 +410,7 @@ class MissionEnvelopeCard extends StatelessWidget {
               ? 'Worker plan'
               : envelope.isReport
                   ? 'Task report'
-                  : 'Mission Control',
+                  : 'Lead',
       reference: envelope.taskId.isEmpty ? null : _short(envelope.taskId),
       title: envelope.title.isEmpty
           ? (envelope.isRecurring ? 'Scheduled run' : 'Task')
@@ -785,7 +785,7 @@ class WorkerQuestionCard extends StatelessWidget {
         ),
         ChatCardBody(
           child: Text(
-            'Mission Control answers from your brief, or pings you',
+            'Lead answers from your brief, or pings you',
             style: sans(TranscriptCard.metaSize, color: AppColors.fg3),
           ),
         ),

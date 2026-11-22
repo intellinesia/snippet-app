@@ -102,7 +102,7 @@ class SessionRail extends StatefulWidget {
     required this.client,
     required this.sessionId,
     required this.state,
-    required this.isMissionControl,
+    required this.isLead,
     required this.profileLabel,
     required this.resumeMode,
     required this.onModel,
@@ -151,7 +151,7 @@ class SessionRail extends StatefulWidget {
   final DaemonClient client;
   final String sessionId;
   final HarnessState? state;
-  final bool isMissionControl;
+  final bool isLead;
   final String profileLabel;
   final String resumeMode;
 
@@ -198,7 +198,7 @@ class SessionRail extends StatefulWidget {
   final VoidCallback? onRecurring;
   final VoidCallback? onDelete;
 
-  /// Sends the answer to Mission Control's pending question.
+  /// Sends the answer to Lead's pending question.
   final void Function(String answer)? onAnswer;
 
   /// Sets or replaces the goal; the editor lives inside the goal card.
@@ -275,7 +275,7 @@ class _SessionRailState extends State<SessionRail> {
   bool? _warm;
   bool? _autonomous;
   List<TaskItem> _tasks = const [];
-  // Mission Control only: every open task and session, for "Needs you".
+  // Lead only: every open task and session, for "Needs you".
   List<TaskItem> _allTasks = const [];
   List<SessionInfo> _sessions = const [];
   int _gen = 0;
@@ -341,7 +341,7 @@ class _SessionRailState extends State<SessionRail> {
 
   void _onPageRequest() {
     final p = sessionRailPageRequest.value;
-    if (p == null || kMobile || widget.isMissionControl) return;
+    if (p == null || kMobile || widget.isLead) return;
     sessionRailPageRequest.value = null;
     _go(p);
   }
@@ -392,7 +392,7 @@ class _SessionRailState extends State<SessionRail> {
   }
 
   Future<void> _loadLive() async {
-    if (widget.isMissionControl) return;
+    if (widget.isLead) return;
     final gen = ++_liveGen;
     final c = widget.client;
     final id = widget.sessionId;
@@ -411,13 +411,13 @@ class _SessionRailState extends State<SessionRail> {
     ++_liveGen;
     final c = widget.client;
     final id = widget.sessionId;
-    final mc = widget.isMissionControl;
+    final mc = widget.isLead;
     final r = await Future.wait<Object?>([
       mc ? Future.value(null) : _try(c.gitStatus(id)),
       _try(c.wake(id)),
       _try(c.keepWarmFor(id)),
       _try(c.tasks(status: 'in_progress')),
-      _try(c.mcAutonomy()),
+      _try(c.leadAutonomy()),
       mc ? Future.value(null) : _try(c.bgList(id)),
       mc ? Future.value(null) : _try(c.wakes()),
       mc ? _try(c.tasks(limit: 300)) : Future.value(null),
@@ -587,7 +587,7 @@ class _SessionRailState extends State<SessionRail> {
               },
               child: Column(
                 key: ValueKey(
-                    _page == null || kMobile || widget.isMissionControl
+                    _page == null || kMobile || widget.isLead
                         ? 'rail-root'
                         : 'rail-$_page'),
                 mainAxisSize: MainAxisSize.min,
@@ -602,13 +602,13 @@ class _SessionRailState extends State<SessionRail> {
   }
 
   List<Widget> _railBody() {
-    if (kMobile || widget.isMissionControl) return _groups();
+    if (kMobile || widget.isLead) return _groups();
     if (_page != null) return _subPage();
     return _overviewRoot();
   }
 
   List<Widget> _groups() {
-    final mc = widget.isMissionControl;
+    final mc = widget.isLead;
     final s = widget.state;
     final out = <Widget>[_header()];
     var first = true;
@@ -1307,7 +1307,7 @@ class _SessionRailState extends State<SessionRail> {
   }
 
   Widget _header() {
-    final mc = widget.isMissionControl;
+    final mc = widget.isLead;
     final t = _tasks.where((t) => t.sessionId == widget.sessionId).firstOrNull;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Container(
@@ -1321,7 +1321,7 @@ class _SessionRailState extends State<SessionRail> {
             : null,
         child: Row(children: [
           Expanded(
-            child: Text(mc ? 'Mission Control' : 'Session',
+            child: Text(mc ? 'Lead' : 'Session',
                 style: sans(13,
                     weight: kMobile ? W.label : W.strong,
                     color: AppColors.fg1)),
@@ -1585,7 +1585,7 @@ class _SessionRailState extends State<SessionRail> {
     ];
   }
 
-  // Mission Control panel.
+  // Lead panel.
   List<Widget> _flightRows() => [
         for (final t in _tasks.take(6))
           InkWell(
@@ -1633,7 +1633,7 @@ class _SessionRailState extends State<SessionRail> {
           builder: (_, __) => view);
 
   List<Widget> _goToRows() {
-    const id = 'mission-control', name = 'Mission Control';
+    const id = 'lead', name = 'Lead';
     return [
       _RailRow(
           icon: 'inbox',

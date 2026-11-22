@@ -150,7 +150,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     }
     return SessionScreen(
       onTogglePanel: null,
-      onDeskInfo: t.isMissionControl ? _showAgentInfo : null,
+      onDeskInfo: t.isLead ? _showAgentInfo : null,
       deskActions: primary
           ? () => Row(mainAxisSize: MainAxisSize.min, children: _headerTools(t))
           : null,
@@ -173,7 +173,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       onTitle: (title) => _onSessionTitle(t.sessionId!, title),
       onDeleted: primary ? () => _onSessionDeleted(t.sessionId!) : null,
       onMenu: kMobile ? _showMobileChats : null,
-      mobileTopBar: kMobile && t.isMissionControl
+      mobileTopBar: kMobile && t.isLead
           ? (openActions) => _mobileMissionBar(onActions: openActions)
           : null,
       onOpenFileTab: (path, name) =>
@@ -464,7 +464,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           r
     ];
     if (agent != null) {
-      final mc = agent.isMissionControl;
+      final mc = agent.isLead;
       final mcState = mc ? _macSessionStatuses[tab.key]?.state : null;
       return AgentSidePanel(
         key: ValueKey('agent-panel-${tab.key}'),
@@ -491,7 +491,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         onClearReadout: () => _setState(() => _activeKey.remove(_Pane.right)),
       );
     }
-    if (tab.isMissionControl) {
+    if (tab.isLead) {
       return MissionBoardPanel(
         key: ValueKey('board-${tab.instanceUrl}'),
         client: tab.client,
@@ -806,7 +806,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           );
         },
       ),
-      if (a.id != 'mission-control') ...[
+      if (a.id != 'lead') ...[
         AgentViewSwitch(agentId: a.id),
         SizedBox(width: S.s6),
       ],
@@ -994,7 +994,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       final parent = slash > 0 ? path.substring(0, slash) : '';
       return lastPathSegment(parent, ifEmpty: 'file');
     }
-    if (t.isMissionControl) return 'orchestration';
+    if (t.isLead) return 'orchestration';
     return _macRepositoryLabel();
   }
 
@@ -1073,7 +1073,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         _liveStatus.clear();
       }
     });
-    _ensurePinnedMissionControl();
+    _ensurePinnedLead();
     _connectEventsWatch();
     _syncPage();
   }
@@ -1186,14 +1186,14 @@ extension _DesktopShellPanesExt on _DesktopShellState {
                   const SizedBox.shrink()),
           if (_activeTab?.readout?.agent != null) _agentBarTools(_activeTab!),
           if (_activeTab?.readout == null &&
-              _activeAgent?.isMissionControl == true)
+              _activeAgent?.isLead == true)
             IconBtn('sidebar',
                 size: 30,
                 iconSize: 15,
                 active: !_panelHidden,
                 tooltip: _panelHidden
-                    ? 'Show Mission Control panel'
-                    : 'Hide Mission Control panel',
+                    ? 'Show Lead panel'
+                    : 'Hide Lead panel',
                 onTap: _togglePanel),
           if (_groupBarTools(_activeTab) case final w?) w,
         ],

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:snippet/screens/mission_control/mission_control_state.dart';
+import 'package:snippet/screens/lead/lead_state.dart';
 import 'package:snippet/screens/session_coordination_cards.dart';
 import 'package:snippet/theme.dart';
 
@@ -120,7 +120,7 @@ void main() {
           'Its last message:\n\nThe shim is hung.');
     });
 
-    test('a waiting stall drops the instructions meant for Mission Control',
+    test('a waiting stall drops the instructions meant for Lead',
         () {
       final e = parseMissionEnvelope(_report(
           'stalled',

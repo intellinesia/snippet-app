@@ -134,7 +134,7 @@ void main() {
       expect(body['brief'], 'Check pipeline');
       expect(body['enabled'], isTrue);
       expect(body['report'],
-          {'to': 'mission_control', 'task_id': null, 'only_on_change': true});
+          {'to': 'lead', 'task_id': null, 'only_on_change': true});
       expect(find.byKey(const ValueKey('wake-schedule')), findsOneWidget);
     });
 
@@ -261,7 +261,7 @@ void main() {
 
   group('session wakes action', () {
     testWidgets(
-        'session actions list contains Wakes and keep warm for a non-Mission-Control session and opens AgentWakePanel',
+        'session actions list contains Wakes and keep warm for a non-Lead session and opens AgentWakePanel',
         (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
       addTearDown(() => debugDefaultTargetPlatformOverride = null);
@@ -311,7 +311,7 @@ void main() {
       expect(w.scheduleText, 'Weekdays at 09:00');
       expect(w.editableSchedule, 'weekdays 09:00');
       expect(w.quietHours?.label, '22:00 to 07:00');
-      expect(w.report.to, 'mission_control');
+      expect(w.report.to, 'lead');
       expect(w.report.onlyOnChange, isTrue);
       expect(w.maxRunsPerDay, 24);
       expect(w.lastStatus, 'ok');
@@ -322,7 +322,7 @@ void main() {
     test('a sparse wake view falls back to defaults', () {
       final w = WakeSchedule.fromJson({'owner': 'x', 'quiet_hours': null});
       expect(w.quietHours, isNull);
-      expect(w.report.to, 'mission_control');
+      expect(w.report.to, 'lead');
       expect(w.enabled, isTrue);
       expect(w.nextRunAt, 0);
       expect(w.lastRunAt, isNull);

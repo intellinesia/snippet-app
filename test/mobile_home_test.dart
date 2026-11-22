@@ -291,7 +291,7 @@ void main() {
                 ],
             onOpenSession: (s) => opened.add(s.id),
             onOpenAgent: (a) => opened.add('agent:${a.id}'),
-            onOpenMissionControl: () => opened.add('mission-control'),
+            onOpenLead: () => opened.add('lead'),
             onSettings: () {},
             onPlus: (_) {},
             onDecide: (s, ok) async {
@@ -478,7 +478,7 @@ void main() {
       expect(find.bySemanticsLabel('Snippet, 4 managed sessions'),
           findsOneWidget);
       // Composer stays on top of the Everyone sheet.
-      expect(find.byKey(const ValueKey('home-open-mission-control')),
+      expect(find.byKey(const ValueKey('home-open-lead')),
           findsOneWidget);
 
       // Tapping the managed pill opens ManagedView with Running and Idle.
@@ -504,19 +504,19 @@ void main() {
       expect(find.textContaining('0 managed'), findsNothing);
     });
 
-    testWidgets('Mission Control button sits inside composer left edge and opens MC chat directly',
+    testWidgets('Lead button sits inside composer left edge and opens Lead chat directly',
         (tester) async {
       await pumpHome(tester, [_s('h0')]);
-      final btn = find.byKey(const ValueKey('home-open-mission-control'));
+      final btn = find.byKey(const ValueKey('home-open-lead'));
       expect(btn, findsOneWidget);
       final rect = tester.getRect(btn);
       expect(rect.width, inInclusiveRange(44, 52));
       expect(rect.height, inInclusiveRange(44, 52));
-      expect(find.bySemanticsLabel('Mission Control, open chat'),
+      expect(find.bySemanticsLabel('Lead, open chat'),
           findsOneWidget);
       await tester.tap(btn);
       await tester.pump();
-      expect(opened, ['mission-control']);
+      expect(opened, ['lead']);
     });
 
     testWidgets('controls are 44 to 52 high, at least 44 wide, and never overlap',
@@ -535,7 +535,7 @@ void main() {
         'more': rectOf(find.ancestor(
             of: find.text('2 more'), matching: find.byType(InkWell))),
         'everyone': rectOf(find.byKey(const ValueKey('everyone-handle'))),
-        'mc': rectOf(find.byKey(const ValueKey('home-open-mission-control'))),
+        'mc': rectOf(find.byKey(const ValueKey('home-open-lead'))),
       };
       for (final e in boxes.entries) {
         expect(e.value.width, greaterThanOrEqualTo(44), reason: e.key);

@@ -6,7 +6,7 @@ import '../theme.dart';
 import '../widgets.dart';
 
 /// Desktop: a chat's identity at the start of its history, shared by agent
-/// threads, group threads and the Mission Control tab. It scrolls away.
+/// threads, group threads and the Lead tab. It scrolls away.
 class AgentTranscriptHead extends StatelessWidget {
   const AgentTranscriptHead({
     super.key,

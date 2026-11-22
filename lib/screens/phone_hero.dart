@@ -104,7 +104,7 @@ class _PhoneHeroState extends State<PhoneHero> {
 
   List<CrewEntry> _crew() => deriveCrew(
       widget.agents
-          .where((a) => !a.isMissionControl && a.status != 'archived')
+          .where((a) => !a.isLead && a.status != 'archived')
           .toList(),
       _live);
 

@@ -13,7 +13,7 @@ import 'notch_home.dart';
 import 'notification_text.dart';
 import 'notifications.dart';
 import 'platform.dart';
-import 'screens/mission_control/mission_control_state.dart'
+import 'screens/lead/lead_state.dart'
     show
         AmbientTurn,
         isAmbientResume,
@@ -66,7 +66,7 @@ class MacosNotch {
   static DaemonClient? _activeClient;
   static String? _activeSessionId;
   static String? _activePeerAgentId;
-  static String _activeTitle = 'Mission Control';
+  static String _activeTitle = 'Lead';
   static HarnessState? _activeState;
   static int _activeRevision = 0;
   static String _liveStreamText = '';
@@ -97,8 +97,8 @@ class MacosNotch {
             await _openConversation(arg);
           } else {
             await _openConversation(jsonEncode({
-              'session': 'mission-control',
-              'title': 'Mission Control',
+              'session': 'lead',
+              'title': 'Lead',
             }));
           }
         case 'notchAction':
@@ -206,13 +206,13 @@ class MacosNotch {
       kind: 'ambient',
       payload: {
         'url': client.baseUrl,
-        'session': 'mission-control',
-        'title': 'Mission Control',
+        'session': 'lead',
+        'title': 'Lead',
       },
     );
   }
 
-  /// Binds the active daemon client so Mission Control chats are always watched
+  /// Binds the active daemon client so Lead chats are always watched
   /// and available in the macOS Notch even when ambient voice is inactive or
   /// another tab is selected.
   static void bindClient(DaemonClient? client) {
@@ -233,7 +233,7 @@ class MacosNotch {
 
   static void _startMcWatch(DaemonClient client) {
     try {
-      final ch = client.attach('mission-control');
+      final ch = client.attach('lead');
       _mcSocket = ch;
       _mcSub = ch.stream.listen(
         (msg) {
@@ -255,7 +255,7 @@ class MacosNotch {
               final chunk = (j['text'] as String?) ?? '';
               if (j['voice'] == true) return;
               _mcLiveStreamText = append ? _mcLiveStreamText + chunk : chunk;
-              if (_activeSessionId == 'mission-control') {
+              if (_activeSessionId == 'lead') {
                 _activeState = _mcState;
                 _liveStreamText = _mcLiveStreamText;
                 _emitSessionMessages();
@@ -283,12 +283,12 @@ class MacosNotch {
               }
               if (wire == 'delta' && prev != null) {
                 final grew = next.events.length > prev.events.length;
-                _noteMissionControl(
+                _noteLead(
                     client,
                     grew ? next.events.sublist(prev.events.length) : const [],
                     next.status);
               }
-              if (_activeSessionId == 'mission-control') {
+              if (_activeSessionId == 'lead') {
                 _activeState = next;
                 _liveStreamText = _mcLiveStreamText;
                 _emitSessionMessages();
@@ -342,8 +342,8 @@ class MacosNotch {
       payload = jsonDecode(rawPayload) as Map<String, dynamic>;
     } catch (_) {
       payload = const {
-        'session': 'mission-control',
-        'title': 'Mission Control',
+        'session': 'lead',
+        'title': 'Lead',
       };
     }
 
@@ -388,24 +388,24 @@ class MacosNotch {
     }
 
     if (sessionId.isEmpty) {
-      sessionId = 'mission-control';
+      sessionId = 'lead';
     }
-    if (sessionId == 'mission-control') {
+    if (sessionId == 'lead') {
       await _channel.invokeMethod<void>('openInApp', <String, dynamic>{
         ...payload,
         'url': client.baseUrl,
-        'session': 'mission-control',
-        'title': 'Mission Control',
+        'session': 'lead',
+        'title': 'Lead',
       });
       return;
     }
-    if (sessionId == 'mission-control' || _activeTitle.isEmpty) {
+    if (sessionId == 'lead' || _activeTitle.isEmpty) {
       _activeTitle =
-          sessionId == 'mission-control' ? 'Mission Control' : 'Conversation';
+          sessionId == 'lead' ? 'Lead' : 'Conversation';
     }
 
     _activeSessionId = sessionId;
-    if (sessionId == 'mission-control') {
+    if (sessionId == 'lead') {
       bindClient(client);
       if (_mcState != null) {
         _activeState = _mcState;
@@ -484,8 +484,8 @@ class MacosNotch {
                 ? cur.applyDelta(j)
                 : HarnessState.fromJson(j);
             _activeState = next;
-            if (sessionId == 'mission-control') {
-              _activeTitle = 'Mission Control';
+            if (sessionId == 'lead') {
+              _activeTitle = 'Lead';
               _mcState = next;
             } else if (next.title != null && next.title!.trim().isNotEmpty) {
               _activeTitle = next.title!.trim();
@@ -710,7 +710,7 @@ class MacosNotch {
     if (action == 'openArtifact' || action == 'openImage') {
       await _channel.invokeMethod<void>('openInApp', {
         'url': (_activeClient ?? _defaultClient)?.baseUrl ?? '',
-        'session': _activeSessionId ?? 'mission-control',
+        'session': _activeSessionId ?? 'lead',
         'title': _activeTitle,
       });
       return;
@@ -724,7 +724,7 @@ class MacosNotch {
       _ => QuickReply(text, via: 'notification'),
     };
     final client = _activeClient ?? _defaultClient;
-    final session = _activeSessionId ?? 'mission-control';
+    final session = _activeSessionId ?? 'lead';
     if (client != null) {
       await quickSend(client: client, session: session, action: quickAction);
     } else {
@@ -746,12 +746,12 @@ class MacosNotch {
     }
 
     final ch =
-        _activeSessionId == 'mission-control' ? _mcSocket : _activeSocket;
+        _activeSessionId == 'lead' ? _mcSocket : _activeSocket;
     if (ch != null && _activeSessionId != null) {
       final nonce =
           'notch-${DateTime.now().millisecondsSinceEpoch}-${_nonceCounter++}';
       final state =
-          _activeSessionId == 'mission-control' ? _mcState : _activeState;
+          _activeSessionId == 'lead' ? _mcState : _activeState;
       final running = state?.status == 'running';
       if (running) {
         ch.sink.add(jsonEncode({
@@ -813,25 +813,25 @@ class MacosNotch {
     }).catchError((Object _) {});
   }
 
-  static void _showMissionControl(
+  static void _showLead(
       DaemonClient client, String text, String kind) {
     showNotification(
-      title: 'Mission Control',
+      title: 'Lead',
       subtitle: text,
       kind: kind,
       payload: {
         'url': client.baseUrl,
-        'session': 'mission-control',
-        'title': 'Mission Control',
+        'session': 'lead',
+        'title': 'Lead',
         'body': text,
-        'destination': const {'type': 'session', 'id': 'mission-control'},
+        'destination': const {'type': 'session', 'id': 'lead'},
       },
     );
   }
 
   /// A running turn's progress text stays quiet: only its last message surfaces,
   /// when the turn ends. A question can't wait for that.
-  static void _noteMissionControl(
+  static void _noteLead(
       DaemonClient client, List<Map<String, dynamic>> added, String status) {
     for (final e in added) {
       final kind = e['kind'] as String? ?? '';
@@ -841,11 +841,11 @@ class MacosNotch {
         if (text.isNotEmpty) _mcTurnText = text;
       } else if (kind == 'user_question') {
         final text = userQuestionLead(e).replaceAll(RegExp(r'\s+'), ' ').trim();
-        if (text.isNotEmpty) _showMissionControl(client, text, 'waiting');
+        if (text.isNotEmpty) _showLead(client, text, 'waiting');
       }
     }
     if (status != 'running' && _mcTurnText.isNotEmpty) {
-      _showMissionControl(client, _mcTurnText, 'message');
+      _showLead(client, _mcTurnText, 'message');
       _mcTurnText = '';
     }
   }
@@ -1017,10 +1017,10 @@ String notchChannel(Map<String, dynamic> payload, String title) {
   final session =
       (payload['session'] ?? destination['session'] ?? '').toString();
   final kind = (payload['kind'] ?? '').toString();
-  if (session == 'mission-control' ||
+  if (session == 'lead' ||
       destination['type'] == 'task' ||
       kind == 'ping') {
-    return 'Mission Control';
+    return 'Lead';
   }
   if (kind == 'direct_message.sent') return 'Message';
   if (kind == 'group_mention') return 'Mention';

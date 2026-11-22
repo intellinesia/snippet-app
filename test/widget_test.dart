@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:snippet/models.dart';
 import 'package:snippet/tool_activity.dart';
-import 'package:snippet/screens/mission_control/mission_control_state.dart';
+import 'package:snippet/screens/lead/lead_state.dart';
 import 'package:snippet/tool_views.dart';
 import 'package:snippet/theme.dart';
 import 'package:snippet/transcript.dart';
@@ -110,60 +110,60 @@ void main() {
     expect(delta.goal?.text, 'Finish the task');
     expect(delta.goal?.ongoing, isTrue);
   });
-  test('Mission Control is the dedicated home session', () {
-    expect(isDedicatedMcSession(null), isFalse);
-    expect(isDedicatedMcSession(''), isFalse);
+  test('Lead is the dedicated home session', () {
+    expect(isDedicatedLeadSession(null), isFalse);
+    expect(isDedicatedLeadSession(''), isFalse);
     expect(
-      isDedicatedMcSession('snippet-service-61c2d836aee8dc5b'),
+      isDedicatedLeadSession('snippet-service-61c2d836aee8dc5b'),
       isFalse,
     );
     expect(
-      isDedicatedMcSession(
+      isDedicatedLeadSession(
         'gmata-backend-74fcefb69dbc56ca/conversations/deadbeef.json',
       ),
       isFalse,
     );
-    expect(isDedicatedMcSession('mission-control'), isTrue);
-    expect(isDedicatedMcSession('mission-control/session.json'), isTrue);
+    expect(isDedicatedLeadSession('lead'), isTrue);
+    expect(isDedicatedLeadSession('lead/session.json'), isTrue);
     expect(
-      isMissionControlTab(
+      isLeadTab(
         sessionId: 'gmata-backend-74fcefb69dbc56ca/conversations/ef933a40.json',
-        title: 'Mission Control',
+        title: 'Lead',
       ),
       isTrue,
     );
     expect(
-      isMissionControlTab(
+      isLeadTab(
         sessionId: 'snippet-service-61c2d836aee8dc5b',
-        title: 'Design Mission Control',
+        title: 'Design Lead',
       ),
       isFalse,
     );
     expect(
-      isMissionControlListRow(SessionInfo.fromJson({
-        'id': 'mission-control',
-        'title': 'Mission Control',
+      isLeadListRow(SessionInfo.fromJson({
+        'id': 'lead',
+        'title': 'Lead',
       })),
       isTrue,
     );
     expect(
-      isMissionControlListRow(SessionInfo.fromJson({
+      isLeadListRow(SessionInfo.fromJson({
         'id': 'gmata-backend-74fcefb69dbc56ca/conversations/ef933a40.json',
-        'title': 'Mission Control',
+        'title': 'Lead',
       })),
       isTrue,
     );
     expect(
-      isMissionControlListRow(SessionInfo.fromJson({
+      isLeadListRow(SessionInfo.fromJson({
         'id': 'snippet-service-61c2d836aee8dc5b',
-        'title': 'Design Mission Control',
+        'title': 'Design Lead',
       })),
       isFalse,
     );
   });
 
-  test('Mission Control models mirror the daemon contract', () {
-    final task = MissionControlTask.fromJson({
+  test('Lead models mirror the daemon contract', () {
+    final task = LeadTask.fromJson({
       'id': 'task-1',
       'title': 'Fix lifecycle',
       'description': 'Use the server task contract only.',
@@ -174,7 +174,7 @@ void main() {
       'archived': false,
       // Intentionally omit old client-only priority, tags, and assignee fields.
     });
-    final done = MissionControlTask.fromJson({
+    final done = LeadTask.fromJson({
       'id': 'task-2',
       'status': 'done',
       'archived': true,
@@ -471,7 +471,7 @@ void main() {
     // for the new message: the real field is the final line before the tag.
     const envelope = '<coordination_board_message thread_id="system" from_id="human" from_kind="human">\n'
         '<history messages="1" order="oldest first">\n'
-        '4 agent:mission-control: earlier note about body: parsing\n'
+        '4 agent:lead: earlier note about body: parsing\n'
         '</history>\n'
         '<body>the real current message</body>\n'
         '</coordination_board_message>';

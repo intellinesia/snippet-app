@@ -425,8 +425,8 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
   }
 
   bool get _mc =>
-      widget.agentId == 'mission-control' ||
-      (widget.agent?.isMissionControl ?? false);
+      widget.agentId == 'lead' ||
+      (widget.agent?.isLead ?? false);
 
   // Opens on top of this page, so back returns here.
   void _go(VoidCallback open) => open();
@@ -1372,7 +1372,7 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
       if (!mounted) return;
       setState(() {
         _agents = all
-            .where((a) => !a.isMissionControl && a.status != 'archived')
+            .where((a) => !a.isLead && a.status != 'archived')
             .toList()
           ..sort((a, b) => a.displayName.compareTo(b.displayName));
         _byId = {for (final a in _agents) a.id: a};
@@ -1411,7 +1411,7 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
 
   String _name(String id, String kind) {
     if (kind == 'human') return 'You';
-    if (id == 'mission-control') return 'Mission Control';
+    if (id == 'lead') return 'Lead';
     final a = _byId[id];
     if (a == null) return id;
     final n = a.displayName.trim();

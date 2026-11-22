@@ -38,9 +38,9 @@ Widget _rail(DaemonClient client, String status, {bool mc = false}) => MaterialA
       home: Scaffold(
         body: SessionRail(
           client: client,
-          sessionId: mc ? 'mission-control' : 'sess-1',
+          sessionId: mc ? 'lead' : 'sess-1',
           state: HarnessState.fromJson({'status': status, 'workspace': '/tmp/ws'}),
-          isMissionControl: mc,
+          isLead: mc,
           profileLabel: 'Default',
           resumeMode: 'ask',
           onModel: () {},

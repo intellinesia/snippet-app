@@ -66,7 +66,7 @@ void main() {
         }
         Object body;
         switch (path) {
-          case '/mission-control/open': body = {'id': 'mission-control'};
+          case '/lead/open': body = {'id': 'lead'};
           case '/health': body = {'ok': true};
           case '/sessions': body = <Object>[];
           case '/sessions/counts': body = <String, int>{};

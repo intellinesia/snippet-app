@@ -54,10 +54,10 @@ import '../tap_detector.dart';
 /// Returns null when dismissed. Shared by the composer's recipient picker and
 /// the message sheet so both offer the same list, in the same order.
 ///
-/// Mission Control is NOT offered. It is the coordinator, reached by opening its
+/// Lead is NOT offered. It is the coordinator, reached by opening its
 /// own session, so listing it as a recipient elsewhere would be a second path to
 /// the same place — and would let a message meant for a worker land on the
-/// coordinator. Agents reach Mission Control through their own tools, not here.
+/// coordinator. Agents reach Lead through their own tools, not here.
 Future<CoordinationAgent?> pickAgentId(
   BuildContext context,
   DaemonClient client, {
@@ -77,10 +77,10 @@ Future<CoordinationAgent?> pickAgentId(
   final candidates = agents
       .where((a) =>
           !exclude.contains(a.id) &&
-          // Mission Control is reached through its own chat, not picked here.
+          // Lead is reached through its own chat, not picked here.
           // Offering it would let a message aimed at a worker land on the
           // coordinator.
-          !a.isMissionControl)
+          !a.isLead)
       .toList();
   if (!context.mounted) return null;
   if (candidates.isEmpty) {
@@ -122,7 +122,7 @@ Future<CoordinationAgent?> pickAgentId(
 /// The sheet collects only what a human can decide — who, and what to say. It
 /// sends a DIRECT MESSAGE carrying this session as its origin, so the agent
 /// knows which session to reply in and which session to request dispatch on.
-/// Nothing here creates work: dispatching belongs to Mission Control.
+/// Nothing here creates work: dispatching belongs to Lead.
 class AgentWorkSheet extends StatefulWidget {
   const AgentWorkSheet({
     super.key,
@@ -1253,7 +1253,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   bool _hasTaskOrigin(CoordinationEvent e) {
     if (e.actorKind == 'human') return false;
     final origin = e.payload['origin_session'];
-    // Mission Control's session is its own inbox.
+    // Lead's session is its own inbox.
     return origin is String &&
         origin.isNotEmpty &&
         origin != 'inbox-${widget.agentId}' &&
@@ -1894,7 +1894,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   Widget _agentHead() {
     final a = _agent;
     final mc =
-        widget.agentId == 'mission-control' || (a?.isMissionControl ?? false);
+        widget.agentId == 'lead' || (a?.isLead ?? false);
     final purpose = mc
         ? 'Coordinates your agents and sessions'
         : (a?.capabilities.isNotEmpty ?? false)

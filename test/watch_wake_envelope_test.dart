@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:snippet/screens/mission_control/mission_control_state.dart';
+import 'package:snippet/screens/lead/lead_state.dart';
 
 void main() {
   test('parses a watch envelope into name, mode and new lines', () {
@@ -27,12 +27,12 @@ void main() {
   test('labels queued envelopes by kind and sender', () {
     expect(
         queuedEnvelopeLabel(
-            '<direct_message event_id="e1" from="agent:mission-control" from_kind="agent">\n<body>Run scrape</body>\n</direct_message>'),
-        'Message from mission-control: Run scrape');
+            '<direct_message event_id="e1" from="agent:lead" from_kind="agent">\n<body>Run scrape</body>\n</direct_message>'),
+        'Message from lead: Run scrape');
     expect(
         queuedEnvelopeLabel(
-            '<agent_reply from="agent:mission-control">\n<body>Task is done.</body>\n</agent_reply>'),
-        'Reply from mission-control: Task is done.');
+            '<agent_reply from="agent:lead">\n<body>Task is done.</body>\n</agent_reply>'),
+        'Reply from lead: Task is done.');
     expect(queuedEnvelopeLabel('plain [text]'), isNull);
   });
 }

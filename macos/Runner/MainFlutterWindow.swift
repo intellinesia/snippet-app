@@ -725,13 +725,13 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
     openItem.target = self
     menu.addItem(openItem)
 
-    let mcNotchItem = NSMenuItem(
-      title: "Mission Control Notch",
-      action: #selector(onMenuOpenMissionControlNotch),
+    let leadNotchItem = NSMenuItem(
+      title: "Lead Notch",
+      action: #selector(onMenuOpenLeadNotch),
       keyEquivalent: "m"
     )
-    mcNotchItem.target = self
-    menu.addItem(mcNotchItem)
+    leadNotchItem.target = self
+    menu.addItem(leadNotchItem)
 
     menu.addItem(NSMenuItem.separator())
 
@@ -763,12 +763,12 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
     restoreFromMenuBar()
   }
 
-  @objc private func onMenuOpenMissionControlNotch() {
+  @objc private func onMenuOpenLeadNotch() {
     if self.isVisible && !self.isMiniaturized {
       self.orderOut(nil)
       notchHUD?.setWindowHidden(true)
     }
-    notchHUD?.openMissionControlConversation()
+    notchHUD?.openLeadConversation()
   }
 
   @objc private func onMenuToggleAmbient() {
@@ -1818,8 +1818,8 @@ final class NotchHUDController {
     onOpenInApp(payload)
   }
 
-  func openMissionControlConversation() {
-    let defaultPayload = "{\"session\":\"mission-control\",\"title\":\"Mission Control\"}"
+  func openLeadConversation() {
+    let defaultPayload = "{\"session\":\"lead\",\"title\":\"Lead\"}"
     activePayload = defaultPayload
     notifDismissTimer?.invalidate()
     notifTitle = nil
@@ -1830,7 +1830,7 @@ final class NotchHUDController {
     conversationExpanded = true
     hudView.setConversationExpanded(true)
     hudView.setConversationData(
-      title: "Mission Control",
+      title: "Lead",
       status: "loading",
       messages: []
     )
@@ -1894,7 +1894,7 @@ final class NotchHUDController {
       return
     }
     if let payload = notifPayload, !payload.isEmpty {
-      let title = notifTitle ?? "Mission Control"
+      let title = notifTitle ?? "Lead"
       let sub = notifSubtitle ?? ""
       activePayload = payload
       notifDismissTimer?.invalidate()
@@ -1913,7 +1913,7 @@ final class NotchHUDController {
       refreshHUD(animated: true)
       onOpenConversation(payload)
     } else {
-      openMissionControlConversation()
+      openLeadConversation()
     }
   }
 
@@ -2214,7 +2214,7 @@ final class NotchHUDView: NSView, NSTextFieldDelegate {
     replyField.focusRingType = .none
     replyField.font = SnippetTheme.sans(13.0, weight: .regular)
     replyField.textColor = SnippetTheme.fg1
-    replyField.placeholderString = "Reply to Mission Control"
+    replyField.placeholderString = "Reply to Lead"
     replyField.delegate = self
     replyField.target = self
     replyField.action = #selector(handleSendTap)
@@ -2433,7 +2433,7 @@ final class NotchHUDView: NSView, NSTextFieldDelegate {
     var y: CGFloat = 8
 
     if convMessages.isEmpty {
-      let empty = NSTextField(labelWithString: convStatus == "loading" ? "Loading Mission Control…" : "No messages yet.")
+      let empty = NSTextField(labelWithString: convStatus == "loading" ? "Loading Lead…" : "No messages yet.")
       empty.font = SnippetTheme.sans(12.5, weight: .regular)
       empty.textColor = SnippetTheme.fg3
       empty.frame = NSRect(x: 8, y: 18, width: width - 16, height: 20)

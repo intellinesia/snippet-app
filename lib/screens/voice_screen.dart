@@ -324,7 +324,7 @@ class _VoiceScreenState extends State<VoiceScreen> {
   Future<void> _removeRule(String id, String label) => _ask(
         'rule:$id',
         'Remove rule?',
-        'Mission Control will stop applying "$label".',
+        'Lead will stop applying "$label".',
         'Remove',
         () => _recAct(() => widget.client.setRecording(removeRule: id),
             done: 'Rule removed'),
@@ -333,7 +333,7 @@ class _VoiceScreenState extends State<VoiceScreen> {
   Future<void> _removeWindow(String id, String label) => _ask(
         'window:$id',
         'Remove window?',
-        'Mission Control will stop applying "$label".',
+        'Lead will stop applying "$label".',
         'Remove',
         () => _recAct(() => widget.client.setRecording(removeWindow: id),
             done: 'Window removed'),
@@ -477,12 +477,12 @@ class _VoiceScreenState extends State<VoiceScreen> {
         header: 'Rules',
         footer: ruleRows.isEmpty
             ? null
-            : 'Rules are set by asking Mission Control.',
+            : 'Rules are set by asking Lead.',
         children: ruleRows.isEmpty
             ? [
                 SettingsRow(
                   label:
-                      'Ask Mission Control, for example: always record my Monday standup.',
+                      'Ask Lead, for example: always record my Monday standup.',
                 ),
               ]
             : ruleRows,
@@ -570,7 +570,7 @@ class _VoiceScreenState extends State<VoiceScreen> {
     return SettingsGroup(
       header: 'Attention',
       footer:
-          'How the microphone treats speech. Mission Control also changes it when you say who is around.',
+          'How the microphone treats speech. Lead also changes it when you say who is around.',
       children: [
         SettingsPickerRow<String>(
           label: 'Profile',

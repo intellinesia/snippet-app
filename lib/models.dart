@@ -276,7 +276,7 @@ class SessionInfo {
   /// The agent dispatched to work here right now, from the task board's roster.
   ///
   /// A different question from [agentId]: a plain project session is nobody's,
-  /// yet Mission Control can dispatch an agent into it — and that is exactly the
+  /// yet Lead can dispatch an agent into it, and that is exactly the
   /// case the session list needs to show. [agentId] alone could never answer it,
   /// because dispatch writes the roster, not the session's identity.
   final String? workerAgentId;
@@ -1248,36 +1248,37 @@ class GitStatus {
   List<GitFile> get untracked => files.where((f) => f.untracked).toList();
 }
 
-// ---- Mission Control ----
+// ---- Lead ----
 
-/// Summary dashboard returned by GET /mission-control/overview.
-class MissionControlOverview {
+/// Summary dashboard returned by GET /lead/overview.
+class LeadOverview {
   final int activeTasks;
   final int completedTasks;
   final int totalTasks;
   final int activeSessions;
   final int totalSessions;
-  final List<MissionControlTask> recentTasks;
+  final List<LeadTask> recentTasks;
   final List<ManagedSession> recentSessions;
 
-  /// Daemon-side id of the active Mission Control session, if one is open.
+  /// Daemon-side id of the active Lead session, if one is open.
   /// Resolved client-side from the settings sidecar; null when the user has
-  /// never opened Mission Control on this device.
-  final String? mcSessionId;
+  /// never opened Lead on this device.
+  final String? leadSessionId;
 
-  MissionControlOverview.fromJson(Map<String, dynamic> j)
+  LeadOverview.fromJson(Map<String, dynamic> j)
       : activeTasks = (j['active_tasks'] as num?)?.toInt() ?? 0,
         completedTasks = (j['completed_tasks'] as num?)?.toInt() ?? 0,
         totalTasks = (j['total_tasks'] as num?)?.toInt() ?? 0,
         activeSessions = (j['active_sessions'] as num?)?.toInt() ?? 0,
         totalSessions = (j['total_sessions'] as num?)?.toInt() ?? 0,
         recentTasks = ((j['recent_tasks'] as List?) ?? const [])
-            .map((e) => MissionControlTask.fromJson(e as Map<String, dynamic>))
+            .map((e) => LeadTask.fromJson(e as Map<String, dynamic>))
             .toList(),
         recentSessions = ((j['recent_sessions'] as List?) ?? const [])
             .map((e) => ManagedSession.fromJson(e as Map<String, dynamic>))
             .toList(),
-        mcSessionId = j['mc_session_id'] as String?;
+        leadSessionId =
+            (j['lead_session_id'] ?? j['mc_session_id']) as String?;
 }
 
 /// A notification marker attached to a task (e.g. "dispatch failed 3 times",
@@ -1474,14 +1475,13 @@ class CoordinationAgent {
 
   bool get available => status == 'active';
 
-  /// True for Mission Control, the coordinator.
+  /// True for Lead, the coordinator.
   ///
   /// It is not a peer agent: it has its own pinned chat, and it does not take
   /// work the way a worker does. Any list of agents a user picks FROM should
-  /// exclude it — it is a destination reached by its own session, not an entry
+  /// exclude it; it is a destination reached by its own session, not an entry
   /// in a list of workers.
-  bool get isMissionControl =>
-      kind == 'mission_control' || id == 'mission-control';
+  bool get isLead => kind == 'lead' || id == 'lead';
 }
 
 /// One row of an agent's coordination memory: what it dispatched, what came
@@ -1781,8 +1781,8 @@ class DirectThreadPage {
   }
 }
 
-/// A task tracked by Mission Control.
-class MissionControlTask {
+/// A task tracked by Lead.
+class LeadTask {
   final String id;
   final String title;
   final String description;
@@ -1801,7 +1801,7 @@ class MissionControlTask {
   final int planDone;
   final int planTotal;
 
-  MissionControlTask.preview(MissionControlTask o)
+  LeadTask.preview(LeadTask o)
       : id = o.id,
         title = o.title,
         description = o.description,
@@ -1819,7 +1819,7 @@ class MissionControlTask {
         planTotal = o.planTotal,
         summary = false;
 
-  MissionControlTask.fromJson(Map<String, dynamic> j)
+  LeadTask.fromJson(Map<String, dynamic> j)
       : id = j['id'] as String? ?? '',
         summary = j['summary'] == true,
         title = j['title'] as String? ?? '',
@@ -1853,7 +1853,7 @@ int _epochSeconds(dynamic raw) {
   return 0;
 }
 
-/// A managed session registered in Mission Control.
+/// A managed session registered in Lead.
 class ManagedSession {
   final String id;
   final String sessionId; // links to the actual snippet session
@@ -1879,7 +1879,7 @@ class ManagedSession {
   bool get isActive => !archived && status == 'active';
 }
 
-/// A scheduled poke that wakes Mission Control or any conversation.
+/// A scheduled poke that wakes Lead or any conversation.
 class RecurringJob {
   final String id;
   final String title;
@@ -1974,7 +1974,7 @@ final ValueNotifier<int> modelsRevision = ValueNotifier<int>(0);
 ///
 /// Deliberately smaller than the assignment states: a task is what a HUMAN
 /// filed, so it carries the columns a person works in and nothing about
-/// dispatch, which is Mission Control's concern.
+/// dispatch, which is Lead's concern.
 enum TaskStatus {
   todo('todo', 'To do'),
   inProgress('in_progress', 'In progress'),

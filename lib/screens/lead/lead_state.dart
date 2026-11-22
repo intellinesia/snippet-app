@@ -1,26 +1,24 @@
-/// Mission Control session predicates and the typed envelopes agents and the
+/// Lead session predicates and the typed envelopes agents and the
 /// daemon write into transcripts.
 library;
 
 import '../../envelope.dart';
 import '../../models.dart';
 
-bool isDedicatedMcSession(String? id) {
+bool isDedicatedLeadSession(String? id) {
   if (id == null || id.isEmpty) return false;
   final normalized = id.replaceAll(r'\', '/').trim();
-  return normalized == 'mission-control' ||
-      normalized == 'mission-control/session.json';
+  return normalized == 'lead' || normalized == 'lead/session.json';
 }
 
-/// True for the dedicated MC home — by session id or the exact tab title
-/// leftover from when MC was listed as a regular chat.
-bool isMissionControlTab({String? sessionId, String? title}) {
-  if (isDedicatedMcSession(sessionId)) return true;
-  return title?.trim() == 'Mission Control';
+/// True for the dedicated Lead home, by session id or exact tab title.
+bool isLeadTab({String? sessionId, String? title}) {
+  if (isDedicatedLeadSession(sessionId)) return true;
+  return title?.trim() == 'Lead';
 }
 
-bool isMissionControlListRow(SessionInfo session) {
-  return isMissionControlTab(sessionId: session.id, title: session.title);
+bool isLeadListRow(SessionInfo session) {
+  return isLeadTab(sessionId: session.id, title: session.title);
 }
 
 /// Whether a session id names an agent inbox rather than a project session.
@@ -89,7 +87,7 @@ const _envelopeNames = {
   'group_message': 'Group message',
   'coordination_board_message': 'Task room post',
   'task_offer': 'Task offer',
-  'mission_control_task': 'Task',
+  'lead_task': 'Task',
   'mission_task_report': 'Task report',
   'review_request': 'Review request',
   'review_findings': 'Review findings',
@@ -124,7 +122,7 @@ MissionEnvelope? parseMissionEnvelope(String text) {
   final isRecurring = tag == 'recurring_run_report';
   final isPlan = tag == 'task_plan';
   final isReport = isRecurring || isPlan || tag == 'mission_task_report';
-  final isTask = tag == 'mission_control_task';
+  final isTask = tag == 'lead_task';
   final review = tag == 'review_findings'
       ? 'findings'
       : tag == 'review_request'
@@ -187,7 +185,7 @@ MissionEnvelope? parseMissionEnvelope(String text) {
   );
 }
 
-/// Stall reports are written for Mission Control; keep what the user can use.
+/// Stall reports are written for Lead; keep what the user can use.
 String _readableStall(String summary) {
   final head = RegExp(
     r'^stalled (\d+) min: no progress since \S+; ',
@@ -324,7 +322,7 @@ Map<int, QuietWakeRun> quietWakeRuns(List<Map<String, dynamic>> events) {
   return out;
 }
 
-/// The periodic round the daemon hands Mission Control in autonomous mode.
+/// The periodic round the daemon hands Lead in autonomous mode.
 /// Parsed so the transcript shows a compact summary instead of the envelope.
 class AutonomousRound {
   const AutonomousRound({
@@ -434,7 +432,7 @@ AutonomousRound? parseAutonomousRound(String text) {
   );
 }
 
-/// A worker paused on a question, forwarded to Mission Control.
+/// A worker paused on a question, forwarded to Lead.
 class WorkerQuestion {
   const WorkerQuestion({
     required this.taskId,
@@ -655,7 +653,7 @@ String? parseParentMessage(String text) {
   return envelopeBody(t);
 }
 
-/// Work Mission Control offers an agent, carried as the body of a direct
+/// Work Lead offers an agent, carried as the body of a direct
 /// message. Nothing starts until the agent claims it.
 class TaskOffer {
   const TaskOffer({
@@ -752,7 +750,7 @@ String? voiceClassifierNote(String agentId, String body) {
   ).firstMatch(text);
   if (mode != null) {
     final reason = (mode.group(2) ?? '').replaceFirst(
-      RegExp(r'^mission_control:\s*'),
+      RegExp(r'^lead:\s*'),
       '',
     );
     final label = mode.group(1) == 'active'
@@ -862,7 +860,7 @@ String? parseRoutingNote(String text) {
 String userQuestionLead(Map<String, dynamic> e) {
   final raw = e['questions'];
   final list = raw is Map ? raw['questions'] : raw;
-  final text = missionControlQuestionText({
+  final text = leadQuestionText({
     ...e,
     'questions': list is List ? list : const [],
   });
@@ -873,7 +871,7 @@ String userQuestionLead(Map<String, dynamic> e) {
   return '$text$more';
 }
 
-String missionControlQuestionText(Map<String, dynamic> e) {
+String leadQuestionText(Map<String, dynamic> e) {
   final questions = e['questions'];
   if (questions is List && questions.isNotEmpty) {
     final first = questions.first;

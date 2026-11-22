@@ -111,7 +111,7 @@ class _SessionHandOffPanelState extends State<SessionHandOffPanel> {
       setState(() {
         _agents = [
           for (final a in agents)
-            if (a.available && !a.isMissionControl && a.id != owner) a,
+            if (a.available && !a.isLead && a.id != owner) a,
         ];
         _loading = false;
       });

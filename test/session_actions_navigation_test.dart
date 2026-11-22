@@ -52,7 +52,7 @@ void _sessionUnchanged(WidgetTester tester) {
 
 void main() {
   for (final desktop in [false, true]) {
-    for (final sessionId in ['mission-control', 'mission-control/session.json']) {
+    for (final sessionId in ['lead', 'lead/session.json']) {
       testWidgets('MC chat $sessionId has no Tasks entry (${desktop ? 'desktop' : 'mobile'})',
           (tester) async {
         debugDefaultTargetPlatformOverride =
@@ -71,7 +71,7 @@ void main() {
           home: SessionScreen(
             client: DaemonClient('http://127.0.0.1:9090', 'tok'),
             sessionId: sessionId,
-            title: 'Mission Control',
+            title: 'Lead',
             onMenu: () {},
           ),
         ));
@@ -84,7 +84,7 @@ void main() {
         } else {
           expect(find.byType(StageHeader), findsOneWidget);
           expect(find.byTooltip('Tasks'), findsNothing);
-          await tester.tap(find.text('Mission Control').first);
+          await tester.tap(find.text('Lead').first);
           await _pump(tester);
           expect(
               find.descendant(

@@ -7,7 +7,7 @@ import '../shell_panel.dart';
 import '../models.dart';
 import '../share_inbound.dart';
 import '../tool_sheet.dart';
-import 'mission_control.dart';
+import 'lead.dart';
 
 /// Which pane a tab lives in. Both panes are tab containers, so this is a
 /// property OF a tab, not of the shell — dragging a tab across the divider is
@@ -286,8 +286,8 @@ class ShellTab {
   /// The session's own conversation tab, as opposed to its files, terminals
   /// and readouts.
   bool get isSessionChat =>
-      sessionId != null && !isDiff && !isDraft && !isMissionControl;
-  bool get isMissionControl =>
+      sessionId != null && !isDiff && !isDraft && !isLead;
+  bool get isLead =>
       !isDraft &&
       !isReadout &&
       !isSettings &&
@@ -298,7 +298,7 @@ class ShellTab {
       !isDiff &&
       !isTerminal &&
       !isWorkspace &&
-      isMissionControlTab(sessionId: sessionId, title: title);
+      isLeadTab(sessionId: sessionId, title: title);
   String get key => isSettings
       ? '$instanceUrl|settings'
       : isReadout
@@ -319,8 +319,8 @@ class ShellTab {
                                   ? '$instanceUrl|diff|$diffPath|$diffStaged'
                                   : isFile
                                       ? '$instanceUrl|file|$filePath'
-                                      : isMissionControl
-                                          ? '$instanceUrl|mission-control'
+                                      : isLead
+                                          ? '$instanceUrl|lead'
                                           : '$instanceUrl|$sessionId';
 }
 
@@ -346,7 +346,7 @@ String tabIconKind(ShellTab t) => t.isSettings
                     ? 'kanban'
                     : t.isWorkspace
                         ? 'folder'
-                        : t.isMissionControl
+                        : t.isLead
                             ? 'layers'
                             : t.isTerminal
                                 ? 'terminal'
@@ -369,7 +369,7 @@ class MacSessionControls {
 }
 
 /// The one pinned readout the secondary pane can host: the docked info panel
-/// of an agent or Mission Control tab.
+/// of an agent or Lead tab.
 enum RightPanel {
   none('', ''),
   files('Files', 'file');

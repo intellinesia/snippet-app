@@ -14,7 +14,7 @@ void showTabContextMenu({
   required BuildContext context,
   required ShellTab tab,
   required int index,
-  required bool hasNonMissionControlTabs,
+  required bool hasNonLeadTabs,
   required VoidCallback onCloseTab,
   required VoidCallback onCloseOthers,
   required VoidCallback onCloseAll,
@@ -26,19 +26,19 @@ void showTabContextMenu({
       point: position ?? const Offset(200, 44),
       below: true,
       items: [
-        if (!tab.isMissionControl)
+        if (!tab.isLead)
           appMenuItem(
             value: 'close',
             icon: 'x',
             label: 'Close tab',
           ),
-        if (hasNonMissionControlTabs)
+        if (hasNonLeadTabs)
           appMenuItem(
             value: 'close_others',
             icon: 'copy',
             label: 'Close other tabs',
           ),
-        if (hasNonMissionControlTabs)
+        if (hasNonLeadTabs)
           appMenuItem(
             value: 'close_all',
             icon: 'trash',
@@ -58,12 +58,12 @@ void showTabContextMenu({
     context,
     items: [
       appMenuHeading<String>(tab.title.isEmpty ? '(untitled)' : tab.title),
-      if (!tab.isMissionControl)
+      if (!tab.isLead)
         appMenuItem(value: 'close', icon: 'x', label: 'Close tab'),
-      if (hasNonMissionControlTabs)
+      if (hasNonLeadTabs)
         appMenuItem(
             value: 'close_others', icon: 'copy', label: 'Close other tabs'),
-      if (hasNonMissionControlTabs)
+      if (hasNonLeadTabs)
         appMenuItem(
             value: 'close_all',
             icon: 'trash',

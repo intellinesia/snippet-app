@@ -251,7 +251,7 @@ class AgentSidePanel extends StatelessWidget {
     this.onModel,
   });
 
-  /// Mission Control's session, for its model and cold-resume rows.
+  /// Lead's session, for its model and cold-resume rows.
   final String? sessionId;
   final VoidCallback? onModel;
   final int contextUsed;

@@ -112,7 +112,7 @@ class AgentRow {
     agentRows(List<CoordinationAgent> agents, List<SessionInfo> sessions,
         {PresenceStore? presence}) {
   final crew = deriveCrew(
-      [for (final a in agents) if (a.id != 'mission-control') a], sessions,
+      [for (final a in agents) if (a.id != 'lead') a], sessions,
       presence: presence);
   final working = <AgentRow>[], needs = <AgentRow>[], asleep = <AgentRow>[];
   final at = <String, int>{};

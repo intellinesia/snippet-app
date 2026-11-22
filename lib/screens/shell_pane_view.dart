@@ -11,7 +11,7 @@ import '../theme.dart';
 import '../tool_sheet.dart';
 import '../widgets.dart';
 import 'agent_view_mode.dart';
-import 'mission_control/coordination_agent_detail.dart';
+import 'lead/coordination_agent_detail.dart';
 import 'session.dart' show SessionScreen;
 import 'shell_models.dart';
 import 'shell_nav.dart';

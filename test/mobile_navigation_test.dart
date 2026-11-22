@@ -9,7 +9,7 @@ import 'package:snippet/screens/mobile_home/mobile_home_screen.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/notifications.dart';
 import 'package:snippet/models.dart';
-import 'package:snippet/screens/mission_control/coordination_agent_detail.dart';
+import 'package:snippet/screens/lead/coordination_agent_detail.dart';
 import 'package:snippet/screens/desktop_shell.dart';
 import 'package:snippet/screens/mobile_chrome.dart';
 import 'package:snippet/theme.dart';

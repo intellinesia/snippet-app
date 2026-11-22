@@ -443,7 +443,7 @@ class _LiveSessionCardState extends State<LiveSessionCard> {
   }
 }
 
-/// A breathing ring that marks a control as live, such as Mission Control
+/// A breathing ring that marks a control as live, such as Lead
 /// while ambient voice is on.
 class LiveRing extends StatefulWidget {
   const LiveRing({super.key, required this.live, required this.child});

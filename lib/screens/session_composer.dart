@@ -621,7 +621,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       };
 
   Widget? _recipientChip() {
-    if (_isMissionControl || _recipientAgentId == null) return null;
+    if (_isLead || _recipientAgentId == null) return null;
     if (!kMobile) {
       return Builder(
         builder: (ctx) => DeskRecipientChip(
@@ -697,7 +697,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
           ));
 
   void _trackMention() {
-    if (_isMissionControl) return;
+    if (_isLead) return;
     final v = _input.value;
     final sel = v.selection;
     String? query;
@@ -734,7 +734,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
         if (mounted) {
           _setState(() => _handoffAgents = [
                 for (final a in all)
-                  if (a.available && !a.isMissionControl && a.id != owner)
+                  if (a.available && !a.isLead && a.id != owner)
                     (a.id, a.displayName),
               ]);
         }
@@ -750,7 +750,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     final c = _slashControllers[this] ??= SlashController(_input);
     c.env = SlashEnv(
       goalOngoing: _state?.goal?.ongoing == true,
-      isMc: _isMissionControl,
+      isMc: _isLead,
       resumeMode: _resumeMode,
       settleOn: !_keepAwake,
       resumeTokens: (_cold?['resume_tokens'] as num?)?.toInt(),
@@ -765,7 +765,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
           if (mounted) _setState(() => _warmOn = before);
         }
       },
-      handoffAgents: _isMissionControl ? null : _slashAgents(),
+      handoffAgents: _isLead ? null : _slashAgents(),
       onHandOff: (id, name) async {
         final note = _input.text.trim();
         try {
@@ -811,7 +811,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     _mentionLoading = true;
     try {
       final agents = (await widget.client.coordinationAgents())
-          .where((a) => !a.isMissionControl)
+          .where((a) => !a.isLead)
           .toList()
         ..sort((a, b) => a.displayName.compareTo(b.displayName));
       if (mounted) _setState(() => _mentionAgents = agents);
@@ -824,7 +824,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
 
   List<CoordinationAgent> get _mentionMatches {
     final q = _mentionQuery?.toLowerCase();
-    if (q == null || _isMissionControl) return const [];
+    if (q == null || _isLead) return const [];
     return (_mentionAgents ?? const <CoordinationAgent>[])
         .where((a) =>
             a.displayName.toLowerCase().contains(q) ||
@@ -929,8 +929,8 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     if (agent.isEmpty && _inboxAgentId(widget.sessionId) != null) {
       agent = widget.title.trim();
     }
-    final hint = _isMissionControl
-        ? 'Ask Mission Control…'
+    final hint = _isLead
+        ? 'Ask Lead…'
         : (agent.isEmpty ? 'Reply to Snippet' : 'Message $agent');
     final goal = _state?.goal?.ongoing == true;
     final rcpt = _recipientChip();
@@ -973,7 +973,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
               agentId: _me?.displayAgentId ?? 'snippet',
               onOpen: _openLiveActivity),
         if (_heldQueue.isNotEmpty) _queuedCard(),
-        if (_mentionQuery != null && !_isMissionControl) _mentionList(),
+        if (_mentionQuery != null && !_isLead) _mentionList(),
         if (!kMobile) SlashMenuPopover(controller: _slash),
         if (top != null) top,
       ],
@@ -1017,7 +1017,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
   }
 
   bool get _showsQuickActions =>
-      !_isMissionControl &&
+      !_isLead &&
       !widget.readOnly &&
       _inboxAgentId(widget.sessionId) == null;
 
