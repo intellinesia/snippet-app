@@ -223,7 +223,7 @@ class _SharedArtifactLineState extends State<SharedArtifactLine> {
             : _lookedUp
                 ? Center(
                     child: AppIcon('image', size: 20, color: AppColors.fg4))
-                : const LoadingBlock())
+                : const LoadingBlock(spinner: true))
         : ArtifactImage(client: widget.client, url: _url);
     return TapDetector(
       onTap: _open,

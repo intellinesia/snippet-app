@@ -335,33 +335,68 @@ class _ArtifactRowState extends State<ArtifactRow> {
     ]);
   }
 
+  void _retryPreview() {
+    setState(() {
+      _preview = _load();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final f = _preview;
     if (f == null) return _compact(context);
+    final isImage = widget.kind == 'image';
     return FutureBuilder<_ArtifactPreview?>(
       future: f,
       builder: (context, snap) {
-        if (snap.hasError ||
-            (snap.connectionState == ConnectionState.done &&
-                snap.data == null)) {
-          return _compact(context);
+        if (snap.connectionState != ConnectionState.done) {
+          if (!isImage) {
+            if (widget.caption.trim().isNotEmpty) return _compact(context);
+            return GroupedCard(segments: [
+              _header(context),
+              const LoadingInline(label: 'Loading preview…'),
+            ]);
+          }
+          return GroupedCard(segments: [
+            _header(context),
+            TapDetector(
+              onTap: () => _open(context),
+              child: const SizedBox(
+                height: 150,
+                width: double.infinity,
+                child: LoadingBlock(spinner: true),
+              ),
+            ),
+          ]);
+        }
+        if (snap.hasError) {
+          if (!isImage && widget.caption.trim().isNotEmpty) {
+            return _compact(context);
+          }
+          final fail = LoadFailed(
+            message: 'Couldn’t load preview',
+            onRetry: _retryPreview,
+          );
+          return GroupedCard(segments: [
+            _header(context),
+            if (isImage)
+              SizedBox(height: 150, width: double.infinity, child: fail)
+            else
+              fail,
+          ]);
         }
         final d = snap.data;
-        if (d != null && d.uri == null) {
-          return _compact(context, text: d.text);
-        }
-        final Widget body;
-        if (d == null) {
-          body = const ArtifactSkeleton(fill: true);
-        } else {
-          body = ArtifactImage(client: widget.client, url: d.uri!);
-        }
+        if (d == null) return _compact(context);
+        if (d.uri == null) return _compact(context, text: d.text);
         return GroupedCard(segments: [
           _header(context),
           TapDetector(
             onTap: () => _open(context),
-            child: SizedBox(height: 150, width: double.infinity, child: body),
+            child: SizedBox(
+              height: 150,
+              width: double.infinity,
+              child: ArtifactImage(client: widget.client, url: d.uri!),
+            ),
           ),
         ]);
       },
@@ -429,8 +464,8 @@ class _ArtifactInlineState extends State<ArtifactInline>
       _text ??= widget.client.artifactText(v.url);
 
   Widget _loading() => widget.kind == 'image'
-      ? LoadingBlock(height: 280, radius: R.card)
-      : const ArtifactSkeleton();
+      ? LoadingBlock(height: 280, radius: R.card, spinner: true)
+      : const LoadingInline();
 
   Widget _note(String text) => Padding(
         padding: EdgeInsets.symmetric(vertical: S.s8),
@@ -441,6 +476,7 @@ class _ArtifactInlineState extends State<ArtifactInline>
       FutureBuilder<String>(
         future: _textOf(v),
         builder: (context, snap) {
+          if (snap.connectionState != ConnectionState.done) return _loading();
           if (snap.hasError) {
             return SizedBox(
               height: 72,
@@ -514,16 +550,20 @@ class _ArtifactInlineState extends State<ArtifactInline>
             child: FutureBuilder<ArtifactVersion?>(
               future: _version,
               builder: (context, snap) {
+                if (snap.connectionState != ConnectionState.done) {
+                  return _loading();
+                }
                 if (snap.hasError) {
                   return SizedBox(
                     height: 72,
                     child: LoadFailed(
-                      onRetry: () => setState(() => _version = _load()),
+                      onRetry: () {
+                        setState(() {
+                          _version = _load();
+                        });
+                      },
                     ),
                   );
-                }
-                if (snap.connectionState != ConnectionState.done) {
-                  return _loading();
                 }
                 final v = snap.data;
                 if (v == null) {
@@ -615,17 +655,17 @@ String snippetPageTheme(bool dark, String bg) {
 ''';
 }
 
-/// Stand-in while an artifact loads: one quiet block, no fake text lines.
+/// Stand-in while an artifact loads: quiet shimmer slot when filling a fixed
+/// media container, or a compact inline spinner row otherwise.
 class ArtifactSkeleton extends StatelessWidget {
   const ArtifactSkeleton({super.key, this.fill = false});
 
-  /// Fill the slot it sits in; otherwise a card-sized block.
+  /// Fill the slot it sits in; otherwise a compact inline row.
   final bool fill;
 
   @override
-  Widget build(BuildContext context) => fill
-      ? const LoadingBlock()
-      : LoadingBlock(height: 160, radius: R.card);
+  Widget build(BuildContext context) =>
+      fill ? const LoadingBlock(spinner: true) : const LoadingInline();
 }
 
 /// An artifact image that loads with a timeout, decodes at display size and
@@ -670,7 +710,7 @@ class _ArtifactImageState extends State<ArtifactImage> {
 
   Widget _placeholder() => widget.fullSize
       ? const Center(child: Spinner(size: 20))
-      : LoadingBlock(radius: widget.radius);
+      : LoadingBlock(radius: widget.radius, spinner: true);
 
   @override
   Widget build(BuildContext context) {

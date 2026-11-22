@@ -756,8 +756,14 @@ class _LoadingSweepState extends State<LoadingSweep>
 /// The placeholder for content still loading: a quiet tinted block the size
 /// of what it stands in for, so nothing jumps when the content lands.
 class LoadingBlock extends StatelessWidget {
-  const LoadingBlock(
-      {super.key, this.width, this.height, this.radius = 0, this.color});
+  const LoadingBlock({
+    super.key,
+    this.width,
+    this.height,
+    this.radius = 0,
+    this.color,
+    this.spinner = false,
+  });
 
   final double? width;
 
@@ -766,20 +772,54 @@ class LoadingBlock extends StatelessWidget {
   final double radius;
   final Color? color;
 
+  /// Show a quiet delayed spinner in the centre when loading takes a moment.
+  final bool spinner;
+
   @override
   Widget build(BuildContext context) => Semantics(
         label: 'Loading',
         child: LayoutBuilder(
-          builder: (context, c) => LoadingSweep(
-            child: Container(
-              width: width ?? (c.hasBoundedWidth ? c.maxWidth : null),
-              height: height ?? (c.hasBoundedHeight ? c.maxHeight : 160),
-              decoration: BoxDecoration(
-                color: color ?? AppColors.tint1,
-                borderRadius: BorderRadius.circular(radius),
+          builder: (context, c) {
+            final block = LoadingSweep(
+              child: Container(
+                width: width ?? (c.hasBoundedWidth ? c.maxWidth : null),
+                height: height ?? (c.hasBoundedHeight ? c.maxHeight : 160),
+                decoration: BoxDecoration(
+                  color: color ?? AppColors.tint1,
+                  borderRadius: BorderRadius.circular(radius),
+                ),
               ),
-            ),
-          ),
+            );
+            if (!spinner) return block;
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                block,
+                DelayedSpinner(size: 16, color: AppColors.fg4),
+              ],
+            );
+          },
+        ),
+      );
+}
+
+/// A compact inline loading row for cards and text previews without a fixed
+/// media slot, avoiding tall empty skeleton blocks.
+class LoadingInline extends StatelessWidget {
+  const LoadingInline({super.key, this.label = 'Loading…'});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        label: label,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.of(10)),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Spinner(size: 13, color: AppColors.fg4),
+            SizedBox(width: S.s8),
+            Text(label, style: sans(12, color: AppColors.fg3)),
+          ]),
         ),
       );
 }
