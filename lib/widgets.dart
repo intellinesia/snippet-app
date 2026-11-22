@@ -16,6 +16,7 @@ import 'shell_panel.dart' show openSessionInTab;
 import 'package:flutter/gestures.dart' show kTouchSlop;
 import 'gesture_physics.dart';
 import 'api.dart';
+import 'chat_links.dart';
 import 'media_views.dart';
 import 'theme.dart';
 import 'components.dart';
@@ -172,7 +173,8 @@ class Pills<T> extends StatelessWidget {
 
 const _linkColor = Color(0xFF8AB4FF);
 
-final _codedLink = RegExp(r'`(\[[^\]`]+\]\((?:session|artifact):[^)\s`]+\))`');
+final _codedLink = RegExp(
+    r'`(\[[^\]`]+\]\((?:session|artifact|agent|thread|task):[^)\s`]+\))`');
 final _diffFenceOpenRe = RegExp(r'^([ \t]{0,3})(`{3,})(diff|patch)\s*$');
 final _innerBacktickLineRe = RegExp(r'^[ +\-]?[ \t]*`{3,}');
 
@@ -236,6 +238,17 @@ String _widenDiffFences(String text) {
 
 void openMarkdownLink(String? href, [BuildContext? context, String? text]) {
   if (href == null || href.isEmpty) return;
+  if (parseChatLink(href) case final link?) {
+    if (context == null) return;
+    final client = DaemonScope.maybeOf(context) ?? DaemonScope.current;
+    if (client == null) {
+      toast(context, 'Connect to the machine to open this link.',
+          danger: true);
+      return;
+    }
+    openChatLink(context, client, link, text);
+    return;
+  }
   final uri = Uri.tryParse(href);
   if (uri == null) return;
   if (uri.scheme == 'artifact') {
