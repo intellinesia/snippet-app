@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'myna_icons.dart';
 
 import 'platform.dart';
 import 'settings_form.dart';
@@ -107,7 +108,7 @@ class SettingsBack extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.symmetric(vertical: S.s4),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.chevron_left, size: 16, color: AppColors.fg3),
+              Icon(MynaIcons.chevronLeft, size: 16, color: AppColors.fg3),
               SizedBox(width: S.s2),
               Text(label, style: sans(13, color: AppColors.fg3)),
             ]),

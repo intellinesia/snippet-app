@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../myna_icons.dart';
 
 import '../../api.dart';
 import '../../markdown_preview.dart';
@@ -218,8 +218,8 @@ class _TaskSheetState extends State<TaskSheet> {
   Widget _icons() => Padding(
         padding: const EdgeInsets.only(top: 4),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          _iconBtn(LucideIcons.rotateCcw300, 'Refresh', _refresh),
-          _iconBtn(LucideIcons.x300, 'Close', widget.onClose),
+          _iconBtn(MynaIcons.undo, 'Refresh', _refresh),
+          _iconBtn(MynaIcons.x, 'Close', widget.onClose),
         ]),
       );
 
@@ -300,16 +300,16 @@ class _TaskSheetState extends State<TaskSheet> {
         for (final e in entries) _update(e),
       _h2('Resources', 30),
       if (sessionId != null)
-        _resource(LucideIcons.terminal300, 'Session',
+        _resource(MynaIcons.terminal, 'Session',
             [if (who.isNotEmpty) who, if (folder.isNotEmpty) folder].join(' · '),
             onTap: _openSession),
       if (commits > 0 || files > 0)
-        _resource(LucideIcons.gitBranch300, 'Changes',
+        _resource(MynaIcons.gitBranch, 'Changes',
             [
               if (commits > 0) '$commits ${commits == 1 ? 'commit' : 'commits'}',
               if (files > 0) '$files ${files == 1 ? 'file' : 'files'}',
             ].join(' · ')),
-      _resource(LucideIcons.fileText300, 'Open full details',
+      _resource(MynaIcons.fileText, 'Open full details',
           'Chat, crew, links and history',
           onTap: _openFull),
       if (inReview)
@@ -359,7 +359,7 @@ class _TaskSheetState extends State<TaskSheet> {
         height: 20,
         decoration:
             BoxDecoration(color: AppColors.fg3, shape: BoxShape.circle),
-        child: Icon(LucideIcons.check, size: 12, color: AppColors.bg),
+        child: Icon(MynaIcons.check, size: 12, color: AppColors.bg),
       );
     } else if (s.current) {
       mark = Container(
@@ -413,7 +413,7 @@ class _TaskSheetState extends State<TaskSheet> {
           height: 23,
           child: Center(
             child: turn
-                ? Icon(LucideIcons.arrowRightLeft300,
+                ? Icon(MynaIcons.arrowLeftRight,
                     size: 16, color: AppColors.fg3)
                 : Text('•', style: sans(14, color: AppColors.fg3)),
           ),

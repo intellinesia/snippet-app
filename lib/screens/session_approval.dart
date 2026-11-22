@@ -404,7 +404,7 @@ class ApprovalBarState extends State<ApprovalBar> {
                 kind: ChatCardButtonKind.secondary,
                 onTap: _sent ? null : () => _decide({'kind': 'deny'})),
             ChatCardButton('Approve',
-                icon: Icons.check,
+                icon: MynaIcons.check,
                 busy: _sent,
                 onTap: () => _decide({'kind': 'approve'})),
           ],

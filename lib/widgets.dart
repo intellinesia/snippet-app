@@ -1,4 +1,4 @@
-import 'app_icons_tabler.dart';
+import 'app_icons.dart';
 import 'dart:async';
 import 'desktop_look.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
-import 'package:hugeicons/hugeicons.dart';
 
 import 'platform.dart';
 import 'shell_panel.dart' show openSessionInTab;
@@ -29,7 +28,6 @@ import 'screens/file_viewer.dart' show openFileForViewing, presentFileOnDesktop;
 import 'screens/session.dart' show SessionScreen;
 import 'panel.dart' show presentScreen;
 import 'screens/mobile_chrome.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'tap_detector.dart';
 
 export 'components.dart';
@@ -492,9 +490,12 @@ MarkdownStyleSheet thinkingMarkdownStyle(BuildContext context) {
 
 /// Live thinking/reasoning stream — full markdown, dimmed.
 
-/// HugeIcons sit inside an explicit square and are optically scaled below its
-/// layout bound. This prevents round/full-canvas SVGs from reading larger than
-/// adjacent text or controls.
+/// Myna glyphs sit inside a padded 24 grid; this brings them level with the
+/// text beside them at 16 to 24 pt.
+const double _mynaOptical = 1.1;
+
+/// One icon set (Myna UI) drawn from the bundled MynaIcons font, in an explicit
+/// square so glyphs never push their neighbours around.
 class AppIcon extends StatelessWidget {
   final String name;
   final double size;
@@ -510,72 +511,15 @@ class AppIcon extends StatelessWidget {
     if (name.startsWith('provider:')) {
       return ProviderLogo(name.substring(9), size: size * visualScale);
     }
-    final tabler = tablerIcons[name];
-    if (tabler != null) {
-      return SizedBox.square(
-        dimension: size,
-        child: Center(
-          child: Icon(tabler,
-              size: size * visualScale, color: color ?? AppColors.fg2),
-        ),
-      );
-    }
-    final line = _lucide[name];
-    if (line != null) {
-      return SizedBox.square(
-        dimension: size,
-        child: Center(
-          child: Icon(line,
-              size: size * visualScale, color: color ?? AppColors.fg2),
-        ),
-      );
-    }
-    return _huge(context);
-  }
-
-  Widget _huge(BuildContext context) => SizedBox.square(
-        dimension: size,
-        child: name == 'check'
-            ? CustomPaint(
-                painter: _CheckPainter(
-                    color ?? AppColors.fg2, size * visualScale / 9),
-              )
-            : Center(
-                child: HugeIcon(
-                  icon: hugeIconFor(name),
-                  size: size * visualScale,
-                  color: color ?? AppColors.fg2,
-                ),
-              ),
-      );
-}
-
-class _CheckPainter extends CustomPainter {
-  _CheckPainter(this.color, this.stroke);
-
-  final Color color;
-  final double stroke;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke < 1.4 ? 1.4 : stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    canvas.drawPath(
-      Path()
-        ..moveTo(size.width * 0.2, size.height * 0.53)
-        ..lineTo(size.width * 0.42, size.height * 0.74)
-        ..lineTo(size.width * 0.8, size.height * 0.3),
-      paint,
+    return SizedBox.square(
+      dimension: size,
+      child: Center(
+        child: Icon(appIcons[name] ?? appIcons['circle']!,
+            size: size * visualScale * _mynaOptical,
+            color: color ?? AppColors.fg2),
+      ),
     );
   }
-
-  @override
-  bool shouldRepaint(_CheckPainter old) =>
-      old.color != color || old.stroke != stroke;
 }
 
 /// Glowing status dot.
@@ -2525,175 +2469,6 @@ class AppToggle extends StatelessWidget {
     );
   }
 }
-
-// The thin (300) cut everywhere, matching the settings rows.
-const _lucide = <String, IconData>{
-  'crown': LucideIcons.crown300,
-  'user-plus': LucideIcons.userPlus300,
-  'hash': LucideIcons.hash300,
-  'chevron-left': LucideIcons.chevronLeft300,
-  'paperclip': LucideIcons.paperclip300,
-  'arrow-left': LucideIcons.arrowLeft300,
-  'chevron-right': LucideIcons.chevronRight300,
-  'arrow-right': LucideIcons.arrowRight300,
-  'chevron-down': LucideIcons.chevronDown300,
-  'chevron-up': LucideIcons.chevronUp300,
-  'arrow-up': LucideIcons.arrowUp300,
-  'send': LucideIcons.send300,
-  'bell': LucideIcons.bell300,
-  'bell-off': LucideIcons.bellOff300,
-  'alert-circle': LucideIcons.circleAlert300,
-  'message': LucideIcons.messageSquare300,
-  'message-square': LucideIcons.messageSquare300,
-  'message-text': LucideIcons.messageSquareText300,
-  'chat-thread': LucideIcons.messagesSquare300,
-  'users': LucideIcons.users300,
-  'agent': LucideIcons.bot300,
-  'bot': LucideIcons.bot300,
-  'brain': LucideIcons.brain300,
-  'archive': LucideIcons.archive300,
-  'plus': LucideIcons.plus300,
-  'add': LucideIcons.plus300,
-  'minus': LucideIcons.minus300,
-  'x': LucideIcons.x300,
-  'undo': LucideIcons.undo2300,
-  'redo': LucideIcons.redo2300,
-  'wrap': LucideIcons.wrapText300,
-  'keyboard': LucideIcons.keyboard300,
-  'file-code': LucideIcons.fileCode300,
-  'x-circle': LucideIcons.circleX300,
-  'check-circle': LucideIcons.circleCheck300,
-  'file-text': LucideIcons.fileText300,
-  'more-horizontal': LucideIcons.ellipsis300,
-  'ellipsis': LucideIcons.ellipsis300,
-  'more-vertical': LucideIcons.ellipsisVertical300,
-  'search': LucideIcons.search300,
-  'settings': LucideIcons.settings300,
-  'sliders': LucideIcons.slidersHorizontal300,
-  'panel-right': LucideIcons.panelRight300,
-  'wifi-off': LucideIcons.wifiOff300,
-  'refresh': LucideIcons.refreshCw300,
-  'alert-triangle': LucideIcons.triangleAlert300,
-  'check-check': LucideIcons.checkCheck300,
-  'stop': LucideIcons.square300,
-  'play': LucideIcons.play300,
-  'pause': LucideIcons.pause300,
-  'git-commit': LucideIcons.gitCommitHorizontal300,
-  'user': LucideIcons.user300,
-  'sparkles': LucideIcons.sparkles300,
-  'mic': LucideIcons.mic300,
-  'volume': LucideIcons.volume2300,
-  'mic-off': LucideIcons.micOff300,
-  'phone': LucideIcons.phone300,
-  'phone-off': LucideIcons.phoneOff300,
-  'shield': LucideIcons.shield300,
-  'goal': LucideIcons.goal300,
-  'folder': LucideIcons.folder300,
-  'folder-open': LucideIcons.folderOpen300,
-  'folder-plus': LucideIcons.folderPlus300,
-  'folder-x': LucideIcons.folderX300,
-  'upload': LucideIcons.upload300,
-  'download': LucideIcons.download300,
-  'package': LucideIcons.package300,
-  'link': LucideIcons.link300,
-  'share': LucideIcons.share300,
-  'file': LucideIcons.file300,
-  'git-branch': LucideIcons.gitBranch300,
-  'git-fork': LucideIcons.gitFork300,
-  'worktree': LucideIcons.gitFork300,
-  'terminal': LucideIcons.terminal300,
-  'square-terminal': LucideIcons.squareTerminal300,
-  'grip': LucideIcons.gripVertical300,
-  'sidebar': LucideIcons.panelLeft300,
-  'panel-left': LucideIcons.panelLeft300,
-  'menu': LucideIcons.menu300,
-  'edit': LucideIcons.pencil300,
-  'pencil-line': LucideIcons.pencilLine300,
-  'square-pen': LucideIcons.squarePen300,
-  'chevrons-up-down': LucideIcons.chevronsUpDown300,
-  'git-pull-request-arrow': LucideIcons.gitPullRequestArrow300,
-  'maximize-2': LucideIcons.maximize2300,
-  'eye': LucideIcons.eye300,
-  'eye-off': LucideIcons.eyeOff300,
-  'code': LucideIcons.code300,
-  'book': LucideIcons.bookOpen300,
-  'trash': LucideIcons.trash2300,
-  'copy': LucideIcons.copy300,
-  'cube': LucideIcons.box300,
-  'inbox': LucideIcons.inbox300,
-  'transfer': LucideIcons.arrowLeftRight300,
-  'key': LucideIcons.key300,
-  'cpu': LucideIcons.cpu300,
-  'layers': LucideIcons.layers300,
-  'activity': LucideIcons.activity300,
-  'image': LucideIcons.image300,
-  'film': LucideIcons.film300,
-  'music': LucideIcons.music300,
-  'scan': LucideIcons.scan300,
-  'camera': LucideIcons.camera300,
-  'camera-off': LucideIcons.cameraOff300,
-  'clipboard': LucideIcons.clipboard300,
-  'history': LucideIcons.history300,
-  'clock': LucideIcons.clock300,
-  'minimize': LucideIcons.minimize2300,
-  'expand': LucideIcons.maximize2300,
-  'shrink': LucideIcons.shrink300,
-  'rotate': LucideIcons.rotateCw300,
-  'globe': LucideIcons.globe300,
-  'map': LucideIcons.map300,
-  'list': LucideIcons.list300,
-  'task': LucideIcons.listChecks300,
-  'kanban': LucideIcons.squareKanban300,
-  'file-plus': LucideIcons.filePlus300,
-  'corner-down-right': LucideIcons.cornerDownRight300,
-  'home': LucideIcons.house300,
-  'scheduled': LucideIcons.calendarClock300,
-  'coordination': LucideIcons.network300,
-  'split': LucideIcons.split300,
-  'processes': LucideIcons.cog300,
-  'server': LucideIcons.server300,
-  'monitor': LucideIcons.monitor300,
-  'laptop': LucideIcons.laptop300,
-  'ai-chip': LucideIcons.cpu300,
-  'analytics': LucideIcons.chartColumn300,
-  'lock-key': LucideIcons.keyRound300,
-  'repeat': LucideIcons.repeat300,
-  'check': LucideIcons.check300,
-  'chat': LucideIcons.messageSquare300,
-  'grid': LucideIcons.layoutGrid300,
-  'pdf': LucideIcons.fileText300,
-  'file-image': LucideIcons.fileImage300,
-  'file-video': LucideIcons.fileVideoCamera300,
-  'file-audio': LucideIcons.fileMusic300,
-  'file-json': LucideIcons.fileBraces300,
-  'file-archive': LucideIcons.fileArchive300,
-  'file-terminal': LucideIcons.fileTerminal300,
-  'file-diff': LucideIcons.fileDiff300,
-  'pull-request': LucideIcons.gitPullRequest300,
-  'external-link': LucideIcons.externalLink300,
-  'route': LucideIcons.route300,
-  'gauge': LucideIcons.gauge300,
-  'book-marked': LucideIcons.bookMarked300,
-  'shield-check': LucideIcons.shieldCheck300,
-  'lock': LucideIcons.lockKeyhole300,
-  'calendar-clock': LucideIcons.calendarClock300,
-  'reply': LucideIcons.reply300,
-  'thumbs-up': LucideIcons.thumbsUp300,
-  'help-circle': LucideIcons.circleHelp300,
-  'pin': LucideIcons.pin300,
-  'pin-off': LucideIcons.pinOff300,
-  'message-circle': LucideIcons.messageCircle300,
-  'timer': LucideIcons.timer300,
-  'check-square': LucideIcons.squareCheck300,
-  'info': LucideIcons.info300,
-  'zap': LucideIcons.zap300,
-  'columns-3': LucideIcons.columns3300,
-  'star': LucideIcons.star300,
-  'key-round': LucideIcons.keyRound300,
-  'map-pin': LucideIcons.mapPin300,
-  'ear': LucideIcons.ear300,
-  'audio-lines': LucideIcons.audioLines300,
-};
 
 String? providerLogoAsset(String? provider) {
   final p = (provider ?? '').toLowerCase();

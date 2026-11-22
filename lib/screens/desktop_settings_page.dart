@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../desktop_look.dart';
 import 'package:flutter/services.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../myna_icons.dart';
 
 import '../api.dart';
 import '../models.dart';
@@ -62,7 +62,7 @@ const List<(String, List<_NavEntry>)> _groups = [
         page: SettingsPage.general,
         label: 'Machines',
         icon: null,
-        iconData: LucideIcons.laptop300,
+        iconData: MynaIcons.monitor,
       ),
     ],
   ),

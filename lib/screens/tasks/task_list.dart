@@ -1,4 +1,5 @@
 import '../../task_reason.dart';
+import '../../myna_icons.dart';
 import 'package:flutter/material.dart';
 
 import '../../models.dart';
@@ -559,7 +560,7 @@ class PhoneTaskRow extends StatelessWidget {
                       width: 1.5),
                 ),
                 child: finished
-                    ? Icon(Icons.check, size: 14, color: AppColors.bg)
+                    ? Icon(MynaIcons.check, size: 14, color: AppColors.bg)
                     : null,
               ),
             ),

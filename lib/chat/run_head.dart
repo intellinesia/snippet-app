@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../myna_icons.dart';
 
 import '../mochi.dart';
 import '../theme.dart';
@@ -157,7 +157,7 @@ class SentMeta extends StatelessWidget {
           const SizedBox(width: 4),
           Tooltip(
             message: r ?? 'Delivered',
-            child: Icon(r != null ? LucideIcons.checkCheck : LucideIcons.check,
+            child: Icon(r != null ? MynaIcons.checkCircle : MynaIcons.check,
                 size: 13, color: r != null ? AppColors.accent : AppColors.fg4),
           ),
         ],

@@ -3,7 +3,7 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../myna_icons.dart';
 
 import '../dialog_widgets.dart';
 import '../glass.dart';
@@ -469,7 +469,7 @@ class _ReactionBar extends StatelessWidget {
                           ),
                           alignment: Alignment.center,
                           child: Icon(
-                            LucideIcons.plus,
+                            MynaIcons.plus,
                             size: 18,
                             color: AppColors.fg2,
                           ),
@@ -513,14 +513,14 @@ class _ActionsCard extends StatelessWidget {
             if (showReply)
               _ActionRow(
                 label: 'Reply',
-                icon: LucideIcons.cornerUpLeft,
+                icon: MynaIcons.cornerUpLeft,
                 onTap: onReply,
               ),
             if (showReply && showCopy) Container(height: 1, color: dividerColor),
             if (showCopy)
               _ActionRow(
                 label: 'Copy',
-                icon: LucideIcons.copy,
+                icon: MynaIcons.copy,
                 onTap: onCopy,
               ),
           ],

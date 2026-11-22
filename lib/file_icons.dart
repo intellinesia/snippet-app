@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'theme.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'myna_icons.dart';
 
 const _orange = Color(0xFFD97757);
 const _blue = Color(0xFF8AB4F8);
@@ -21,28 +21,28 @@ String _ext(String name) {
 
 (IconData, Color)? _byName(String lower) {
   if (lower == '.env' || lower.startsWith('.env.')) {
-    return (LucideIcons.fileKey, _amber);
+    return (MynaIcons.file, _amber);
   }
   if (lower.startsWith('license') ||
       lower.startsWith('licence') ||
       lower == 'copying') {
-    return (LucideIcons.fileBadge, _amber);
+    return (MynaIcons.file, _amber);
   }
-  if (lower.startsWith('readme')) return (LucideIcons.fileText, _blue);
-  if (lower.startsWith('changelog')) return (LucideIcons.fileClock, _blue);
+  if (lower.startsWith('readme')) return (MynaIcons.fileText, _blue);
+  if (lower.startsWith('changelog')) return (MynaIcons.file, _blue);
   if (lower == 'dockerfile' ||
       lower.startsWith('dockerfile.') ||
       lower.startsWith('docker-compose') ||
       lower.startsWith('compose.')) {
-    return (LucideIcons.fileBox, _blue);
+    return (MynaIcons.file, _blue);
   }
   if (lower == 'makefile' ||
       lower == 'justfile' ||
       lower == 'procfile' ||
       lower == 'rakefile') {
-    return (LucideIcons.fileTerminal, _orange);
+    return (MynaIcons.terminal, _orange);
   }
-  if (lower.startsWith('.git')) return (LucideIcons.fileDiff, _orange);
+  if (lower.startsWith('.git')) return (MynaIcons.gitDiff, _orange);
   if (const {
     'package.json',
     'cargo.toml',
@@ -59,13 +59,13 @@ String _ext(String name) {
     'deno.json',
     'bun.lockb',
   }.contains(lower)) {
-    return (LucideIcons.fileBox, _green);
+    return (MynaIcons.file, _green);
   }
   if (lower.endsWith('.lock') ||
       lower.endsWith('-lock.json') ||
       lower.endsWith('-lock.yaml') ||
       lower == 'go.sum') {
-    return (LucideIcons.fileLock, _grey);
+    return (MynaIcons.file, _grey);
   }
   if (lower.startsWith('tsconfig') ||
       lower.startsWith('jsconfig') ||
@@ -77,7 +77,7 @@ String _ext(String name) {
       lower == 'analysis_options.yaml' ||
       lower.startsWith('.npmrc') ||
       lower.startsWith('.nvmrc')) {
-    return (LucideIcons.fileCog, _teal);
+    return (MynaIcons.file, _teal);
   }
   return null;
 }
@@ -87,38 +87,38 @@ String _ext(String name) {
   final named = _byName(lower);
   if (named != null) return named;
   return switch (_ext(lower)) {
-    'rs' => (LucideIcons.fileCode, _orange),
+    'rs' => (MynaIcons.codeSquare, _orange),
     'swift' || 'kt' || 'kts' || 'java' || 'scala' => (
-        LucideIcons.fileCode,
+        MynaIcons.codeSquare,
         _orange
       ),
-    'dart' || 'go' || 'py' || 'pyi' => (LucideIcons.fileCode, _blue),
+    'dart' || 'go' || 'py' || 'pyi' => (MynaIcons.codeSquare, _blue),
     'c' || 'h' || 'cc' || 'cpp' || 'hpp' || 'cs' || 'm' || 'mm' => (
-        LucideIcons.fileCode,
+        MynaIcons.codeSquare,
         _blue
       ),
-    'ts' || 'tsx' || 'mts' || 'cts' => (LucideIcons.fileCode, _blue),
-    'js' || 'jsx' || 'mjs' || 'cjs' => (LucideIcons.fileCode, _yellow),
+    'ts' || 'tsx' || 'mts' || 'cts' => (MynaIcons.codeSquare, _blue),
+    'js' || 'jsx' || 'mjs' || 'cjs' => (MynaIcons.codeSquare, _yellow),
     'rb' || 'erb' || 'ex' || 'exs' || 'erl' || 'clj' => (
-        LucideIcons.fileCode,
+        MynaIcons.codeSquare,
         _red
       ),
     'php' || 'lua' || 'zig' || 'nim' || 'jl' || 'r' || 'hs' || 'ml' => (
-        LucideIcons.fileCode,
+        MynaIcons.codeSquare,
         _purple
       ),
-    'vue' || 'svelte' || 'astro' => (LucideIcons.fileCode, _green),
-    'html' || 'htm' || 'xml' || 'xhtml' => (LucideIcons.fileCode, _orange),
+    'vue' || 'svelte' || 'astro' => (MynaIcons.codeSquare, _green),
+    'html' || 'htm' || 'xml' || 'xhtml' => (MynaIcons.codeSquare, _orange),
     'css' || 'scss' || 'sass' || 'less' || 'styl' => (
-        LucideIcons.fileCode,
+        MynaIcons.codeSquare,
         _purple
       ),
     'sql' || 'prisma' || 'graphql' || 'gql' || 'proto' => (
-        LucideIcons.fileCode,
+        MynaIcons.codeSquare,
         _teal
       ),
     'json' || 'jsonc' || 'json5' || 'jsonl' || 'ndjson' => (
-        LucideIcons.fileBraces,
+        MynaIcons.code,
         _yellow
       ),
     'yaml' ||
@@ -130,21 +130,21 @@ String _ext(String name) {
     'properties' ||
     'plist' ||
     'env' =>
-      (LucideIcons.fileSliders, _green),
+      (MynaIcons.file, _green),
     'md' || 'mdx' || 'markdown' || 'rst' || 'adoc' || 'org' || 'tex' => (
-        LucideIcons.fileText,
+        MynaIcons.fileText,
         _blue
       ),
-    'txt' || 'rtf' => (LucideIcons.fileText, _grey),
-    'log' => (LucideIcons.fileClock, _grey),
-    'pdf' => (LucideIcons.fileText, _red),
-    'doc' || 'docx' || 'odt' || 'pages' => (LucideIcons.fileText, _blue),
+    'txt' || 'rtf' => (MynaIcons.fileText, _grey),
+    'log' => (MynaIcons.file, _grey),
+    'pdf' => (MynaIcons.fileText, _red),
+    'doc' || 'docx' || 'odt' || 'pages' => (MynaIcons.fileText, _blue),
     'csv' || 'tsv' || 'xls' || 'xlsx' || 'ods' || 'numbers' || 'parquet' => (
-        LucideIcons.fileSpreadsheet,
+        MynaIcons.table,
         _green
       ),
-    'ppt' || 'pptx' || 'odp' => (LucideIcons.filePlay, _orange),
-    'ipynb' => (LucideIcons.fileChartLine, _orange),
+    'ppt' || 'pptx' || 'odp' => (MynaIcons.film, _orange),
+    'ipynb' => (MynaIcons.chartLine, _orange),
     'png' ||
     'jpg' ||
     'jpeg' ||
@@ -157,15 +157,15 @@ String _ext(String name) {
     'tif' ||
     'tiff' ||
     'psd' =>
-      (LucideIcons.fileImage, _purple),
-    'svg' => (LucideIcons.fileImage, _yellow),
-    'fig' || 'sketch' || 'xd' => (LucideIcons.fileImage, _red),
+      (MynaIcons.image, _purple),
+    'svg' => (MynaIcons.image, _yellow),
+    'fig' || 'sketch' || 'xd' => (MynaIcons.image, _red),
     'mp4' || 'mov' || 'webm' || 'mkv' || 'avi' || 'm4v' => (
-        LucideIcons.fileVideo,
+        MynaIcons.film,
         _red
       ),
     'mp3' || 'wav' || 'm4a' || 'flac' || 'ogg' || 'aac' || 'aiff' => (
-        LucideIcons.fileMusic,
+        MynaIcons.music,
         _purple
       ),
     'zip' ||
@@ -179,44 +179,44 @@ String _ext(String name) {
     'rar' ||
     'jar' ||
     'war' =>
-      (LucideIcons.fileArchive, _amber),
+      (MynaIcons.file, _amber),
     'apk' || 'aab' || 'ipa' || 'dmg' || 'pkg' || 'deb' || 'rpm' || 'msi' => (
-        LucideIcons.fileBox,
+        MynaIcons.file,
         _amber
       ),
     'sh' || 'bash' || 'zsh' || 'fish' || 'ps1' || 'bat' || 'cmd' || 'nu' => (
-        LucideIcons.fileTerminal,
+        MynaIcons.terminal,
         _green
       ),
     'ttf' || 'otf' || 'woff' || 'woff2' || 'eot' => (
-        LucideIcons.fileType,
+        MynaIcons.fileText,
         _red
       ),
     'pem' || 'crt' || 'cer' || 'p12' || 'pfx' || 'pub' || 'gpg' || 'asc' => (
-        LucideIcons.fileKey,
+        MynaIcons.file,
         _amber
       ),
-    'diff' || 'patch' => (LucideIcons.fileDiff, _orange),
-    'db' || 'sqlite' || 'sqlite3' || 'wal' => (LucideIcons.fileStack, _teal),
+    'diff' || 'patch' => (MynaIcons.gitDiff, _orange),
+    'db' || 'sqlite' || 'sqlite3' || 'wal' => (MynaIcons.database, _teal),
     'glb' || 'gltf' || 'obj' || 'fbx' || 'stl' || 'blend' || 'usdz' => (
-        LucideIcons.fileAxis3d,
+        MynaIcons.file,
         _purple
       ),
     'wasm' || 'so' || 'dylib' || 'dll' || 'exe' || 'bin' || 'o' || 'a' => (
-        LucideIcons.fileDigit,
+        MynaIcons.file,
         _grey
       ),
-    'lock' => (LucideIcons.fileLock, _grey),
-    'csr' || 'sig' => (LucideIcons.fileSignature, _amber),
-    _ => (LucideIcons.file, _grey),
+    'lock' => (MynaIcons.file, _grey),
+    'csr' || 'sig' => (MynaIcons.file, _amber),
+    _ => (MynaIcons.file, _grey),
   };
 }
 
 (IconData, Color) folderIconFor(String name, {bool open = false}) {
   final l = name.toLowerCase();
   return switch (l) {
-    '.git' => (LucideIcons.folderGit2, _orange),
-    '.github' || '.gitlab' || '.circleci' => (LucideIcons.folderGit, _grey),
+    '.git' => (MynaIcons.gitBranch, _orange),
+    '.github' || '.gitlab' || '.circleci' => (MynaIcons.gitBranch, _grey),
     'src' ||
     'lib' ||
     'app' ||
@@ -228,7 +228,7 @@ String _ext(String name) {
     'crates' ||
     'components' ||
     'modules' =>
-      (LucideIcons.folderCode, _blue),
+      (MynaIcons.folder, _blue),
     'test' ||
     'tests' ||
     '__tests__' ||
@@ -238,9 +238,9 @@ String _ext(String name) {
     'integration_test' ||
     'testdata' ||
     'fixtures' =>
-      (LucideIcons.folderCheck, _green),
+      (MynaIcons.folderCheck, _green),
     'docs' || 'doc' || 'documentation' || 'wiki' || 'notes' => (
-        LucideIcons.folderBookmark,
+        MynaIcons.folder,
         _blue
       ),
     'node_modules' ||
@@ -250,7 +250,7 @@ String _ext(String name) {
     'venv' ||
     '.dart_tool' ||
     'pods' =>
-      (LucideIcons.folderArchive, _grey),
+      (MynaIcons.folder, _grey),
     'build' ||
     'dist' ||
     'out' ||
@@ -261,7 +261,7 @@ String _ext(String name) {
     'release' ||
     'bin' ||
     'obj' =>
-      (LucideIcons.folderOutput, _grey),
+      (MynaIcons.folder, _grey),
     'config' ||
     '.config' ||
     '.vscode' ||
@@ -269,9 +269,9 @@ String _ext(String name) {
     'settings' ||
     '.claude' ||
     '.cursor' =>
-      (LucideIcons.folderCog, _teal),
+      (MynaIcons.folder, _teal),
     'scripts' || 'tools' || 'hack' || 'ci' || '.husky' => (
-        LucideIcons.folderCog2,
+        MynaIcons.folder,
         _green
       ),
     'assets' ||
@@ -284,25 +284,25 @@ String _ext(String name) {
     'fonts' ||
     'res' ||
     'resources' =>
-      (LucideIcons.folderHeart, _purple),
-    'secrets' || 'keys' || '.ssh' || 'certs' => (LucideIcons.folderKey, _amber),
+      (MynaIcons.folderHeart, _purple),
+    'secrets' || 'keys' || '.ssh' || 'certs' => (MynaIcons.folder, _amber),
     'tmp' || 'temp' || 'cache' || '.cache' || 'logs' => (
-        LucideIcons.folderClock,
+        MynaIcons.folder,
         _grey
       ),
     'android' || 'ios' || 'macos' || 'linux' || 'windows' || 'web' => (
-        LucideIcons.folderRoot,
+        MynaIcons.folder,
         _green
       ),
     'migrations' || 'db' || 'data' || 'database' => (
-        LucideIcons.folderSync,
+        MynaIcons.folder,
         _teal
       ),
     'examples' || 'samples' || 'demo' || 'templates' => (
-        LucideIcons.folderKanban,
+        MynaIcons.folderKanban,
         _yellow
       ),
-    _ => (open ? LucideIcons.folderOpen : LucideIcons.folder, _grey),
+    _ => (open ? MynaIcons.folderOne : MynaIcons.folder, _grey),
   };
 }
 
@@ -378,7 +378,7 @@ class FileGlyph extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = AppColors.fg3;
     if (isDir) {
-      return Icon(open ? LucideIcons.folderOpen : LucideIcons.folder,
+      return Icon(open ? MynaIcons.folderOne : MynaIcons.folder,
           size: size, color: color);
     }
     return Icon(fileIconFor(name).$1, size: size, color: color);

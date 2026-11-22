@@ -34,8 +34,6 @@ dependencies:
   url_launcher: ^6.3.0
   re_editor: ^0.10.0
   re_highlight: ^0.0.3
-  hugeicons: ^1.1.7
-  lucide_icons_flutter: 3.1.14+2
   flutter_svg: 2.3.0
   file_picker: ^12.0.0
   share_plus: ^13.3.0
@@ -54,7 +52,6 @@ dependencies:
   snippet_render:
     path: packages/snippet_render
   flutter_soloud: ^4.1.7
-  tabler_icons_plus: ^3.52.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -106,6 +103,9 @@ flutter:
     - assets/avatars/35/
     - assets/avatars/36/
   fonts:
+    - family: MynaIcons
+      fonts:
+        - asset: assets/fonts/MynaIcons.ttf
     - family: Cove
       fonts:
         - asset: assets/fonts/Cove-400.ttf

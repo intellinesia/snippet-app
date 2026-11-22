@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../myna_icons.dart';
 
 import '../../api.dart';
 import '../../mochi.dart';
@@ -247,7 +247,7 @@ class _TaskListViewState extends State<TaskListView> {
         ],
         _SmallBtn(
             label: 'Filter',
-            icon: LucideIcons.slidersHorizontal,
+            icon: MynaIcons.fineTune,
             onTap: () => setState(() {
                   _filtering = !_filtering;
                   if (!_filtering) {
@@ -258,7 +258,7 @@ class _TaskListViewState extends State<TaskListView> {
         SizedBox(width: S.s8),
         _SmallBtn(
             label: 'New task',
-            icon: LucideIcons.plus,
+            icon: MynaIcons.plus,
             primary: true,
             onTap: _create),
       ]),
@@ -371,7 +371,7 @@ class _TaskListViewState extends State<TaskListView> {
           const Spacer(),
           TapDetector(
             onTap: () => setState(() => _selected = null),
-            child: Icon(LucideIcons.x, size: 16, color: AppColors.fg3),
+            child: Icon(MynaIcons.x, size: 16, color: AppColors.fg3),
           ),
         ]),
         SizedBox(height: S.s12),
@@ -401,7 +401,7 @@ class _TaskListViewState extends State<TaskListView> {
               _group('Lanes', [
                 for (final a in lanes)
                   _kv(
-                    leading: Icon(LucideIcons.activity,
+                    leading: Icon(MynaIcons.activity,
                         size: 14, color: AppColors.fg3),
                     left: _sessions[a.workSessionId]?.title.isNotEmpty == true
                         ? _sessions[a.workSessionId]!.title
@@ -479,7 +479,7 @@ class _TaskListViewState extends State<TaskListView> {
               width: 14,
               child: Center(
                 child: s.done
-                    ? Icon(LucideIcons.check, size: 14, color: AppColors.fg3)
+                    ? Icon(MynaIcons.check, size: 14, color: AppColors.fg3)
                     : Container(
                         width: 6,
                         height: 6,

@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:snippet/myna_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:snippet/api.dart';
@@ -72,13 +72,13 @@ void main() {
       await t.pump();
       await gesture.moveBy(const Offset(55, 0));
       await t.pump();
-      expect(find.byIcon(LucideIcons.cornerUpLeft), findsOneWidget);
+      expect(find.byIcon(MynaIcons.cornerUpLeft), findsOneWidget);
 
       await gesture.up();
       await _pumpFrames(t);
       expect(replies, 1);
       // After spring back, the reply icon hides again.
-      expect(find.byIcon(LucideIcons.cornerUpLeft), findsNothing);
+      expect(find.byIcon(MynaIcons.cornerUpLeft), findsNothing);
       } finally {
         debugDefaultTargetPlatformOverride = null;
       }
@@ -243,8 +243,8 @@ void main() {
       expect(find.bySemanticsLabel('More reactions'), findsOneWidget);
       expect(find.text('Reply'), findsOneWidget);
       expect(find.text('Copy'), findsOneWidget);
-      expect(find.byIcon(LucideIcons.cornerUpLeft), findsOneWidget);
-      expect(find.byIcon(LucideIcons.copy), findsOneWidget);
+      expect(find.byIcon(MynaIcons.cornerUpLeft), findsOneWidget);
+      expect(find.byIcon(MynaIcons.copy), findsOneWidget);
 
       // Tap outside dismisses.
       await t.tapAt(const Offset(20, 40));

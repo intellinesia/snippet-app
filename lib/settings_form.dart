@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'platform.dart';
 import 'theme.dart';
@@ -121,55 +120,6 @@ abstract final class Grouped {
       sans(heroSize, weight: FontWeight.w600, color: AppColors.fg1);
 }
 
-/// Stroke-1.5 Lucide glyphs for the names grouped rows use; others fall back
-/// to [AppIcon]. Const so release builds can still tree-shake the icon fonts.
-const Map<String, IconData> _thinIcons = {
-  'activity': LucideIcons.activity300,
-  'agent': LucideIcons.bot300,
-  'archive': LucideIcons.archive300,
-  'audio-lines': LucideIcons.audioLines300,
-  'bell': LucideIcons.bell300,
-  'book': LucideIcons.book300,
-  'book-marked': LucideIcons.bookMarked300,
-  'calendar-clock': LucideIcons.calendarClock300,
-  'chat-thread': LucideIcons.messageSquare300,
-  'clock': LucideIcons.clock300,
-  'columns-3': LucideIcons.columns3300,
-  'cpu': LucideIcons.cpu300,
-  'crown': LucideIcons.crown300,
-  'ear': LucideIcons.ear300,
-  'edit': LucideIcons.pencil300,
-  'folder': LucideIcons.folder300,
-  'gauge': LucideIcons.gauge300,
-  'globe': LucideIcons.globe300,
-  'inbox': LucideIcons.inbox300,
-  'key': LucideIcons.keyRound300,
-  'key-round': LucideIcons.keyRound300,
-  'laptop': LucideIcons.laptop300,
-  'list-checks': LucideIcons.listChecks300,
-  'lock': LucideIcons.lock300,
-  'map-pin': LucideIcons.mapPin300,
-  'message-circle': LucideIcons.messageCircle300,
-  'mic': LucideIcons.mic300,
-  'pencil': LucideIcons.pencil300,
-  'plus': LucideIcons.plus300,
-  'repeat': LucideIcons.repeat300,
-  'route': LucideIcons.route300,
-  'scheduled': LucideIcons.calendarClock300,
-  'shield-check': LucideIcons.shieldCheck300,
-  'sliders': LucideIcons.slidersHorizontal300,
-  'sliders-horizontal': LucideIcons.slidersHorizontal300,
-  'star': LucideIcons.star300,
-  'task': LucideIcons.listChecks300,
-  'timer': LucideIcons.timer300,
-  'trash': LucideIcons.trash2300,
-  'trash-2': LucideIcons.trash2300,
-  'user': LucideIcons.user300,
-  'user-plus': LucideIcons.userPlus300,
-  'users': LucideIcons.users300,
-  'zap': LucideIcons.zap300,
-};
-
 /// A bare leading icon in the row's icon column: no tile, 22 on phones.
 class SettingsIcon extends StatelessWidget {
   const SettingsIcon(this.name, {super.key, this.iconData, this.color})
@@ -183,7 +133,7 @@ class SettingsIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = Grouped.icon;
     final c = color ?? Grouped.iconColor;
-    final data = iconData ?? _thinIcons[name];
+    final data = iconData;
     if (!kMobile) {
       // Desktop list rows lead with a small tile, as in the device lists.
       return Container(

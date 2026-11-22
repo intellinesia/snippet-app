@@ -39,7 +39,7 @@ import '../screens/tasks/task_common.dart' show openTaskDetail;
 import 'agent_panel_body.dart';
 import '../settings_form.dart'
     show Grouped, SettingsGroup, SettingsHero, SettingsRow, SettingsSwitch;
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../myna_icons.dart';
 import '../tap_detector.dart';
 
 /// Lets rows inside a docked [AgentInfoPanel] push a nested page instead of
@@ -528,7 +528,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
               AgentPageRow(
                   label: 'Appearance',
                   subtitle: 'Avatar and colour across the app',
-                  iconData: LucideIcons.star,
+                  iconData: MynaIcons.star,
                   onTap: () => _openAppearance(ctx)),
             ]),
         const AgentPageCaption('Work'),
@@ -543,18 +543,18 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
             AgentPageRow(
                 label: 'Board',
                 subtitle: 'What it dispatched, reported and noted',
-                iconData: LucideIcons.columns3,
+                iconData: MynaIcons.columns,
                 onTap: () => _go(widget.onOpenBoard!)),
           if (widget.onOpenDesk != null && !mc)
             AgentPageRow(
                 label: 'Desk session',
                 subtitle: 'The conversation where its mail arrives',
-                iconData: LucideIcons.messageCircle,
+                iconData: MynaIcons.message,
                 onTap: () => _go(widget.onOpenDesk!)),
           AgentPageRow(
               label: 'Memory',
               subtitle: 'What this agent remembers',
-              iconData: LucideIcons.book,
+              iconData: MynaIcons.bookOpen,
               onTap: () => _openMemory(ctx)),
         ]),
         // Destructive last, in its own group, away from everyday rows.
