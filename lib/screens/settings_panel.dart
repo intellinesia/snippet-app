@@ -12,6 +12,7 @@ import '../notifications.dart';
 import '../panel.dart';
 import '../platform.dart';
 import '../settings_form.dart';
+import '../inline_flow.dart';
 import '../store.dart';
 import '../chat_scene.dart';
 import '../theme.dart';
@@ -299,6 +300,7 @@ class SettingsPanelState extends State<SettingsPanel> {
   int? _liveCount;
 
   String? _renamingUrl;
+  String? _removingUrl;
   final TextEditingController _renameController = TextEditingController();
 
   late SettingsPage _page = widget.initialPage ?? SettingsPage.general;
@@ -426,9 +428,7 @@ class SettingsPanelState extends State<SettingsPanel> {
       if (mounted) {
         setState(() => _liveCount = sessions
             .where((s) =>
-                !s.settled &&
-                s.status != 'waiting_for_input' &&
-                sessionBusy(s))
+                !s.settled && s.status != 'waiting_for_input' && sessionBusy(s))
             .length);
       }
     } catch (_) {}
@@ -445,13 +445,26 @@ class SettingsPanelState extends State<SettingsPanel> {
     if (err != null) toast(context, err);
   }
 
-  Future<void> _confirmRemove(Instance inst) async {
-    if (!await _confirmRemoveInstance(context, inst)) return;
-    widget.onRemove(inst);
-    if (mounted) {
-      setState(() => _instances.removeWhere((e) => e.url == inst.url));
-    }
-  }
+  // Arms the in-place strip; the row renders it until confirmed or cancelled.
+  void _confirmRemove(Instance inst) => setState(() => _removingUrl = inst.url);
+
+  Widget _removeStrip(Instance inst) => InlineConfirmStrip(
+        title: 'Remove ${inst.label.isEmpty ? hostOf(inst.url) : inst.label}?',
+        body:
+            'Removes the saved connection from this app. The machine and its sessions are untouched.',
+        onCancel: () {
+          if (mounted && _removingUrl == inst.url) {
+            setState(() => _removingUrl = null);
+          }
+        },
+        onConfirm: () {
+          widget.onRemove(inst);
+          setState(() {
+            _removingUrl = null;
+            _instances.removeWhere((e) => e.url == inst.url);
+          });
+        },
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -1077,7 +1090,10 @@ class SettingsPanelState extends State<SettingsPanel> {
     );
   }
 
-  Widget _instanceRow(Instance i) {
+  Widget _instanceRow(Instance i) =>
+      _removingUrl == i.url ? _removeStrip(i) : _instanceRowBase(i);
+
+  Widget _instanceRowBase(Instance i) {
     final isActive = i.url == widget.active?.url;
     final isRenaming = _renamingUrl == i.url;
     final compact = kMobile && widget.embedded;
@@ -1260,15 +1276,6 @@ void _renameStoredInstance(
   }
 }
 
-Future<bool> _confirmRemoveInstance(BuildContext context, Instance inst) =>
-    confirmAction(
-      context,
-      title: 'Remove instance?',
-      body:
-          '${inst.label}\n\nRemoves the saved connection from this app. The machine and its sessions are untouched.',
-      confirmLabel: 'Remove',
-    );
-
 Future<void> _showMachineMenu(
   BuildContext context, {
   required BuildContext anchor,
@@ -1352,6 +1359,10 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
   bool _recurringAdding = false;
 
   String? _renamingUrl;
+  String? _openMachineUrl;
+  String? _removingUrl;
+  bool _connecting = false;
+
   final TextEditingController _renameController = TextEditingController();
 
   bool? _manual;
@@ -1527,7 +1538,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
 
   void _addMachine() {
     if (widget.v5Desktop) {
-      _openConnectDialog();
+      setState(() => _connecting = true);
       return;
     }
     setState(() {
@@ -1585,13 +1596,26 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     widget.onRename?.call(inst, newName);
   }
 
-  Future<void> _confirmRemove(Instance inst) async {
-    if (!await _confirmRemoveInstance(context, inst)) return;
-    widget.onRemove(inst);
-    if (mounted) {
-      setState(() => _instances.removeWhere((e) => e.url == inst.url));
-    }
-  }
+  // Arms the in-place strip; the row renders it until confirmed or cancelled.
+  void _confirmRemove(Instance inst) => setState(() => _removingUrl = inst.url);
+
+  Widget _removeStrip(Instance inst) => InlineConfirmStrip(
+        title: 'Remove ${inst.label.isEmpty ? hostOf(inst.url) : inst.label}?',
+        body:
+            'Removes the saved connection from this app. The machine and its sessions are untouched.',
+        onCancel: () {
+          if (mounted && _removingUrl == inst.url) {
+            setState(() => _removingUrl = null);
+          }
+        },
+        onConfirm: () {
+          widget.onRemove(inst);
+          setState(() {
+            _removingUrl = null;
+            _instances.removeWhere((e) => e.url == inst.url);
+          });
+        },
+      );
 
   Widget _machineMenu(Instance i, {bool connect = false}) => Builder(
         builder: (anchor) => IconBtn('more-horizontal',
@@ -1641,7 +1665,9 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
 
   Widget? _pageAction(SettingsPage page) {
     if (widget.v5Desktop && page == SettingsPage.general) {
-      return HeaderAction('Add machine', onTap: _openConnectDialog);
+      return _connecting
+          ? null
+          : HeaderAction('Add machine', onTap: _addMachine);
     }
     return switch (page) {
       SettingsPage.general =>
@@ -1710,6 +1736,38 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     ];
   }
 
+  List<Widget> _v5MachineRows(Instance i) {
+    final removing = _removingUrl == i.url;
+    final open = _openMachineUrl == i.url && _renamingUrl != i.url;
+    final canConnect = i.url != widget.active?.url && widget.onSelect != null;
+    return [
+      if (removing) _removeStrip(i) else _v5MachineRow(i),
+      if (open && !removing)
+        InlineActionsStrip(
+          onClose: () => setState(() => _openMachineUrl = null),
+          actions: [
+            if (canConnect)
+              Btn('Connect', small: true, onTap: () {
+                setState(() => _openMachineUrl = null);
+                widget.onSelect?.call(i);
+              }),
+            Btn('Rename', small: true, variant: BtnVariant.secondary,
+                onTap: () {
+              setState(() => _openMachineUrl = null);
+              _startRename(i);
+            }),
+            Btn('Remove',
+                small: true,
+                variant: BtnVariant.danger,
+                onTap: () => setState(() {
+                      _openMachineUrl = null;
+                      _removingUrl = i.url;
+                    })),
+          ],
+        ),
+    ];
+  }
+
   Widget _v5MachineRow(Instance i) {
     final isActive = i.url == widget.active?.url;
     final connected = _health[i.url] ?? isActive;
@@ -1745,34 +1803,15 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
                     ? 'Connect'
                     : null,
         chevron: true,
-        // The row is the menu: Connect, Rename and Remove.
-        onTap: () => _showMachineMenu(
-          context,
-          anchor: anchor,
-          instance: i,
-          connect: canConnect,
-          onSelect: () => widget.onSelect?.call(i),
-          onRename: () => _startRename(i),
-          onRemove: () => _confirmRemove(i),
-        ),
+        // The row expands in place: Connect, Rename and Remove.
+        onTap: () => setState(
+            () => _openMachineUrl = _openMachineUrl == i.url ? null : i.url),
       ),
     );
   }
 
-  Future<void> _pickApprovals() async {
-    final manual = _manual;
-    if (manual == null) return;
-    final picked = await showApprovalsSheet(context, manual: manual);
-    if (picked != null && picked != manual) await _setManual(picked);
-  }
-
-  Future<void> _openConnectDialog() async {
-    final inst = await showPointPopover<Instance>(context,
-        point: lastPointerDown,
-        width: 440,
-        maxHeight: 520,
-        child: const _ConnectMachineDialog());
-    if (inst == null || !mounted) return;
+  Future<void> _connected(Instance inst) async {
+    setState(() => _connecting = false);
     await _saveInstances((items) => items
       ..removeWhere((e) => e.url == inst.url || e.token == inst.token)
       ..add(inst));
@@ -1787,14 +1826,19 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
         footer:
             'Snippet talks to the daemon on each machine. Run snippet serve on a new one and add its link.',
         children: [
-          if (_instances.isEmpty)
+          if (_connecting)
+            _ConnectMachinePanel(
+              onCancel: () => setState(() => _connecting = false),
+              onConnected: _connected,
+            ),
+          if (_instances.isEmpty && !_connecting)
             const SettingsRow(
               iconData: MynaIcons.monitor,
               label: 'No saved machines',
               sub: 'Run snippet serve on one and add its link.',
             )
           else
-            for (final i in _instances) _v5MachineRow(i),
+            for (final i in _instances) ..._v5MachineRows(i),
         ],
       ),
       SettingsGroup(
@@ -1804,9 +1848,12 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
             icon: 'shield',
             label: 'Approvals',
             sub: 'Applies to every session on this machine',
-            value: manual == null ? null : (manual ? 'Ask' : 'Yolo'),
-            chevron: true,
-            onTap: manual == null ? null : _pickApprovals,
+            trailing: manual == null
+                ? null
+                : InlineSegmented<bool>(
+                    value: manual,
+                    options: const [(true, 'Ask'), (false, 'Yolo')],
+                    onChanged: _setManual),
           ),
         ],
       ),
@@ -1830,7 +1877,10 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     ];
   }
 
-  Widget _machineRow(Instance i) {
+  Widget _machineRow(Instance i) =>
+      _removingUrl == i.url ? _removeStrip(i) : _machineRowBase(i);
+
+  Widget _machineRowBase(Instance i) {
     final isActive = i.url == widget.active?.url;
     if (_renamingUrl == i.url) {
       return SettingsRow(
@@ -2299,12 +2349,12 @@ class _ApprovalsRowState extends State<ApprovalsRow> {
       title: 'Approvals',
       subtitle: 'Applies to every session on this machine',
       leading: AppIcon('shield', size: 19, color: AppColors.fg3),
-      onTap: manual == null ? null : _pick,
-      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-        if (value != null) Text(value, style: sans(13, color: AppColors.fg3)),
-        SizedBox(width: S.s6),
-        AppIcon('chevron-right', size: 14, color: AppColors.fg3),
-      ]),
+      trailing: manual == null
+          ? null
+          : InlineSegmented<bool>(
+              value: manual,
+              options: const [(true, 'Ask'), (false, 'Yolo')],
+              onChanged: _apply),
     );
   }
 }
@@ -2339,17 +2389,6 @@ Future<bool?> showApprovalsSheet(BuildContext context, {required bool manual}) {
       option('Yolo', 'Run shell and file edits without asking', false),
     ]),
   );
-  if (!kMobile) {
-    return showAppSheet<bool>(context,
-        title: 'Approvals',
-        maxWidth: 400,
-        child:
-            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text(sub, style: sans(12, color: AppColors.fg3)),
-          SizedBox(height: S.s12),
-          group,
-        ]));
-  }
   return showAppSheet<bool>(context,
       title: 'Approvals', subtitle: sub, child: group);
 }
@@ -3412,7 +3451,8 @@ class _AppearancePreviewCard extends StatelessWidget {
               child: Text.rich(TextSpan(children: [
                 TextSpan(
                     text: '48.6M',
-                    style: sans(kMobile ? 26 : 18, weight: W.strong, color: AppColors.fg1)),
+                    style: sans(kMobile ? 26 : 18,
+                        weight: W.strong, color: AppColors.fg1)),
                 TextSpan(
                     text: ' tokens today',
                     style: sans(14, color: AppColors.fg3)),
@@ -3473,14 +3513,18 @@ class _V5SettingsRow extends StatelessWidget {
 
 /// Desktop "Connect a machine" dialog over the Machines page: the command to
 /// run on the other computer, then the link it prints. Pops the new [Instance].
-class _ConnectMachineDialog extends StatefulWidget {
-  const _ConnectMachineDialog();
+/// Connect a machine, expanded inside the Machines card instead of a popover.
+class _ConnectMachinePanel extends StatefulWidget {
+  const _ConnectMachinePanel(
+      {required this.onCancel, required this.onConnected});
+  final VoidCallback onCancel;
+  final ValueChanged<Instance> onConnected;
 
   @override
-  State<_ConnectMachineDialog> createState() => _ConnectMachineDialogState();
+  State<_ConnectMachinePanel> createState() => _ConnectMachinePanelState();
 }
 
-class _ConnectMachineDialogState extends State<_ConnectMachineDialog> {
+class _ConnectMachinePanelState extends State<_ConnectMachinePanel> {
   static const _command = 'snippet serve --enable';
   final TextEditingController _link = TextEditingController();
   bool _busy = false;
@@ -3501,7 +3545,7 @@ class _ConnectMachineDialogState extends State<_ConnectMachineDialog> {
     });
     try {
       final inst = await _connectMachineFromLink(raw);
-      if (mounted) Navigator.pop(context, inst);
+      if (mounted) widget.onConnected(inst);
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -3521,12 +3565,12 @@ class _ConnectMachineDialogState extends State<_ConnectMachineDialog> {
         );
     return CallbackShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.escape): () =>
-            Navigator.pop(context),
+        const SingleActivator(LogicalKeyboardKey.escape): widget.onCancel,
       },
-      child: Material(
-        type: MaterialType.transparency,
-        child: SingleChildScrollView(
+      child: Focus(
+        autofocus: true,
+        child: Material(
+          type: MaterialType.transparency,
           child: Container(
             padding: EdgeInsets.all(S.s16),
             child: Column(
@@ -3551,7 +3595,7 @@ class _ConnectMachineDialogState extends State<_ConnectMachineDialog> {
                       size: 28,
                       iconSize: 15,
                       tooltip: 'Close',
-                      onTap: () => Navigator.pop(context)),
+                      onTap: widget.onCancel),
                 ]),
                 label('Run this on that computer'),
                 Container(
@@ -3579,7 +3623,7 @@ class _ConnectMachineDialogState extends State<_ConnectMachineDialog> {
                   controller: _link,
                   hint: 'https://…?token=…',
                   mono: true,
-                  width: 408,
+                  width: 560,
                   onChanged: (_) => setState(() {}),
                   onSubmitted: (_) => _connect(),
                 ),

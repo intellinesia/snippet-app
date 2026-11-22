@@ -13,6 +13,7 @@ import '../chat/chat_info.dart'
         dockedPromptText;
 import '../models.dart';
 import '../platform.dart';
+import '../inline_flow.dart';
 import '../settings_form.dart';
 import '../theme.dart';
 import '../wake_models.dart';
@@ -720,10 +721,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
       return Padding(
         padding: EdgeInsets.symmetric(vertical: S.s24),
         child: Center(
-            child: SizedBox(
-                width: 18,
-                height: 18,
-                child: Spinner(size: 18))),
+            child: SizedBox(width: 18, height: 18, child: Spinner(size: 18))),
       );
     }
     return FlatGroupScope(
@@ -1257,6 +1255,7 @@ class _AgentWatchDetailState extends State<_AgentWatchDetail> {
   String? _scriptError;
   bool _loading = true;
   bool _deleting = false;
+  bool _confirmingDelete = false;
 
   @override
   void initState() {
@@ -1292,13 +1291,21 @@ class _AgentWatchDetailState extends State<_AgentWatchDetail> {
   }
 
   Future<void> _deleteWatch() async {
-    final ok = await confirmAction(
-      context,
-      title: 'Delete ${widget.watch.name}?',
-      body: 'This stops the watch and removes its script and event history.',
-      confirmLabel: 'Delete',
-    );
-    if (!ok || !mounted) return;
+    if (!kMobile) {
+      if (!_confirmingDelete) {
+        setState(() => _confirmingDelete = true);
+        return;
+      }
+      setState(() => _confirmingDelete = false);
+    } else {
+      final ok = await confirmAction(
+        context,
+        title: 'Delete ${widget.watch.name}?',
+        body: 'This stops the watch and removes its script and event history.',
+        confirmLabel: 'Delete',
+      );
+      if (!ok || !mounted) return;
+    }
     setState(() => _deleting = true);
     try {
       await widget.client.deleteAgentWatch(widget.owner, widget.watch.id);
@@ -1348,10 +1355,8 @@ class _AgentWatchDetailState extends State<_AgentWatchDetail> {
           Padding(
             padding: EdgeInsets.symmetric(vertical: S.s16),
             child: Center(
-                child: SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: Spinner(size: 18))),
+                child:
+                    SizedBox(width: 18, height: 18, child: Spinner(size: 18))),
           )
         else ...[
           if (_eventsError != null)
@@ -1402,15 +1407,29 @@ class _AgentWatchDetailState extends State<_AgentWatchDetail> {
             ),
         ],
         SizedBox(height: S.s16),
-        Row(children: [
-          Btn(
-            _deleting ? 'Deleting' : 'Delete',
-            variant: BtnVariant.danger,
-            small: true,
-            disabled: _deleting,
-            onTap: _deleteWatch,
-          ),
-        ]),
+        if (_confirmingDelete)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(R.md),
+            child: InlineConfirmStrip(
+              title: 'Delete ${widget.watch.name}?',
+              body: 'Stops the watch and removes its script and event history.',
+              confirmLabel: 'Delete',
+              onCancel: () {
+                if (mounted) setState(() => _confirmingDelete = false);
+              },
+              onConfirm: _deleteWatch,
+            ),
+          )
+        else
+          Row(children: [
+            Btn(
+              _deleting ? 'Deleting' : 'Delete',
+              variant: BtnVariant.danger,
+              small: true,
+              disabled: _deleting,
+              onTap: _deleteWatch,
+            ),
+          ]),
       ],
     );
   }

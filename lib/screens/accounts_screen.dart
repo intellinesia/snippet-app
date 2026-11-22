@@ -7,6 +7,7 @@ import '../desktop_layout.dart';
 import '../models.dart';
 import '../platform.dart';
 import '../theme.dart';
+import '../inline_flow.dart';
 import '../settings_form.dart';
 import '../widgets.dart';
 import 'shell_nav.dart';
@@ -218,6 +219,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
     String label,
     Map<String, dynamic> result
   })? _pendingSignIn;
+  String? _removingAccount;
   final _nameField = TextEditingController();
   final _token = TextEditingController();
   final _label = TextEditingController();
@@ -951,11 +953,31 @@ class _AccountsScreenState extends State<AccountsScreen> {
       ]),
       if (canRemove)
         SettingsGroup(children: [
-          SettingsRow(
-            label: 'Remove account',
-            danger: true,
-            onTap: _busy ? null : () => _remove(provider, account),
-          ),
+          if (_removingAccount == '$provider/${account.id}')
+            InlineConfirmStrip(
+              title:
+                  'Remove ${account.label.isEmpty ? account.id : account.label}?',
+              body:
+                  'Snippet will stop switching to it from ${_title(provider)}.',
+              onCancel: () {
+                if (mounted) setState(() => _removingAccount = null);
+              },
+              onConfirm: () async {
+                setState(() => _removingAccount = null);
+                await _mutate(
+                    () => widget.client.removeAccount(provider, account.id),
+                    provider);
+              },
+            )
+          else
+            SettingsRow(
+              label: 'Remove account',
+              danger: true,
+              onTap: _busy
+                  ? null
+                  : () => setState(
+                      () => _removingAccount = '$provider/${account.id}'),
+            ),
         ]),
     ]);
   }
