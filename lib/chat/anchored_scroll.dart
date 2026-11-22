@@ -19,7 +19,7 @@ class AnchoredScrollController extends ScrollController {
 
   /// Queue a correction; the viewport applies it before this frame paints.
   void correctBy(double delta) {
-    if (!hasClients) return;
+    if (positions.length != 1) return;
     final p = position;
     if (p is AnchoredScrollPosition) p.pending += delta;
   }

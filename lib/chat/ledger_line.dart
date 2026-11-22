@@ -360,7 +360,7 @@ class _PhraseTargetState extends State<_PhraseTarget> {
   bool _hover = false;
 
   void _set(bool v) {
-    if (_hover == v) return;
+    if (!mounted || _hover == v) return;
     setState(() => _hover = v);
     v ? _portal.show() : _portal.hide();
   }
@@ -817,6 +817,7 @@ class _LedgerStripState extends State<LedgerStrip> {
   }
 
   void _togglePeek() {
+    if (!mounted) return;
     if (_pinned) {
       setState(() => _pinned = false);
       return;
@@ -914,6 +915,7 @@ class _LedgerStripState extends State<LedgerStrip> {
   Widget _peekPanel() => TapRegion(
         groupId: _link,
         onTapOutside: (_) {
+          if (!mounted) return;
           _portal.hide();
           setState(() {});
         },
@@ -990,7 +992,9 @@ class _LedgerStripState extends State<LedgerStrip> {
     final agent = scope?.agentId;
     final peekOpen = _portal.isShowing || _pinned;
 
+    // Keyed so inserting the failure banner above it never remounts _portal.
     final strip = Container(
+      key: const ValueKey('ledger-strip'),
       height: 32,
       padding: const EdgeInsets.only(left: 9, right: 3),
       decoration: BoxDecoration(
@@ -1024,7 +1028,9 @@ class _LedgerStripState extends State<LedgerStrip> {
           Text(_clock(el), style: mono(12, color: AppColors.fg3)),
           const SizedBox(width: 8),
         ],
+        // Keyed so toggling the progress bar or clock before it never remounts _portal.
         CompositedTransformTarget(
+          key: const ValueKey('ledger-peek-portal'),
           link: _link,
           child: OverlayPortal(
             controller: _portal,
@@ -1117,6 +1123,7 @@ class _LedgerStripState extends State<LedgerStrip> {
         ],
         strip,
         SpringExpand(
+          key: const ValueKey('ledger-gantt'),
           open: _pinned,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),

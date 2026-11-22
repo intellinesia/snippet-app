@@ -946,17 +946,25 @@ class Pressable extends StatefulWidget {
 }
 
 class _PressableState extends State<Pressable> with TickerProviderStateMixin {
-  late final AnimationController _scale = AnimationController(
-      vsync: this, value: 1, lowerBound: 0.5, upperBound: 1.5);
-  late final AnimationController _tint = AnimationController(
-      vsync: this,
-      duration: Pressable._pressIn,
-      reverseDuration: Pressable._pressOut,
-      upperBound: 2);
+  late final AnimationController _scale;
+  late final AnimationController _tint;
   Offset? _origin;
   Timer? _hold;
   Timer? _liftTimer;
   bool _down = false;
+  bool _disposed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scale = AnimationController(
+        vsync: this, value: 1, lowerBound: 0.5, upperBound: 1.5);
+    _tint = AnimationController(
+        vsync: this,
+        duration: Pressable._pressIn,
+        reverseDuration: Pressable._pressOut,
+        upperBound: 2);
+  }
 
   // Phone rows keep the press scale but no square tint (radius 0 showed a rectangle).
   bool get _tints =>
@@ -964,24 +972,25 @@ class _PressableState extends State<Pressable> with TickerProviderStateMixin {
       !(kMobile && widget.kind == PressKind.row);
 
   void _press(PointerDownEvent e) {
-    if (!widget.enabled || _down) return;
+    if (_disposed || !mounted || !widget.enabled || _down) return;
     _down = true;
     _origin = e.position;
     if (widget.delay == Duration.zero) {
       _show();
     } else {
       _hold = Timer(widget.delay, () {
-        if (mounted && _down) _show();
+        if (!_disposed && mounted && _down) _show();
       });
     }
     if (widget.lift && kMobile) {
       _liftTimer = Timer(Pressable._liftDelay, () {
-        if (mounted && _down) _lift();
+        if (!_disposed && mounted && _down) _lift();
       });
     }
   }
 
   void _lift() {
+    if (_disposed || !mounted) return;
     if (!reduceMotion(context)) {
       springTo(_scale, Pressable.liftScale, _scale.velocity,
           spring: Pressable._liftSpring, epsilon: 0.001);
@@ -990,6 +999,7 @@ class _PressableState extends State<Pressable> with TickerProviderStateMixin {
   }
 
   void _show() {
+    if (_disposed || !mounted) return;
     if (widget.haptic && kMobile) HapticFeedback.selectionClick();
     final to = widget.scale ?? Pressable.scaleFor(widget.kind);
     if (!reduceMotion(context) && to < 1) {
@@ -1003,6 +1013,8 @@ class _PressableState extends State<Pressable> with TickerProviderStateMixin {
     _liftTimer?.cancel();
     if (!_down) return;
     _down = false;
+    _origin = null;
+    if (_disposed || !mounted) return;
     if (_scale.value != 1) {
       final v = _scale.velocity;
       springTo(_scale, 1, v, spring: Pressable._spring, epsilon: 0.001);
@@ -1011,6 +1023,7 @@ class _PressableState extends State<Pressable> with TickerProviderStateMixin {
   }
 
   void _move(PointerMoveEvent e) {
+    if (_disposed || !mounted) return;
     final o = _origin;
     if (_down && o != null && (e.position - o).distance > kTouchSlop) {
       _release();
@@ -1025,6 +1038,9 @@ class _PressableState extends State<Pressable> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _disposed = true;
+    _down = false;
+    _origin = null;
     _hold?.cancel();
     _liftTimer?.cancel();
     _scale.dispose();

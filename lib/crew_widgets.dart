@@ -219,11 +219,12 @@ class _CrewStackState extends State<CrewStack> {
 
   void _show() {
     _hide?.cancel();
-    if (!_portal.isShowing) _portal.show();
+    if (mounted && !_portal.isShowing) _portal.show();
   }
 
   void _later() {
     _hide?.cancel();
+    if (!mounted) return;
     _hide = Timer(const Duration(milliseconds: 220), () {
       if (mounted && !_pinned && _portal.isShowing) _portal.hide();
     });

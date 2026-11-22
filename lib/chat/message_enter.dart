@@ -99,13 +99,14 @@ class ChatBottomTracker {
   static const double _bottomThreshold = 80;
 
   bool atBottom(ScrollController scroll) {
-    if (!scroll.hasClients) return true;
+    if (scroll.positions.length != 1) return true;
     return scroll.position.pixels <= _bottomThreshold;
   }
 
   /// Updates [stickToBottom] from scroll notifications. Returns true only when
   /// [stickToBottom] flips, so callers avoid per-frame rebuilds.
   bool handleScroll(ScrollNotification n, ScrollController scroll) {
+    if (n.depth != 0) return false;
     final was = stickToBottom;
     if (n is ScrollStartNotification && n.dragDetails != null) {
       userScrolling = true;
@@ -136,7 +137,7 @@ class ChatBottomTracker {
     BuildContext context, {
     bool animated = true,
   }) {
-    if (!scroll.hasClients || userScrolling) return;
+    if (scroll.positions.length != 1 || userScrolling) return;
     if (scroll.offset <= 0.5) return;
     final noAnim = !animated ||
         reduceMotion(context) ||

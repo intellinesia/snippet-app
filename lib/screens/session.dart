@@ -23,7 +23,7 @@ import '../chat/shared_artifact_line.dart';
 import '../chat/activity_sheet.dart';
 import '../chat/anchored_scroll.dart';
 import '../chat/message_enter.dart';
-import '../chat/send_turn_space.dart';
+
 import '../chat/chat_card.dart';
 import '../chat/stage_bar.dart';
 import '../chat/stage_header.dart';
@@ -1401,31 +1401,14 @@ class _SessionScreenState extends State<SessionScreen>
   bool get _stickToBottom => _bottom.stickToBottom;
   set _stickToBottom(bool v) => _bottom.stickToBottom = v;
 
-  // Desktop turn space: kept inactive so sending animates smoothly instead of jumping.
-  final bool _turnSpace = false;
-  final GlobalKey _turnAnchor = GlobalKey();
-  String? _lastUserRowKey;
-
-  // Index in the reversed list of the newest user message (or its unechoed bubble).
-  int _turnAnchorIndex(List<Widget> timeline) {
-    String keyOf(Widget w) => '${(w.key as ValueKey?)?.value}';
-    var at = timeline.lastIndexWhere(
-        (w) => w.key is ValueKey && keyOf(w).startsWith('pending-'));
-    if (at < 0 && _lastUserRowKey != null) {
-      at = timeline.lastIndexWhere((w) => keyOf(w) == _lastUserRowKey);
-    }
-    return at < 0 ? -1 : timeline.length - 1 - at;
-  }
-
+  // Always keep one Scrollable attached to _scroll (no ListView/CustomScrollView swaps).
   Widget _transcriptList({
-    required bool anchorActive,
     required EdgeInsets padding,
     required int itemCount,
     required int? Function(Key) findChildIndexCallback,
     required IndexedWidgetBuilder itemBuilder,
-  }) {
-    if (!anchorActive) {
-      return ListView.builder(
+  }) =>
+      ListView.builder(
         controller: _scroll,
         reverse: true,
         scrollCacheExtent: ScrollCacheExtent.pixels(400),
@@ -1434,27 +1417,6 @@ class _SessionScreenState extends State<SessionScreen>
         findChildIndexCallback: findChildIndexCallback,
         itemBuilder: itemBuilder,
       );
-    }
-    return CustomScrollView(
-      controller: _scroll,
-      reverse: true,
-      scrollCacheExtent: ScrollCacheExtent.pixels(400),
-      slivers: [
-        SliverTurnSpace(
-          padding: padding,
-          anchorKey: _turnAnchor,
-          active: true,
-          child: SliverList(
-            delegate: SliverChildBuilderDelegate(
-              itemBuilder,
-              childCount: itemCount,
-              findChildIndexCallback: findChildIndexCallback,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 
   bool _onScroll(ScrollNotification n) {
     // Repaint only on the pinned/unpinned edge — it toggles the floating
@@ -1906,7 +1868,6 @@ class _SessionScreenState extends State<SessionScreen>
                                                                   rowKey(i));
                                                             }
                                                           }
-                                                          final anchorIndex = !kMobile && _turnSpace ? _turnAnchorIndex(timeline) : -1;
                                                           final list =
                                                               ScrollConfiguration(
                                                             behavior: ScrollConfiguration
@@ -1915,7 +1876,6 @@ class _SessionScreenState extends State<SessionScreen>
                                                                     scrollbars:
                                                                         false),
                                                             child: _transcriptList(
- anchorActive: !kMobile && _turnSpace,
  padding: EdgeInsets.fromLTRB(
                                                                   kMobile
                                                                       ? M.gutter
@@ -1950,9 +1910,7 @@ class _SessionScreenState extends State<SessionScreen>
                                                                         .length -
                                                                     1 -
                                                                     index;
-                                                                final child = index == anchorIndex
- ? KeyedSubtree(key: _turnAnchor, child: timeline[at])
- : timeline[at];
+                                                                final child = timeline[at];
                                                                 final key =
                                                                     rowKey(at);
                                                                 final fresh =

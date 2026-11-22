@@ -27,7 +27,7 @@ import '../message_reactions.dart';
 import '../chat/anchored_scroll.dart';
 import '../chat/message_enter.dart';
 import '../chat/send_flight.dart';
-import '../chat/send_turn_space.dart';
+
 import '../mochi.dart';
 import '../motion.dart';
 import '../models.dart';
@@ -620,8 +620,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   final Set<String> _shownIds = {};
   bool _rowsSeeded = false;
   // Desktop turn space: kept inactive so sending animates smoothly instead of jumping.
-  final bool _turnSpace = false;
-  final GlobalKey _turnAnchor = GlobalKey();
+
   final Map<String, GlobalKey> _messageKeys = {};
   CoordinationEvent? _replyTo;
   List<CoordinationEvent> _events = const [];
@@ -1440,9 +1439,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                       !(kMobile && _sendInIds.contains(rowId)),
                   child: Padding(
                     padding: EdgeInsets.only(top: topGap),
-                    child: !kMobile && _turnSpace && at == lastHumanIdx
-                        ? KeyedSubtree(key: _turnAnchor, child: row)
-                        : row,
+                    child: row,
                   ),
                 ),
               ),
@@ -1453,14 +1450,14 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     );
   }
 
+  // Always keep one Scrollable attached to _scroll (no ListView/CustomScrollView swaps).
   Widget _messageList({
     required EdgeInsets padding,
     required int itemCount,
     required int? Function(Key) findChildIndexCallback,
     required IndexedWidgetBuilder itemBuilder,
-  }) {
-    if (kMobile || !_turnSpace) {
-      return ListView.builder(
+  }) =>
+      ListView.builder(
         controller: _scroll,
         reverse: true,
         scrollCacheExtent: ScrollCacheExtent.pixels(400),
@@ -1470,27 +1467,6 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         findChildIndexCallback: findChildIndexCallback,
         itemBuilder: itemBuilder,
       );
-    }
-    return CustomScrollView(
-      controller: _scroll,
-      reverse: true,
-      scrollCacheExtent: ScrollCacheExtent.pixels(400),
-      physics: const AlwaysScrollableScrollPhysics(),
-      slivers: [
-        SliverTurnSpace(
-          padding: padding,
-          anchorKey: _turnAnchor,
-          active: true,
-          child: SliverList(
-            delegate: SliverChildBuilderDelegate(
-              itemBuilder,
-              childCount: itemCount,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 
   _Derived? _derived;
 
