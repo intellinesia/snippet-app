@@ -183,11 +183,12 @@ class _PhoneSheetState extends State<_PhoneSheet> {
     final media = MediaQuery.of(context);
     final keyboard = media.viewInsets.bottom;
     final screen = media.size.height;
-    final full = screen - media.padding.top - S.s8;
+    final top = statusBarInset(context);
+    final full = screen - top - S.s8;
     final base = _full ? full : screen * 0.6;
     var height = (_drag ?? base).clamp(120.0, full);
     if (keyboard > 0) {
-      height = height.clamp(120.0, screen - keyboard - media.padding.top);
+      height = height.clamp(120.0, screen - keyboard - top);
     }
     final calm = reduceMotion(context);
     return Padding(

@@ -2310,3 +2310,12 @@ class SnappyPageTransitionsBuilder extends PageTransitionsBuilder {
     );
   }
 }
+
+/// The status bar height, read from the view too: a sheet route can strip the
+/// top padding from the context a full-height sheet sees.
+double statusBarInset(BuildContext context) {
+  final view = View.of(context);
+  final fromView = view.padding.top / view.devicePixelRatio;
+  final fromContext = MediaQuery.maybePaddingOf(context)?.top ?? 0;
+  return fromContext > fromView ? fromContext : fromView;
+}

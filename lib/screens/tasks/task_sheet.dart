@@ -20,6 +20,7 @@ import '../../tap_detector.dart';
 /// one tap away under "Open full details".
 Future<void> showTaskSheet(
     BuildContext context, DaemonClient client, String taskId) {
+  final inset = statusBarInset(context);
   return showModalBottomSheet<void>(
     sheetAnimationStyle: sheetMotion,
     context: context,
@@ -29,7 +30,7 @@ Future<void> showTaskSheet(
     barrierColor: AppColors.scrim,
     builder: (sheet) {
       final media = MediaQuery.of(sheet);
-      final top = media.padding.top + 8;
+      final top = inset + 8;
       return SizedBox(
         height: media.size.height - top,
         child: TaskSheet(

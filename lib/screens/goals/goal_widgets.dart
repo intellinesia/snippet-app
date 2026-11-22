@@ -108,7 +108,7 @@ Future<void> openGoalDetail(
         return SafeArea(
           top: false,
           child: SizedBox(
-            height: (media.size.height - media.padding.top) * 0.9,
+            height: (media.size.height - statusBarInset(sheet)) * 0.9,
             child: Material(
               color: AppColors.bg,
               clipBehavior: Clip.antiAlias,
