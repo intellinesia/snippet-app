@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/chat/stage_header.dart';
 import 'package:snippet/screens/desktop_shell.dart';
-import 'package:snippet/screens/mobile_session_home.dart';
+import 'package:snippet/screens/mobile_home/mobile_home_screen.dart';
 import 'package:snippet/screens/processes.dart';
 import 'package:snippet/screens/session.dart';
 import 'package:snippet/theme.dart';
@@ -118,7 +118,7 @@ void main() {
     final home = tester.widget<MobileShell>(find.byType(MobileShell));
     expect(home.chatsOpen, isTrue);
     expect(home.canPopRoute, isFalse);
-    expect(find.byType(MobileHomeTopBar), findsWidgets);
+    expect(find.byType(MobileHomeScreen), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
     debugDefaultTargetPlatformOverride = null;

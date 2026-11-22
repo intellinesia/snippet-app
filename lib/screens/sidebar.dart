@@ -2,7 +2,6 @@ import 'dart:async';
 
 import '../desktop_look.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../api.dart';
 import '../drafts.dart';
@@ -17,7 +16,8 @@ import 'agents_sidebar_panel.dart';
 import 'mission_control.dart';
 import 'mission_control/coordination_agent_detail.dart';
 import 'settings_panel.dart';
-import 'mobile_shell.dart' show HomePager, HomePagerScope;
+import 'group_messaging.dart' show createAndOpenGroup;
+import 'mobile_home/mobile_home_screen.dart';
 import 'shell_models.dart';
 import 'shell_nav.dart';
 import 'session_list_row.dart';
@@ -28,13 +28,11 @@ import '../pull_refresh.dart';
 import '../motion.dart';
 import '../page_stack.dart';
 import '../mochi.dart';
-import '../ambient/controller.dart';
 import '../chat_scene.dart' show ChatScene;
 import 'mobile_chrome.dart';
 import 'mobile_session_home.dart';
 import 'phone_hero.dart';
 import '../session_quick_send.dart';
-import 'mobile_voice_page.dart' show startMobileVoice;
 import 'pull_requests.dart' show openPullRequest;
 import '../tap_detector.dart';
 export 'sidebar_mobile.dart';
@@ -171,26 +169,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   final Set<String> _selected = {};
 
   /// Phone search: a filter field at the top of each tab.
-  final TextEditingController _searchCtl = TextEditingController();
-  final FocusNode _searchFocus = FocusNode();
-  final TextEditingController _agentSearchCtl = TextEditingController();
-  final FocusNode _agentSearchFocus = FocusNode();
 
-  /// Measured height of the shared bottom bar; scroll views pad by it so the
-  /// last row clears the glass.
-  // Plus button, its gap, the dock and the gap under it.
-  double get _barHeight =>
-      44 + 10 + 56 + 12 + MediaQuery.viewPaddingOf(context).bottom;
-  double get _bottomClearance => _barHeight + M.gutter;
-
-  bool get _showMobileBottomBar =>
-      !_selecting &&
-      widget.mobileHome != MobileHome.tasks &&
-      !(widget.mobileHome == MobileHome.agents && widget.agent != null) &&
-      widget.mobileHome != MobileHome.settings;
-
-  double get _scrollBottomPad =>
-      _selecting ? 24.0 : (_showMobileBottomBar ? _bottomClearance : 0.0);
+  double get _scrollBottomPad => _selecting ? 24.0 : 0.0;
 
   /// Desktop search in section headers.
   final TextEditingController _desktopChatsSearchCtl = TextEditingController();
@@ -255,20 +235,49 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     } catch (_) {}
   }
 
-  Future<void> _decideHero(SessionInfo s, bool approve) async {
+  Future<bool> _decideHero(SessionInfo s, bool approve) async {
     final client = widget.client;
-    if (client == null) return;
+    if (client == null) return false;
     final ok = await quickSend(
       client: client,
       session: s.id,
       action: approve ? const QuickApprove() : const QuickDeny(),
     );
-    if (!mounted) return;
+    if (!mounted) return false;
     if (!ok) {
       toast(context, "Couldn't send the decision", danger: true);
-      return;
+      return false;
     }
     widget.onRefreshSessions();
+    return true;
+  }
+
+  /// The home composer's plus: a new session, agent or group.
+  Future<void> _openNewMenu(BuildContext anchor) async {
+    final client = widget.client;
+    if (client == null) return;
+    final host = context;
+    final pick = await showAppSheet<String>(
+      host,
+      title: 'New',
+      child: SheetActions([
+        SheetAction('plus', 'New session', () => Navigator.pop(host, 'session'),
+            detail: 'Start work in a project'),
+        SheetAction('agent', 'New agent', () => Navigator.pop(host, 'agent'),
+            detail: 'Add someone to the team'),
+        SheetAction('users', 'New group', () => Navigator.pop(host, 'group'),
+            detail: 'Put agents in one thread'),
+      ]),
+    );
+    if (!mounted) return;
+    switch (pick) {
+      case 'session':
+        widget.onNewSession();
+      case 'agent':
+        await showCreateAgentDialog(context, client);
+      case 'group':
+        await createAndOpenGroup(context, client);
+    }
   }
 
   Widget _phoneHero(List<SessionInfo> sessions,
@@ -377,10 +386,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     _homeAnimC?.dispose();
     _renameCtl.dispose();
     _renameFocus.dispose();
-    _searchCtl.dispose();
-    _searchFocus.dispose();
-    _agentSearchCtl.dispose();
-    _agentSearchFocus.dispose();
     _desktopChatsSearchCtl.dispose();
     _desktopChatsSearchFocus.dispose();
     super.dispose();
@@ -411,25 +416,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           Expanded(
             child: Stack(clipBehavior: Clip.none, children: [
               _buildMobileHomeStack(hasClient),
-              if (_showMobileBottomBar)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          AppColors.bg.withValues(alpha: 0),
-                          AppColors.bg.withValues(alpha: 0.85),
-                        ],
-                      ),
-                    ),
-                    child: _mobileDock(hasClient),
-                  ),
-                ),
             ]),
           ),
         ],
@@ -559,46 +545,26 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     );
   }
 
-  /// Sessions and Agents under one top bar, paged 1:1 by the finger. An open
-  /// agent detail covers the pair.
+  /// One scrolling home: Needs you, Agents and Sessions. An open agent
+  /// detail covers it.
   Widget _mobilePair(bool hasClient) {
     final client = widget.client;
     final agent = widget.agent;
-    final main = widget.mobileHome == MobileHome.settings ||
-            widget.mobileHome == MobileHome.tasks
-        ? _lastMainHome
-        : widget.mobileHome;
-    final onAgents = main == MobileHome.agents;
     final inDetail = widget.mobileHome == MobileHome.agents && agent != null;
-    Widget list(bool agents) => !hasClient
-        ? _mobileUnavailable(agents
-            ? 'Add a machine to see its agents.'
-            : 'Add a machine to begin.')
-        : agents && !_selecting
-            ? _agentList(client!, mirror: true)
-            : _sessionList();
     return PhonePageStack(
       onBack: () => widget.onAgent(null),
-      base: HomePagerScope(
-        page: onAgents ? 1 : 0,
-        onPage: (p) =>
-            widget.onMobileHome(p == 1 ? MobileHome.agents : MobileHome.chats),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _mobileChatsHeader(hasClient,
-                title: onAgents ? 'Agents' : 'Sessions',
-                agents: onAgents,
-                agentsMirror: onAgents),
-            Expanded(
-              child: _selecting
-                  ? list(false)
-                  : HomePager(sessions: list(false), agents: list(true)),
-            ),
-            if (_selecting) _mobileSelectionActions(),
-          ],
-        ),
-      ),
+      base: _selecting
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _selectionHeader(),
+                Expanded(child: _sessionList()),
+                _mobileSelectionActions(),
+              ],
+            )
+          : !hasClient
+              ? _mobileUnavailable('Add a machine to begin.')
+              : _mobileHome(client!),
       page: inDetail && client != null
           ? KeyedSubtree(
               key: ValueKey('agent-page-${agent.id}'),
@@ -617,36 +583,39 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     );
   }
 
+  Widget _mobileHome(DaemonClient client) => MobileHomeScreen(
+        key: const ValueKey('mobile-home'),
+        client: client,
+        sessions: [
+          for (final s in _sessions ?? const <SessionInfo>[])
+            if (!isDedicatedMcSession(s.id) && !isInboxSessionRow(s)) s,
+        ],
+        agents: _heroAgents,
+        loading: _loading,
+        error: widget.sessionsError,
+        onRefresh: widget.onRefreshSessions,
+        onOpenSession: (s) => widget.onOpenSession(s.id, s.title, s.profile),
+        onOpenAgent: widget.onAgent,
+        onOpenMissionControl: widget.onOpenMissionControl,
+        onSettings: () => widget.onMobileHome(MobileHome.settings),
+        onPlus: _openNewMenu,
+        onDecide: _decideHero,
+        onSessionActions: _sessionActions,
+      );
+
   /// The phone home body for the destination the bar currently selects.
   ///
   /// Each destination gets the whole surface below the bar. Chats keeps a head
   /// for its title and context controls; Agents and Settings own their own
   /// headers, so they render directly.
   Widget _mobileHomeBody(bool hasClient,
-      [MobileHome? home, bool agentsMirror = false]) {
+      [MobileHome? home]) {
     final destination = home ?? widget.mobileHome;
     switch (destination) {
       case MobileHome.chats:
-        final showAgents = agentsMirror;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _mobileChatsHeader(
-              hasClient,
-              title: showAgents ? 'Agents' : 'Sessions',
-              agents: showAgents,
-              agentsMirror: agentsMirror,
-            ),
-            Expanded(
-              child: !hasClient
-                  ? _mobileUnavailable('Add a machine to begin.')
-                  : showAgents && !_selecting
-                      ? _agentList(widget.client!, mirror: agentsMirror)
-                      : _sessionList(),
-            ),
-            if (_selecting) _mobileSelectionActions(),
-          ],
-        );
+        return !hasClient
+            ? _mobileUnavailable('Add a machine to begin.')
+            : _mobileHome(widget.client!);
 
       case MobileHome.tasks:
         final client = widget.client;
@@ -694,7 +663,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             offstage: agent != null,
             child: TickerMode(
               enabled: agent == null,
-              child: _mobileHomeBody(hasClient, MobileHome.chats, true),
+              child: _mobileHomeBody(hasClient, MobileHome.chats),
             ),
           ),
           if (agent != null)
@@ -799,105 +768,33 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                 wholeTeam: true)
             : null,
         sessions: widget.sessions,
-        onSearchChanged: (v) => setState(() {
-          _agentFilterQuery = v;
-          if (_agentSearchCtl.text != v) _agentSearchCtl.text = v;
-        }),
+        onSearchChanged: (v) => setState(() => _agentFilterQuery = v),
         onOpenAgent: (a) =>
             kMobile ? widget.onAgent(a) : widget.onOpenAgent?.call(a),
       );
 
-  /// The bar's search field filters the list in place, on Chats and Agents.
-
-  int get _mcAttentionCount {
-    final override = widget.mcAttention;
-    if (override != null) return override;
-    var count = 0;
-    for (final s in widget.sessions ?? const <SessionInfo>[]) {
-      if (!s.settled && (s.needsInput || s.attention != null)) {
-        count++;
-      }
-    }
-    return count;
-  }
-
-  Widget _mobileChatsHeader(
-    bool hasClient, {
-    String title = 'Sessions',
-    bool agents = false,
-    bool agentsMirror = false,
-  }) {
-    if (_selecting) {
-      final n = _selected.length;
-      return Padding(
-        padding: EdgeInsets.fromLTRB(S.s4, S.s16, M.gutter, S.s6),
-        child: SizedBox(
-          height: M.minTarget,
-          child: Row(children: [
-            IconBtn('x',
-                size: M.minTarget,
-                iconSize: 20,
-                tooltip: 'Cancel',
-                onTap: _exitSelect),
-            SizedBox(width: S.s4),
-            Expanded(
-              child: Text(n == 0 ? 'Select chats' : '$n selected',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(kMobile ? M.sectionTitle : 15,
-                      weight: W.label, color: AppColors.fg1)),
-            ),
-            _selectAllToggle(),
-          ]),
-        ),
-      );
-    }
-    return MobileHomeTopBar(
-      key: const ValueKey('mobile-home-top'),
-      agents: agents,
-      controller: agents ? _agentSearchCtl : _searchCtl,
-      focusNode: _searchFocus,
-      onChanged: (v) =>
-          setState(() => agents ? _agentFilterQuery = v : _filterQuery = v),
-      onSessions: () => widget.onMobileHome(MobileHome.chats),
-      onAgents: () => widget.onMobileHome(MobileHome.agents),
-      onSettings: () => widget.onMobileHome(MobileHome.settings),
-    );
-  }
-
-  Widget _mobileDock(bool hasClient) {
-    final agents = widget.mobileHome == MobileHome.agents;
+  Widget _selectionHeader() {
+    final n = _selected.length;
     return Padding(
-      padding: EdgeInsets.fromLTRB(M.gutter, S.s12, M.gutter,
-          S.s12 + MediaQuery.viewPaddingOf(context).bottom),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Builder(
-            builder: (btnCtx) => _DockPlus(
-              tooltip: agents ? 'New agent or group' : 'New session',
-              onTap: !hasClient
-                  ? null
-                  : agents
-                      ? () => _agentsMirrorKey.currentState
-                          ?.openCreateMenu(btnCtx, above: true)
-                      : widget.onNewSession,
-            ),
+      padding: EdgeInsets.fromLTRB(S.s4, S.s16, M.gutter, S.s6),
+      child: SizedBox(
+        height: M.minTarget,
+        child: Row(children: [
+          IconBtn('x',
+              size: M.minTarget,
+              iconSize: 20,
+              tooltip: 'Cancel',
+              onTap: _exitSelect),
+          SizedBox(width: S.s4),
+          Expanded(
+            child: Text(n == 0 ? 'Select chats' : '$n selected',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(kMobile ? M.sectionTitle : 15,
+                    weight: W.label, color: AppColors.fg1)),
           ),
-          SizedBox(height: S.of(10)),
-          ListenableBuilder(
-            listenable: AmbientController.instance,
-            builder: (context, _) => MissionControlDock(
-              live: widget.listening || AmbientController.instance.running,
-              badgeCount: _mcAttentionCount,
-              onOpen: widget.onOpenMissionControl,
-              onCall: widget.client == null
-                  ? null
-                  : () => startMobileVoice(context, widget.client!),
-            ),
-          ),
-        ],
+          _selectAllToggle(),
+        ]),
       ),
     );
   }
@@ -2034,37 +1931,4 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       if (mounted) toast(context, '$e', danger: true);
     }
   }
-}
-
-class _DockPlus extends StatelessWidget {
-  const _DockPlus({required this.tooltip, this.onTap});
-
-  final String tooltip;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) => Tooltip(
-        message: tooltip,
-        child: Semantics(
-          button: true,
-          label: tooltip,
-          child: TapDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onTap == null
-                ? null
-                : () {
-                    HapticFeedback.lightImpact();
-                    onTap!();
-                  },
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                  color: AppColors.accentFill, shape: BoxShape.circle),
-              alignment: Alignment.center,
-              child: AppIcon('plus', size: 20, color: AppColors.accentFg),
-            ),
-          ),
-        ),
-      );
 }

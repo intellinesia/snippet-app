@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'sidebar_mode.dart' show homeAgentsFirst, setHomeAgentsFirst;
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -2430,8 +2429,6 @@ class AppearanceScreen extends StatelessWidget {
                   padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s40),
                   children: [
                     _AppearancePreviewCard(),
-                    const SettingsGroupLabel('Home'),
-                    const ListGroup(children: [_HomeFirstRow()]),
                     if (shaderSurfaceSupported) ...[
                       const SettingsGroupLabel('Background'),
                       const ListGroup(children: [_ChatSceneRow()]),
@@ -2466,10 +2463,6 @@ class AppearanceScreen extends StatelessWidget {
           children: [
             _AppearancePreviewCard(),
             SizedBox(height: S.s16),
-            const SettingsGroup(
-              header: 'Home',
-              children: [_HomeFirstRow()],
-            ),
             const SettingsGroup(
               header: 'Surfaces and wallpaper',
               footer:
@@ -2510,25 +2503,6 @@ class AppearanceScreen extends StatelessWidget {
       },
     );
   }
-}
-
-class _HomeFirstRow extends StatelessWidget {
-  const _HomeFirstRow();
-
-  @override
-  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
-        valueListenable: homeAgentsFirst,
-        builder: (context, agents, _) => SettingsRow(
-          label: 'Open on',
-          sub: 'The tab the app starts on',
-          trailing: Pills<bool>(
-            key: const Key('home-first'),
-            items: const [(false, 'Sessions'), (true, 'Agents')],
-            selected: agents,
-            onSelect: setHomeAgentsFirst,
-          ),
-        ),
-      );
 }
 
 class _TactileRow extends StatelessWidget {

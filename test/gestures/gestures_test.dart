@@ -101,9 +101,9 @@ void main() {
       expect(sideX(t), closeTo(0, .5));
     });
 
-    // Sessions <-> Agents paging now lives in HomePager (test/pager); the
+    // The home's Needs you pager takes horizontal drags on its cards; the
     // shell must not also page or open Mission on these drags.
-    testWidgets('left swipe on Sessions is left to the home pager', (t) async {
+    testWidgets('left swipe on the home is left to its pager', (t) async {
       await t.pumpWidget(shell());
       await t.pump(const Duration(milliseconds: 400));
       await t.fling(find.byKey(const Key('side')), const Offset(-200, 0), 1500);

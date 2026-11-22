@@ -9,6 +9,8 @@ import 'package:snippet/models.dart';
 import 'package:snippet/screens/agent_card.dart';
 import 'package:snippet/screens/agents_sidebar_panel.dart';
 import 'package:snippet/screens/desktop_shell.dart';
+import 'package:snippet/screens/mobile_home/agents_group.dart';
+import 'package:snippet/screens/mobile_home/mobile_home_screen.dart';
 import 'package:snippet/screens/mission_control/coordination_agent_detail.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/theme.dart';
@@ -66,7 +68,7 @@ Widget _sidebar(_Client client, {CoordinationAgent? agent}) => MaterialApp(
           health: {client.baseUrl: true},
           onRefreshHealth: () {},
           topInset: false,
-          mobileHome: MobileHome.agents,
+          mobileHome: agent == null ? MobileHome.chats : MobileHome.agents,
           onMobileHome: (_) {},
           settingsSection: null,
           onSettingsSection: (_) {},
@@ -84,27 +86,29 @@ void _expectRowsNoSpinner() {
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  testWidgets('back from an agent keeps the same list, no reload frame',
+  testWidgets('back from an agent keeps the same home, no reload frame',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     final client = _Client('https://return-a.invalid');
     await tester.pumpWidget(_sidebar(client));
     await tester.pumpAndSettle();
-    _expectRowsNoSpinner();
-    final before = tester.state(find.byType(AgentsSidebarPanel));
+    await tester.tap(find.byKey(const ValueKey('asleep-fold')));
+    await tester.pumpAndSettle();
+    expect(find.byType(AgentTile), findsNWidgets(2));
+    final before = tester.state(find.byType(MobileHomeScreen));
 
     await tester.pumpWidget(_sidebar(client,
         agent: CoordinationAgent.fromJson(
             {'id': 'ada', 'display_name': 'Ada', 'handle': 'ada'})));
     await tester.pump();
     expect(find.byType(CoordinationAgentDetail), findsOneWidget);
-    expect(find.byType(AgentCard).hitTestable(), findsNothing);
+    expect(find.byType(AgentTile).hitTestable(), findsNothing);
 
     client.hold = Completer();
     await tester.pumpWidget(_sidebar(client));
     await tester.pump();
-    _expectRowsNoSpinner();
-    expect(identical(tester.state(find.byType(AgentsSidebarPanel)), before),
+    expect(find.byType(AgentTile), findsNWidgets(2));
+    expect(identical(tester.state(find.byType(MobileHomeScreen)), before),
         isTrue);
     client.hold!.complete([]);
     await tester.pumpWidget(const SizedBox.shrink());

@@ -5,12 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:snippet/screens/mobile_session_home.dart';
+import 'package:snippet/screens/mobile_home/mobile_home_screen.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/notifications.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/mission_control/coordination_agent_detail.dart';
-import 'package:snippet/screens/agents_sidebar_panel.dart';
 import 'package:snippet/screens/desktop_shell.dart';
 import 'package:snippet/screens/mobile_chrome.dart';
 import 'package:snippet/theme.dart';
@@ -164,7 +163,7 @@ void main() {
     }
   });
 
-  testWidgets('the Agents tab opens an agent and back returns to it',
+  testWidgets('an agent opens over the home and back returns to it',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     DaemonClient.wsConnector = (uri, {connectTimeout, pingInterval}) =>
@@ -177,11 +176,7 @@ void main() {
       });
       await _pumpShell(tester);
 
-      await tester.tap(find.descendant(
-          of: find.byType(MobileHomeTopBar), matching: find.text('Agents')));
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.pump(const Duration(milliseconds: 400));
-      expect(find.byType(AgentsSidebarPanel), findsOneWidget);
+      expect(find.byType(MobileHomeScreen), findsOneWidget);
 
       final sidebar = tester.widget<Sidebar>(find.byType(Sidebar));
       sidebar.onAgent(CoordinationAgent.fromJson(
@@ -197,9 +192,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump(const Duration(milliseconds: 400));
       shell = tester.widget<MobileShell>(find.byType(MobileShell));
-      expect(shell.mobileHome, MobileHome.agents);
+      expect(shell.mobileHome, MobileHome.chats);
       expect(find.byType(CoordinationAgentDetail), findsNothing);
-      expect(find.byType(AgentsSidebarPanel), findsOneWidget);
+      expect(find.byType(MobileHomeScreen), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();

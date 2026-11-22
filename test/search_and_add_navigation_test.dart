@@ -6,8 +6,7 @@ import 'package:snippet/swr.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/shell_models.dart';
 import 'package:snippet/screens/sidebar.dart';
-import 'package:snippet/screens/mobile_session_home.dart';
-import 'package:snippet/screens/session_list_row.dart';
+import 'package:snippet/screens/mobile_home/home_style.dart';
 import 'package:snippet/theme.dart';
 
 class _FakeTestClient extends DaemonClient {
@@ -122,15 +121,12 @@ void main() {
       await tester.pumpWidget(buildWidget(allSessions));
       await tester.pumpAndSettle();
 
-      // Recent header is removed; folder name is on trailing session card; no duplicates
+      // One Sessions group counts every human-managed session once.
       expect(find.text('Recent'), findsNothing);
-      expect(find.text('10'), findsNothing);
-      final folder = find.widgetWithText(MobileSectionLabel, 'project');
-      expect(folder, findsOneWidget);
-      expect(find.descendant(of: folder, matching: find.text('15')),
+      final label = find.widgetWithText(HomeLabel, 'Sessions');
+      expect(label, findsOneWidget);
+      expect(find.descendant(of: label, matching: find.text('15')),
           findsOneWidget);
-      expect(find.byType(SessionGroupHeader), findsNothing);
-      expect(find.byType(LiveSessionCard), findsNothing);
 
       // Top recent items are visible once each:
       expect(find.text('Session Title 0'), findsOneWidget);
@@ -147,15 +143,15 @@ void main() {
       // Search reaches past the visible rows to every matching chat.
       await tester.tap(find.byTooltip('Search'));
       await tester.pumpAndSettle();
-      await tester.enterText(_field('Search sessions'), 'Title 13');
+      await tester.enterText(_field('Search agents and sessions'), 'Title 13');
       await tester.pumpAndSettle();
       expect(find.text('Session Title 13'), findsOneWidget);
 
       // Search for nonexistent chat
-      await tester.enterText(_field('Search sessions'), 'Session Title 99');
+      await tester.enterText(_field('Search agents and sessions'), 'Session Title 99');
       await tester.pumpAndSettle();
-      expect(find.text('No matching sessions'), findsOneWidget);
-      await tester.enterText(_field('Search sessions'), '');
+      expect(find.text('Nothing matches'), findsOneWidget);
+      await tester.enterText(_field('Search agents and sessions'), '');
       await tester.pumpAndSettle();
 
       // When all sessions are older than 12 hours, Recent header is absent but folder shows them

@@ -11,32 +11,27 @@ import '../tap_detector.dart';
 final sidebarAgentsFirst = ValueNotifier<bool>(false);
 const _agentsFirstPref = 'desktop_sidebar_agents_first';
 
-/// Settings choice: the home tab the app opens on, phone and desktop.
-final homeAgentsFirst = ValueNotifier<bool>(false);
-const _homeFirstPref = 'home_agents_first';
-
 Future<void> loadSidebarAgentsFirst() async {
   final prefs = await SharedPreferences.getInstance();
-  homeAgentsFirst.value = prefs.getBool(_homeFirstPref) ??
-      prefs.getBool(_agentsFirstPref) ??
-      false;
-  if (!kMobile) sidebarAgentsFirst.value = homeAgentsFirst.value;
+  if (!kMobile) {
+    // An earlier "Open on" choice (home_agents_first) carries over.
+    sidebarAgentsFirst.value = prefs.getBool(_agentsFirstPref) ??
+        prefs.getBool('home_agents_first') ??
+        false;
+  }
 }
 
-MobileHome homeFirstTab() =>
-    homeAgentsFirst.value ? MobileHome.agents : MobileHome.chats;
-
-void setHomeAgentsFirst(bool agents) {
-  if (homeAgentsFirst.value == agents) return;
-  homeAgentsFirst.value = agents;
-  if (!kMobile) setSidebarAgentsFirst(agents);
-  SharedPreferences.getInstance()
-      .then((p) => p.setBool(_homeFirstPref, agents));
-}
+/// The tab the shell starts on: always Sessions on the phone, which has one
+/// home list; desktop follows its sidebar mode.
+MobileHome homeFirstTab() => !kMobile && sidebarAgentsFirst.value
+    ? MobileHome.agents
+    : MobileHome.chats;
 
 void setSidebarAgentsFirst(bool agents) {
   if (sidebarAgentsFirst.value == agents) return;
   sidebarAgentsFirst.value = agents;
+  SharedPreferences.getInstance()
+      .then((p) => p.setBool(_agentsFirstPref, agents));
 }
 
 /// Two-way switch in the sidebar header: sessions or agents first.

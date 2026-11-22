@@ -1,269 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../ambient_loop.dart';
-import '../glass.dart';
+import '../ink.dart';
 import '../models.dart';
 import '../mochi.dart';
 import '../notification_text.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import 'mobile_chrome.dart';
-import 'mobile_shell.dart' show HomePagerScope;
 import 'phone_hero.dart' show heroAgentColor;
 import 'session_list_row.dart';
-import '../tap_detector.dart';
-
-/// Phone home top bar: the Sessions / Agents switch with search and settings.
-/// Search swaps the row for a field until it is cleared and closed.
-class MobileHomeTopBar extends StatefulWidget {
-  const MobileHomeTopBar({
-    super.key,
-    required this.agents,
-    required this.controller,
-    required this.focusNode,
-    required this.onChanged,
-    required this.onSessions,
-    required this.onAgents,
-    this.onSettings,
-  });
-
-  final bool agents;
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final ValueChanged<String> onChanged;
-  final VoidCallback onSessions;
-  final VoidCallback onAgents;
-  final VoidCallback? onSettings;
-
-  @override
-  State<MobileHomeTopBar> createState() => _MobileHomeTopBarState();
-}
-
-class _MobileHomeTopBarState extends State<MobileHomeTopBar> {
-  late bool _searching = widget.controller.text.isNotEmpty;
-
-  void _open() {
-    setState(() => _searching = true);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) widget.focusNode.requestFocus();
-    });
-  }
-
-  void _close() {
-    widget.controller.clear();
-    widget.onChanged('');
-    widget.focusNode.unfocus();
-    setState(() => _searching = false);
-  }
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.fromLTRB(M.gutter, S.s6, M.gutter, S.of(10)),
-        child: SizedBox(
-          height: 44,
-          child: AnimatedSwitcher(
-            duration: Motion.base,
-            child: _searching
-                ? Row(key: const ValueKey('search'), children: [
-                    Expanded(child: _field()),
-                    SizedBox(width: S.s8),
-                    RoundBtn(icon: 'x', tooltip: 'Close search', onTap: _close),
-                  ])
-                : Row(key: const ValueKey('tabs'), children: [
-                    Expanded(child: _segment()),
-                    SizedBox(width: S.s8),
-                    RoundBtn(icon: 'search', tooltip: 'Search', onTap: _open),
-                    if (widget.onSettings != null) ...[
-                      SizedBox(width: S.s8),
-                      RoundBtn(
-                          icon: 'settings',
-                          tooltip: 'Settings',
-                          onTap: widget.onSettings),
-                    ],
-                  ]),
-          ),
-        ),
-      );
-
-  Widget _segment() {
-    final ctl = HomePagerScope.maybeOf(context);
-    final selected = widget.agents ? 1.0 : 0.0;
-    return Container(
-      height: 40,
-      padding: EdgeInsets.all(S.of(3)),
-      decoration: BoxDecoration(
-        color: AppColors.tint2,
-        borderRadius: BorderRadius.circular(R.pill),
-      ),
-      child: Stack(children: [
-        Positioned.fill(
-          child: LayoutBuilder(builder: (context, box) {
-            final p = (ctl?.position ?? selected).clamp(0.0, 1.0);
-            final w = box.maxWidth / 2;
-            return Align(
-              alignment: Alignment.centerLeft,
-              child: Transform.translate(
-                offset: Offset(p * w, 0),
-                child: Container(
-                  key: const ValueKey('home-indicator'),
-                  width: w,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface3,
-                    borderRadius: BorderRadius.circular(R.pill),
-                  ),
-                ),
-              ),
-            );
-          }),
-        ),
-        Row(children: [
-          _seg('Sessions', !widget.agents, () {
-            if (ctl != null) {
-              ctl.animateTo(0);
-              ctl.onCommit?.call(0);
-            } else {
-              widget.onSessions();
-            }
-          }),
-          _seg('Agents', widget.agents, () {
-            if (ctl != null) {
-              ctl.animateTo(1);
-              ctl.onCommit?.call(1);
-            } else {
-              widget.onAgents();
-            }
-          }),
-        ]),
-      ]),
-    );
-  }
-
-  Widget _seg(String label, bool on, VoidCallback onTap) => Expanded(
-        child: Semantics(
-          button: true,
-          selected: on,
-          label: label,
-          child: TapDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: on
-                ? null
-                : () {
-                    HapticFeedback.selectionClick();
-                    onTap();
-                  },
-            child: AnimatedDefaultTextStyle(
-              duration: Motion.fast,
-              style: sans(14,
-                  weight: on ? W.label : W.body,
-                  color: on ? AppColors.fg1 : AppColors.fg3),
-              child: Center(child: Text(label)),
-            ),
-          ),
-        ),
-      );
-
-  Widget _field() => Container(
-        height: 40,
-        padding: EdgeInsets.symmetric(horizontal: S.s12),
-        decoration: BoxDecoration(
-          color: AppColors.tint2,
-          borderRadius: BorderRadius.circular(R.lg),
-        ),
-        child: Row(children: [
-          AppIcon('search', size: 16, color: AppColors.fg4),
-          SizedBox(width: S.s8),
-          Expanded(
-            child: TextField(
-              controller: widget.controller,
-              focusNode: widget.focusNode,
-              onChanged: widget.onChanged,
-              textInputAction: TextInputAction.search,
-              style: sans(15, color: AppColors.fg1),
-              cursorColor: AppColors.accent,
-              decoration: InputDecoration(
-                isCollapsed: true,
-                border: InputBorder.none,
-                hintText: widget.agents ? 'Search agents' : 'Search sessions',
-                hintStyle: sans(15, color: AppColors.fg4),
-              ),
-            ),
-          ),
-        ]),
-      );
-}
-
-/// The phone home's bottom bar: Mission Control as an input, with its badge,
-/// a live ring while voice is on, and the call button.
-class MissionControlDock extends StatelessWidget {
-  const MissionControlDock({
-    super.key,
-    required this.onOpen,
-    this.onCall,
-    this.live = false,
-    this.badgeCount = 0,
-  });
-
-  final VoidCallback onOpen;
-  final VoidCallback? onCall;
-  final bool live;
-  final int badgeCount;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-        button: true,
-        label: 'Ask Mission Control',
-        child: TapDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            tapHaptic();
-            onOpen();
-          },
-          child: Glass(
-            radius: BorderRadius.circular(R.of(28)),
-            child: SizedBox(
-              height: 56,
-              child: Row(children: [
-                SizedBox(width: S.s6),
-                LiveRing(
-                  live: live,
-                  child: RoundBtn(
-                    tooltip:
-                        live ? 'Mission Control, voice on' : 'Mission Control',
-                    size: 44,
-                    bare: true,
-                    badgeCount: badgeCount,
-                    onTap: onOpen,
-                    child: AgentMochi('mission-control',
-                        size: 28,
-                        state: live
-                            ? AgentCharacterState.working
-                            : AgentCharacterState.idle),
-                  ),
-                ),
-                SizedBox(width: S.s12),
-                Expanded(
-                  child: Text('Ask Mission Control',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(15, color: AppColors.fg3)),
-                ),
-                if (onCall != null)
-                  RoundBtn(
-                    tooltip: live ? 'Voice call' : 'Start voice',
-                    size: 44,
-                    bare: true,
-                    onTap: onCall,
-                    child: AppIcon('phone',
-                        size: 20, color: live ? AppColors.ok : AppColors.fg2),
-                  ),
-                SizedBox(width: S.s6),
-              ]),
-            ),
-          ),
-        ),
-      );
-}
 
 /// Section label over a group: an optional icon, the name and a count.
 class MobileSectionLabel extends StatelessWidget {
@@ -376,9 +121,6 @@ class _LiveSessionCardState extends State<LiveSessionCard> {
       if (mounted) setState(() => _busy = false);
     }
   }
-
-  static Color _ink(Color c) =>
-      c.computeLuminance() > 0.45 ? const Color(0xFF14141A) : Colors.white;
 
   static String _cap(String v) =>
       v.isEmpty ? v : '${v[0].toUpperCase()}${v.substring(1)}';
@@ -651,7 +393,7 @@ class _LiveSessionCardState extends State<LiveSessionCard> {
                           flex: 2,
                           child: _button(
                               'Approve', _busy ? null : () => _decide(true),
-                              icon: 'check', color: colour, ink: _ink(colour))),
+                              icon: 'check', color: colour, ink: inkOn(colour))),
                     ]),
                   ] else if (cameBack &&
                       openPr &&
@@ -668,7 +410,7 @@ class _LiveSessionCardState extends State<LiveSessionCard> {
                             child: _button('Merge', widget.onMergePr,
                                 icon: 'pull-request',
                                 color: colour,
-                                ink: _ink(colour))),
+                                ink: inkOn(colour))),
                       ],
                     ]),
                   ] else if (!needsYou && !cameBack && pr != null) ...[

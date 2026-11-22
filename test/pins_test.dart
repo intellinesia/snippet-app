@@ -6,7 +6,6 @@ import 'package:snippet/api.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/pins.dart';
 import 'package:snippet/screens/agents_sidebar_panel.dart';
-import 'package:snippet/screens/mobile_session_home.dart';
 import 'package:snippet/screens/session_list_row.dart';
 import 'package:snippet/screens/shell_models.dart';
 import 'package:snippet/screens/sidebar.dart';
@@ -87,40 +86,6 @@ SessionInfo _session(
       'settled': false,
     });
 
-Widget _phoneHarness({required List<SessionInfo> sessions}) {
-  return MaterialApp(
-    theme: buildAppTheme(),
-    home: Scaffold(
-      body: Sidebar(
-        instances: const [],
-        active: null,
-        client: _Client(),
-        selectedSessionId: null,
-        sessions: sessions,
-        sessionsLoading: false,
-        onRefreshSessions: () {},
-        onNewSession: () {},
-        onSelectInstance: (_) {},
-        onOpenMissionControl: () {},
-        onOpenSession: (_, __, ___) {},
-        onAddInstance: () {},
-        onRenameInstance: (_, __) {},
-        onRemoveInstance: (_) {},
-        onSessionDeleted: (_) {},
-        health: const {'https://daemon.invalid': true},
-        onRefreshHealth: () {},
-        topInset: false,
-        mobileHome: MobileHome.chats,
-        onMobileHome: (_) {},
-        settingsSection: null,
-        onSettingsSection: (_) {},
-        agent: null,
-        onAgent: (_) {},
-      ),
-    ),
-  );
-}
-
 void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
@@ -163,51 +128,6 @@ void main() {
     await Pins.instance.toggle(Pins.session, 's2');
     expect(Pins.instance.isPinned(Pins.session, 's2'), isFalse);
     expect(Pins.instance.ids(Pins.session), ['s1']);
-  });
-
-  testWidgets(
-      'pinned session shows in Pinned section on phone home without repeating below',
-      (tester) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.android;
-    try {
-      await Pins.instance.toggle(Pins.session, 's1');
-      await tester.pumpWidget(_phoneHarness(sessions: [
-        _session('s1', 'Pinned work', folder: '/home/dev/code/alpha'),
-        _session('s2', 'Other work', folder: '/home/dev/code/beta'),
-      ]));
-      await tester.pump(const Duration(milliseconds: 600));
-      await tester.pump(const Duration(seconds: 1));
-
-      final pinnedHeader = find.widgetWithText(MobileSectionLabel, 'Pinned');
-      expect(pinnedHeader, findsOneWidget);
-      expect(find.descendant(of: pinnedHeader, matching: find.text('1')),
-          findsOneWidget);
-      expect(find.text('Pinned work'), findsOneWidget);
-      expect(find.widgetWithText(MobileSectionLabel, 'alpha'), findsNothing);
-      expect(find.widgetWithText(MobileSectionLabel, 'beta'), findsOneWidget);
-
-      final pinnedRow = find.ancestor(
-          of: find.text('Pinned work'), matching: find.byType(SessionListRow));
-      expect(
-        tester
-            .widgetList<AppIcon>(
-                find.descendant(of: pinnedRow, matching: find.byType(AppIcon)))
-            .any((i) => i.name == 'pin'),
-        isTrue,
-      );
-
-      await tester.longPress(find.text('Other work'));
-      await tester.pumpAndSettle();
-      expect(find.text('Pin'), findsOneWidget);
-      await tester.tap(find.text('Pin'));
-      await tester.pumpAndSettle();
-
-      expect(find.descendant(of: pinnedHeader, matching: find.text('2')),
-          findsOneWidget);
-      expect(find.widgetWithText(MobileSectionLabel, 'beta'), findsNothing);
-    } finally {
-      debugDefaultTargetPlatformOverride = null;
-    }
   });
 
   testWidgets('pinned agents and groups sort to top',
