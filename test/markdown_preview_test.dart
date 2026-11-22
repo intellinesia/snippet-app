@@ -50,4 +50,10 @@ void main() {
     expect(cleanAgentStatusText('Split:\n- **Me (`snippet`)**: tests'),
         'Split: **Me (`snippet`)**: tests');
   });
+
+  test('a link cut by the preview limit shows its label', () {
+    expect(plainPreview('merged [#230](https://github.c...'), 'merged #230');
+    expect(plainPreview('**@theo** fixed [#230](https://x.y/z)'),
+        '@theo fixed #230');
+  });
 }

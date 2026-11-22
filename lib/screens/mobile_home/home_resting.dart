@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../markdown_preview.dart' show markdownPreviewSpan, plainPreview;
 import '../../mochi.dart';
 import '../../models.dart';
 import '../../theme.dart';
@@ -243,7 +244,7 @@ class HomeResting extends StatelessWidget {
         : DateTime.fromMillisecondsSinceEpoch(s.finishedAt! * 1000);
     return Semantics(
       button: true,
-      label: 'Last result, $line',
+      label: 'Last result, ${plainPreview(line)}',
       child: ExcludeSemantics(
         child: GestureDetector(
           key: const ValueKey('home-last-result'),
@@ -258,10 +259,10 @@ class HomeResting extends StatelessWidget {
               AgentMochi(s.displayAgentId ?? 'snippet', size: 28),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(line,
+                child: Text.rich(
+                    markdownPreviewSpan(line, sans(15, color: AppColors.fg2)),
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(15, color: AppColors.fg2)),
+                    overflow: TextOverflow.ellipsis),
               ),
               const SizedBox(width: 8),
               Text(agentRowTime(at), style: codeMono(12, color: AppColors.fg3)),

@@ -4,6 +4,8 @@ import 'theme.dart';
 
 final _fence = RegExp(r'```[^\n]*\n?');
 final _link = RegExp(r'!?\[([^\]]*)\]\([^)]*\)');
+// A link cut off by a preview limit: `[label](https://gith...`.
+final _cutLink = RegExp(r'!?\[([^\]]*)\]\([^)]*$');
 final _heading = RegExp(r'^\s{0,3}#{1,6}\s+', multiLine: true);
 final _bullet = RegExp(r'^\s*(?:[-*+]|\d+\.)\s+', multiLine: true);
 final _inlineBullet = RegExp(r'([:;.!?])\s+(?:[-*+]|\d+\.)\s+(?=\S)');
@@ -72,6 +74,7 @@ String describeAttachments(String raw, {bool labels = true}) {
 String flattenMarkdown(String raw) => describeAttachments(raw)
     .replaceAll(_fence, '')
     .replaceAllMapped(_link, (m) => m[1] ?? '')
+    .replaceAllMapped(_cutLink, (m) => m[1] ?? '')
     .replaceAll(_heading, '')
     .replaceAll(_bullet, '')
     .replaceAll(_quote, '')

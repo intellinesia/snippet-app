@@ -95,6 +95,17 @@ void main() {
       expect(_managed('b', 'snippet').agentManaged, isTrue);
     });
 
+    test('agent rows run latest activity first, name breaks ties', () {
+      final rows = agentRows(
+        [_agent('a', 'Alpha'), _agent('b', 'Bravo'), _agent('c', 'Charlie')],
+        [
+          _s('x', extra: {'worker_agent_id': 'c', 'last_active': _ago(5)}),
+          _s('y', extra: {'worker_agent_id': 'a', 'last_active': _ago(500)}),
+        ],
+      );
+      expect([for (final r in rows.asleep) r.agent.id], ['c', 'a', 'b']);
+    });
+
     test('managed sessions group on worker then owner and skip settled', () {
       final by = managedByAgent([
         _managed('a', 'snippet'),

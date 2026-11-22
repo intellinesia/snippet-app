@@ -92,6 +92,13 @@ Map<String, List<SessionInfo>> managedByAgent(Iterable<SessionInfo> sessions) {
       idle: [for (final s in sessions) if (!sessionBusy(s)) s],
     );
 
+/// When the agent last did anything: its newest session or direct message.
+int agentActivityMs(CrewEntry e) {
+  final session = (e.sessions.firstOrNull?.lastActive ?? 0) * 1000;
+  final said = e.agent.lastMessage?.at?.millisecondsSinceEpoch ?? 0;
+  return session > said ? session : said;
+}
+
 /// An agent row: what it is doing, for ordering and the status line.
 class AgentRow {
   const AgentRow(this.agent, this.state, this.line);
@@ -108,6 +115,10 @@ class AgentRow {
       [for (final a in agents) if (a.id != 'mission-control') a], sessions,
       presence: presence);
   final working = <AgentRow>[], needs = <AgentRow>[], asleep = <AgentRow>[];
+  final at = <String, int>{};
+  for (final e in crew) {
+    at[e.agent.id] = agentActivityMs(e);
+  }
   for (final e in crew) {
     final asks = e.state == CrewState.needsYou ||
         (e.agent.available && e.agent.needsYou > 0);
@@ -122,5 +133,18 @@ class AgentRow {
       asleep.add(AgentRow(e.agent, CrewState.standingBy, e.line));
     }
   }
+  // Latest activity first, name as the tiebreak.
+  int byRecent(AgentRow a, AgentRow b) {
+    final r = at[b.agent.id]!.compareTo(at[a.agent.id]!);
+    return r != 0
+        ? r
+        : a.agent.displayName
+            .toLowerCase()
+            .compareTo(b.agent.displayName.toLowerCase());
+  }
+
+  working.sort(byRecent);
+  needs.sort(byRecent);
+  asleep.sort(byRecent);
   return (working: working, needs: needs, asleep: asleep);
 }

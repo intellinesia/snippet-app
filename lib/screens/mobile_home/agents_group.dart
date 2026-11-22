@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../crew_status.dart' show CrewState;
 import '../../mochi.dart';
 import '../../models.dart';
+import '../../markdown_preview.dart' show markdownPreviewSpan, plainPreview;
 import '../../theme.dart';
 import '../../widgets.dart';
 import '../phone_hero.dart' show heroAgentColor;
@@ -132,10 +133,11 @@ class AgentTile extends StatelessWidget {
                 SizedBox(width: S.s6),
               ],
               Expanded(
-                child: Text(row.line,
+                child: Text.rich(
+                    markdownPreviewSpan(
+                        row.line, sans(13, color: AppColors.fg3)),
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(13, color: AppColors.fg3)),
+                    overflow: TextOverflow.ellipsis),
               ),
             ]),
           ],
@@ -144,7 +146,7 @@ class AgentTile extends StatelessWidget {
     ]);
     final tapArea = Semantics(
       button: true,
-      label: '${a.displayName}, ${row.line}',
+      label: '${a.displayName}, ${plainPreview(row.line)}',
       child: ExcludeSemantics(
         child: InkWell(
           onTap: onOpen,
