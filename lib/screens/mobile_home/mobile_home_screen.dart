@@ -6,9 +6,11 @@ import '../../agent_character.dart' show AgentCharacterState;
 import '../../api.dart';
 import '../../chat/stage_bar.dart';
 import '../../chat/stage_header.dart' show StageMember;
+import '../../glass.dart';
 import '../../models.dart';
 import '../../motion_routes.dart';
 import '../../pull_refresh.dart';
+import '../../tap_detector.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
 import '../mobile_chrome.dart' show RoundBtn;
@@ -179,11 +181,11 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
             controller: _scroll,
             physics: const AlwaysScrollableScrollPhysics(),
             padding: EdgeInsets.only(
-                top: StageBar.height + 8, bottom: 160 + bottom),
+                top: _searching ? 70 : StageBar.height + 8,
+                bottom: 160 + bottom),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (_searching) _searchField(),
                 if (q.isEmpty)
                   NeedsYouSection(
                     items: asks,
@@ -260,23 +262,36 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
         top: 0,
         left: 0,
         right: 0,
-        child: StageBar(
-          members: cast,
-          title: 'Snippet',
-          subtitle: subtitle,
-          subtitleDot: asks.isNotEmpty ? AppColors.run : AppColors.ok,
+        child: AnimatedSwitcher(
+          duration: reduceMotion(context) ? Duration.zero : Motion.fast,
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          child: _searching
+              ? _searchTopBar()
+              : Stack(
+                  key: const ValueKey('home-stage-bar'),
+                  clipBehavior: Clip.none,
+                  children: [
+                    StageBar(
+                      members: cast,
+                      title: 'Snippet',
+                      subtitle: subtitle,
+                      subtitleDot:
+                          asks.isNotEmpty ? AppColors.run : AppColors.ok,
+                    ),
+                    Positioned(
+                        left: M.gutter - 2,
+                        top: S.s8 - 2,
+                        child: _round('search', 'Search', _openSearch)),
+                    Positioned(
+                        right: M.gutter - 2,
+                        top: S.s8 - 2,
+                        child: _round(
+                            'settings', 'Settings', widget.onSettings)),
+                  ],
+                ),
         ),
       ),
-      Positioned(
-          left: M.gutter - 2,
-          top: S.s8 - 2,
-          child: _round(_searching ? 'x' : 'search',
-              _searching ? 'Close search' : 'Search',
-              _searching ? _closeSearch : _openSearch)),
-      Positioned(
-          right: M.gutter - 2,
-          top: S.s8 - 2,
-          child: _round('settings', 'Settings', widget.onSettings)),
       Positioned(
         left: 0,
         right: 0,
@@ -288,39 +303,86 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
           hint: 'Ask Mission Control',
           onPlus: widget.onPlus,
           onSent: widget.onOpenMissionControl,
+          onOpenChat: widget.onOpenMissionControl,
         ),
       ),
     ]);
   }
 
-  Widget _searchField() => Padding(
-        padding: EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, S.s12),
-        child: Container(
-          height: 44,
-          padding: EdgeInsets.symmetric(horizontal: S.s12),
-          decoration: BoxDecoration(
-            color: AppColors.surface2.withValues(alpha: 0.9),
-            borderRadius: BorderRadius.circular(R.lg),
-          ),
+  Widget _searchTopBar() => GlassTopFrame(
+        key: const ValueKey('home-search-bar'),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(M.gutter, S.s8, M.gutter - 2, S.s4),
           child: Row(children: [
-            AppIcon('search', size: 16, color: AppColors.fg3),
-            SizedBox(width: S.s8),
             Expanded(
-              child: TextField(
-                controller: _search,
-                focusNode: _searchFocus,
-                onChanged: (_) => setState(() {}),
-                textInputAction: TextInputAction.search,
-                style: sans(15, color: AppColors.fg1),
-                cursorColor: AppColors.accent,
-                decoration: InputDecoration(
-                  isCollapsed: true,
-                  border: InputBorder.none,
-                  hintText: 'Search agents and sessions',
-                  hintStyle: sans(15, color: AppColors.fg3),
+              child: Container(
+                height: 44,
+                padding: EdgeInsets.only(
+                    left: S.of(14), right: _search.text.isNotEmpty ? S.s6 : S.of(14)),
+                decoration: BoxDecoration(
+                  color: AppColors.surface2.withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(R.pill),
                 ),
+                child: Row(children: [
+                  AppIcon('search', size: 16, color: AppColors.fg3),
+                  SizedBox(width: S.of(10)),
+                  Expanded(
+                    child: TextField(
+                      controller: _search,
+                      focusNode: _searchFocus,
+                      onChanged: (_) => setState(() {}),
+                      textInputAction: TextInputAction.search,
+                      textAlignVertical: TextAlignVertical.center,
+                      style: sans(16, color: AppColors.fg1),
+                      cursorColor: AppColors.accent,
+                      decoration: InputDecoration(
+                        isCollapsed: true,
+                        border: InputBorder.none,
+                        hintText: 'Search agents and sessions',
+                        hintStyle: sans(16, color: AppColors.fg4),
+                      ),
+                    ),
+                  ),
+                  if (_search.text.isNotEmpty)
+                    Tooltip(
+                      message: 'Clear search',
+                      child: Semantics(
+                        button: true,
+                        label: 'Clear search',
+                        child: ExcludeSemantics(
+                          child: TapDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () {
+                              _search.clear();
+                              setState(() {});
+                            },
+                            child: SizedBox(
+                              width: 32,
+                              height: 32,
+                              child: Center(
+                                child: Container(
+                                  width: 20,
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    color:
+                                        AppColors.fg1.withValues(alpha: 0.12),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: AppIcon('x',
+                                      size: 11, color: AppColors.fg2),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ]),
               ),
             ),
+            SizedBox(width: S.s6),
+            _round('x', 'Close search', _closeSearch),
           ]),
         ),
       );

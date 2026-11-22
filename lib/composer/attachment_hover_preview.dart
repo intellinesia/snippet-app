@@ -80,12 +80,17 @@ class _AttachmentHoverPreviewState extends State<AttachmentHoverPreview>
 
   final _portal = OverlayPortalController();
   final _link = LayerLink();
-  late final AnimationController _anim =
-      AnimationController(vsync: this, duration: Motion.fast);
+  late final AnimationController _anim;
   Timer? _timer;
   ScrollPosition? _scroll;
   bool _below = false;
   double _dx = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _anim = AnimationController(vsync: this, duration: Motion.fast);
+  }
 
   @override
   void didChangeDependencies() {

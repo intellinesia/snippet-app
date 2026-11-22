@@ -5,8 +5,12 @@ import 'package:flutter/material.dart';
 import '../../api.dart';
 import '../../composer/chat_composer.dart';
 import '../../composer/composer_attachments.dart';
-import '../../composer/composer_card.dart' show ComposerIconButton;
+import '../../composer/composer_card.dart'
+    show C7, ComposerIconButton, ComposerPillSurface;
 import '../../composer/voice_note.dart';
+import '../../desktop_look.dart';
+import '../../mochi.dart';
+import '../../tap_detector.dart';
 import '../../widgets.dart';
 
 /// The shared floating composer on the phone home and the managed view. It
@@ -20,6 +24,7 @@ class HomeComposer extends StatefulWidget {
     required this.hint,
     required this.onPlus,
     this.onSent,
+    this.onOpenChat,
   });
 
   final DaemonClient client;
@@ -30,6 +35,9 @@ class HomeComposer extends StatefulWidget {
   /// "+" is new session, agent or group; the anchor is the button's context.
   final void Function(BuildContext anchor) onPlus;
   final VoidCallback? onSent;
+
+  /// Opens the target agent's chat directly without sending a message.
+  final VoidCallback? onOpenChat;
 
   @override
   State<HomeComposer> createState() => _HomeComposerState();
@@ -102,6 +110,38 @@ class _HomeComposerState extends State<HomeComposer> {
     }
   }
 
+  Widget? _openButton() {
+    final open = widget.onOpenChat;
+    if (open == null) return null;
+    final label = widget.agentName;
+    return Tooltip(
+      message: label,
+      child: Semantics(
+        button: true,
+        label: label,
+        child: ExcludeSemantics(
+          child: TapDetector(
+            key: ValueKey('home-open-${widget.agentId}'),
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              tapHaptic();
+              open();
+            },
+            child: Tactile(
+              radius: BorderRadius.circular(C7.pillRadius),
+              child: ComposerPillSurface(
+                child: SizedBox.square(
+                  dimension: C7.btn,
+                  child: Center(child: AgentMochi(widget.agentId, size: 28)),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => ChatComposer(
         input: _input,
@@ -110,6 +150,7 @@ class _HomeComposerState extends State<HomeComposer> {
         voice: _voice,
         listen: _attachments,
         recipient: widget.agentName,
+        besideCard: _openButton(),
         attachments: () =>
             _attachments.isNotEmpty ? _attachments.buildBar(context,
                 onInsertText: (t) => appendToInput(_input, t)) : null,

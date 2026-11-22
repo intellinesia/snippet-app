@@ -187,7 +187,7 @@ void main() {
                 ],
             onOpenSession: (s) => opened.add(s.id),
             onOpenAgent: (a) => opened.add('agent:${a.id}'),
-            onOpenMissionControl: () {},
+            onOpenMissionControl: () => opened.add('mission-control'),
             onSettings: () {},
             onPlus: (_) {},
             onDecide: (s, ok) async {
@@ -388,6 +388,37 @@ void main() {
       final agents = tester.getRect(find.text('Agents'));
       expect(blur.bottom, lessThanOrEqualTo(frame.bottom + 0.5));
       expect(blur.bottom, lessThan(agents.top));
+    });
+
+    testWidgets('Mission Control button opens MC chat directly',
+        (tester) async {
+      await pumpHome(tester, [_s('h0')]);
+      final btn = find.byKey(const ValueKey('home-open-mission-control'));
+      expect(btn, findsOneWidget);
+      final rect = tester.getRect(btn);
+      expect(rect.width, inInclusiveRange(44, 56));
+      expect(rect.height, inInclusiveRange(44, 56));
+      await tester.tap(btn);
+      await tester.pump();
+      expect(opened, ['mission-control']);
+    });
+
+    testWidgets('search swaps top bar for a pinned pill with clear and close',
+        (tester) async {
+      await pumpHome(tester, base);
+      await tester.tap(find.byTooltip('Search'));
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(find.byKey(const ValueKey('home-search-bar')), findsOneWidget);
+      expect(find.byTooltip('Clear search'), findsNothing);
+      await tester.enterText(find.byType(TextField).first, 'Snippet');
+      await tester.pump();
+      expect(find.byTooltip('Clear search'), findsOneWidget);
+      await tester.tap(find.byTooltip('Clear search'));
+      await tester.pump();
+      expect(find.byTooltip('Clear search'), findsNothing);
+      await tester.tap(find.byTooltip('Close search'));
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(find.byKey(const ValueKey('home-stage-bar')), findsOneWidget);
     });
   });
 }

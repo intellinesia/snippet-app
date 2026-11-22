@@ -48,6 +48,7 @@ class ChatComposer extends StatelessWidget {
     this.deskHint,
     this.highlight = false,
     this.attentionExclude,
+    this.besideCard,
   });
 
   final TextEditingController input;
@@ -95,6 +96,9 @@ class ChatComposer extends StatelessWidget {
   final Widget? Function()? deskHint;
   final bool highlight;
   final String? attentionExclude;
+
+  /// Optional control anchored beside the composer pill (e.g. home MC button).
+  final Widget? besideCard;
 
   Map<ShortcutActivator, VoidCallback> get _bindings =>
       shortcuts ??
@@ -265,9 +269,25 @@ class ChatComposer extends StatelessWidget {
                               onSend: onSend,
                               onMore: onRecordMore ?? () => unawaited(voice.recordMore()),
                             )
-                          : KeyedSubtree(
-                              key: cardKey,
-                              child: kMobile ? _phoneCard() : _deskCard()),
+                          : besideCard != null
+                              ? Row(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    besideCard!,
+                                    SizedBox(width: S.s8),
+                                    Expanded(
+                                      child: KeyedSubtree(
+                                        key: cardKey,
+                                        child: kMobile
+                                            ? _phoneCard()
+                                            : _deskCard(),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : KeyedSubtree(
+                                  key: cardKey,
+                                  child: kMobile ? _phoneCard() : _deskCard()),
                     ),
                   ],
                 );
