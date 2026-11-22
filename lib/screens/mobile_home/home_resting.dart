@@ -108,9 +108,11 @@ class HomeResting extends StatelessWidget {
   }
 
   Widget _workingView(BuildContext context) {
-    final shown = working.take(_maxWorking).toList();
-    final more = working.length - shown.length;
-    // Centred in the free space, so a short list does not hang from the top.
+    final reduce = reduceMotion(context);
+    final first = working.first.agent.displayName;
+    final headline =
+        working.length == 1 ? '$first is working' : '${working.length} agents are working';
+    // Centred in the free space, so the card never hangs from the nav.
     return Center(
       key: const ValueKey('home-working'),
       child: SingleChildScrollView(
@@ -119,123 +121,267 @@ class HomeResting extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Center(child: AgentMochi('mission-control', size: 52)),
-            const SizedBox(height: 14),
-            Text('All on track.',
+            SizedBox(
+              height: 168,
+              child: Stack(alignment: Alignment.center, children: [
+                if (!reduce)
+                  Container(
+                    width: 168,
+                    height: 168,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(colors: [
+                        AppColors.ok.withValues(alpha: 0.16),
+                        AppColors.ok.withValues(alpha: 0),
+                      ]),
+                    ),
+                  ),
+                const AgentMochi('mission-control', size: 96),
+              ]),
+            ),
+            Text(headline,
                 textAlign: TextAlign.center,
-                style: sans(22, weight: FontWeight.w500, color: AppColors.fg1)),
-            const SizedBox(height: 4),
-            Text('Nothing needs you.',
+                style: sans(26, weight: FontWeight.w500, color: AppColors.fg1)),
+            const SizedBox(height: 6),
+            Text('Nothing needs you',
                 textAlign: TextAlign.center,
-                style: sans(13, color: AppColors.fg3)),
-            const HomeLabel('In progress', top: 28),
-            for (final r in shown) _workingBlock(r),
-            if (more > 0)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Hit44(
-                  label: '$more more working, open Everyone',
-                  onTap: onOpenEveryone,
-                  width: 160,
-                  child: Text('+$more working',
-                      style: sans(15,
-                          weight: FontWeight.w500, color: AppColors.fg2)),
+                style: sans(14, color: AppColors.fg3)),
+            const SizedBox(height: 28),
+            HomeWorkingBlock(
+              working: working,
+              sessions: sessions,
+              managed: managed,
+              onOpenAgent: onOpenAgent,
+              onOpenManaged: onOpenManaged,
+              onOpenEveryone: onOpenEveryone,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Who is working: one focal card for a single agent, a grouped list of rows
+/// for several (up to three, then "+n working" opens Everyone).
+class HomeWorkingBlock extends StatelessWidget {
+  const HomeWorkingBlock({
+    super.key,
+    required this.working,
+    required this.sessions,
+    required this.managed,
+    required this.onOpenAgent,
+    required this.onOpenManaged,
+    required this.onOpenEveryone,
+    this.forceList = false,
+  });
+
+  final List<AgentRow> working;
+  final List<SessionInfo> sessions;
+  final Map<String, List<SessionInfo>> managed;
+  final void Function(CoordinationAgent a) onOpenAgent;
+  final void Function(CoordinationAgent a) onOpenManaged;
+  final VoidCallback onOpenEveryone;
+
+  /// Rows even for one agent, under an ask.
+  final bool forceList;
+
+  static const _glass = Color(0xB81C1C20);
+
+  @override
+  Widget build(BuildContext context) {
+    final shown = working.take(_maxWorking).toList();
+    final more = working.length - shown.length;
+    final single = shown.length == 1 && !forceList;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (single)
+          _card(shown.first)
+        else
+          Container(
+            decoration: BoxDecoration(
+              color: _glass,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(children: [
+              for (var i = 0; i < shown.length; i++) ...[
+                if (i > 0) const HomeDivider(inset: 0),
+                _row(shown[i]),
+              ],
+            ]),
+          ),
+        if (more > 0)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Hit44(
+              label: '$more more working, open Everyone',
+              onTap: onOpenEveryone,
+              width: 160,
+              child: Text('+$more working',
+                  style:
+                      sans(15, weight: FontWeight.w500, color: AppColors.fg2)),
+            ),
+          ),
+      ],
+    );
+  }
+
+  ({SessionInfo? s, SessionPlan? plan, String task, int count}) _facts(
+      AgentRow r) {
+    final s = workingSessionOf(r.agent.id, sessions);
+    final plan = s?.plan;
+    return (
+      s: s,
+      plan: plan,
+      task: plan?.current ?? s?.title ?? r.line,
+      count: managed[r.agent.id]?.length ?? 0,
+    );
+  }
+
+  Widget _badgeAvatar(String id, double size, double dot, Color ring) =>
+      SizedBox(
+        width: size,
+        height: size,
+        child: Stack(clipBehavior: Clip.none, children: [
+          Positioned.fill(child: AgentMochi(id, size: size)),
+          Positioned(
+            right: -2,
+            bottom: -2,
+            child: Container(
+              width: dot,
+              height: dot,
+              decoration: BoxDecoration(
+                color: AppColors.ok,
+                shape: BoxShape.circle,
+                border: Border.all(color: ring, width: dot > 14 ? 3 : 2),
+              ),
+            ),
+          ),
+        ]),
+      );
+
+  Widget _tap(AgentRow r, String label, Widget child) => Semantics(
+        button: true,
+        label: label,
+        child: ExcludeSemantics(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              tapHaptic();
+              onOpenAgent(r.agent);
+            },
+            child: child,
+          ),
+        ),
+      );
+
+  Widget _card(AgentRow r) {
+    final f = _facts(r);
+    final plan = f.plan;
+    return _tap(
+      r,
+      '${r.agent.displayName}, ${f.task}',
+      Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: _glass,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(children: [
+              _badgeAvatar(r.agent.id, 56, 16, const Color(0xFF1C1C20)),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(r.agent.displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(20,
+                            weight: FontWeight.w600, color: AppColors.fg1)),
+                    const SizedBox(height: 2),
+                    Text('Working now',
+                        style: sans(14, color: AppColors.fg3)),
+                  ],
                 ),
               ),
+              if (f.count > 0)
+                ManagedPill(
+                  name: r.agent.displayName,
+                  count: f.count,
+                  tone: pillTone(heroAgentColor(r.agent.id)),
+                  onTap: () => onOpenManaged(r.agent),
+                ),
+            ]),
+            const SizedBox(height: 14),
+            Text(f.task,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: sans(16, height: 1.4, color: AppColors.fg2)),
+            if (plan != null && plan.total > 0) ...[
+              const SizedBox(height: 14),
+              _SegBar(done: plan.done, total: plan.total),
+              const SizedBox(height: 9),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                      'Step ${(plan.done + 1).clamp(1, plan.total)} of ${plan.total}',
+                      style: sans(13, color: AppColors.fg3)),
+                  Text('${plan.done} done',
+                      style: sans(13, color: AppColors.fg3)),
+                ],
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _workingBlock(AgentRow r) {
-    final s = workingSessionOf(r.agent.id, sessions);
-    final plan = s?.plan;
-    final count = managed[r.agent.id]?.length ?? 0;
-    final task = plan?.current ?? s?.title ?? r.line;
-    return Semantics(
-      button: true,
-      label: '${r.agent.displayName}, $task',
-      child: ExcludeSemantics(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            tapHaptic();
-            onOpenAgent(r.agent);
-          },
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 72),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-                SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: Stack(clipBehavior: Clip.none, children: [
-                    Positioned.fill(
-                        child: AgentMochi(r.agent.id, size: 40)),
-                    Positioned(
-                      right: -3,
-                      bottom: -3,
-                      child: Container(
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          color: AppColors.ok,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.bg, width: 2),
-                        ),
-                      ),
-                    ),
-                  ]),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(children: [
-                        Expanded(
-                          child: Text(r.agent.displayName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: sans(17,
-                                  weight: FontWeight.w600,
-                                  color: AppColors.fg1)),
-                        ),
-                        if (count > 0)
-                          ManagedPill(
-                            name: r.agent.displayName,
-                            count: count,
-                            tone: pillTone(heroAgentColor(r.agent.id)),
-                            onTap: () => onOpenManaged(r.agent),
-                          ),
-                      ]),
-                      Text(task,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(14, color: AppColors.fg2)),
-                      if (plan != null && plan.total > 0) ...[
-                        const SizedBox(height: 8),
-                        Row(children: [
-                          Flexible(
-                              child: ConstrainedBox(
-                                  constraints:
-                                      const BoxConstraints(maxWidth: 150),
-                                  child: _SegBar(
-                                      done: plan.done, total: plan.total))),
-                          const SizedBox(width: 10),
-                          Text('${plan.done} of ${plan.total} steps',
-                              style: sans(12, color: AppColors.fg3)),
-                        ]),
-                      ],
-                    ],
-                  ),
-                ),
-              ]),
+  Widget _row(AgentRow r) {
+    final f = _facts(r);
+    final plan = f.plan;
+    return _tap(
+      r,
+      '${r.agent.displayName}, ${f.task}',
+      ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 64),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(children: [
+            _badgeAvatar(r.agent.id, 40, 12, const Color(0xFF1C1C20)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(r.agent.displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(16,
+                          weight: FontWeight.w600, color: AppColors.fg1)),
+                  Text(f.task,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(13, color: AppColors.fg3)),
+                ],
+              ),
             ),
-          ),
+            if (plan != null && plan.total > 0) ...[
+              const SizedBox(width: 8),
+              Text('${plan.done}/${plan.total}',
+                  style: codeMono(12, color: AppColors.fg3)),
+            ],
+          ]),
         ),
       ),
     );

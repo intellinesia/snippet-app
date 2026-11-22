@@ -274,7 +274,8 @@ void main() {
     testWidgets('busy state centres the top ask (even managed), Approve advances and 2 more cycles',
         (tester) async {
       await pumpHome(tester, base);
-      expect(find.text('2 working'), findsOneWidget);
+      // The header status and the strip under the ask both say it.
+      expect(find.text('2 working'), findsNWidgets(2));
       expect(find.text('Rust PR Reviewer asks'), findsOneWidget);
       expect(find.text('Push fix/p1 to origin?', findRichText: true),
           findsOneWidget);
@@ -350,11 +351,11 @@ void main() {
       ], textScale: 1.3);
       tester.view.physicalSize = const Size(360, 740) * 3;
       await tester.pump(const Duration(milliseconds: 400));
-      expect(find.text('All on track.'), findsOneWidget);
-      expect(find.text('1 of 4 steps'), findsOneWidget);
+      expect(find.textContaining('is working'), findsOneWidget);
+      expect(find.text('Step 2 of 4'), findsOneWidget);
       expect(find.text('Last result'), findsNothing);
       expect(tester.takeException(), isNull);
-      final top = tester.getTopLeft(find.text('In progress')).dy;
+      final top = tester.getTopLeft(find.textContaining('is working')).dy;
       final bar = tester.getBottomLeft(find.byKey(const ValueKey('home-stage-bar'))).dy;
       expect(top, greaterThan(bar + 24));
     });

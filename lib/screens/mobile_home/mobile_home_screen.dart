@@ -441,13 +441,34 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: box.maxHeight),
             child: Center(
-              child: OneThingAsk(
-                items: asks,
-                names: names,
-                onOpen: (i) => widget.onOpenSession(i.session),
-                onDecide: widget.onDecide == null
-                    ? null
-                    : (i, ok) => widget.onDecide!(i.session, ok),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  OneThingAsk(
+                    items: asks,
+                    names: names,
+                    onOpen: (i) => widget.onOpenSession(i.session),
+                    onDecide: widget.onDecide == null
+                        ? null
+                        : (i, ok) => widget.onDecide!(i.session, ok),
+                  ),
+                  // Work in flight stays in view under the ask.
+                  if (rows.working.isNotEmpty) ...[
+                    const SizedBox(height: 22),
+                    HomeLabel('${rows.working.length} working',
+                        trailing: 'Everyone'),
+                    HomeWorkingBlock(
+                      working: rows.working,
+                      sessions: widget.sessions,
+                      managed: managed,
+                      forceList: true,
+                      onOpenAgent: widget.onOpenAgent,
+                      onOpenManaged: _openManaged,
+                      onOpenEveryone: _openEveryone,
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
