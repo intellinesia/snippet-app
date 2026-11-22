@@ -62,6 +62,13 @@ class QuickApproveRule extends QuickAction {
       };
 }
 
+class QuickInterrupt extends QuickAction {
+  const QuickInterrupt();
+  @override
+  Map<String, dynamic> frame(String nonce) =>
+      {'kind': 'interrupt', 'nonce': nonce};
+}
+
 class QuickDeny extends QuickAction {
   const QuickDeny({this.via});
   final String? via;

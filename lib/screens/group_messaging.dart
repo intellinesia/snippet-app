@@ -9,7 +9,9 @@ import '../api.dart';
 import '../chat/choices.dart';
 import '../composer/chat_composer.dart';
 import '../composer/composer_attachments.dart';
+import '../composer/thread_composer_kit.dart';
 import '../composer/voice_note.dart';
+import '../drafts.dart';
 import '../desktop_pick.dart';
 import '../markdown_preview.dart';
 import '../chat/message_body.dart';
@@ -987,9 +989,20 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         },
       );
 
+  late final ThreadComposerKit _kit = ThreadComposerKit(
+    input: _input,
+    attachments: _attachments,
+    voice: _voice,
+    draftKey: Drafts.keyFor(widget.client.baseUrl, 'thread:${widget.group.id}'),
+    onToast: (msg) {
+      if (mounted) toast(context, msg);
+    },
+  );
+
   @override
   void initState() {
     super.initState();
+    _kit.start();
     _loadAgents();
     _thread = Swr<List<CoordinationEvent>>(
       client: widget.client,
@@ -1010,6 +1023,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   @override
   void dispose() {
     _thread.dispose();
+    _kit.dispose();
     _attachments.dispose();
     if (widget.voiceController == null) {
       _voice.dispose();
@@ -1238,7 +1252,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   Widget build(BuildContext context) {
     // Desktop: the tab, bar and panel carry the identity; no stage.
     final hideChrome = widget.embedded || !kMobile;
-    return Material(
+    return _kit.dropTarget(Material(
       color: kMobile ? AppColors.pageCanvas : Colors.transparent,
       child: _chrome(
           SafeArea(
@@ -1273,7 +1287,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
             ),
           ),
           hideChrome),
-    );
+    ));
   }
 
   Widget _header() {
@@ -2036,11 +2050,35 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         (name: name, localPath: null, readBytes: () async => bytes)
       ], upload: _voice.uploadTake);
 
-  Widget _composer() => ChatComposer(
+  bool _canSend() =>
+      (_input.text.trim().isNotEmpty ||
+          _attachments.isNotEmpty ||
+          _voice.isActive) &&
+      !_sending;
+
+  // Enter picks the first match while the mention list is open.
+  void _enter() {
+    final c = _mention != null ? _mentionCandidates : const [];
+    if (c.isNotEmpty) {
+      _applyMention(c.first.id);
+    } else if (!kMobile && _canSend()) {
+      unawaited(_send());
+    }
+  }
+
+  Widget _composer() => ValueListenableBuilder<bool>(
+      valueListenable: _kit.dragging,
+      builder: (context, dragging, _) => ChatComposer(
         input: _input,
         focus: _inputFocus,
         fieldKey: _inputFieldKey,
         hint: 'Message the group',
+        highlight: dragging,
+        shortcuts: _kit.shortcuts(
+            canSend: _canSend,
+            onSend: () => unawaited(_send()),
+            extra: {const SingleActivator(LogicalKeyboardKey.enter): _enter}),
+        contentInsertion: _kit.keyboardContent,
         voice: _voice,
         listen: _attachments,
         above: [
@@ -2057,13 +2095,9 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         sending: _sending,
         hasDraft: () =>
             _input.text.trim().isNotEmpty || _attachments.isNotEmpty,
-        canSend: () =>
-            (_input.text.trim().isNotEmpty ||
-                _attachments.isNotEmpty ||
-                _voice.isActive) &&
-            !_sending,
+        canSend: _canSend,
         onSend: () => unawaited(_send()),
-      );
+      ));
 
   Widget _mentionList() {
     final candidates = _mentionCandidates;

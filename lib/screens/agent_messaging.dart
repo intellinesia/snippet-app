@@ -19,6 +19,9 @@ import '../chat/message_body.dart';
 import '../composer/chat_composer.dart';
 import '../composer/composer_attachments.dart';
 import '../composer/composer_card.dart';
+import '../composer/thread_composer_kit.dart';
+import '../drafts.dart';
+import '../session_quick_send.dart';
 import '../composer/voice_note.dart';
 import '../message_reactions.dart';
 import '../chat/send_flight.dart';
@@ -657,9 +660,20 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     onConfirmTake: _attachVoiceBytes,
   );
 
+  late final ThreadComposerKit _kit = ThreadComposerKit(
+    input: _input,
+    attachments: _attachments,
+    voice: _voice,
+    draftKey: Drafts.keyFor(widget.client.baseUrl, 'agent:${widget.agentId}'),
+    onToast: (msg) {
+      if (mounted) toast(context, msg);
+    },
+  );
+
   @override
   void initState() {
     super.initState();
+    _kit.start();
     _loadLine();
     _loadUnread();
     if (!kMobile) _loadProviders();
@@ -712,6 +726,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   @override
   void dispose() {
     _thread.dispose();
+    _kit.dispose();
     _attachments.dispose();
     _voice.dispose();
     _input.dispose();
@@ -1056,7 +1071,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         agentColor: agentTintFor(widget.agentId) ?? AppColors.accent,
         child: child!,
       ),
-      child: Material(
+      child: _kit.dropTarget(Material(
         color: kMobile ? AppColors.pageCanvas : Colors.transparent,
         child: _chrome(
             SafeArea(
@@ -1091,7 +1106,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
               ),
             ),
             hideChrome),
-      ),
+      )),
     );
   }
 
@@ -1928,11 +1943,24 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
             text: quotePreviewText(_replyTo!.body),
             onClear: () => setState(() => _replyTo = null),
           );
-    return ChatComposer(
+    bool canSend() =>
+        (_input.text.trim().isNotEmpty ||
+            _attachments.isNotEmpty ||
+            _voice.isActive) &&
+        !_sending;
+    final presence = widget.client.presence;
+    return ListenableBuilder(
+      listenable: Listenable.merge([presence, _kit.dragging]),
+      builder: (context, _) => ChatComposer(
       input: _input,
       focus: _inputFocus,
       fieldKey: _inputFieldKey,
       hint: 'Message ${widget.agentName}',
+      highlight: _kit.dragging.value,
+      shortcuts: _kit.shortcuts(canSend: canSend, onSend: () => unawaited(_send())),
+      contentInsertion: _kit.keyboardContent,
+      running: _busyPresence(presence.presenceForAgentId(widget.agentId)),
+      onStop: _stopAgent,
       voice: _voice,
       listen: _attachments,
       recipient: widget.agentName,
@@ -1943,13 +1971,19 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       onAttach: () => unawaited(_attachments.pickFromSheet(context)),
       sending: _sending,
       hasDraft: () => _input.text.trim().isNotEmpty || _attachments.isNotEmpty,
-      canSend: () =>
-          (_input.text.trim().isNotEmpty ||
-              _attachments.isNotEmpty ||
-              _voice.isActive) &&
-          !_sending,
+      canSend: canSend,
       onSend: () => unawaited(_send()),
+    ),
     );
+  }
+
+  // The agent's desk session is where it works between messages.
+  Future<void> _stopAgent() async {
+    final ok = await quickSend(
+        client: widget.client,
+        session: 'inbox-${widget.agentId}',
+        action: const QuickInterrupt());
+    if (!ok && mounted) toast(context, "Couldn't stop ${widget.agentName}");
   }
 }
 

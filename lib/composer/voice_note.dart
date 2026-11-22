@@ -70,6 +70,9 @@ class VoiceNoteController extends ChangeNotifier {
   bool get isConfirming => _confirming;
   String? get takeName => _takeName;
 
+  /// The upload begun when the take stopped, so a leaving screen can keep it.
+  Future<String>? get takeUpload => isReviewing ? _takeUpload : null;
+
   /// Upload [bytes] as [name], reusing the upload begun at stop for this take.
   Future<String> uploadTake(Uint8List bytes, String name) async {
     final early = name == _takeName ? _takeUpload : null;

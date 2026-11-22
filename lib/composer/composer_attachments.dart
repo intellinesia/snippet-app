@@ -6,6 +6,8 @@ import 'package:image_picker/image_picker.dart';
 
 import '../api.dart';
 import '../desktop_pick.dart';
+import '../drafts.dart';
+import '../media_views.dart' show pastedTextBlock;
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -26,6 +28,9 @@ class ComposerAttachment {
   String? remotePath;
   bool uploading;
 
+  /// Text pasted into the composer, kept as a card and sent inline.
+  final String? pastedText;
+
   ComposerAttachment({
     required this.name,
     required this.isImage,
@@ -33,7 +38,19 @@ class ComposerAttachment {
     this.localPath,
     this.remotePath,
     this.uploading = true,
+    this.pastedText,
   });
+
+  bool get ready => remotePath != null || pastedText != null;
+
+  DraftAttachment toDraft() => DraftAttachment(
+        name: name,
+        isImage: isImage,
+        isAudio: isAudio,
+        localPath: localPath,
+        remotePath: remotePath,
+        pastedText: pastedText,
+      );
 }
 
 /// Manages picked attachments, background uploads, previewing, and marker
@@ -215,6 +232,35 @@ class ComposerAttachmentController extends ChangeNotifier {
     }
   }
 
+  void addPasted(String text, String name) {
+    items.add(ComposerAttachment(
+      name: name,
+      isImage: false,
+      isAudio: false,
+      uploading: false,
+      pastedText: text,
+    ));
+    notifyListeners();
+  }
+
+  /// Brings back a saved draft's attachments; they are uploaded already.
+  void restore(List<DraftAttachment> saved) {
+    if (saved.isEmpty) return;
+    items.addAll(saved.map((d) => ComposerAttachment(
+          name: d.name,
+          isImage: d.isImage,
+          isAudio: d.isAudio,
+          localPath: d.localPath,
+          remotePath: d.remotePath,
+          pastedText: d.pastedText,
+          uploading: false,
+        )));
+    notifyListeners();
+  }
+
+  List<DraftAttachment> readyDrafts() =>
+      [for (final a in items) if (a.ready) a.toDraft()];
+
   void remove(ComposerAttachment a) {
     items.remove(a);
     notifyListeners();
@@ -228,7 +274,9 @@ class ComposerAttachmentController extends ChangeNotifier {
 
   List<String> markers() => [
         for (final a in items)
-          if (a.remotePath != null)
+          if (a.pastedText case final pasted?)
+            pastedTextBlock(pasted)
+          else if (a.remotePath != null)
             a.isImage
                 ? '[attached image — call view_image on this exact path to see it: ${a.remotePath}]'
                 : '[attached file — read it at this exact path: ${a.remotePath}]',
@@ -249,14 +297,17 @@ class ComposerAttachmentController extends ChangeNotifier {
             isAudio: a.isAudio,
             uploading: a.uploading,
             localPath: a.localPath,
-            onOpen: () => preview(context, a),
+            body: a.pastedText == null
+                ? null
+                : PastedAttachmentBody(text: a.pastedText!),
+            onOpen: a.pastedText == null ? () => preview(context, a) : null,
             onRemove: () => remove(a),
           ),
       ]);
 
   Future<void> preview(BuildContext context, ComposerAttachment a) {
     final pairs = {
-      for (final x in items)
+      for (final x in items.where((x) => x.pastedText == null))
         PreviewAttachment(
           name: x.name,
           isImage: x.isImage,
@@ -270,7 +321,7 @@ class ComposerAttachmentController extends ChangeNotifier {
     return showAttachmentPreview(
       context,
       pairs.keys.toList(),
-      items.indexOf(a),
+      pairs.values.toList().indexOf(a),
       onRemove: (p) {
         final target = pairs[p];
         if (target != null) remove(target);

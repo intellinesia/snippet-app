@@ -779,7 +779,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     final a = t.readout!.agent!;
     final presence = t.client.presence;
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      // Only a wait on the user shows here; the sidebar dot shows working.
+      // Only a wait on the user shows here; the stop button and transcript
+      // show working.
       ListenableBuilder(
         listenable: presence,
         builder: (_, __) {
@@ -789,11 +790,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
               'needs_you',
             _ => null,
           };
-          if (status == null) {
-            return p != null && p.state != 'waiting'
-                ? _barWorking('working')
-                : const SizedBox.shrink();
-          }
+          if (status == null) return const SizedBox.shrink();
           return Padding(
             padding: EdgeInsets.only(right: S.s8),
             child: SessionStatusPill(

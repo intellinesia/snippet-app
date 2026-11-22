@@ -1217,35 +1217,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     Widget? body;
     final pasted = a.pastedText;
     if (pasted != null) {
-      final lines = '\n'.allMatches(pasted.trimRight()).length + 1;
-      final firstLine = pasted.trim().split('\n').first.trim();
-      body = Container(
-        height: ComposerAttachmentTile.side,
-        width: 176,
-        padding: EdgeInsets.fromLTRB(S.of(10), S.s8, S.s12, S.s8),
-        decoration: BoxDecoration(
-          color: AppColors.surface2,
-          borderRadius: BorderRadius.circular(R.md),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Row(children: [
-              AppIcon('file-text', size: 12, color: AppColors.fg3),
-              SizedBox(width: S.of(5)),
-              Text('Pasted · $lines lines',
-                  style: sans(11, weight: W.label, color: AppColors.fg2)),
-            ]),
-            SizedBox(height: S.s4),
-            Text(firstLine,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: mono(11, color: AppColors.fg3)),
-          ],
-        ),
-      );
+      body = PastedAttachmentBody(text: pasted);
     } else if (a.isImage &&
         !(a.localPath != null && File(a.localPath!).existsSync()) &&
         a.remotePath != null) {
