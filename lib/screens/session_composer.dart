@@ -1,7 +1,5 @@
 part of 'session.dart';
 
-const double kDesktopComposerWidth = 960;
-
 final _slashControllers = Expando<SlashController>('slash');
 
 extension _SessionScreenComposerExt on _SessionScreenState {
@@ -47,14 +45,14 @@ extension _SessionScreenComposerExt on _SessionScreenState {
   Future<void> _sendMessageOnce({bool steer = false}) async {
     // Audio can be sent directly from the composer: stop the live take, upload
     // it through the normal attachment path, then continue with the same send.
-    if (_sendingAudio) return;
-    if (_isRecording || _recordingPath != null) {
+    if (_sendingAudio || _voice.isConfirming) return;
+    if (_voice.isActive) {
       _sendingAudio = true;
       Diag.crumb('send audio tapped');
       if (mounted) _setState(() {});
       try {
-        if (_isRecording) await _stopRecording();
-        if (_recordingPath != null && !await _confirmRecording()) return;
+        if (_voice.isRecording) await _voice.stop();
+        if (_voice.hasTake && !await _voice.confirmTake()) return;
       } finally {
         _sendingAudio = false;
         if (mounted) _setState(() {});
@@ -450,8 +448,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
   }
 
   bool get _canSend =>
-      (_isRecording ||
-          _recordingPath != null ||
+      (_voice.isActive ||
           _input.text.trim().isNotEmpty ||
           _attachments.any((a) => a.ready)) &&
       !_anyUploading &&
@@ -922,7 +919,12 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     );
   }
 
-  Widget _composerCard(bool running) {
+  bool _showsCold(bool running) => !running && !_settled && _cold != null;
+
+  bool get _hasDraft =>
+      _input.text.trim().isNotEmpty || _attachments.isNotEmpty;
+
+  Widget _inputBar(bool running, {Widget? top}) {
     var agent = (_meAgentName ?? '').trim();
     // A desk session belongs to its agent; never address it as "Snippet".
     if (agent.isEmpty && _inboxAgentId(widget.sessionId) != null) {
@@ -931,300 +933,87 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     final hint = _isMissionControl
         ? 'Ask Mission Control…'
         : (agent.isEmpty ? 'Reply to Snippet' : 'Message $agent');
-    if (!kMobile) return _deskComposerCard(running, hint);
-    return KeyedSubtree(
-      key: _composerCardKey,
-      child: ComposerCard(
-        highlight: _draggingFiles,
-        text: _input,
-        banner: _state?.goal?.ongoing == true || _recipientChip() != null
-            ? Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (_state?.goal?.ongoing == true) _goalBanner(),
-                  if (_recipientChip() != null) _recipientChip()!,
-                ],
-              )
-            : null,
-        field: CallbackShortcuts(
-          bindings: _composerShortcuts,
-          child: TextField(
-            key: _inputFieldKey,
-            controller: _input,
-            focusNode: _inputFocus,
-            contentInsertionConfiguration: _keyboardContent,
-            minLines: 1,
-            maxLines: 8,
-            cursorColor: AppColors.accent,
-            onSubmitted: (_) => _sendMessage(),
-            style: ComposerCard.fieldStyle,
-            decoration:
-                ComposerCard.decoration(hint, style: ComposerCard.fieldStyle),
-          ),
-        ),
-        attach: _composerPlus(),
-        // The phone tray carries the model; the desktop pill keeps it inline.
-        trailing: !(kMobile && _showsQuickActions) &&
-                _inboxAgentId(widget.sessionId) == null
-            ? (kMobile
-                ? _modelChip
-                : (compact) => Row(mainAxisSize: MainAxisSize.min, children: [
-                      _modelChip(compact),
-                      _contextRing(),
-                    ]))
-            : null,
-        send: ValueListenableBuilder<TextEditingValue>(
-          valueListenable: _input,
-          builder: (_, __, ___) => _composerAction(running),
-        ),
-      ),
-    );
-  }
-
-  bool _showsCold(bool running) => !running && !_settled && _cold != null;
-
-  Widget _deskComposerCard(bool running, String hint) {
     final goal = _state?.goal?.ongoing == true;
     final rcpt = _recipientChip();
-    return KeyedSubtree(
-      key: _composerCardKey,
-      child: ListenableBuilder(
-        listenable: _input,
-        builder: (_, __) {
-          final typing = _input.text.isNotEmpty;
-          return DeskComposerCard(
-            attentionExclude: widget.sessionId,
-            highlight: _draggingFiles,
-            focus: _inputFocus,
-            banner: goal || rcpt != null
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (goal) _goalBanner(),
-                      if (rcpt != null) rcpt,
-                    ],
-                  )
-                : null,
-            field: CallbackShortcuts(
-              bindings: _composerShortcuts,
-              child: SlashKeys(
-                  controller: _slash,
-                  child: TextField(
-                    controller: _input,
-                    focusNode: _inputFocus,
-                    contentInsertionConfiguration: _keyboardContent,
-                    minLines: 1,
-                    maxLines: 10,
-                    cursorColor: AppColors.fg1,
-                    onSubmitted: (_) => _sendMessage(),
-                    style: DeskComposerCard.fieldStyle,
-                    decoration: DeskComposerCard.decoration(hint),
-                  )),
-            ),
-            attach: DeskIconButton('plus',
-                tooltip: 'Attach',
-                onTap: _onAttachTap,
-                iconSize: 16,
-                color: AppColors.fg2),
-            model: _inboxAgentId(widget.sessionId) == null
-                ? Row(mainAxisSize: MainAxisSize.min, children: [
-                    Builder(
-                      builder: (chipCtx) => DeskModelChip(
-                        icon: _modelProvider == null
-                            ? 'cpu'
-                            : 'provider:$_modelProvider',
-                        label: _modelLabel ?? 'Auto',
-                        onTap: () => _switchModel(chipCtx),
-                      ),
-                    ),
-                    _contextRing(),
-                  ])
-                : null,
-            cold: _showsCold(running)
-                ? ColdChip(
-                    mode: _resumeMode,
-                    resumeTokens: (_cold!['resume_tokens'] as num?)?.toInt(),
-                    onPick: _onColdPick)
-                : null,
-            // No send-mode legend; only the new-line key, while idle.
-            hint: !typing || running
-                ? null
-                : DeskHint([('\u21e7\u21b5', 'new line')]),
-            mic: kCanRecord
-                ? DeskIconButton('mic', tooltip: 'Record', onTap: _onMicTap)
-                : null,
-            action: _deskAction(running),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _deskRecorder() {
-    final reviewing = !_isRecording && _recordingPath != null;
-    final total = _playbackDuration > Duration.zero
-        ? _playbackDuration
-        : _recordingElapsed;
-    final showPosition =
-        reviewing && (_isPlayingRecording || _playbackPosition > Duration.zero);
-    final time = !reviewing
-        ? _audioTime(_recordingElapsed)
-        : '${_audioTime(showPosition ? _playbackPosition : Duration.zero)} / ${_audioTime(total)}';
-    final progress = !reviewing || total.inMilliseconds <= 0
-        ? null
-        : (_playbackPosition.inMilliseconds / total.inMilliseconds)
-            .clamp(0.0, 1.0);
-    final agent = (_meAgentName ?? '').trim();
-    return DeskVoiceCard(
-      recording: _isRecording,
-      sending: _sendingAudio,
-      playing: _isPlayingRecording,
-      label: _isRecording
-          ? (agent.isEmpty
-              ? 'Recording a voice note'
-              : 'Recording a voice note for $agent')
-          : 'Voice note ready to send',
-      time: time,
-      wave: LiveRecordingWave(
-          buffer: _waveform, live: _isRecording, progress: progress),
-      onDiscard: () => unawaited(_discardRecording()),
-      onPlay: () => unawaited(_toggleRecordingPlayback()),
-      onStop: () => unawaited(_stopRecording()),
-      onSend: () => unawaited(_sendMessage()),
-      onMore: reviewing ? () => unawaited(_recordMore()) : null,
-    );
-  }
-
-  /// Stop when the agent runs and there is nothing to send, else send.
-  Widget _deskAction(bool running) {
-    final draft = _hasDraft;
-    final sendBtn = DeskActionButton(
-      icon: 'arrow-up',
-      tooltip: 'Send',
-      on: _canSend,
-      busy: _sendingAudio,
-      onTap: _canSend ? () => _sendMessage() : null,
-    );
-    if (!running) return sendBtn;
-    final stop = DeskActionButton(
-      icon: 'stop',
-      tooltip: 'Stop',
-      soft: true,
-      onTap: () => _send({'kind': 'interrupt'}),
-    );
-    if (!draft) return stop;
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      stop,
-      const SizedBox(width: 6),
-      sendBtn,
-    ]);
-  }
-
-  bool get _hasDraft =>
-      _input.text.trim().isNotEmpty || _attachments.isNotEmpty;
-
-  /// The pill's trailing control: one button that is mic, send or stop, with
-  /// a bare mic beside stop so voice stays one tap away while the agent runs.
-  Widget _composerAction(bool running) {
-    final draft = _hasDraft;
-    final action = draft
-        ? ComposerAction.send
-        : running
-            ? ComposerAction.stop
-            : kCanRecord
-                ? ComposerAction.mic
-                : ComposerAction.send;
-    final morph = ComposerMorphButton(
-      action: action,
-      enabled: action != ComposerAction.send || _canSend,
-      busy: _sendingAudio,
-      onTap: switch (action) {
-        ComposerAction.stop => () => _send({'kind': 'interrupt'}),
-        ComposerAction.mic => _onMicTap,
-        ComposerAction.send => _canSend ? () => _sendMessage() : null,
-      },
-      onLongPress: running && _canSend ? () => _sendMessage(steer: true) : null,
-    );
-    if (!(running && !draft && kCanRecord)) return morph;
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      ComposerBareButton('mic', label: 'Record', onTap: _onMicTap),
-      const SizedBox(width: 4),
-      morph,
-    ]);
-  }
-
-  Widget _inputBar(bool running, {Widget? top}) {
-    final mq = MediaQuery.of(context);
-    final keyboard = mq.viewInsets.bottom;
-    return AnimatedPadding(
-      duration: Motion.fast,
-      curve: Motion.enter,
-      padding: EdgeInsets.only(bottom: keyboard),
-      child: Align(
-        alignment: Alignment.bottomCenter,
-        heightFactor: 1,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-              // Gutter sits outside the column so it lines up with transcript rows.
-              maxWidth: kMobile
-                  ? double.infinity
-                  : kDesktopComposerWidth + 2 * S.s20),
-          child: LiveCaptionAnchor(
-            // Inset from the pane on EVERY layout. Embedded used to be 0, which is
-            // why the composer stuck to the sides of the shell.
-            padding: EdgeInsets.fromLTRB(
-                kMobile ? M.gutter : S.s20,
-                S.s8,
-                kMobile ? M.gutter : S.s20,
-                kMobile
-                    ? S.of(10) + (keyboard > 0 ? S.s8 : mq.padding.bottom)
-                    : 18),
-            child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (kMobile && _showsQuickActions)
-                    ListenableBuilder(
-                      listenable: Listenable.merge([_tray, _input]),
-                      builder: (_, __) => ComposerTray(
-                          controller: _tray,
-                          bleed: M.gutter,
-                          child: _trayPage(running)),
-                    ),
-                  if (kMobile &&
-                      _dockRun != null &&
-                      _state?.status == 'running')
-                    ActivityDock(
-                        run: _dockRun!,
-                        agentId: _me?.displayAgentId ?? 'snippet',
-                        onOpen: _openLiveActivity),
-                  if (_heldQueue.isNotEmpty) _queuedCard(),
-                  // Attachments sit above the composer, never inside it.
-                  if (_attachments.isNotEmpty) _attachmentBar(),
-                  if (_mentionQuery != null && !_isMissionControl)
-                    _mentionList(),
-                  if (!kMobile) SlashMenuPopover(controller: _slash),
-                  if (top != null) top,
-                  Swap(
-                    stateKey: (_isRecording || _recordingPath != null)
-                        ? 'recorder'
-                        : 'composer',
-                    alignment: Alignment.bottomCenter,
-                    child: (_isRecording || _recordingPath != null)
-                        ? ValueListenableBuilder<int>(
-                            valueListenable: _recorderTick,
-                            builder: (_, __, ___) => kMobile
-                                ? _mobileRecorder(running)
-                                : _deskRecorder(),
-                          )
-                        : _composerCard(running),
-                  ),
-                ]),
+    final ownModel = _inboxAgentId(widget.sessionId) == null;
+    return ChatComposer(
+      input: _input,
+      focus: _inputFocus,
+      fieldKey: _inputFieldKey,
+      cardKey: _composerCardKey,
+      hint: hint,
+      voice: _voice,
+      recipient: (_meAgentName ?? '').trim(),
+      attentionExclude: widget.sessionId,
+      highlight: _draggingFiles,
+      shortcuts: _composerShortcuts,
+      contentInsertion: _keyboardContent,
+      fieldWrapper: (field) => SlashKeys(controller: _slash, child: field),
+      banner: goal || rcpt != null
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: kMobile
+                  ? CrossAxisAlignment.stretch
+                  : CrossAxisAlignment.start,
+              children: [
+                if (goal) _goalBanner(),
+                if (rcpt != null) rcpt,
+              ],
+            )
+          : null,
+      above: [
+        if (kMobile && _showsQuickActions)
+          ListenableBuilder(
+            listenable: Listenable.merge([_tray, _input]),
+            builder: (_, __) => ComposerTray(
+                controller: _tray, bleed: M.gutter, child: _trayPage(running)),
           ),
-        ),
-      ),
+        if (kMobile && _dockRun != null && _state?.status == 'running')
+          ActivityDock(
+              run: _dockRun!,
+              agentId: _me?.displayAgentId ?? 'snippet',
+              onOpen: _openLiveActivity),
+        if (_heldQueue.isNotEmpty) _queuedCard(),
+        if (_mentionQuery != null && !_isMissionControl) _mentionList(),
+        if (!kMobile) SlashMenuPopover(controller: _slash),
+        if (top != null) top,
+      ],
+      attachments: () => _attachments.isNotEmpty ? _attachmentBar() : null,
+      attach: _composerPlus(),
+      onAttach: _onAttachTap,
+      // The phone tray carries the model; the desktop card keeps it inline.
+      trailing: kMobile && !_showsQuickActions && ownModel ? _modelChip : null,
+      deskModel: ownModel
+          ? Row(mainAxisSize: MainAxisSize.min, children: [
+              Builder(
+                builder: (chipCtx) => DeskModelChip(
+                  icon: _modelProvider == null
+                      ? 'cpu'
+                      : 'provider:$_modelProvider',
+                  label: _modelLabel ?? 'Auto',
+                  onTap: () => _switchModel(chipCtx),
+                ),
+              ),
+              _contextRing(),
+            ])
+          : null,
+      deskCold: _showsCold(running)
+          ? ColdChip(
+              mode: _resumeMode,
+              resumeTokens: (_cold!['resume_tokens'] as num?)?.toInt(),
+              onPick: _onColdPick)
+          : null,
+      // No send-mode legend; only the new-line key, while idle.
+      deskHint: () => _input.text.isEmpty || running
+          ? null
+          : DeskHint([('\u21e7\u21b5', 'new line')]),
+      running: running,
+      sending: _sendingAudio,
+      hasDraft: () => _hasDraft,
+      canSend: () => _canSend,
+      onSend: () => _sendMessage(),
+      onSteer: () => _sendMessage(steer: true),
+      onStop: () => _send({'kind': 'interrupt'}),
     );
   }
 

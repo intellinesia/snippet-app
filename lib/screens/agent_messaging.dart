@@ -1,5 +1,3 @@
-import 'package:snippet/ambient/hold.dart';
-import 'package:snippet/ambient/live_caption.dart';
 import 'dart:async';
 
 import '../motion_routes.dart';
@@ -18,6 +16,7 @@ import '../chat/stage_bar.dart';
 import '../chat/stage_header.dart';
 import '../chat/chat_style.dart';
 import '../chat/message_body.dart';
+import '../composer/chat_composer.dart';
 import '../composer/composer_attachments.dart';
 import '../composer/composer_card.dart';
 import '../composer/voice_note.dart';
@@ -842,14 +841,10 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     });
   }
 
-  Future<void> _attachVoiceBytes(Uint8List bytes) => _attachments.ingest([
-        (
-          name:
-              'voice-${DateTime.now().microsecondsSinceEpoch}.$voiceNoteExtension',
-          localPath: null,
-          readBytes: () async => bytes,
-        )
-      ]);
+  Future<void> _attachVoiceBytes(Uint8List bytes, String name) =>
+      _attachments.ingest([
+        (name: name, localPath: null, readBytes: () async => bytes)
+      ], upload: _voice.uploadTake);
 
   Future<void> _send() async {
     if (_sending) return;
@@ -1924,176 +1919,36 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
               constraints: const BoxConstraints(maxWidth: 960),
               child: SizedBox(width: double.infinity, child: child)));
 
-  /// Desktop: the same two-row card as the desk, so Chat and Work match.
-  Widget _deskComposerCard() => ListenableBuilder(
-        listenable: Listenable.merge([_input, _attachments]),
-        builder: (_, __) {
-          final canSend =
-              (_input.text.trim().isNotEmpty || _attachments.isNotEmpty) &&
-                  !_sending;
-          return DeskComposerCard(
-            attentionExclude: 'inbox-${widget.agentId}',
-            focus: _inputFocus,
-            banner: _replyTo == null
-                ? null
-                : PendingReplyBanner(
-                    author: _replyTo!.actorKind == 'human'
-                        ? 'yourself'
-                        : widget.agentName,
-                    text: quotePreviewText(_replyTo!.body),
-                    onClear: () => setState(() => _replyTo = null),
-                  ),
-            field: CallbackShortcuts(
-              bindings: {
-                const SingleActivator(LogicalKeyboardKey.enter): _send,
-                const SingleActivator(LogicalKeyboardKey.enter, meta: true):
-                    _send,
-                const SingleActivator(LogicalKeyboardKey.enter, control: true):
-                    _send,
-              },
-              child: TextField(
-                controller: _input,
-                focusNode: _inputFocus,
-                minLines: 1,
-                maxLines: 10,
-                cursorColor: AppColors.fg1,
-                onSubmitted: (_) => _send(),
-                style: DeskComposerCard.fieldStyle,
-                decoration:
-                    DeskComposerCard.decoration('Message ${widget.agentName}'),
-              ),
-            ),
-            attach: DeskIconButton('plus',
-                tooltip: 'Attach',
-                onTap: () => unawaited(_attachments.pickFromSheet(context)),
-                iconSize: 16,
-                color: AppColors.fg2),
-            mic: kCanRecord
-                ? DeskIconButton('mic',
-                    tooltip: 'Record',
-                    onTap: () => unawaited(_voice.toggleRecording()))
-                : null,
-            action: DeskActionButton(
-              icon: 'arrow-up',
-              tooltip: 'Send',
-              on: canSend,
-              busy: _sending,
-              onTap: canSend ? _send : null,
-            ),
-          );
-        },
-      );
-
-  Widget _composerCard() => !kMobile
-      ? _deskComposerCard()
-      : ComposerCard(
-          text: _input,
-          banner: _replyTo == null
-              ? null
-              : PendingReplyBanner(
-                  author: _replyTo!.actorKind == 'human'
-                      ? 'yourself'
-                      : widget.agentName,
-                  text: quotePreviewText(_replyTo!.body),
-                  onClear: () => setState(() => _replyTo = null),
-                ),
-          field: CallbackShortcuts(
-            bindings: {
-              const SingleActivator(LogicalKeyboardKey.enter): () {
-                if (!kMobile) _send();
-              },
-              const SingleActivator(LogicalKeyboardKey.enter, meta: true):
-                  _send,
-              const SingleActivator(LogicalKeyboardKey.enter, control: true):
-                  _send,
-            },
-            child: TextField(
-              key: _inputFieldKey,
-              controller: _input,
-              focusNode: _inputFocus,
-              minLines: 1,
-              maxLines: 8,
-              cursorColor: AppColors.accent,
-              onSubmitted: (_) {
-                if (!kMobile) _send();
-              },
-              style: TS.body(AppColors.fg1),
-              decoration:
-                  ComposerCard.decoration('Message ${widget.agentName}'),
-            ),
-          ),
-          attach: ComposerIconButton(
-            'plus',
-            tooltip: 'Attach',
-            onTap: () => unawaited(_attachments.pickFromSheet(context)),
-          ),
-          mic: kCanRecord
-              ? ComposerIconButton(_voice.isRecording ? 'mic-off' : 'mic',
-                  tooltip: 'Record',
-                  onTap: () => unawaited(_voice.toggleRecording()),
-                  color: _voice.isRecording ? AppColors.danger : null)
-              : null,
-          send: ListenableBuilder(
-            listenable: Listenable.merge([_input, _attachments]),
-            builder: (_, __) {
-              final canSend = (_input.text.trim().isNotEmpty ||
-                      _attachments.isNotEmpty ||
-                      _voice.isActive) &&
-                  !_sending;
-              // Mic alone until there is something to send, as in the desk.
-              if (!canSend && !_sending && kCanRecord) {
-                return const SizedBox.shrink();
-              }
-              return ComposerSendButton(
-                enabled: canSend,
-                sending: _sending,
-                onTap: canSend ? _send : null,
-              );
-            },
-          ),
-        );
-
   Widget _composer() {
-    final mq = MediaQuery.of(context);
-    final keyboard = mq.viewInsets.bottom;
-    return AnimatedPadding(
-      duration: Motion.fast,
-      curve: Motion.enter,
-      padding: EdgeInsets.only(bottom: keyboard),
-      child: LiveCaptionAnchor(
-        padding: EdgeInsets.fromLTRB(
-          M.gutter,
-          S.s8,
-          M.gutter,
-          S.of(10) + (keyboard > 0 ? S.s8 : mq.padding.bottom),
-        ),
-        child: ListenableBuilder(
-          listenable: Listenable.merge([_voice, _attachments]),
-          builder: (context, _) {
-            final recording = _voice.isActive;
-            return Swap(
-              stateKey: recording ? 'recorder' : 'composer',
-              alignment: Alignment.bottomCenter,
-              child: _wideCap(recording
-                  ? VoiceNoteRecorderStrip(
-                      controller: _voice,
-                      sending: _sending,
-                      onMore: () => unawaited(_voice.recordMore()),
-                      onSend: () => unawaited(_send()),
-                    )
-                  : Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (_attachments.isNotEmpty)
-                          _attachments.buildBar(context),
-                        _composerCard(),
-                      ],
-                    )),
-            );
-          },
-        ),
-      ),
+    final reply = _replyTo == null
+        ? null
+        : PendingReplyBanner(
+            author:
+                _replyTo!.actorKind == 'human' ? 'yourself' : widget.agentName,
+            text: quotePreviewText(_replyTo!.body),
+            onClear: () => setState(() => _replyTo = null),
+          );
+    return ChatComposer(
+      input: _input,
+      focus: _inputFocus,
+      fieldKey: _inputFieldKey,
+      hint: 'Message ${widget.agentName}',
+      voice: _voice,
+      listen: _attachments,
+      recipient: widget.agentName,
+      attentionExclude: 'inbox-${widget.agentId}',
+      banner: reply,
+      attachments: () =>
+          _attachments.isNotEmpty ? _attachments.buildBar(context) : null,
+      onAttach: () => unawaited(_attachments.pickFromSheet(context)),
+      sending: _sending,
+      hasDraft: () => _input.text.trim().isNotEmpty || _attachments.isNotEmpty,
+      canSend: () =>
+          (_input.text.trim().isNotEmpty ||
+              _attachments.isNotEmpty ||
+              _voice.isActive) &&
+          !_sending,
+      onSend: () => unawaited(_send()),
     );
   }
 }

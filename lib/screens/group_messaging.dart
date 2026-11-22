@@ -5,11 +5,10 @@ import '../motion_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../ambient/hold.dart';
 import '../api.dart';
 import '../chat/choices.dart';
+import '../composer/chat_composer.dart';
 import '../composer/composer_attachments.dart';
-import '../composer/composer_card.dart';
 import '../composer/voice_note.dart';
 import '../desktop_pick.dart';
 import '../markdown_preview.dart';
@@ -1139,11 +1138,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     if (_voice.isRecording) {
       await _voice.stop();
     }
-    final hasTake = _voice.hasTake;
-    final takeBytes = _voice.bytes;
-    if (hasTake && (takeBytes == null || takeBytes.isEmpty)) {
-      await _voice.discard();
-      if (mounted) toast(context, 'The recording was empty.');
+    if (_voice.hasTake && !await _voice.confirmTake(_attachVoiceBytes)) {
       return;
     }
     if (_attachments.isUploading) {
@@ -1151,22 +1146,13 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       return;
     }
     final typed = _input.text.trim();
-    if (typed.isEmpty && !hasTake && _attachments.isEmpty) return;
+    if (typed.isEmpty && _attachments.isEmpty) return;
     setState(() => _sending = true);
     try {
       var body = typed;
       final extraMarkers = <String>[
         ..._attachments.markers(),
       ];
-      if (takeBytes != null && takeBytes.isNotEmpty) {
-        final remotePath = await widget.client.uploadFile(
-          takeBytes,
-          name:
-              'voice-${DateTime.now().microsecondsSinceEpoch}.$voiceNoteExtension',
-        );
-        extraMarkers
-            .add('[attached file — read it at this exact path: $remotePath]');
-      }
       if (extraMarkers.isNotEmpty) {
         final joined = extraMarkers.join('\n\n');
         body = body.isEmpty ? joined : '$body\n\n$joined';
@@ -2040,168 +2026,44 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
               constraints: const BoxConstraints(maxWidth: 960),
               child: SizedBox(width: double.infinity, child: child)));
 
-  Widget _deskComposerCard() => ListenableBuilder(
-        listenable: Listenable.merge([_input, _attachments]),
-        builder: (_, __) {
-          final canSend = (_input.text.trim().isNotEmpty ||
-                  _attachments.isNotEmpty ||
-                  _voice.isActive) &&
-              !_sending;
-          return DeskComposerCard(
-            focus: _inputFocus,
-            field: CallbackShortcuts(
-              bindings: {
-                const SingleActivator(LogicalKeyboardKey.enter): _send,
-                const SingleActivator(LogicalKeyboardKey.enter, meta: true):
-                    _send,
-                const SingleActivator(LogicalKeyboardKey.enter, control: true):
-                    _send,
-              },
-              child: TextField(
-                controller: _input,
-                focusNode: _inputFocus,
-                minLines: 1,
-                maxLines: 10,
-                cursorColor: AppColors.fg1,
-                onSubmitted: (_) => _send(),
-                style: DeskComposerCard.fieldStyle,
-                decoration: DeskComposerCard.decoration('Message the group'),
-              ),
-            ),
-            attach: DeskIconButton('plus',
-                tooltip: 'Attach',
-                onTap: () => unawaited(_attachments.pickFromSheet(context)),
-                iconSize: 16,
-                color: AppColors.fg2),
-            hint: Padding(
-              padding: EdgeInsets.only(right: S.s8),
-              child:
-                  Text('@ to mention', style: sans(12, color: AppColors.fg4)),
-            ),
-            mic: kCanRecord
-                ? DeskIconButton('mic',
-                    tooltip: 'Record',
-                    onTap: () => unawaited(_voice.toggleRecording()))
-                : null,
-            action: DeskActionButton(
-              icon: 'arrow-up',
-              tooltip: 'Send',
-              on: canSend,
-              busy: _sending,
-              onTap: canSend ? _send : null,
-            ),
-          );
-        },
-      );
-
   Widget _sendFlight(String id, Widget child) =>
       kMobile && _sendInIds.contains(id)
           ? SendFlightTarget(child: child)
           : child;
 
-  Widget _composerCard() => !kMobile
-      ? _deskComposerCard()
-      : ComposerCard(
-          text: _input,
-          field: CallbackShortcuts(
-            bindings: {
-              const SingleActivator(LogicalKeyboardKey.enter): () {
-                if (!kMobile) _send();
-              },
-              const SingleActivator(LogicalKeyboardKey.enter, meta: true):
-                  _send,
-              const SingleActivator(LogicalKeyboardKey.enter, control: true):
-                  _send,
-            },
-            child: TextField(
-              key: _inputFieldKey,
-              controller: _input,
-              focusNode: _inputFocus,
-              minLines: 1,
-              maxLines: 8,
-              cursorColor: AppColors.accent,
-              onSubmitted: (_) {
-                if (!kMobile) _send();
-              },
-              style: TS.body(AppColors.fg1),
-              decoration: ComposerCard.decoration('Message the group…'),
-            ),
-          ),
-          attach: ComposerIconButton(
-            'plus',
-            tooltip: 'Attach',
-            onTap: () => unawaited(_attachments.pickFromSheet(context)),
-          ),
-          mic: kCanRecord
-              ? ComposerIconButton(
-                  _voice.isRecording ? 'mic-off' : 'mic',
-                  tooltip: 'Record',
-                  onTap: () => unawaited(_voice.toggleRecording()),
-                  color: _voice.isRecording ? AppColors.danger : null,
-                )
-              : null,
-          send: ListenableBuilder(
-            listenable: Listenable.merge([_input, _attachments]),
-            builder: (_, __) {
-              final canSend = (_input.text.trim().isNotEmpty ||
-                      _attachments.isNotEmpty ||
-                      _voice.isActive) &&
-                  !_sending;
-              return ComposerSendButton(
-                enabled: canSend,
-                sending: _sending,
-                onTap: canSend ? _send : null,
-              );
-            },
-          ),
-        );
+  Future<void> _attachVoiceBytes(Uint8List bytes, String name) =>
+      _attachments.ingest([
+        (name: name, localPath: null, readBytes: () async => bytes)
+      ], upload: _voice.uploadTake);
 
-  Widget _composer() {
-    final mq = MediaQuery.of(context);
-    final keyboard = mq.viewInsets.bottom;
-    return AnimatedPadding(
-      duration: Motion.fast,
-      curve: Motion.enter,
-      padding: EdgeInsets.only(bottom: keyboard),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          S.s16,
-          S.s8,
-          S.s16,
-          S.of(10) + (keyboard > 0 ? S.s8 : mq.padding.bottom),
+  Widget _composer() => ChatComposer(
+        input: _input,
+        focus: _inputFocus,
+        fieldKey: _inputFieldKey,
+        hint: 'Message the group',
+        voice: _voice,
+        listen: _attachments,
+        above: [
+          if (_mention != null && _mentionCandidates.isNotEmpty) _mentionList(),
+        ],
+        attachments: () =>
+            _attachments.isNotEmpty ? _attachments.buildBar(context) : null,
+        onAttach: () => unawaited(_attachments.pickFromSheet(context)),
+        onRecordMore: () => unawaited(_voice.recordMore(_attachVoiceBytes)),
+        deskHint: () => Padding(
+          padding: EdgeInsets.only(right: S.s8),
+          child: Text('@ to mention', style: sans(12, color: AppColors.fg4)),
         ),
-        child: ListenableBuilder(
-          listenable: Listenable.merge([_voice, _attachments]),
-          builder: (context, _) {
-            final recording = _voice.isActive;
-            return Swap(
-              stateKey: recording ? 'recorder' : 'composer',
-              alignment: Alignment.bottomCenter,
-              child: _wideCap(
-                recording
-                    ? VoiceNoteRecorderStrip(
-                        controller: _voice,
-                        sending: _sending,
-                        onSend: () => unawaited(_send()),
-                      )
-                    : Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (_mention != null && _mentionCandidates.isNotEmpty)
-                            _mentionList(),
-                          if (_attachments.isNotEmpty)
-                            _attachments.buildBar(context),
-                          _composerCard(),
-                        ],
-                      ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
+        sending: _sending,
+        hasDraft: () =>
+            _input.text.trim().isNotEmpty || _attachments.isNotEmpty,
+        canSend: () =>
+            (_input.text.trim().isNotEmpty ||
+                _attachments.isNotEmpty ||
+                _voice.isActive) &&
+            !_sending,
+        onSend: () => unawaited(_send()),
+      );
 
   Widget _mentionList() {
     final candidates = _mentionCandidates;

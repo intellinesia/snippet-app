@@ -37,9 +37,13 @@ class ComposerMorphButton extends StatefulWidget {
     this.busy = false,
     this.onTap,
     this.onLongPress,
+    this.label,
   });
 
   final ComposerAction action;
+
+  /// Overrides the spoken name, e.g. "Send voice note".
+  final String? label;
   final bool enabled;
   final bool busy;
   final VoidCallback? onTap;
@@ -84,7 +88,7 @@ class _ComposerMorphButtonState extends State<ComposerMorphButton>
     return Semantics(
       button: true,
       enabled: on,
-      label: _label,
+      label: widget.label ?? _label,
       child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: on
@@ -323,6 +327,7 @@ class ComposerVoicePill extends StatelessWidget {
         const SizedBox(width: 4),
         ComposerMorphButton(
           action: ComposerAction.send,
+          label: 'Send voice note',
           busy: sending,
           enabled: !sending,
           onTap: onSend,

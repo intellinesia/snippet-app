@@ -179,7 +179,9 @@ class ComposerAttachmentController extends ChangeNotifier {
         .toList());
   }
 
-  Future<void> ingest(List<PickedAttachment> picked) async {
+  /// [upload] lets a voice note reuse the upload begun when recording stopped.
+  Future<void> ingest(List<PickedAttachment> picked,
+      {Future<String> Function(Uint8List bytes, String name)? upload}) async {
     final entries = picked
         .map((p) => ComposerAttachment(
               name: p.name,
@@ -197,7 +199,9 @@ class ComposerAttachmentController extends ChangeNotifier {
       final a = entries[i];
       try {
         final bytes = await p.readBytes();
-        final path = await client.uploadFile(bytes, name: p.name);
+        final path = upload != null
+            ? await upload(bytes, p.name)
+            : await client.uploadFile(bytes, name: p.name);
         if (_disposed || generation != _generation) return;
         a.remotePath = path;
         a.uploading = false;

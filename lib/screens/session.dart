@@ -3,14 +3,11 @@ import '../chat/system_notice.dart';
 import '../diagnostics.dart';
 import 'session_header.dart';
 import 'package:snippet/ambient/controller.dart';
-import 'package:snippet/ambient/hold.dart';
-import 'package:snippet/ambient/live_caption.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:audioplayers/audioplayers.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -18,9 +15,6 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:pasteboard/pasteboard.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:record/record.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../chat/activity_dock.dart';
@@ -73,8 +67,10 @@ import '../github_models.dart';
 import 'presented_file_card.dart';
 import '../composer/attachment_preview.dart';
 import '../composer/attachment_tile.dart';
+import '../composer/chat_composer.dart';
 import '../composer/composer_card.dart';
 import '../composer/composer_tray.dart';
+import '../composer/voice_note.dart';
 import '../composer/slash_menu.dart';
 import '../media_views.dart';
 import 'agent_transcript_head.dart';
@@ -345,7 +341,6 @@ class _SessionScreenState extends State<SessionScreen>
   Timer? _bannerTimer;
   static const _reconnecting = 'Reconnecting…';
   static const _unreachable = "Can't reach Snippet";
-  bool _confirmingRecording = false;
   SharedInbound? _consumedShare;
   HarnessState? _state;
   // The list row for this session: plan and the agent standing on the header.
@@ -433,32 +428,15 @@ class _SessionScreenState extends State<SessionScreen>
     });
   }
 
-  final AudioRecorder _recorder = HeldRecorder();
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  StreamSubscription<Amplitude>? _amplitudeSub;
-  StreamSubscription<PlayerState>? _playerStateSub;
-  StreamSubscription<Duration>? _positionSub;
-  StreamSubscription<Duration>? _durationSub;
-  Timer? _recordingTimer;
-  bool _isRecording = false;
-  bool _isPlayingRecording = false;
+  late final VoiceNoteController _voice = VoiceNoteController(
+    client: widget.client,
+    onToast: (msg, {bool danger = false}) => _toast(msg),
+    onConfirmTake: _attachVoiceTake,
+  );
   bool _sendingAudio = false;
   bool _sendingMessage = false;
   // Last moment the model was seen working; a send soon after needs no cold check.
   DateTime? _warmSeenAt;
-  String? _recordingPath;
-
-  /// The take's upload, started as soon as recording stops so Send is instant.
-  Future<String>? _takeUpload;
-  String? _takeName;
-  Uint8List? _recordingBytes;
-  Duration _recordingElapsed = Duration.zero;
-  // Bumped on discard so a stop still finishing does not restore the take.
-  int _recordingTake = 0;
-  final ValueNotifier<int> _recorderTick = ValueNotifier(0);
-  Duration _playbackPosition = Duration.zero;
-  Duration _playbackDuration = Duration.zero;
-  final WaveBuffer _waveform = WaveBuffer();
   // Queue frames already sent but not yet in `state.queuedInputs` (the daemon
   // parks them until the in-flight step ends). Shown immediately so the
   // composer doesn't sit empty for a whole tool call.
@@ -1067,26 +1045,6 @@ class _SessionScreenState extends State<SessionScreen>
             ?.call(() => _send({'kind': 'interrupt'}), _performMacAction);
       }
     });
-    _playerStateSub = _audioPlayer.onPlayerStateChanged.listen((state) {
-      if (!mounted) return;
-      setState(() {
-        _isPlayingRecording = state == PlayerState.playing;
-        if (state == PlayerState.completed) {
-          _isPlayingRecording = false;
-          _playbackPosition = _playbackDuration;
-        }
-      });
-    });
-    _positionSub = _audioPlayer.onPositionChanged.listen((position) {
-      if (!mounted) return;
-      _playbackPosition = position;
-      _recorderTick.value++;
-    });
-    _durationSub = _audioPlayer.onDurationChanged.listen((duration) {
-      if (!mounted) return;
-      _playbackDuration = duration;
-      _recorderTick.value++;
-    });
     if (!_live && _state != null) _parked = true;
     _startSession();
     _startAgentEvents();
@@ -1573,7 +1531,6 @@ class _SessionScreenState extends State<SessionScreen>
     _decisionGiveUp?.cancel();
     _streamFlushTimer?.cancel();
     _liveFrame.dispose();
-    _recorderTick.dispose();
     _sub?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     // Only clear the suppression key if this screen still owns it — on a session
@@ -1593,13 +1550,7 @@ class _SessionScreenState extends State<SessionScreen>
     _input.dispose();
     _inputFocus.dispose();
     _scroll.dispose();
-    _amplitudeSub?.cancel();
-    _recordingTimer?.cancel();
-    _playerStateSub?.cancel();
-    _positionSub?.cancel();
-    _durationSub?.cancel();
-    unawaited(_audioPlayer.dispose());
-    unawaited(_disposeRecorder());
+    _voice.dispose();
     super.dispose();
   }
 

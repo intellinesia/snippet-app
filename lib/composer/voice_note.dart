@@ -10,12 +10,9 @@ import 'package:record/record.dart';
 
 import '../ambient/hold.dart';
 import '../api.dart';
-import '../composer_strip.dart';
-import '../glass.dart';
+import '../diagnostics.dart';
 import '../media_views.dart';
 import '../platform.dart';
-import '../theme.dart';
-import '../widgets.dart';
 import 'composer_card.dart';
 
 typedef VoiceNoteToast = void Function(String message, {bool danger});
@@ -30,7 +27,7 @@ class VoiceNoteController extends ChangeNotifier {
 
   final DaemonClient client;
   final VoiceNoteToast? onToast;
-  final Future<void> Function(Uint8List bytes)? onConfirmTake;
+  final Future<void> Function(Uint8List bytes, String name)? onConfirmTake;
   final String filePrefix;
 
   Duration _maxRecordingDuration = const Duration(minutes: 3);
@@ -53,6 +50,11 @@ class VoiceNoteController extends ChangeNotifier {
   final WaveBuffer _waveform = WaveBuffer();
   bool _disposed = false;
   int _take = 0;
+  bool _confirming = false;
+
+  /// The take's upload, started as soon as recording stops so Send is instant.
+  Future<String>? _takeUpload;
+  String? _takeName;
 
   bool get isRecording => _isRecording;
   bool get hasTake => _recordingPath != null || _recordingBytes != null;
@@ -65,6 +67,20 @@ class VoiceNoteController extends ChangeNotifier {
   Duration get playbackDuration => _playbackDuration;
   bool get isPlaying => _isPlayingRecording;
   WaveBuffer get waveform => _waveform;
+  bool get isConfirming => _confirming;
+  String? get takeName => _takeName;
+
+  /// Upload [bytes] as [name], reusing the upload begun at stop for this take.
+  Future<String> uploadTake(Uint8List bytes, String name) async {
+    final early = name == _takeName ? _takeUpload : null;
+    if (early != null) {
+      try {
+        return await Diag.span('upload (started early)', () => early);
+      } catch (_) {}
+    }
+    return Diag.span('upload ${bytes.length}B',
+        () => client.uploadFile(bytes, name: name));
+  }
 
   @visibleForTesting
   void debugSeedTake(
@@ -89,6 +105,7 @@ class VoiceNoteController extends ChangeNotifier {
     _playerStateSub = player.onPlayerStateChanged.listen((state) {
       if (_disposed) return;
       _isPlayingRecording = state == PlayerState.playing;
+      if (state == PlayerState.completed) _playbackPosition = _playbackDuration;
       notifyListeners();
     });
     _positionSub = player.onPositionChanged.listen((position) {
@@ -177,7 +194,8 @@ class VoiceNoteController extends ChangeNotifier {
       await _recorder.start(
         RecordConfig(
           encoder: AudioEncoder.aacLc,
-          bitRate: 96000,
+          // Speech: 32 kbps at 16 kHz is clear and a third of the upload.
+          bitRate: kMobile ? 32000 : 96000,
           sampleRate: kMobile ? 16000 : 44100,
           numChannels: 1,
           androidConfig: const AndroidRecordConfig(manageBluetooth: false),
@@ -238,7 +256,8 @@ class VoiceNoteController extends ChangeNotifier {
     _recordingTimer?.cancel();
     _recordingTimer = null;
     try {
-      final stoppedPath = await _recorder.stop();
+      final stoppedPath =
+          await Diag.span('recorder.stop', () => _recorder.stop());
       final path = stoppedPath ?? _recordingPath;
       if (path == null) {
         _toast('No recording was captured.');
@@ -262,10 +281,21 @@ class VoiceNoteController extends ChangeNotifier {
       _recordingPath = path;
       _recordingBytes = bytes;
       _notify();
+      _startTakeUpload(bytes);
     } catch (e) {
       await discard();
       _toast('Could not finish recording: $e', danger: true);
     }
+  }
+
+  void _startTakeUpload(Uint8List bytes) {
+    final name =
+        'voice-${DateTime.now().microsecondsSinceEpoch}.$voiceNoteExtension';
+    _takeName = name;
+    final upload = client.uploadFile(bytes, name: name);
+    upload.ignore();
+    _takeUpload = upload;
+    Diag.crumb('take upload started ${bytes.length}B');
   }
 
   Future<Uint8List?> _waitForRecordingFile(String path) async {
@@ -286,6 +316,8 @@ class VoiceNoteController extends ChangeNotifier {
 
   Future<void> discard() async {
     _take++;
+    _takeUpload = null;
+    _takeName = null;
     final path = _recordingPath;
     final wasRecording = _isRecording;
     _isRecording = false;
@@ -321,31 +353,48 @@ class VoiceNoteController extends ChangeNotifier {
     }
   }
 
+  /// Hand the take to [accept] (or [onConfirmTake]) with its upload name. The
+  /// pill clears at once so a second tap cannot race; a failure restores it.
   Future<bool> confirmTake([
-    Future<void> Function(Uint8List bytes)? accept,
+    Future<void> Function(Uint8List bytes, String name)? accept,
   ]) async {
     final fn = accept ?? onConfirmTake;
-    if (fn == null) return false;
+    if (fn == null || _isRecording || _confirming) return false;
     final path = _recordingPath;
-    final currentBytes = _recordingBytes;
-    if (path == null && currentBytes == null) return false;
+    var bytes = _recordingBytes;
+    if (path == null && bytes == null) return false;
+    _confirming = true;
+    _recordingPath = null;
+    _recordingBytes = null;
+    _notify();
     try {
-      if (currentBytes == null || currentBytes.isEmpty) {
+      if ((bytes == null || bytes.isEmpty) && path != null) {
+        bytes = await _waitForRecordingFile(path);
+      }
+      if (bytes == null || bytes.isEmpty) {
         await discard();
         _toast('The recording was empty.');
         return false;
       }
-      await fn(currentBytes);
+      final name = _takeName ??
+          'voice-${DateTime.now().microsecondsSinceEpoch}.$voiceNoteExtension';
+      await Diag.span('recorder.ingest', () => fn(bytes!, name));
+      _recordingPath = path;
       await discard();
       return true;
     } catch (e) {
+      _recordingPath = path;
+      _recordingBytes = bytes;
+      _notify();
       _toast('Could not attach recording: $e', danger: true);
       return false;
+    } finally {
+      _confirming = false;
     }
   }
 
   Future<void> recordMore([
-    Future<void> Function(Uint8List bytes)? accept,
+    Future<void> Function(Uint8List bytes, String name)? accept,
   ]) async {
     if (await confirmTake(accept)) await start();
   }
@@ -359,11 +408,34 @@ class VoiceNoteController extends ChangeNotifier {
       } else if (_audioPlayer.state == PlayerState.paused) {
         await _audioPlayer.resume();
       } else {
-        await _audioPlayer.play(DeviceFileSource(path));
+        await _audioPlayer.play(DeviceFileSource(path),
+            position: _playbackPosition >= _playbackDuration
+                ? Duration.zero
+                : _playbackPosition);
       }
     } catch (e) {
       _toast('Could not play preview: $e', danger: true);
     }
+  }
+
+  Future<void> seek(double fraction) async {
+    final path = _recordingPath;
+    final total = _playbackDuration > Duration.zero
+        ? _playbackDuration
+        : _recordingElapsed;
+    if (path == null || total <= Duration.zero) return;
+    final target =
+        Duration(milliseconds: (total.inMilliseconds * fraction).round());
+    try {
+      final player = _audioPlayer;
+      if (player.state == PlayerState.stopped ||
+          player.state == PlayerState.completed) {
+        await player.setSource(DeviceFileSource(path));
+      }
+      await player.seek(target);
+      _playbackPosition = target;
+      _notify();
+    } catch (_) {}
   }
 
   static String formatDuration(Duration d) {
@@ -400,6 +472,8 @@ class VoiceNoteController extends ChangeNotifier {
   }
 }
 
+/// The one recorder for every chat: the voice pill on phones, the voice card
+/// on desktop, both driven by a [VoiceNoteController].
 class VoiceNoteRecorderStrip extends StatelessWidget {
   const VoiceNoteRecorderStrip({
     super.key,
@@ -407,12 +481,16 @@ class VoiceNoteRecorderStrip extends StatelessWidget {
     required this.onSend,
     this.sending = false,
     this.onMore,
+    this.recipient = '',
   });
 
   final VoiceNoteController controller;
   final VoidCallback onSend;
   final bool sending;
   final VoidCallback? onMore;
+
+  /// Who the note is for, named in the desktop card's label.
+  final String recipient;
 
   @override
   Widget build(BuildContext context) {
@@ -421,100 +499,56 @@ class VoiceNoteRecorderStrip extends StatelessWidget {
       builder: (context, _) {
         final recording = controller.isRecording;
         final reviewing = controller.isReviewing;
-        final playbackDuration = controller.playbackDuration;
-        final elapsed = controller.elapsed;
-        final playbackPosition = controller.playbackPosition;
-        final total =
-            playbackDuration > Duration.zero ? playbackDuration : elapsed;
+        final position = controller.playbackPosition;
+        final total = controller.playbackDuration > Duration.zero
+            ? controller.playbackDuration
+            : controller.elapsed;
+        final showPosition =
+            reviewing && (controller.isPlaying || position > Duration.zero);
+        final fmt = VoiceNoteController.formatDuration;
         final time = reviewing
-            ? '${VoiceNoteController.formatDuration(playbackPosition)} / ${VoiceNoteController.formatDuration(total)}'
-            : VoiceNoteController.formatDuration(elapsed);
+            ? '${fmt(showPosition ? position : Duration.zero)} / ${fmt(total)}'
+            : fmt(controller.elapsed);
         final progress = !reviewing || total.inMilliseconds <= 0
             ? null
-            : (playbackPosition.inMilliseconds / total.inMilliseconds)
-                .clamp(0.0, 1.0);
+            : (position.inMilliseconds / total.inMilliseconds).clamp(0.0, 1.0);
+        final wave = LiveRecordingWave(
+            buffer: controller.waveform, live: recording, progress: progress);
+        void discard() => unawaited(controller.discard());
+        void play() => unawaited(controller.togglePlayback());
+        void stop() => unawaited(controller.stop());
+        final more = reviewing ? onMore : null;
         if (!kMobile) {
-          return DesktopRecorderStrip(
+          return DeskVoiceCard(
             recording: recording,
-            time: time,
-            wave: LiveRecordingWave(
-                buffer: controller.waveform, live: recording, progress: progress),
+            sending: sending,
             playing: controller.isPlaying,
-            onDiscard: () => unawaited(controller.discard()),
-            onPlay: () => unawaited(controller.togglePlayback()),
-            onStop: () => unawaited(controller.stop()),
-            onSend: sending ? () {} : onSend,
-            onMore: reviewing ? onMore : null,
+            label: recording
+                ? (recipient.isEmpty
+                    ? 'Recording a voice note'
+                    : 'Recording a voice note for $recipient')
+                : 'Voice note ready to send',
+            time: time,
+            wave: wave,
+            onDiscard: discard,
+            onPlay: play,
+            onStop: stop,
+            onSend: onSend,
+            onMore: more,
           );
         }
-        Widget btn(String icon, String tip, VoidCallback onTap,
-                {Color? color}) =>
-            Semantics(
-                button: true,
-                label: tip,
-                child: ComposerIconButton(icon,
-                    tooltip: tip, onTap: onTap, color: color));
-        Widget slot(Widget w) => SizedBox(height: 36, child: Center(child: w));
-        return Glass(
-          radius: BorderRadius.circular(ComposerCard.radius),
-          tint: AppColors.surface1.withValues(alpha: 0.78),
-          child: Padding(
-            padding: EdgeInsets.all(S.s6),
-            child: Row(children: [
-              if (reviewing) ...[
-                slot(btn('trash', 'Discard',
-                    () => unawaited(controller.discard()))),
-                slot(btn(
-                    controller.isPlaying ? 'pause' : 'play',
-                    controller.isPlaying ? 'Pause' : 'Play',
-                    () => unawaited(controller.togglePlayback()),
-                    color: AppColors.fg1)),
-              ] else
-                slot(Padding(
-                  padding: EdgeInsets.symmetric(horizontal: S.s12),
-                  child: StatusDot(
-                      status: 'running', size: 8, color: AppColors.danger),
-                )),
-              Expanded(
-                child: SizedBox(
-                  height: 28,
-                  child: LiveRecordingWave(
-                      buffer: controller.waveform,
-                      live: recording,
-                      progress: progress),
-                ),
-              ),
-              SizedBox(width: S.of(10)),
-              Text(time,
-                  style: sans(13,
-                      tabular: true,
-                      color: reviewing ? AppColors.fg3 : AppColors.danger)),
-              SizedBox(width: S.s6),
-              if (recording)
-                slot(Semantics(
-                  button: true,
-                  label: 'Stop',
-                  child: ComposerSendButton(
-                      enabled: true,
-                      stop: true,
-                      onTap: () => unawaited(controller.stop())),
-                ))
-              else ...[
-                if (onMore != null) ...[
-                  slot(btn('mic', 'Record more', onMore!)),
-                  SizedBox(width: S.s4),
-                ],
-                slot(Semantics(
-                  button: true,
-                  label: 'Send voice note',
-                  child: ComposerSendButton(
-                      enabled: !sending,
-                      sending: sending,
-                      onTap: sending ? null : onSend),
-                )),
-              ],
-            ]),
-          ),
+        return ComposerVoicePill(
+          recording: recording,
+          sending: sending,
+          time: time,
+          wave: wave,
+          playing: controller.isPlaying,
+          onDiscard: discard,
+          onPlay: play,
+          onStop: stop,
+          onSend: onSend,
+          onSeek: reviewing ? (f) => unawaited(controller.seek(f)) : null,
+          onMore: more,
         );
       },
     );
