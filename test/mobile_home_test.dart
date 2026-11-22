@@ -340,7 +340,8 @@ void main() {
       tester.view.physicalSize = const Size(360, 740) * 3;
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('All on track.'), findsOneWidget);
-      expect(find.text('1 of 4'), findsOneWidget);
+      expect(find.text('1 of 4 steps'), findsOneWidget);
+      expect(find.text('Last result'), findsNothing);
       expect(tester.takeException(), isNull);
       final top = tester.getTopLeft(find.text('In progress')).dy;
       final bar = tester.getBottomLeft(find.byKey(const ValueKey('home-stage-bar'))).dy;

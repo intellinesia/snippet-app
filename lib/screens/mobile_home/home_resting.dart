@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../markdown_preview.dart' show markdownPreviewSpan, plainPreview;
 import '../../mochi.dart';
 import '../../models.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
-import '../agent_card.dart' show agentRowTime;
 import '../phone_hero.dart' show heroAgentColor;
 import '../shell_nav.dart' show sessionBusy;
 import 'agents_group.dart' show ManagedPill;
@@ -13,17 +11,6 @@ import 'home_data.dart';
 import 'home_style.dart';
 
 const int _maxWorking = 3;
-
-/// The newest finished session that left a result, for the "last result" row.
-SessionInfo? lastResult(Iterable<SessionInfo> sessions) {
-  SessionInfo? best;
-  for (final s in sessions) {
-    final at = s.finishedAt;
-    if (at == null || s.running) continue;
-    if (best == null || at > best.finishedAt!) best = s;
-  }
-  return best;
-}
 
 /// The working session of [agentId] that has plan progress, else any busy one.
 SessionInfo? workingSessionOf(String agentId, Iterable<SessionInfo> sessions) {
@@ -39,7 +26,7 @@ SessionInfo? workingSessionOf(String agentId, Iterable<SessionInfo> sessions) {
 }
 
 /// Round 7 resting screen when nothing needs the user: Mission Control and one
-/// line, plus who is working and the last result. Never an empty centre.
+/// line, plus who is working. Never an empty centre.
 class HomeResting extends StatelessWidget {
   const HomeResting({
     super.key,
@@ -67,17 +54,16 @@ class HomeResting extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final reduce = reduceMotion(context);
-    final last = lastResult(sessions);
     final isWorking = working.isNotEmpty;
     return AnimatedSwitcher(
       duration: reduce ? const Duration(milliseconds: 120) : Motion.base,
       child: isWorking
-          ? _workingView(context, last)
-          : _quietView(context, last),
+          ? _workingView(context)
+          : _quietView(context),
     );
   }
 
-  Widget _quietView(BuildContext context, SessionInfo? last) {
+  Widget _quietView(BuildContext context) {
     final reduce = reduceMotion(context);
     final parts = <String>[
       if (asleepCount > 0) '$asleepCount agent${asleepCount == 1 ? '' : 's'} asleep',
@@ -117,15 +103,11 @@ class HomeResting extends StatelessWidget {
               textAlign: TextAlign.center,
               style: sans(13, color: AppColors.fg3)),
         ],
-        if (last != null) ...[
-          const SizedBox(height: 20),
-          _lastRow(last),
-        ],
       ],
     );
   }
 
-  Widget _workingView(BuildContext context, SessionInfo? last) {
+  Widget _workingView(BuildContext context) {
     final shown = working.take(_maxWorking).toList();
     final more = working.length - shown.length;
     // Centred in the free space, so a short list does not hang from the top.
@@ -160,10 +142,6 @@ class HomeResting extends StatelessWidget {
                           weight: FontWeight.w500, color: AppColors.fg2)),
                 ),
               ),
-            if (last != null) ...[
-              const HomeLabel('Last result', top: 16),
-              _lastRow(last),
-            ],
           ],
         ),
       ),
@@ -189,18 +167,16 @@ class HomeResting extends StatelessWidget {
             constraints: const BoxConstraints(minHeight: 72),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
                 SizedBox(
-                  width: 52,
-                  height: 52,
+                  width: 40,
+                  height: 40,
                   child: Stack(clipBehavior: Clip.none, children: [
+                    Positioned.fill(
+                        child: AgentMochi(r.agent.id, size: 40)),
                     Positioned(
-                        left: 2,
-                        top: 2,
-                        child: AgentMochi(r.agent.id, size: 48)),
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
+                      right: -3,
+                      bottom: -3,
                       child: Container(
                         width: 14,
                         height: 14,
@@ -250,8 +226,8 @@ class HomeResting extends StatelessWidget {
                                   child: _SegBar(
                                       done: plan.done, total: plan.total))),
                           const SizedBox(width: 10),
-                          Text('${plan.done} of ${plan.total}',
-                              style: codeMono(12, color: AppColors.fg3)),
+                          Text('${plan.done} of ${plan.total} steps',
+                              style: sans(12, color: AppColors.fg3)),
                         ]),
                       ],
                     ],
@@ -259,45 +235,6 @@ class HomeResting extends StatelessWidget {
                 ),
               ]),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _lastRow(SessionInfo s) {
-    final said = (s.resultSummary ?? '').trim();
-    final line = said.isNotEmpty ? said.split('\n').first : s.title;
-    final at = s.finishedAt == null
-        ? null
-        : DateTime.fromMillisecondsSinceEpoch(s.finishedAt! * 1000);
-    return Semantics(
-      button: true,
-      label: 'Last result, ${plainPreview(line)}',
-      child: ExcludeSemantics(
-        child: GestureDetector(
-          key: const ValueKey('home-last-result'),
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            tapHaptic();
-            onOpenSession(s);
-          },
-          child: SizedBox(
-            height: 48,
-            child: Row(children: [
-              AgentMochi(s.displayAgentId ?? 'snippet', size: 28),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text.rich(
-                    markdownPreviewSpan(line, sans(15, color: AppColors.fg2)),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-              ),
-              const SizedBox(width: 8),
-              Text(agentRowTime(at), style: codeMono(12, color: AppColors.fg3)),
-              const SizedBox(width: 4),
-              AppIcon('chevron-right', size: 14, color: AppColors.fg3),
-            ]),
           ),
         ),
       ),
