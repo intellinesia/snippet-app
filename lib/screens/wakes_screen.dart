@@ -103,7 +103,7 @@ class _WakesScreenState extends State<WakesScreen> {
               title: 'Wakes',
               subtitle: 'Agent schedules and keep-warm.',
             ),
-            const SizedBox(height: S.s8),
+            SizedBox(height: S.s8),
             ...children,
           ])
         : PageBody(children: children);
@@ -117,7 +117,7 @@ class _WakesScreenState extends State<WakesScreen> {
         if (snap.hasError) {
           return page([
             Padding(
-              padding: const EdgeInsets.fromLTRB(S.s4, S.s8, S.s4, S.s24),
+              padding: EdgeInsets.fromLTRB(S.s4, S.s8, S.s4, S.s24),
               child: Text('${snap.error}', style: TS.ui(AppColors.danger)),
             ),
           ]);
@@ -138,7 +138,7 @@ class _WakesScreenState extends State<WakesScreen> {
           if (!desk) return empty;
           return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(S.s32, S.s24, S.s32, 0),
+              padding: EdgeInsets.fromLTRB(S.s32, S.s24, S.s32, 0),
               child: Align(
                 alignment: Alignment.topCenter,
                 child: ConstrainedBox(
@@ -246,7 +246,7 @@ class _WakesScreenState extends State<WakesScreen> {
                 decoration: BoxDecoration(
                     color: wakeStatusColor(w.lastStatus),
                     shape: BoxShape.circle)),
-          const SizedBox(width: S.s6),
+          SizedBox(width: S.s6),
           Text(w.ownerKind, style: TS.meta()),
         ]),
         onTap: () => _open(ctx, w.owner, name, agents),

@@ -142,7 +142,7 @@ class QuotedReplyLine extends StatelessWidget {
     final maxW = mine ? (kMobile ? 280.0 : 440.0) : 460.0;
     final row = Container(
       constraints: BoxConstraints(maxWidth: maxW),
-      padding: const EdgeInsets.only(left: 8, top: 2, bottom: 2),
+      padding: EdgeInsets.only(left: S.s8, top: S.s2, bottom: S.s2),
       decoration: BoxDecoration(
         border: Border(left: BorderSide(color: AppColors.fg4, width: 2)),
       ),
@@ -181,11 +181,11 @@ class PendingReplyBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 2, 2, 6),
+      padding: EdgeInsets.fromLTRB(S.s4, S.s2, S.s2, S.s6),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(R.card),
         child: Container(
-          padding: const EdgeInsets.fromLTRB(8, 5, 4, 5),
+          padding: EdgeInsets.fromLTRB(S.s8, S.of(5), S.s4, S.of(5)),
           decoration: BoxDecoration(
             color: AppColors.surface2,
             border: Border(left: BorderSide(color: AppColors.fg4, width: 2)),
@@ -193,7 +193,7 @@ class PendingReplyBanner extends StatelessWidget {
           child: Row(
             children: [
               AppIcon('reply', size: 13, color: AppColors.fg3),
-              const SizedBox(width: 6),
+              SizedBox(width: S.s6),
               Expanded(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -260,7 +260,7 @@ class MessageReactionChips extends StatelessWidget {
           shape: StadiumBorder(side: BorderSide(color: AppColors.bg, width: 2)),
           clipBehavior: Clip.antiAlias,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            padding: EdgeInsets.symmetric(horizontal: S.s6, vertical: S.of(3)),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               for (final r in reactions)
                 _ReactionChip(
@@ -270,7 +270,7 @@ class MessageReactionChips extends StatelessWidget {
                 ),
               if (total > 1)
                 Padding(
-                  padding: const EdgeInsets.only(left: 2, right: 2),
+                  padding: EdgeInsets.only(left: S.s2, right: S.s2),
                   child: Text('$total',
                       style: sans(11,
                           tabular: true,
@@ -318,12 +318,12 @@ class _ReactionChip extends StatelessWidget {
         label: '${group.name} ${group.count}',
         button: true,
         child: InkWell(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(R.card),
           onTap: onTap,
           onLongPress: onLongPress,
           onSecondaryTap: onLongPress,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
+            padding: EdgeInsets.symmetric(horizontal: S.s2),
             child: Text(group.name, style: _emojiStyle(14)),
           ),
         ),
@@ -454,7 +454,7 @@ class _ReactionStripEntry extends PopupMenuEntry<String> {
 class _ReactionStripEntryState extends State<_ReactionStripEntry> {
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        padding: EdgeInsets.symmetric(horizontal: S.s6, vertical: S.s2),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -463,7 +463,7 @@ class _ReactionStripEntryState extends State<_ReactionStripEntry> {
                 label: 'React $emoji',
                 button: true,
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(R.md),
                   onTap: () => Navigator.of(context).pop('react:$emoji'),
                   child: SizedBox(
                     width: 36,
@@ -494,17 +494,17 @@ class MessageActionsView extends StatelessWidget {
     final preview = quotePreviewText(text);
     final hasCopy = text.trim().isNotEmpty;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: EdgeInsets.fromLTRB(S.s16, 0, S.s16, S.s16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
           if (preview.isNotEmpty)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.of(10)),
               decoration: BoxDecoration(
                 color: AppColors.surface2,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(R.lg),
               ),
               child: Text(
                 preview,
@@ -514,7 +514,7 @@ class MessageActionsView extends StatelessWidget {
               ),
             ),
           if (showReply || hasCopy) ...[
-            const SizedBox(height: 12),
+            SizedBox(height: S.s12),
             Row(
               children: [
                 if (showReply)
@@ -525,7 +525,7 @@ class MessageActionsView extends StatelessWidget {
                       onTap: () => pick(ReplyAction()),
                     ),
                   ),
-                if (showReply && hasCopy) const SizedBox(width: 8),
+                if (showReply && hasCopy) SizedBox(width: S.s8),
                 if (hasCopy)
                   Expanded(
                     child: _SheetAction(
@@ -542,7 +542,7 @@ class MessageActionsView extends StatelessWidget {
             ),
           ],
           if (showReactions) ...[
-            const SizedBox(height: 16),
+            SizedBox(height: S.s16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -551,7 +551,7 @@ class MessageActionsView extends StatelessWidget {
                     button: true,
                     label: 'React $emoji',
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(R.lg),
                       onTap: () => pick(ReactAction(emoji)),
                       child: SizedBox.square(
                         dimension: 48,
@@ -563,9 +563,9 @@ class MessageActionsView extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: S.s12),
             Text('More', style: sans(12, weight: W.label, color: AppColors.fg3)),
-            const SizedBox(height: 8),
+            SizedBox(height: S.s8),
             LayoutBuilder(builder: (context, c) {
               final cols = (c.maxWidth / 76).floor().clamp(3, 6);
               final w = c.maxWidth / cols;
@@ -576,7 +576,7 @@ class MessageActionsView extends StatelessWidget {
                       button: true,
                       label: 'React $emoji, $meaning',
                       child: InkWell(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(R.card),
                         onTap: () => pick(ReactAction(emoji)),
                         child: SizedBox(
                           width: w,
@@ -585,7 +585,7 @@ class MessageActionsView extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(emoji, style: _emojiStyle(24)),
-                              const SizedBox(height: 4),
+                              SizedBox(height: S.s4),
                               Text(
                                 meaning,
                                 maxLines: 1,
@@ -618,9 +618,9 @@ class _SheetAction extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.surface2,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(R.lg),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(R.lg),
         onTap: onTap,
         child: SizedBox(
           height: 44,
@@ -628,7 +628,7 @@ class _SheetAction extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               AppIcon(icon, size: 15, color: AppColors.fg2),
-              const SizedBox(width: 6),
+              SizedBox(width: S.s6),
               Text(label,
                   style: sans(13, weight: W.label, color: AppColors.fg2)),
             ],
@@ -947,7 +947,7 @@ void showReactionPeople(BuildContext context, List<ReactionGroup> reactions) {
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         for (final r in reactions)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: S.s16, vertical: S.s8),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               SizedBox(width: 32, child: Text(r.name, style: _emojiStyle(18))),
               Expanded(

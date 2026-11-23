@@ -70,21 +70,21 @@ class DesktopRecorderStrip extends StatelessWidget {
     }
     return Container(
       height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: 4),
+      padding: EdgeInsets.symmetric(horizontal: S.s4),
       decoration: BoxDecoration(
         color: kMobile ? AppColors.surface1 : AppColors.raised,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(R.lg),
         border: Border.all(color: AppColors.border),
       ),
       child: Row(children: [
         if (recording) ...[
-          const SizedBox(width: 10),
+          SizedBox(width: S.of(10)),
           StatusDot(status: 'running', size: 8, color: AppColors.danger),
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           timeText,
-          const SizedBox(width: 10),
+          SizedBox(width: S.of(10)),
           Expanded(child: track),
-          const SizedBox(width: 4),
+          SizedBox(width: S.s4),
           _btn('trash', 'Discard', onDiscard, color: AppColors.fg3),
           _btn('stop', 'Stop', onStop,
               color: kMobile ? AppColors.bg : AppColors.fg1,
@@ -93,9 +93,9 @@ class DesktopRecorderStrip extends StatelessWidget {
           _btn(playing ? 'pause' : 'play', playing ? 'Pause' : 'Play', onPlay,
               color: AppColors.fg1),
           Expanded(child: track),
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           timeText,
-          const SizedBox(width: 4),
+          SizedBox(width: S.s4),
           if (onMore != null)
             _btn('mic', 'Record more', onMore!, color: AppColors.fg2),
           _btn('trash', 'Discard', onDiscard, color: AppColors.fg3),

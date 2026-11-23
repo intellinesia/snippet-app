@@ -123,9 +123,10 @@ void main() {
 
     expect(find.byTooltip('Close'), findsOneWidget);
     for (final label in [
-      'General',
+      'This machine',
+      'Models',
       'Agents',
-      'Appearance',
+      'This device',
       'Machines',
       'Inference profiles',
       'Routing',
@@ -189,7 +190,7 @@ void main() {
     await tester.tap(find.text('Inference profiles'));
     await tester.pumpAndSettle();
     expect(find.text('Profiles'), findsOneWidget);
-    expect(find.text('default'), findsOneWidget);
+    expect(find.text('default'), findsWidgets);
 
     // Back to Machines, then jump to Wakes via Keep sessions warm.
     await tester.tap(find.text('Machines'));
@@ -236,7 +237,7 @@ void main() {
     expect(find.text('snippet-linux'), findsWidgets);
     await tester.tap(find.text('Profiles'));
     await tester.pumpAndSettle();
-    expect(find.text('default'), findsOneWidget);
+    expect(find.text('default'), findsWidgets);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();

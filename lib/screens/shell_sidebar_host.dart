@@ -272,7 +272,7 @@ class SidebarUnavailable extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: AppColors.bg,
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+      padding: EdgeInsets.fromLTRB(S.s20, S.s24, S.s20, S.s20),
       child: Text(message, style: sans(12, color: AppColors.fg3, height: 1.5)),
     );
   }

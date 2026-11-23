@@ -236,7 +236,7 @@ class ShellShortcutsHandler {
 /// Displays modal sheet with keyboard shortcuts.
 void showDesktopShortcutsDialog(BuildContext context) {
   Widget shortcutRow(String keys, String label) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 7),
+        padding: EdgeInsets.symmetric(vertical: S.of(7)),
         child: Row(children: [
           Expanded(child: Text(label, style: sans(13, color: AppColors.fg1))),
           Text(keys, style: mono(11, color: AppColors.fg3)),

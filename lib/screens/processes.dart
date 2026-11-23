@@ -144,7 +144,7 @@ class _ProcessesScreenState extends State<ProcessesScreen> {
                     onRefresh: () => _load(),
                     child: ListView(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(S.s16),
+                        padding: EdgeInsets.all(S.s16),
                         children: [for (final p in procs) _row(p)]))),
         ]),
       ),
@@ -178,26 +178,26 @@ class _ProcessesScreenState extends State<ProcessesScreen> {
             : Tone.neutral;
     final open = _openLogId == id;
     return Padding(
-      padding: const EdgeInsets.only(bottom: S.s8),
+      padding: EdgeInsets.only(bottom: S.s8),
       child: Material(
         color: AppColors.raised,
         borderRadius: BorderRadius.circular(R.md),
         clipBehavior: Clip.antiAlias,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(S.s16, S.s12, S.s8, S.s8),
+          padding: EdgeInsets.fromLTRB(S.s16, S.s12, S.s8, S.s8),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Padding(
-              padding: const EdgeInsets.only(right: S.s8),
+              padding: EdgeInsets.only(right: S.s8),
               child: Text(cmd,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TS.code(AppColors.fg1)),
             ),
-            const SizedBox(height: S.s8),
+            SizedBox(height: S.s8),
             Row(children: [
               Tag(statusLabel, tone: tone, dot: !running, live: running),
-              const SizedBox(width: S.s8),
+              SizedBox(width: S.s8),
               Text('pid $pid', style: TS.meta()),
               const Spacer(),
               TextAction(open ? 'Hide log' : 'Log',
@@ -206,13 +206,13 @@ class _ProcessesScreenState extends State<ProcessesScreen> {
                 TextAction('Stop', onTap: () => _kill(id), danger: true),
             ]),
             if (open) ...[
-              const SizedBox(height: S.s8),
+              SizedBox(height: S.s8),
               Padding(
-                padding: const EdgeInsets.only(right: S.s8, bottom: S.s4),
+                padding: EdgeInsets.only(right: S.s8, bottom: S.s4),
                 child: Container(
                   constraints: const BoxConstraints(maxHeight: 240),
                   width: double.infinity,
-                  padding: const EdgeInsets.all(S.s12),
+                  padding: EdgeInsets.all(S.s12),
                   decoration: BoxDecoration(
                       color: AppColors.canvas,
                       borderRadius: BorderRadius.circular(R.sm + 2)),

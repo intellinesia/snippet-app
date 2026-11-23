@@ -86,7 +86,7 @@ class RailIcon extends StatelessWidget {
         right: 0,
         top: 0,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+          padding: EdgeInsets.symmetric(horizontal: S.s4, vertical: S.of(1)),
           decoration: BoxDecoration(
             color: AppColors.surface3,
             borderRadius: BorderRadius.circular(R.pill),
@@ -117,19 +117,19 @@ class ShellSectionTabs extends StatelessWidget {
         ShellSection.values.where((s) => !hidden.contains(s)).toList();
     final items = shown.isEmpty ? ShellSection.values : shown;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+      padding: EdgeInsets.fromLTRB(S.of(10), S.s8, S.of(10), 0),
       child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         for (final item in items) ...[
-          if (item != items.first) const SizedBox(width: 2),
+          if (item != items.first) SizedBox(width: S.s2),
           Tooltip(
             message: item.label,
             waitDuration: const Duration(milliseconds: 400),
             child: Material(
               color: item == section ? AppColors.surface2 : Colors.transparent,
-              borderRadius: BorderRadius.circular(9),
+              borderRadius: BorderRadius.circular(R.of(9)),
               child: InkWell(
                 onTap: () => onSelect(item),
-                borderRadius: BorderRadius.circular(9),
+                borderRadius: BorderRadius.circular(R.of(9)),
                 child: SizedBox.square(
                   dimension: 30,
                   child: Center(

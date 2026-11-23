@@ -88,7 +88,7 @@ class AgentViewSwitcher extends StatelessWidget {
                           ),
                         ),
                         if (v == AgentView.inbox && unread > 0) ...[
-                          const SizedBox(width: 5),
+                          SizedBox(width: S.of(5)),
                           _Badge(unread),
                         ],
                       ],
@@ -112,7 +112,7 @@ class _Badge extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         constraints: const BoxConstraints(minWidth: 16),
         height: 16,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
+        padding: EdgeInsets.symmetric(horizontal: S.s4),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: AppColors.accent,

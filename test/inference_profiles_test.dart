@@ -242,7 +242,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('DEVIN'), findsOneWidget);
+      expect(find.text('Devin'), findsOneWidget);
       expect(find.text('devin-main'), findsOneWidget);
       await tester.tap(find.text('devin-main'));
       await tester.pumpAndSettle();
@@ -337,7 +337,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      await tester.scrollUntilVisible(find.text('DEVIN'), 200);
+      await tester.scrollUntilVisible(find.text('Devin'), 200);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Add account').last);
       await tester.pumpAndSettle();

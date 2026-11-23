@@ -94,9 +94,9 @@ void main() {
     expect(find.text('desk'), findsWidgets);
     expect(find.textContaining('Connected · 1 live'), findsOneWidget);
     for (final label in [
-      'General',
+      'Models',
       'Agents',
-      'Appearance',
+      'This device',
       'Inference profiles',
       'Routing',
       'Accounts',

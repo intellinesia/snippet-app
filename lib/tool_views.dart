@@ -239,7 +239,7 @@ Widget toolDetailView(BuildContext context,
   if (status == 'error' && errMsg != null) {
     rows.add(_hscroll(Text(_displayText(errMsg).trimRight(),
         style: _code(AppColors.danger))));
-    rows.add(const SizedBox(height: S.s8));
+    rows.add(SizedBox(height: S.s8));
   }
 
   if (d != null &&
@@ -247,12 +247,12 @@ Widget toolDetailView(BuildContext context,
           d['truncated'] == true && d['preview'] != null)) {
     rows.addAll(_toolBody(context, tool, a, d, status, running));
     if (d['preview'] != null) {
-      rows.add(const SizedBox(height: S.s8));
+      rows.add(SizedBox(height: S.s8));
       rows.add(_hscroll(
           Text(_displayText(d['preview'].toString()), style: _code())));
     }
     if (d['hint'] != null) {
-      rows.add(const SizedBox(height: S.s8));
+      rows.add(SizedBox(height: S.s8));
       rows.add(_Hint(d['hint'].toString()));
     }
     return _wrap(rows);
@@ -419,16 +419,16 @@ Widget _fileLabel(String name, int adds, int dels, {String note = ''}) =>
             style: codeMono(kMobile ? 12 : 12, color: AppColors.fg3)),
       ),
       if (adds > 0) ...[
-        const SizedBox(width: S.s8),
+        SizedBox(width: S.s8),
         Text('+$adds', style: codeMono(kMobile ? 12 : 12, color: AppColors.ok)),
       ],
       if (dels > 0) ...[
-        const SizedBox(width: S.s6),
+        SizedBox(width: S.s6),
         Text('−$dels',
             style: codeMono(kMobile ? 12 : 12, color: AppColors.danger)),
       ],
       if (note.isNotEmpty) ...[
-        const SizedBox(width: S.s8),
+        SizedBox(width: S.s8),
         Text(note, style: codeMono(kMobile ? 12 : 12, color: AppColors.fg4)),
       ],
     ]);
@@ -461,16 +461,16 @@ List<Widget> _changeFilesView(Map? a, Map? d, {bool failed = false}) {
     }
     final adds = lines.where((l) => l.kind == _DKind.add).length;
     final dels = lines.where((l) => l.kind == _DKind.del).length;
-    if (out.isNotEmpty) out.add(const SizedBox(height: S.s12));
+    if (out.isNotEmpty) out.add(SizedBox(height: S.s12));
     out.add(_fileLabel(label, adds, dels, note: note));
     if (lines.isNotEmpty) {
-      out.add(const SizedBox(height: S.s4));
+      out.add(SizedBox(height: S.s4));
       out.add(_hscroll(_DiffLines(lines)));
     }
   }
   final notes = d?['notes']?.toString();
   if (notes != null && notes.isNotEmpty) {
-    out.add(const SizedBox(height: S.s8));
+    out.add(SizedBox(height: S.s8));
     out.add(_Hint(notes));
   }
   return out;
@@ -547,7 +547,7 @@ Widget _numberedCode(String text, {int start = 1}) {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Text(numbers, style: _code(AppColors.fg4)),
-      const SizedBox(width: 14),
+      SizedBox(width: S.of(14)),
       Text(text, style: _code()),
     ],
   ));
@@ -566,7 +566,7 @@ List<Widget> _readFileView(Map? a, Map? d) {
         () {
           final parts = e.toString().split('\t');
           return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2),
+            padding: EdgeInsets.symmetric(vertical: S.s2),
             child: Row(children: [
               Expanded(
                 child: Text(parts.first,
@@ -575,7 +575,7 @@ List<Widget> _readFileView(Map? a, Map? d) {
                     style: _code(AppColors.fg1)),
               ),
               if (parts.length > 1) ...[
-                const SizedBox(width: S.s12),
+                SizedBox(width: S.s12),
                 Text(parts.sublist(1).join(' '), style: _code(AppColors.fg3)),
               ],
             ]),
@@ -601,7 +601,7 @@ List<Widget> _readFileView(Map? a, Map? d) {
   return [
     _numberedCode(shown, start: start < 1 ? 1 : start),
     if (all.length > cap) ...[
-      const SizedBox(height: S.s6),
+      SizedBox(height: S.s6),
       Text('Showing the first $cap of ${all.length} lines',
           style: sans(13, color: AppColors.fg3)),
     ],
@@ -647,7 +647,7 @@ List<Widget> _searchContentView(Map? a, Map? d) {
   return [
     for (final m in matches)
       Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
+        padding: EdgeInsets.symmetric(vertical: S.of(3)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           if (m.path.isNotEmpty)
             Text(m.line.isEmpty ? m.path : '${m.path}:${m.line}',
@@ -709,7 +709,7 @@ class _WebResult extends StatelessWidget {
       ),
       if (meta.isNotEmpty)
         Padding(
-          padding: const EdgeInsets.only(top: 1),
+          padding: EdgeInsets.only(top: S.of(1)),
           child: Text(meta.join(' · '),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -717,7 +717,7 @@ class _WebResult extends StatelessWidget {
         ),
       if (snippet.isNotEmpty)
         Padding(
-          padding: const EdgeInsets.only(top: 3),
+          padding: EdgeInsets.only(top: S.of(3)),
           child: Text(snippet,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
@@ -736,7 +736,7 @@ List<Widget> _webReadView(Map? a, Map? d) {
   }
   final text = d?['text']?.toString();
   if (text != null && text.trim().isNotEmpty) {
-    if (out.isNotEmpty) out.add(const SizedBox(height: S.s6));
+    if (out.isNotEmpty) out.add(SizedBox(height: S.s6));
     out.add(Text(_displayText(text).trim(),
         style: sans(_bodySize, height: 1.5, color: AppColors.fg2)));
   }
@@ -867,7 +867,7 @@ List<Widget> _skillView(String tool, Map? a, Map? d) {
     out.add(Text(name, style: TS.label(AppColors.fg1)));
   }
   if (text.trim().isNotEmpty) {
-    if (out.isNotEmpty) out.add(const SizedBox(height: 6));
+    if (out.isNotEmpty) out.add(SizedBox(height: S.s6));
     out.add(_ToolMarkdown(_displayText(text).trimRight()));
   }
   if (out.isEmpty) {
@@ -884,11 +884,11 @@ List<Widget> _monitorView(Map? a, Map? d) {
     Text(action, style: TS.label(AppColors.fg1)),
   ];
   if (path.isNotEmpty) {
-    out.add(const SizedBox(height: 4));
+    out.add(SizedBox(height: S.s4));
     out.add(Text(path, style: codeMono(12, color: AppColors.fg2)));
   }
   if (filter.isNotEmpty) {
-    out.add(const SizedBox(height: 4));
+    out.add(SizedBox(height: S.s4));
     out.add(Text(filter, style: codeMono(11, color: AppColors.fg3)));
   }
   return out;
@@ -904,7 +904,7 @@ List<Widget> _presentView(BuildContext context, Map? a, Map? d) {
           ? Text(path, style: TS.label(AppColors.fg1))
           : FileChip(client: client, path: path),
     if (caption.isNotEmpty) ...[
-      const SizedBox(height: 4),
+      SizedBox(height: S.s4),
       Text(caption, style: sans(13, color: AppColors.fg3)),
     ],
   ];
@@ -1023,7 +1023,7 @@ class _DiffLines extends StatelessWidget {
           for (final l in diffLines.take(_maxLines)) _row(l),
           if (diffLines.length > _maxLines)
             Padding(
-              padding: const EdgeInsets.all(S.s6),
+              padding: EdgeInsets.all(S.s6),
               child: Text('${diffLines.length - _maxLines} more lines',
                   style: _code(AppColors.fg4)),
             ),
@@ -1041,7 +1041,7 @@ class _DiffLines extends StatelessWidget {
     };
     return Container(
       color: bg,
-      padding: const EdgeInsets.symmetric(horizontal: S.s6),
+      padding: EdgeInsets.symmetric(horizontal: S.s6),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         SizedBox(width: 14, child: Text(sign, style: _code(fg))),
         Text(l.text.isEmpty ? ' ' : l.text, style: _code(fg)),

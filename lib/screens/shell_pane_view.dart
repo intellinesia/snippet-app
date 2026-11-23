@@ -114,7 +114,7 @@ class EmptyPaneHint extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(S.s24),
         child: Text(
           message,
           textAlign: TextAlign.center,
@@ -194,14 +194,14 @@ class ReadoutDragFeedback extends StatelessWidget {
       color: Colors.transparent,
       child: Container(
         height: 30,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        padding: EdgeInsets.symmetric(horizontal: S.of(10)),
         decoration: BoxDecoration(
           color: AppColors.surface3,
           borderRadius: BorderRadius.circular(R.md),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           AppIcon(tab.icon, size: 13, color: AppColors.accent),
-          const SizedBox(width: 7),
+          SizedBox(width: S.of(7)),
           Text(tab.label, style: sans(13, color: AppColors.fg1)),
         ]),
       ),
@@ -248,11 +248,11 @@ class ReadoutChip extends StatelessWidget {
           height: compact ? 26 : 32,
           constraints: compact ? BoxConstraints(maxWidth: width) : null,
           margin:
-              EdgeInsets.symmetric(horizontal: 2, vertical: compact ? 6 : 7),
-          padding: EdgeInsets.fromLTRB(compact ? 9 : 12, 0, compact ? 6 : 8, 0),
+              EdgeInsets.symmetric(horizontal: S.s2, vertical: compact ? S.s6 : S.of(7)),
+          padding: EdgeInsets.fromLTRB(compact ? S.of(9 ) : S.s12, 0, compact ? S.s6 : S.s8, 0),
           decoration: BoxDecoration(
             color: active ? AppColors.surface2 : Colors.transparent,
-            borderRadius: BorderRadius.circular(compact ? 7 : 10),
+            borderRadius: BorderRadius.circular(compact ? R.of(7 ) : R.card),
           ),
           child: Row(
               mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
@@ -260,7 +260,7 @@ class ReadoutChip extends StatelessWidget {
                 AppIcon(tab.icon,
                     size: compact ? 12 : 14,
                     color: active ? AppColors.fg1 : AppColors.fg3),
-                SizedBox(width: compact ? 6 : 8),
+                SizedBox(width: compact ? S.s6 : S.s8),
                 Flexible(
                   fit: compact ? FlexFit.loose : FlexFit.tight,
                   child: Text(
@@ -272,14 +272,14 @@ class ReadoutChip extends StatelessWidget {
                   ),
                 ),
                 if (pinned)
-                  const SizedBox(width: 6)
+                  SizedBox(width: S.s6)
                 else ...[
-                  const SizedBox(width: 6),
+                  SizedBox(width: S.s6),
                   GestureDetector(
                     onTap: onClose,
                     behavior: HitTestBehavior.opaque,
                     child: Padding(
-                      padding: const EdgeInsets.all(3),
+                      padding: EdgeInsets.all(S.of(3)),
                       child: AppIcon('x', size: 11, color: AppColors.fg4),
                     ),
                   ),
@@ -354,11 +354,11 @@ class PaneTabChip extends StatelessWidget {
           height: compact ? 26 : 32,
           constraints: compact ? BoxConstraints(maxWidth: width) : null,
           margin:
-              EdgeInsets.symmetric(horizontal: 2, vertical: compact ? 6 : 7),
-          padding: EdgeInsets.fromLTRB(compact ? 9 : 12, 0, compact ? 6 : 8, 0),
+              EdgeInsets.symmetric(horizontal: S.s2, vertical: compact ? S.s6 : S.of(7)),
+          padding: EdgeInsets.fromLTRB(compact ? S.of(9 ) : S.s12, 0, compact ? S.s6 : S.s8, 0),
           decoration: BoxDecoration(
             color: active ? AppColors.surface2 : Colors.transparent,
-            borderRadius: BorderRadius.circular(compact ? 7 : 10),
+            borderRadius: BorderRadius.circular(compact ? R.of(7 ) : R.card),
           ),
           child: Row(
               mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
@@ -368,7 +368,7 @@ class PaneTabChip extends StatelessWidget {
                   icon: tabIconKind(tab),
                   size: compact ? 12 : 14,
                 ),
-                SizedBox(width: compact ? 6 : 8),
+                SizedBox(width: compact ? S.s6 : S.s8),
                 Flexible(
                   fit: compact ? FlexFit.loose : FlexFit.tight,
                   child: Text(
@@ -380,12 +380,12 @@ class PaneTabChip extends StatelessWidget {
                   ),
                 ),
                 if (canDismiss) ...[
-                  const SizedBox(width: 6),
+                  SizedBox(width: S.s6),
                   GestureDetector(
                     onTap: onDismiss,
                     behavior: HitTestBehavior.opaque,
                     child: Padding(
-                      padding: const EdgeInsets.all(3),
+                      padding: EdgeInsets.all(S.of(3)),
                       child: AppIcon('x', size: 11, color: AppColors.fg4),
                     ),
                   ),
@@ -462,7 +462,7 @@ class PaneStrip extends StatelessWidget {
           final w = compact && fit > 136 ? 136.0 : fit;
           return ListView.separated(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 6),
+            padding: EdgeInsets.symmetric(horizontal: S.s6),
             itemCount: count,
             separatorBuilder: (_, __) => const SizedBox.shrink(),
             itemBuilder: (_, i) {

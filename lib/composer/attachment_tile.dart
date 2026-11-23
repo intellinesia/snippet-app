@@ -18,21 +18,21 @@ class ComposerAttachmentBar extends StatelessWidget {
     final voice = tiles.where(_voice).toList();
     final rest = tiles.where((w) => !_voice(w)).toList();
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.only(bottom: S.s8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (final v in voice)
-            Padding(padding: const EdgeInsets.only(top: 6), child: v),
+            Padding(padding: EdgeInsets.only(top: S.s6), child: v),
           if (rest.isNotEmpty)
             SizedBox(
               height: 62,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.only(top: 6, right: 6),
+                padding: EdgeInsets.only(top: S.s6, right: S.s6),
                 itemCount: rest.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                separatorBuilder: (_, __) => SizedBox(width: S.s8),
                 itemBuilder: (_, i) => rest[i],
               ),
             ),
@@ -92,7 +92,7 @@ class ComposerAttachmentTile extends StatelessWidget {
     return Container(
       height: side,
       constraints: const BoxConstraints(maxWidth: 190),
-      padding: const EdgeInsets.fromLTRB(8, 0, 12, 0),
+      padding: EdgeInsets.fromLTRB(S.s8, 0, S.s12, 0),
       decoration: BoxDecoration(
         color: AppColors.surface2,
         borderRadius: BorderRadius.circular(R.md),
@@ -112,7 +112,7 @@ class ComposerAttachmentTile extends StatelessWidget {
               size: 16,
               color: isAudio ? AppColors.accent : AppColors.fg2),
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: S.s8),
         Flexible(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -156,7 +156,7 @@ class ComposerAttachmentTile extends StatelessWidget {
                     duration: const Duration(milliseconds: 220),
                     curve: Curves.easeOut,
                     child: Row(children: [
-                      const SizedBox(width: 8),
+                      SizedBox(width: S.s8),
                       Container(
                         width: 32,
                         height: 32,
@@ -168,18 +168,18 @@ class ComposerAttachmentTile extends StatelessWidget {
                         child: AppIcon('play',
                             size: 14, color: AppColors.accent),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: S.s12),
                       Expanded(child: NoteWaveStrip(seed: name.hashCode)),
                     ]),
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 IconBtn('x',
                     size: 32,
                     iconSize: 14,
                     tooltip: 'Remove voice note',
                     onTap: onRemove),
-                const SizedBox(width: 4),
+                SizedBox(width: S.s4),
               ]),
             ),
           ),

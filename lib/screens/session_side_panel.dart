@@ -165,26 +165,26 @@ class _SessionSidePanelState extends State<SessionSidePanel> {
           child: AnimatedContainer(
             duration: reduced ? Duration.zero : Motion.fast,
             height: 24,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: EdgeInsets.symmetric(horizontal: S.s12),
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: on ? AppColors.surface2 : Colors.transparent,
-              borderRadius: BorderRadius.circular(7),
+              borderRadius: BorderRadius.circular(R.of(7)),
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Text(label,
                   style: sans(12,
                       color: on ? AppColors.fg1 : AppColors.fg4)),
               if (count > 0) ...[
-                const SizedBox(width: 6),
+                SizedBox(width: S.s6),
                 Container(
                   constraints: const BoxConstraints(minWidth: 16),
                   height: 16,
-                  padding: const EdgeInsets.symmetric(horizontal: 5),
+                  padding: EdgeInsets.symmetric(horizontal: S.of(5)),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: AppColors.accent.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(5),
+                    borderRadius: BorderRadius.circular(R.of(5)),
                   ),
                   child: Text('$count',
                       style: mono(11, color: AppColors.accent)),
@@ -198,15 +198,15 @@ class _SessionSidePanelState extends State<SessionSidePanel> {
 
     return Container(
       height: 30,
-      padding: const EdgeInsets.all(2),
+      padding: EdgeInsets.all(S.s2),
       decoration: BoxDecoration(
         color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(R.of(9)),
         border: Border.all(color: AppColors.line),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         btn(_SideTab.files, 'Files', 0),
-        const SizedBox(width: 2),
+        SizedBox(width: S.s2),
         btn(_SideTab.changes, 'Changes', changes),
       ]),
     );
@@ -219,7 +219,7 @@ class _SessionSidePanelState extends State<SessionSidePanel> {
       return Tooltip(
         message: _short(r.label),
         child: Padding(
-          padding: const EdgeInsets.only(left: 4),
+          padding: EdgeInsets.only(left: S.s4),
           child: InkWell(
             borderRadius: BorderRadius.circular(R.md),
             onTap: () => widget.onSelectReadout?.call(r),
@@ -234,7 +234,7 @@ class _SessionSidePanelState extends State<SessionSidePanel> {
       );
     }
     return Padding(
-      padding: const EdgeInsets.only(left: 4),
+      padding: EdgeInsets.only(left: S.s4),
       child: Material(
         color: on ? AppColors.tint2 : Colors.transparent,
         borderRadius: BorderRadius.circular(R.md),
@@ -243,16 +243,16 @@ class _SessionSidePanelState extends State<SessionSidePanel> {
           onTap: () => widget.onSelectReadout?.call(r),
           child: Container(
             height: 28,
-            padding: const EdgeInsets.fromLTRB(9, 0, 5, 0),
+            padding: EdgeInsets.fromLTRB(S.of(9), 0, S.of(5), 0),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Text(_short(r.label),
                   style: sans(12, color: on ? AppColors.fg1 : AppColors.fg4)),
-              const SizedBox(width: 4),
+              SizedBox(width: S.s4),
               InkWell(
                 onTap: () => widget.onCloseReadout?.call(r),
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(R.xs),
                 child: Padding(
-                  padding: const EdgeInsets.all(2),
+                  padding: EdgeInsets.all(S.s2),
                   child: AppIcon('x', size: 11, color: AppColors.fg4),
                 ),
               ),
@@ -267,7 +267,7 @@ class _SessionSidePanelState extends State<SessionSidePanel> {
     final readout = _readout;
     return Container(
       height: 44,
-      padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
+      padding: EdgeInsets.fromLTRB(S.s8, 0, S.s8, 0),
       child: Row(children: [
         Expanded(
           child: SingleChildScrollView(
@@ -332,13 +332,13 @@ class _SessionSidePanelState extends State<SessionSidePanel> {
         onTap: terms.isEmpty ? null : () => setState(() => _termsOpen = !open),
         child: Container(
           height: 34,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          padding: EdgeInsets.symmetric(horizontal: S.of(14)),
           child: Row(children: [
             AppIcon('terminal', size: 14, color: AppColors.fg3),
-            const SizedBox(width: 8),
+            SizedBox(width: S.s8),
             Text('Terminals', style: sans(12, color: AppColors.fg3)),
             if (terms.isNotEmpty) ...[
-              const SizedBox(width: 6),
+              SizedBox(width: S.s6),
               Text('${terms.length}', style: mono(11, color: AppColors.fg4)),
             ],
             const Spacer(),
@@ -359,7 +359,7 @@ class _SessionSidePanelState extends State<SessionSidePanel> {
           ConstrainedBox(
             constraints: const BoxConstraints(maxHeight: 220),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 6),
+              padding: EdgeInsets.only(bottom: S.s6),
               child: Column(children: [
                 for (var i = 0; i < terms.length; i++)
                   _TermTreeRow(
@@ -411,7 +411,7 @@ class _TermTreeRowState extends State<_TermTreeRow> {
         onTap: widget.onTap,
         child: Container(
           color: on || _hover ? AppColors.tint3 : Colors.transparent,
-          padding: const EdgeInsets.fromLTRB(24, 5, 14, 5),
+          padding: EdgeInsets.fromLTRB(S.s24, S.of(5), S.of(14), S.of(5)),
           child: Row(children: [
             Container(
               width: 6,
@@ -421,23 +421,23 @@ class _TermTreeRowState extends State<_TermTreeRow> {
                 color: widget.alive ? AppColors.ok : AppColors.fg4,
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: S.s8),
             Expanded(
               child: Text(widget.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: sans(13, color: on ? AppColors.fg1 : AppColors.fg2)),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: S.s8),
             Text(widget.alive ? 'running' : 'idle',
                 style: mono(11, color: AppColors.fg4)),
             if (_hover) ...[
-              const SizedBox(width: 6),
+              SizedBox(width: S.s6),
               GestureDetector(
                 onTap: widget.onClose,
                 behavior: HitTestBehavior.opaque,
                 child: Padding(
-                  padding: const EdgeInsets.all(2),
+                  padding: EdgeInsets.all(S.s2),
                   child: AppIcon('x', size: 11, color: AppColors.fg3),
                 ),
               ),
