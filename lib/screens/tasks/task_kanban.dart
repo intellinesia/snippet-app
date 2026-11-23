@@ -513,6 +513,14 @@ class _TaskCardState extends State<_TaskCard> {
                 style: sans(13,
                     weight: W.label, height: 1.35, color: AppColors.fg1),
               ),
+              if (t.planTotal > 0) ...[
+                const SizedBox(height: 6),
+                TaskPlanProgress(
+                  done: t.planDone,
+                  total: t.planTotal,
+                  compact: true,
+                ),
+              ],
               if (widget.step.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text(
