@@ -276,7 +276,7 @@ extension on _DesktopSettingsPageState {
       : Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 820), child: child),
+              constraints: const BoxConstraints(maxWidth: 920), child: child),
         );
 }
 
@@ -532,7 +532,7 @@ class DesktopSettingsContent extends StatelessWidget {
   final void Function(Instance)? onAdd;
   final VoidCallback onClose;
 
-  // Pages centre their own 680 column; the wide cap only bounds the rest.
+  // Pages centre their own 880 column; the wide cap only bounds the rest.
   @override
   Widget build(BuildContext context) => Align(
         alignment: Alignment.topCenter,

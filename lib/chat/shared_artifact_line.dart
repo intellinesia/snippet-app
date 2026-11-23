@@ -1,6 +1,7 @@
 // A share_artifact step as one line: "Shared" and the artifact as a chip
 // with a single action; images add a small thumbnail underneath.
 
+import '../platform.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -189,11 +190,11 @@ class _SharedArtifactLineState extends State<SharedArtifactLine> {
     return TapDetector(
       onTap: _open,
       child: Container(
-        height: 36,
+        height: kMobile ? 36 : 30,
         padding: EdgeInsets.only(left: 10, right: action == null ? 12 : 5),
         decoration: BoxDecoration(
           color: AppColors.surface2,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(kMobile ? 18 : 15),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           AppIcon(icon, size: 16, color: iconColor),
@@ -203,7 +204,7 @@ class _SharedArtifactLineState extends State<SharedArtifactLine> {
               widget.title.isEmpty ? 'Artifact' : widget.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: sans(14, weight: W.label, color: AppColors.fg1),
+              style: sans(kMobile ? 14 : 13, weight: W.label, color: AppColors.fg1),
             ),
           ),
           if (meta.isNotEmpty) ...[
@@ -251,7 +252,7 @@ class _SharedArtifactLineState extends State<SharedArtifactLine> {
               child: Text(sharedArtifactVerb(widget.to),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(14, color: AppColors.fg3)),
+                  style: sans(kMobile ? 14 : 13, color: AppColors.fg3)),
             ),
             const SizedBox(width: 8),
             Flexible(child: _chip()),

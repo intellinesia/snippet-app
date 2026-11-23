@@ -174,7 +174,7 @@ class _ThreadCard extends StatelessWidget {
     final stat = status?.trim() ?? '';
     final (fg, bg) = toneColors(tone);
     final agent = agentId?.trim() ?? '';
-    final meta = sans(kMobile ? 13 : 12, height: 1.4, color: AppColors.fg3);
+    final meta = sans(kMobile ? 13 : 11.5, height: 1.4, color: AppColors.fg3);
     final lead = agent.isNotEmpty
         ? AgentMochi(agent, size: kMobile ? 22 : 20)
         : AppIcon(icon, size: kMobile ? 18 : 16, color: fg);
@@ -182,10 +182,10 @@ class _ThreadCard extends StatelessWidget {
       width: double.infinity,
       padding: kMobile
           ? EdgeInsets.fromLTRB(S.of(16), S.of(14), S.of(16), S.of(14))
-          : EdgeInsets.all(S.of(12)),
+          : EdgeInsets.fromLTRB(S.s12, S.of(8), S.s12, S.of(9)),
       decoration: BoxDecoration(
         color: Grouped.row,
-        borderRadius: BorderRadius.circular(R.of(kMobile ? 20 : 13)),
+        borderRadius: BorderRadius.circular(R.of(kMobile ? 20 : 10)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -212,7 +212,7 @@ class _ThreadCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6)),
                     child: Text(ref,
                         maxLines: 1,
-                        style: mono(kMobile ? 12 : 11, color: AppColors.fg2)),
+                        style: mono(kMobile ? 12 : 10.5, color: AppColors.fg2)),
                   ),
                 ],
               ]),
@@ -225,24 +225,25 @@ class _ThreadCard extends StatelessWidget {
                     color: bg, borderRadius: BorderRadius.circular(999)),
                 child: Text(stat,
                     maxLines: 1,
-                    style: sans(kMobile ? 12 : 11,
+                    style: sans(kMobile ? 12 : 10.5,
                         height: 1.4, weight: W.label, color: fg)),
               ),
           ]),
           if (head.isNotEmpty)
             Padding(
-              padding: EdgeInsets.only(top: S.s8),
+              padding: EdgeInsets.only(top: kMobile ? S.s8 : S.s6),
               child: Text(head,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(kMobile ? 16 : 14,
-                      height: kMobile ? 22 / 16 : 20 / 14,
+                  style: sans(kMobile ? 16 : 13,
+                      height: kMobile ? 22 / 16 : 18 / 13,
                       weight: W.strong,
                       color: AppColors.fg1)),
             ),
           if (body.trim().isNotEmpty)
             Padding(
-              padding: EdgeInsets.only(top: head.isEmpty ? S.s8 : S.s4),
+              padding: EdgeInsets.only(
+                  top: head.isEmpty ? (kMobile ? S.s8 : S.s6) : S.s2),
               child: _PreviewBody(body: body),
             ),
           if (foot.isNotEmpty)
@@ -251,7 +252,7 @@ class _ThreadCard extends StatelessWidget {
               child: Text(foot,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(kMobile ? 13 : 12,
+                  style: sans(kMobile ? 13 : 11.5,
                       height: 1.35, color: AppColors.fg4)),
             ),
         ],
@@ -277,8 +278,8 @@ class _PreviewBodyState extends State<_PreviewBody> {
     final body = widget.body.trim();
     final plain = plainPreview(body);
     final long = body.length > 110 || '\n'.allMatches(body).length > 1;
-    final style = sans(kMobile ? 14 : 13,
-        height: kMobile ? 20 / 14 : 18 / 13, color: AppColors.fg2);
+    final style = sans(kMobile ? 14 : 12.5,
+        height: kMobile ? 20 / 14 : 1.4, color: AppColors.fg2);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -299,9 +300,9 @@ class _PreviewBodyState extends State<_PreviewBody> {
             behavior: HitTestBehavior.opaque,
             onTap: () => setState(() => _open = !_open),
             child: Padding(
-              padding: EdgeInsets.only(top: S.s4),
+              padding: EdgeInsets.only(top: kMobile ? S.s4 : S.s2),
               child: Text(_open ? 'Show less' : 'Show more',
-                  style: sans(kMobile ? 13 : 12,
+                  style: sans(kMobile ? 13 : 11.5,
                       weight: W.label, color: AppColors.fg2)),
             ),
           ),

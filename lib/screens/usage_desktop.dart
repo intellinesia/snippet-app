@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../models.dart';
+import '../platform.dart';
 import '../settings_form.dart';
 import '../swr.dart';
 import '../theme.dart';
@@ -583,9 +584,9 @@ class _Breakdown extends StatelessWidget {
           Expanded(
             child: Text(item, maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
           ),
-          SizedBox(width: 96, child: Text(header ? 'Tokens' : fmtSi(tokens), textAlign: TextAlign.right, style: num)),
-          SizedBox(width: 72, child: Text(header ? 'Calls' : '$calls', textAlign: TextAlign.right, style: num)),
-          SizedBox(width: 64, child: Text(header ? 'Share' : share(tokens), textAlign: TextAlign.right, style: num)),
+          SizedBox(width: kMobile ? 64 : 96, child: Text(header ? 'Tokens' : fmtSi(tokens), textAlign: TextAlign.right, style: num)),
+          SizedBox(width: kMobile ? 44 : 72, child: Text(header ? 'Calls' : '$calls', textAlign: TextAlign.right, style: num)),
+          SizedBox(width: kMobile ? 48 : 64, child: Text(header ? 'Share' : share(tokens), textAlign: TextAlign.right, style: num)),
         ]),
       );
     }

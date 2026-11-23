@@ -75,7 +75,7 @@ class GroupedCardHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final row = Container(
-      constraints: BoxConstraints(minHeight: kMobile ? 64 : 56),
+      constraints: BoxConstraints(minHeight: kMobile ? 64 : 48),
       padding: EdgeInsets.symmetric(
           horizontal: Grouped.padX, vertical: Grouped.padY),
       alignment: Alignment.centerLeft,
@@ -90,8 +90,8 @@ class GroupedCardHeader extends StatelessWidget {
               Text(title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(kMobile ? 16 : 14,
-                      height: kMobile ? 22 / 16 : 20 / 14,
+                  style: sans(kMobile ? 16 : 13,
+                      height: kMobile ? 22 / 16 : 18 / 13,
                       color: AppColors.fg1)),
               if (sub.isNotEmpty || subLead.isNotEmpty)
                 Padding(

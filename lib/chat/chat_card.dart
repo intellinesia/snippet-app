@@ -47,7 +47,7 @@ class ChatCard extends StatelessWidget {
   /// Resolved cards recede.
   final bool dimmed;
 
-  static double get pad => kMobile ? 16 : 14;
+  static double get pad => kMobile ? 16 : 12;
 
   @override
   Widget build(BuildContext context) => Align(
@@ -107,7 +107,7 @@ class ChatCardHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = ChatCard.pad;
-    final size = large ? (kMobile ? 17.0 : 15.0) : (kMobile ? 15.0 : 14.0);
+    final size = large ? (kMobile ? 17.0 : 14.0) : (kMobile ? 15.0 : 13.0);
     return Padding(
       padding: EdgeInsets.fromLTRB(p, p - 2, p, padBottom ? p - 2 : 0),
       child: Column(
