@@ -412,7 +412,9 @@ class QuietSessionsScreen extends StatefulWidget {
     required this.agents,
     required this.onOpenSession,
     this.onSessionActions,
+    this.onNew,
   });
+  final VoidCallback? onNew;
   final List<SessionInfo> sessions;
   final List<CoordinationAgent> agents;
   final void Function(SessionInfo s) onOpenSession;
@@ -522,10 +524,37 @@ class _QuietSessionsScreenState extends State<QuietSessionsScreen> {
     }
     if (shown.isEmpty) {
       children.add(Padding(
-        padding: EdgeInsets.all(S.s32),
-        child: Text('No sessions here.',
-            textAlign: TextAlign.center,
-            style: sans(14, color: AppColors.fg3)),
+        padding: EdgeInsets.fromLTRB(S.s16, S.s24, S.s16, S.s8),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(widget.sessions.isEmpty ? 'No sessions yet' : 'No sessions here',
+              style: sans(14, weight: W.label, color: AppColors.fg1)),
+          SizedBox(height: S.s4),
+          Text(
+              widget.sessions.isEmpty
+                  ? 'A session is one job for one agent.'
+                  : 'Nothing matches this filter.',
+              style: sans(13, color: AppColors.fg3)),
+          if (widget.sessions.isEmpty && widget.onNew != null) ...[
+            SizedBox(height: S.s12),
+            TapDetector(
+              onTap: widget.onNew,
+              child: Container(
+                height: 36,
+                padding: EdgeInsets.symmetric(horizontal: S.s16),
+                decoration: BoxDecoration(
+                    color: AppColors.accentFill,
+                    borderRadius: BorderRadius.circular(999)),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  AppIcon('edit', size: 14, color: AppColors.accentFg),
+                  SizedBox(width: S.s8),
+                  Text('New session',
+                      style: sans(13,
+                          weight: W.label, color: AppColors.accentFg)),
+                ]),
+              ),
+            ),
+          ],
+        ]),
       ));
     }
     children.add(SizedBox(height: S.s24));

@@ -599,6 +599,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           agents: _heroAgents,
           onOpenSession: (s) => widget.onOpenSession(s.id, s.title, s.profile),
           onSessionActions: _sessionActions,
+          onNew: widget.onNewSession,
         );
       default:
         return _agentsHome(client);
