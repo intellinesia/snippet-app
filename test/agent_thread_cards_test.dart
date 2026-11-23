@@ -189,7 +189,6 @@ void main() {
     expect(find.text('Here is my quick voice update.'), findsNothing);
     expect(find.text('0:05'), findsOneWidget);
     expect(find.bySemanticsLabel('Play voice note'), findsOneWidget);
-    expect(find.byType(AgentMochi), findsWidgets);
     expect(find.byType(ChatBubble), findsNothing);
     final note = t.widget<VoiceNote>(find.byType(VoiceNote));
     expect(

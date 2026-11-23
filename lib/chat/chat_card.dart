@@ -236,8 +236,9 @@ class ChatCardActions extends StatelessWidget {
               child: TapDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: onLink,
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: S.of(10)),
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 44),
+                  alignment: Alignment.center,
                   child: Text(link!,
                       textAlign: TextAlign.center,
                       style: sans(13,

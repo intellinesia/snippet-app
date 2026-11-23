@@ -1200,6 +1200,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                       : AgentCharacterState.idle),
             ],
             title: widget.agentName,
+            subtitleProvider: _agent?.deskProfile ?? _agent?.profile,
             subtitle: _view == AgentView.thread
                 ? _stageSubtitle(subtitle)
                 : _viewLine,

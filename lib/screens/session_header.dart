@@ -133,8 +133,8 @@ class SessionStatusPillState extends State<SessionStatusPill> {
           widget.startedAt == null
               ? 'Working'
               : 'Working ${_clock(DateTime.now().difference(widget.startedAt!))}',
-          AppColors.accent,
-          AppColors.accentBg
+          AppColors.fg2,
+          AppColors.surface2
         ),
       'waiting_for_input' || 'needs_you' => (
           'Needs you',
@@ -142,7 +142,7 @@ class SessionStatusPillState extends State<SessionStatusPill> {
           AppColors.runBg
         ),
       'in_review' => ('In review', AppColors.fg2, AppColors.surface2),
-      'failed' || 'error' => ('Failed', AppColors.danger, AppColors.dangerBg),
+      'failed' || 'error' => ('Failed', AppColors.fg1, AppColors.surface2),
       _ => ('Finished', AppColors.fg3, AppColors.surface2),
     };
     if (!kMobile) {

@@ -2,13 +2,12 @@
 // while finished, and a single 40px strip while a step is running.
 
 import '../quiet.dart';
+import '../platform.dart' show kMobile;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../agent_character.dart' show AgentCharacterState;
-import '../mochi.dart' show AgentMochi;
 
 import '../theme.dart';
 import '../tool_activity.dart';
@@ -248,18 +247,13 @@ class _LedgerLineState extends State<LedgerLine> {
       ));
     }
     final shown = _shown < phrases.length ? phrases[_shown] : null;
-    final agent = LedgerLiveScope.of(context)?.agentId;
     // Finished run: the live strip's card settles into its done state.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          constraints: const BoxConstraints(minHeight: 32),
-          padding: const EdgeInsets.fromLTRB(9, 5, 4, 5),
-          decoration: BoxDecoration(
-            color: AppColors.surface2,
-            borderRadius: BorderRadius.circular(8),
-          ),
+          constraints: BoxConstraints(minHeight: kMobile ? 48 : 28),
+          padding: const EdgeInsets.fromLTRB(0, 4, 4, 4),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -268,12 +262,10 @@ class _LedgerLineState extends State<LedgerLine> {
                 onTap: widget.onTap,
                 child: Padding(
                   padding: const EdgeInsets.only(right: 8),
-                  child: agent != null && !bad
-                      ? AgentMochi(agent,
-                          size: 16, state: AgentCharacterState.done)
-                      : bad
-                          ? AppIcon('x', size: 13, color: AppColors.danger)
-                          : AppIcon('check', size: 13, color: AppColors.ok),
+                  // Line tier: one fg2 icon, never a colour face or a red mark.
+                  child: AppIcon(bad ? 'alert-triangle' : 'terminal',
+                      size: kMobile ? 16 : 14,
+                      color: bad ? AppColors.fg1 : AppColors.fg2),
                 ),
               ),
               Expanded(
@@ -292,7 +284,7 @@ class _LedgerLineState extends State<LedgerLine> {
                   child: Padding(
                     padding: const EdgeInsets.only(left: 10),
                     child: Text(formatWorkDuration(took),
-                        style: mono(11.5, color: AppColors.fg4)),
+                        style: sans(kMobile ? 13 : 12, color: AppColors.fg2)),
                   ),
                 ),
               HoverSurface(
@@ -304,7 +296,7 @@ class _LedgerLineState extends State<LedgerLine> {
                     turns: widget.open ? 0.25 : 0,
                     duration: const Duration(milliseconds: 160),
                     child: AppIcon('chevron-right',
-                        size: 13, color: AppColors.fg4),
+                        size: 13, color: AppColors.fg3),
                   ),
                 ),
               ),
@@ -405,7 +397,8 @@ class _PhraseTargetState extends State<_PhraseTarget> {
               if (p.failNote != null)
                 TextSpan(
                     text: ' ${p.failNote}',
-                    style: widget.style.copyWith(color: AppColors.danger)),
+                    style: widget.style.copyWith(
+                        color: AppColors.fg1, fontWeight: FontWeight.w500)),
             ])),
           ),
         ),
@@ -442,7 +435,7 @@ class _LedgerPopover extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(6, 4, 6, 2),
                   child: Text('+$more more',
-                      style: sans(12, color: AppColors.fg4)),
+                      style: sans(12, color: AppColors.fg3)),
                 ),
             ],
           ),
@@ -467,18 +460,18 @@ class _PopRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 6),
         child: Row(children: [
           AppIcon(_iconFor(_kindOf(step).$1),
-              size: 13, color: bad ? AppColors.danger : AppColors.fg3),
+              size: 13, color: bad ? AppColors.fg1 : AppColors.fg3),
           const SizedBox(width: 8),
           Flexible(
             child: Text(target.isEmpty ? liveStepText(step) : target,
                 maxLines: 1,
                 softWrap: false,
                 overflow: TextOverflow.ellipsis,
-                style: mono(12, color: bad ? AppColors.danger : AppColors.fg2)),
+                style: mono(12, color: bad ? AppColors.fg1 : AppColors.fg2)),
           ),
           if (meta != null) ...[
             const SizedBox(width: 12),
-            Text(meta, style: sans(12, color: AppColors.fg4)),
+            Text(meta, style: sans(12, color: AppColors.fg3)),
           ],
         ]),
       ),
@@ -690,14 +683,14 @@ class _LedgerGanttState extends State<LedgerGantt> {
           child: Row(children: [
             for (final e in tally.entries) ...[
               Text('${e.value} ${noun(e.key, e.value)}',
-                  style: sans(12, color: AppColors.fg4)),
+                  style: sans(12, color: AppColors.fg3)),
               const SizedBox(width: 12),
             ],
             if (failed > 0)
               Text('$failed failed', style: sans(12, color: AppColors.fg3)),
             const Spacer(),
             if (el != null)
-              Text(_clock(el), style: mono(11.5, color: AppColors.fg4)),
+              Text(_clock(el), style: mono(11.5, color: AppColors.fg3)),
           ]),
         ),
       ],
@@ -846,7 +839,7 @@ class _LedgerStripState extends State<LedgerStrip> {
           color: AppColors.fg1.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(4),
         ),
-        child: Text(k, style: mono(10.5, color: AppColors.fg4)),
+        child: Text(k, style: mono(10.5, color: AppColors.fg3)),
       );
 
   Widget _btn(String icon, String label, String key, VoidCallback? onTap,
@@ -952,25 +945,18 @@ class _LedgerStripState extends State<LedgerStrip> {
     final label = live == null ? 'Thinking' : ledgerLiveLabel(live);
     final target = live == null ? '' : stepTarget(live);
     final el = _elapsed();
-    final agent = scope?.agentId;
     final peekOpen = _portal.isShowing || _pinned;
 
     // Keyed so inserting the failure banner above it never remounts _portal.
     final strip = Container(
       key: const ValueKey('ledger-strip'),
-      height: 32,
-      padding: const EdgeInsets.only(left: 9, right: 3),
-      decoration: BoxDecoration(
-        color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(8),
-      ),
+      constraints: BoxConstraints(minHeight: kMobile ? 48 : 28),
+      padding: const EdgeInsets.only(left: 0, right: 3),
       child: Row(children: [
         SizedBox(
           width: 16,
           height: 16,
-          child: agent == null
-              ? Center(child: RunSpinner(size: 11, color: AppColors.accent))
-              : AgentMochi(agent, size: 16, state: AgentCharacterState.working),
+          child: Center(child: RunSpinner(size: 12, color: AppColors.fg2)),
         ),
         const SizedBox(width: 8),
         Text(label,
@@ -986,7 +972,6 @@ class _LedgerStripState extends State<LedgerStrip> {
               style: mono(12, color: AppColors.fg3)),
         ),
         const SizedBox(width: 10),
-        if (steps.isNotEmpty) ...[_bar(), const SizedBox(width: 10)],
         if (el != null) ...[
           Text(_clock(el), style: mono(12, color: AppColors.fg3)),
           const SizedBox(width: 8),

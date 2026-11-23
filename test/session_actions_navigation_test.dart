@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/screens/mobile_home/quiet_home.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/api.dart';
-import 'package:snippet/chat/stage_header.dart';
+import 'package:snippet/chat/stage_bar.dart';
 import 'package:snippet/screens/desktop_shell.dart';
 import 'package:snippet/screens/mobile_home/mobile_home_screen.dart';
 import 'package:snippet/screens/processes.dart';
@@ -83,7 +83,7 @@ void main() {
         if (desktop) {
           expect(find.byTooltip('Tasks'), findsNothing);
         } else {
-          expect(find.byType(StageHeader), findsOneWidget);
+          expect(find.byType(StageBar), findsOneWidget);
           expect(find.byTooltip('Tasks'), findsNothing);
           await tester.tap(find.text('Lead').first);
           await _pump(tester);

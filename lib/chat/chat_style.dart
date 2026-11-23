@@ -85,14 +85,8 @@ class ChatColors {
   }
 
   static Color get sentText => sentTextFor();
-  static Color sentTextIn(BuildContext context) {
-    final fill = ChatBubbleFill.of(context);
-    // A light fill needs dark ink whatever the theme's sent-text token says.
-    if (fill != null && fill.computeLuminance() > 0.179) {
-      return const Color(0xFF0A0A0A);
-    }
-    return sentTextFor(fill ?? sentIn(context));
-  }
+  // Your bubble is s2 in every theme, so its ink is the primary text token.
+  static Color sentTextIn(BuildContext context) => AppColors.fg1;
 
   static Color get received => _tokens.received;
   static Color get receivedText => _tokens.receivedText;
@@ -172,8 +166,20 @@ class ChatBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fill =
-        color ?? (mine ? ChatColors.sentIn(context) : ChatColors.received);
+    // Agent replies are plain prose on the canvas; yours sits on s2.
+    if (!mine && color == null) {
+      return ChatBubbleFill(
+        fill: AppColors.bg,
+        child: Builder(
+          builder: (bubbleCtx) => DefaultTextStyle.merge(
+            style: chatText(mine: false, context: bubbleCtx),
+            textWidthBasis: TextWidthBasis.longestLine,
+            child: child,
+          ),
+        ),
+      );
+    }
+    final fill = color ?? (mine ? AppColors.surface2 : ChatColors.received);
     final h = kMobile ? 12.0 : 11.0;
     final v = kMobile ? 8.0 : 6.0;
     if (flat && !kMobile) {
@@ -203,7 +209,7 @@ class ChatBubble extends StatelessWidget {
               // Desktop bubbles are plain rounded rects, as in the desk.
               color: fill,
               mine: mine,
-              tail: tail && kMobile,
+              tail: false,
               radius: ChatColors.radius),
           child: Padding(
             padding: EdgeInsets.fromLTRB(

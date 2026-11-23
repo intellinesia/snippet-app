@@ -10,7 +10,7 @@ import 'package:snippet/screens/mobile_home/mobile_home_screen.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/notifications.dart';
 import 'package:snippet/models.dart';
-import 'package:snippet/screens/lead/coordination_agent_detail.dart';
+import 'package:snippet/screens/phone_agent_page.dart';
 import 'package:snippet/screens/desktop_shell.dart';
 import 'package:snippet/screens/mobile_chrome.dart';
 import 'package:snippet/theme.dart';
@@ -186,7 +186,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       var shell = tester.widget<MobileShell>(find.byType(MobileShell));
       expect(shell.mobileHome, MobileHome.agents);
-      expect(find.byType(CoordinationAgentDetail), findsOneWidget);
+      expect(find.byType(PhoneAgentPage), findsOneWidget);
 
       await tester.binding.handlePopRoute();
       await tester.pump(const Duration(milliseconds: 400));
@@ -194,7 +194,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       shell = tester.widget<MobileShell>(find.byType(MobileShell));
       expect(shell.mobileHome, MobileHome.home);
-      expect(find.byType(CoordinationAgentDetail), findsNothing);
+      expect(find.byType(PhoneAgentPage), findsNothing);
       expect(find.byType(QuietHomeScreen), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());

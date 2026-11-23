@@ -1741,7 +1741,9 @@ class Bubble extends StatelessWidget {
         ? MarkdownBody(
             data: unwrapCodedLinks(shown),
             selectable: false,
-            styleSheet: markdownStyle(context),
+            // Your message reads in the primary ink, not the body grey.
+            styleSheet: markdownStyle(context).copyWith(
+                p: markdownStyle(context).p?.copyWith(color: AppColors.fg1)),
             builders: {'pre': PreBlockBuilder()},
             onTapLink: (txt, href, title) =>
                 openMarkdownLink(href, context, txt),

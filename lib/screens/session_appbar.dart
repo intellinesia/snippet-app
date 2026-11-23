@@ -577,9 +577,11 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
                 : AgentCharacterState.idle),
       ],
       title: 'Lead',
-      subtitle: n > 0
-          ? 'Coordinator · $n ${n == 1 ? 'task' : 'tasks'} in flight'
-          : 'Coordinator',
+      subtitle: working
+          ? 'Coordinator \u00b7 Working'
+          : n > 0
+              ? 'Coordinator \u00b7 $n ${n == 1 ? 'task' : 'tasks'} in flight'
+              : 'Coordinator',
       onTap: stuck ? _retryNow : () => _openActionsDrawer(s),
       trailing: RoundBtn(
         icon: 'phone',

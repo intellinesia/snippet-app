@@ -187,13 +187,13 @@ class ApprovalBarState extends State<ApprovalBar> {
         : widget.agentName!;
     final step = widget.stepLabel;
     return Row(children: [
-      AgentMochi(widget.agentId!, size: 18),
+      AgentMochi(widget.agentId!, size: 20),
       SizedBox(width: S.s8),
       Expanded(
         child: Text(step == null ? '$name asks' : '$name asks · $step',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: sans(12, color: AppColors.fg3)),
+            style: sans(13, weight: W.label, color: AppColors.fg2)),
       ),
       if (mins >= 1) ...[
         SizedBox(width: S.s8),

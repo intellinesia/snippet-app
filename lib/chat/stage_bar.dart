@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../glass.dart';
+import '../widgets.dart' show ProviderLogo, providerLogoAsset;
 import '../platform.dart';
 import '../theme.dart';
 import 'chat_style.dart';
@@ -25,11 +26,15 @@ class StageBar extends StatelessWidget {
     this.leading,
     this.below,
     this.framed = true,
+    this.subtitleProvider,
   });
 
   final List<StageMember> members;
   final String title;
   final String? subtitle;
+
+  /// Phone: provider mark drawn before the subtitle, in the subtitle's ink.
+  final String? subtitleProvider;
   final Color? subtitleDot;
   final VoidCallback? onTap;
   final VoidCallback? onBack;
@@ -44,7 +49,7 @@ class StageBar extends StatelessWidget {
   /// Phone only: false when the host already floats it on [GlassTopFrame].
   final bool framed;
 
-  static const double phoneHeight = 140;
+  static const double phoneHeight = 76;
 
   // Desktop leaves headroom above the cast: the characters' crowns rise past their box.
   static double get height => kMobile ? phoneHeight : ChatHeader.overlap + 24;
@@ -54,32 +59,72 @@ class StageBar extends StatelessWidget {
 
   // One phone header for sessions, agents and groups: same frame, same buttons.
   Widget _phone() {
-    final body = Stack(alignment: Alignment.topCenter, children: [
-      Padding(
+    final sub = (subtitle ?? '').trim();
+    final body = SizedBox(
+      height: phoneHeight,
+      child: Padding(
         padding: EdgeInsets.only(top: S.s8),
-        child: StageHeader(
-          members: members,
-          title: title,
-          subtitle: subtitle,
-          subtitleDot: subtitleDot,
-          onTap: onTap,
-          below: below,
-        ),
+        child: Stack(alignment: Alignment.topCenter, children: [
+          // One quiet header: name, then one meta line with the provider mark.
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 64),
+            child: Semantics(
+              button: onTap != null,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onTap,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: 4),
+                    Text(title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(17, weight: W.label, color: AppColors.fg1)),
+                    if (sub.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (subtitleProvider != null &&
+                                  providerLogoAsset(subtitleProvider) !=
+                                      null) ...[
+                                ProviderLogo(subtitleProvider,
+                                    size: 12, color: AppColors.fg2),
+                                const SizedBox(width: 5),
+                              ],
+                              Flexible(
+                                child: Text(sub,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style:
+                                        sans(13, color: AppColors.fg2)),
+                              ),
+                            ]),
+                      ),
+                    if (below != null) ...[const SizedBox(height: 6), below!],
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (onBack != null)
+            Positioned(
+              left: M.gutter,
+              top: 0,
+              child: RoundBtn(
+                  icon: 'chevron-left',
+                  tooltip: 'Back',
+                  size: 44,
+                  iconSize: 20,
+                  onTap: onBack!),
+            ),
+          if (trailing != null)
+            Positioned(right: M.gutter, top: 0, child: trailing!),
+        ]),
       ),
-      if (onBack != null)
-        Positioned(
-          left: M.gutter,
-          top: S.s8,
-          child: RoundBtn(
-              icon: 'chevron-left',
-              tooltip: 'Back',
-              size: 40,
-              iconSize: 20,
-              onTap: onBack!),
-        ),
-      if (trailing != null)
-        Positioned(right: M.gutter, top: S.s8, child: trailing!),
-    ]);
+    );
     return framed ? GlassTopFrame(child: body) : body;
   }
 

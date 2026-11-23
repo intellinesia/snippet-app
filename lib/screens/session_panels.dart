@@ -390,11 +390,11 @@ class _DeskLanesState extends State<_DeskLanes> {
     final (word, fg, bg) = running
         ? (
             elapsed.isEmpty ? 'Running' : elapsed,
-            AppColors.run,
-            AppColors.runBg
+            AppColors.fg2,
+            AppColors.surface2
           )
         : failed
-            ? ('Failed', AppColors.danger, AppColors.dangerBg)
+            ? ('Failed', AppColors.fg1, AppColors.surface2)
             : stopped
                 ? (
                     l.status == 'paused' ? 'Paused' : 'Cancelled',

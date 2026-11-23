@@ -1,3 +1,4 @@
+import 'phone_agent_page.dart';
 import 'agent_profile_panel.dart' show showAgentProfileSettings;
 import 'dart:async';
 
@@ -557,12 +558,15 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
               key: ValueKey('agent-page-${agent.id}'),
               child: Padding(
                 padding: EdgeInsets.only(bottom: _scrollBottomPad),
-                child: CoordinationAgentDetail(
-                  key: const ValueKey('agent-detail'),
+child: PhoneAgentPage(
                   agent: agent,
                   client: client,
-                  embedded: false,
+                  sessions: _sessions ?? const <SessionInfo>[],
                   onClose: () => widget.onAgent(null),
+                  onOpenSession: (s) =>
+                      widget.onOpenSession(s.id, s.title, s.profile),
+                  onAllSessions: () => widget.onMobileHome(MobileHome.chats),
+                  onDecide: _decideHero,
                 ),
               ),
             )
@@ -681,13 +685,16 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           if (agent != null)
             Padding(
               padding: EdgeInsets.only(bottom: _scrollBottomPad),
-              child: CoordinationAgentDetail(
-                key: const ValueKey('agent-detail'),
-                agent: agent,
-                client: client,
-                embedded: false,
-                onClose: () => widget.onAgent(null),
-              ),
+child: PhoneAgentPage(
+                  agent: agent,
+                  client: client,
+                  sessions: _sessions ?? const <SessionInfo>[],
+                  onClose: () => widget.onAgent(null),
+                  onOpenSession: (s) =>
+                      widget.onOpenSession(s.id, s.title, s.profile),
+                  onAllSessions: () => widget.onMobileHome(MobileHome.chats),
+                  onDecide: _decideHero,
+                ),
             ),
         ]);
 
