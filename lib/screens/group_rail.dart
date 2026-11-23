@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
-import '../chat/signal_row.dart' show prettyProfile;
+import '../chat/signal_row.dart' show profileMeta;
 import '../mochi.dart';
 import '../models.dart';
 import '../quiet.dart';
@@ -25,12 +25,18 @@ class GroupRail extends StatefulWidget {
 class _GroupRailState extends State<GroupRail> {
   List<CoordinationAgent> _agents = const [];
   List<SessionInfo> _sessions = const [];
+  Map<String, InferenceProfile> _profiles = const {};
 
   @override
   void initState() {
     super.initState();
     widget.client.coordinationAgents().then((a) {
       if (mounted) setState(() => _agents = a);
+    }).catchError((_) {});
+    widget.client.getConfig().then((c) {
+      if (mounted) {
+        setState(() => _profiles = {for (final p in c.profiles) p.name: p});
+      }
     }).catchError((_) {});
     widget.client.sessions().then((l) {
       if (mounted) setState(() => _sessions = l);
@@ -88,6 +94,7 @@ class _GroupRailState extends State<GroupRail> {
     final needs = (a?.needsYou ?? 0) > 0;
     final working = !needs && (a?.presence?.live ?? false);
     final profile = a?.deskProfile ?? a?.profile;
+    final meta = profileMeta(_profiles, profile);
     final state = needs
         ? 'needs you'
         : working
@@ -110,15 +117,13 @@ class _GroupRailState extends State<GroupRail> {
                   overflow: TextOverflow.ellipsis,
                   style: sans(13, weight: W.label, color: AppColors.fg1)),
               Row(children: [
-                if (profile != null && providerLogoAsset(profile) != null) ...[
-                  ProviderLogo(profile, size: 12, color: AppColors.fg3),
+                if (providerLogoAsset(meta.provider) != null) ...[
+                  ProviderLogo(meta.provider, size: 12, color: AppColors.fg3),
                   const SizedBox(width: 5),
                 ],
                 Flexible(
                   child: Text(
-                      profile == null
-                          ? state
-                          : '${prettyProfile(profile)} · $state',
+                      meta.label.isEmpty ? state : '${meta.label} · $state',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(12, color: AppColors.fg3)),

@@ -102,21 +102,30 @@ class FailedPill extends StatelessWidget {
   Widget build(BuildContext context) => TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Container(
-          constraints: BoxConstraints(minHeight: compact ? 24 : 28),
-          padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 12),
-          decoration: BoxDecoration(
-              color: AppColors.surface3,
-              borderRadius: BorderRadius.circular(compact ? 12 : 14)),
+        // 44pt transparent hit area around the 24/28pt visual.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
           child: Center(
             widthFactor: 1,
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              AppIcon('alert-triangle', size: 14, color: AppColors.fg1),
-              const SizedBox(width: 6),
-              Text('$count failed',
-                  style: sans(compact ? 13 : 14,
-                      weight: W.label, color: AppColors.fg1)),
-            ]),
+            heightFactor: 1,
+            child: Container(
+              constraints: BoxConstraints(minHeight: compact ? 24 : 28),
+              padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 12),
+              decoration: BoxDecoration(
+                  color: AppColors.surface3,
+                  borderRadius: BorderRadius.circular(compact ? 12 : 14)),
+              child: Center(
+                widthFactor: 1,
+                heightFactor: 1,
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  AppIcon('alert-triangle', size: 14, color: AppColors.fg1),
+                  const SizedBox(width: 6),
+                  Text('$count failed',
+                      style: sans(compact ? 13 : 14,
+                          weight: W.label, color: AppColors.fg1)),
+                ]),
+              ),
+            ),
           ),
         ),
       );

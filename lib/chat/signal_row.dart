@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../api.dart' show DaemonClient;
+import '../models.dart' show InferenceProfile;
 import '../envelope.dart';
 import '../platform.dart';
 import '../theme.dart';
@@ -261,6 +262,20 @@ String prettyProvider(String raw) {
     '' => '',
     _ => prettyProfile(raw),
   };
+}
+
+/// Model label (profile name as fallback) and provider key for an agent's
+/// profile, so every surface reads the same.
+({String label, String? provider}) profileMeta(
+    Map<String, InferenceProfile> profiles, String? key) {
+  final k = (key ?? '').trim();
+  if (k.isEmpty) return (label: '', provider: null);
+  final p = profiles[k];
+  final model = (p?.model ?? '').trim();
+  return (
+    label: model.isNotEmpty ? prettyModel(model) : prettyProfile(k),
+    provider: (p?.provider ?? '').isNotEmpty ? p!.provider : k,
+  );
 }
 
 String prettyModel(String raw) {

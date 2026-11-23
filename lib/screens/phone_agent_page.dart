@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../chat/chat_card.dart';
-import '../chat/signal_row.dart' show prettyModel, prettyProfile;
+import '../chat/signal_row.dart' show profileMeta;
 import '../mochi.dart';
 import '../models.dart';
 import '../quiet.dart';
@@ -108,15 +108,12 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
               Text(state, style: sans(14, color: AppColors.fg2)),
               if (profile != null && profile.trim().isNotEmpty) ...[
                 Text(' · ', style: sans(14, color: AppColors.fg3)),
-                if (providerLogoAsset(profile) != null) ...[
-                  ProviderLogo(profile, size: 14, color: AppColors.fg2),
+                if (providerLogoAsset(profileMeta(_profiles, profile).provider) != null) ...[
+                  ProviderLogo(profileMeta(_profiles, profile).provider, size: 14, color: AppColors.fg2),
                   const SizedBox(width: 6),
                 ],
                 Flexible(
-                  child: Text(
-                      (_profiles[profile]?.model ?? '').trim().isNotEmpty
-                          ? prettyModel(_profiles[profile]!.model)
-                          : prettyProfile(profile),
+                  child: Text(profileMeta(_profiles, profile).label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(14, color: AppColors.fg2)),
