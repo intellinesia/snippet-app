@@ -599,20 +599,35 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           final shortMsg = firstLine.length > 90
               ? '${firstLine.substring(0, 89)}\u2026'
               : firstLine;
+          // Only the latest stop still needs the user; older ones were got past.
+          final latest = !events
+              .skip(idx + 1)
+              .any((x) => const {'user_input', 'assistant_text', 'tool_call'}
+                  .contains(x['kind']));
+          final who = (_meAgentName ?? '').trim().isEmpty
+              ? 'The agent'
+              : _meAgentName!;
           addEvent(
               key,
               Builder(
-                builder: (ctx) => SignalRow(
-                  icon: 'alert-triangle',
-                  tone: SignalTone.danger,
-                  text: '${shortMsg.isEmpty ? 'Model error' : shortMsg}'
-                      '${count > 1 ? ' \u00d7$count' : ''}',
-                  time: formatEventTime(e['at'] ?? e['created_at']),
-                  action: 'Details',
-                  actionTone: SignalTone.danger,
-                  onAction: () =>
-                      showSignalDetails(ctx, title: 'Model error', body: msg),
-                ),
+                builder: (ctx) => latest
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: QuietNeedsYou(
+                          title: '$who stopped and needs you',
+                          detail:
+                              '${shortMsg.isEmpty ? 'Model error' : shortMsg}'
+                              '${count > 1 ? ' \u00d7$count' : ''}',
+                          action: 'Retry',
+                          onAction: _retryAfterError,
+                          secondary: 'Details',
+                          onSecondary: () => showSignalDetails(ctx,
+                              title: 'Model error', body: msg),
+                        ),
+                      )
+                    : QuietRecoveredLine(
+                        summary: 'Model error, then carried on',
+                        detail: msg),
               ));
         case 'profile_switched':
           endTools(key);

@@ -1090,14 +1090,17 @@ class _ImageViewerState extends State<_ImageViewer>
                 : (d) {
                     final v = d.primaryVelocity ?? 0;
                     final dir = _dragY == 0 ? v.sign : _dragY.sign;
-                    if (kMobile && !_full && _dragY <= 0 && v < -300) {
+                    if (kMobile &&
+                        !_full &&
+                        _dragY <= 0 &&
+                        (v < -300 || _dragY < -60)) {
                       setState(() => _full = true);
                       springTo(_dragC, 0, 0);
                     } else if (kMobile &&
                         _full &&
                         _dragY >= 0 &&
-                        v > 300 &&
-                        _dragY < 120) {
+                        (v > 300 || _dragY > 60) &&
+                        _dragY < 160) {
                       setState(() => _full = false);
                       springTo(_dragC, 0, 0);
                     } else if (dragDismisses(
@@ -1192,6 +1195,20 @@ class _ImageViewerState extends State<_ImageViewer>
           ),
         ),
       ),
+      if (kMobile && !_full)
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: many ? 80 : 24,
+          child: IgnorePointer(
+            child: Text(
+                many
+                    ? 'Swipe for the next item; drag up for full screen.'
+                    : 'Drag up for full screen.',
+                textAlign: TextAlign.center,
+                style: sans(13, color: Colors.white60)),
+          ),
+        ),
       if (many)
         Positioned(
           left: 0,

@@ -506,6 +506,19 @@ extension _SessionScreenComposerExt on _SessionScreenState {
           selected: selected);
 
   /// Pick (or clear) the direct-message recipient for the composer.
+  /// Retry after a stop: ask the agent to carry on from where it left off.
+  void _retryAfterError() {
+    if (_state?.status == 'running') return;
+    const msg = 'Retry: carry on from where you left off.';
+    final nonce = _nextNonce();
+    _setState(() {
+      _send({'kind': 'user_message', 'value': msg, 'nonce': nonce},
+          tracked: true);
+      _trackPending(msg, nonce);
+    });
+    _armAckWatchdog();
+  }
+
   Future<void> _pickRecipient(BuildContext anchor) async {
     final current = _recipientAgentId;
     final picked = await pickAgentId(
@@ -1136,6 +1149,10 @@ extension _SessionScreenComposerExt on _SessionScreenState {
             onTap: () => run(_pickFiles)),
         ComposerTrayRow(
             icon: 'camera', label: 'Camera', onTap: () => run(_pickCamera)),
+        ComposerTrayRow(
+            icon: 'folder',
+            label: 'Attach a session file',
+            onTap: () => run(_attachSessionFile)),
         ComposerTrayRow(
             icon: 'users',
             label: 'Mention an agent',

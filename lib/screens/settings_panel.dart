@@ -398,6 +398,7 @@ class SettingsPanelState extends State<SettingsPanel> {
     modelsRevision.removeListener(_onModelsChanged);
     _addMachinePaste.dispose();
     _renameController.dispose();
+    _settingsSearchCtl.dispose();
     super.dispose();
   }
 
@@ -623,15 +624,178 @@ class SettingsPanelState extends State<SettingsPanel> {
     String label,
     String icon, {
     String? value,
+    String? sub,
     SettingsPage? page,
   }) =>
       SettingsRow(
         label: label,
         icon: icon,
         value: value,
+        sub: sub,
         chevron: true,
         onTap: page == null ? null : () => widget.onSection?.call(page),
       );
+
+  String _settingsQuery = '';
+  final TextEditingController _settingsSearchCtl = TextEditingController();
+
+  Widget _settingsSearch() => Padding(
+        padding: EdgeInsets.only(bottom: S.s12),
+        child: Container(
+          height: 44,
+          padding: EdgeInsets.symmetric(horizontal: S.s12),
+          decoration: BoxDecoration(
+              color: AppColors.surface1,
+              borderRadius: BorderRadius.circular(R.of(14))),
+          child: Row(children: [
+            AppIcon('search', size: 18, color: AppColors.fg3),
+            SizedBox(width: S.s8),
+            Expanded(
+              child: TextField(
+                controller: _settingsSearchCtl,
+                onChanged: (v) => setState(() => _settingsQuery = v),
+                style: sans(15, color: AppColors.fg1),
+                cursorColor: AppColors.fg1,
+                decoration: InputDecoration(
+                  isCollapsed: true,
+                  border: InputBorder.none,
+                  hintText: 'Search settings',
+                  hintStyle: sans(15, color: AppColors.fg3),
+                ),
+              ),
+            ),
+          ]),
+        ),
+      );
+
+  /// Every page row on the phone home: group, label, icon, page, sub-line.
+  List<(String, String, String, SettingsPage, String?)> _settingsEntries() => [
+        (
+          'Models',
+          'Inference profiles',
+          'cpu',
+          SettingsPage.models,
+          _profileCount == null
+              ? 'Models and their keys'
+              : '$_profileCount profiles'
+        ),
+        (
+          'Models',
+          'Routing',
+          'route',
+          SettingsPage.routing,
+          'Which model leads and which runs lanes'
+        ),
+        (
+          'Models',
+          'Accounts',
+          'users',
+          SettingsPage.accounts,
+          'Used in order, with failover'
+        ),
+        (
+          'Models',
+          'Usage',
+          'analytics',
+          SettingsPage.usage,
+          _usageTokens == null
+              ? 'Tokens and limits'
+              : '${fmtSi(_usageTokens!)} tokens this week'
+        ),
+        (
+          'Agents',
+          'Memory',
+          'book-marked',
+          SettingsPage.memory,
+          'What agents remember'
+        ),
+        (
+          'Agents',
+          'Wakes',
+          'repeat',
+          SettingsPage.wakes,
+          'Scheduled and recurring runs'
+        ),
+        (
+          'Agents',
+          'Vault',
+          'lock',
+          SettingsPage.vault,
+          _vaultCount == null
+              ? 'Secrets agents may use'
+              : '$_vaultCount secrets'
+        ),
+        (
+          'Agents',
+          'Web search',
+          'globe',
+          SettingsPage.webSearch,
+          'Provider and key'
+        ),
+        (
+          'Agents',
+          'Voice',
+          'mic',
+          SettingsPage.voice,
+          _ambientOn == null
+              ? 'Talk to agents'
+              : _ambientOn!
+                  ? 'Listening'
+                  : 'Off'
+        ),
+        (
+          'This device',
+          'Theme and accent',
+          'sliders',
+          SettingsPage.appearance,
+          'Theme, accent and fonts'
+        ),
+      ];
+
+  List<Widget> _settingsMatches() {
+    final q = _settingsQuery.trim().toLowerCase();
+    final hits = [
+      for (final e in _settingsEntries())
+        if (e.$2.toLowerCase().contains(q) ||
+            (e.$5 ?? '').toLowerCase().contains(q) ||
+            e.$1.toLowerCase().contains(q))
+          e
+    ];
+    if (hits.isEmpty) {
+      return [
+        Padding(
+          padding: EdgeInsets.all(S.s32),
+          child: Center(
+              child: Text('Nothing matches "$_settingsQuery"',
+                  style: sans(14, color: AppColors.fg3))),
+        )
+      ];
+    }
+    return [
+      SettingsGroup(children: [
+        for (final e in hits) _settingsRow(e.$2, e.$3, page: e.$4, sub: e.$5),
+      ]),
+    ];
+  }
+
+  List<Widget> _mobileModelAgentGroups() {
+    if (_settingsQuery.trim().isNotEmpty) return const [];
+    List<Widget> rows(String group) => [
+          for (final e in _settingsEntries())
+            if (e.$1 == group) _settingsRow(e.$2, e.$3, page: e.$4, sub: e.$5),
+        ];
+    return [
+      SettingsGroup(header: 'Models', children: rows('Models')),
+      SettingsGroup(
+        header: 'Agents',
+        footer: 'Approvals apply to every session on this machine.',
+        children: [
+          ApprovalsRow(client: widget.client),
+          ...rows('Agents'),
+        ],
+      ),
+    ];
+  }
 
   /// Phone settings HOME, in design language v7 grouped rows.
   Widget _mobileSettingsHome() {
@@ -642,78 +806,55 @@ class SettingsPanelState extends State<SettingsPanel> {
     return ListView(
       padding: EdgeInsets.fromLTRB(Grouped.gutter, S.s8, Grouped.gutter, S.s40),
       children: [
-        SettingsGroup(children: [
-          SettingsRow(
-            label: name.isEmpty ? 'No machine yet' : name,
-            sub: active == null ? 'Add one to begin' : null,
-            subWidget: active == null
-                ? null
-                : Text.rich(
-                    TextSpan(children: [
-                      TextSpan(
-                          text: 'Connected',
-                          style: Grouped.subStyle(AppColors.ok)),
-                      if (live != null) TextSpan(text: ' · $live live'),
-                    ]),
-                    style: Grouped.subStyle(),
-                  ),
-            leading: _SettingsTile(null,
-                iconData: PhIcons.monitor, ok: active != null),
-            chevron: true,
-            onTap: () => widget.onSection?.call(SettingsPage.general),
-          ),
-        ]),
-        SettingsGroup(header: 'Models', children: [
-          _settingsRow('Inference profiles', 'cpu',
-              page: SettingsPage.models, value: _profileCount?.toString()),
-          _settingsRow('Routing', 'route', page: SettingsPage.routing),
-          _settingsRow('Accounts', 'users', page: SettingsPage.accounts),
-          _settingsRow('Usage', 'analytics',
-              page: SettingsPage.usage,
-              value: _usageTokens == null
+        _settingsSearch(),
+        if (_settingsQuery.trim().isNotEmpty)
+          ..._settingsMatches()
+        else
+          SettingsGroup(children: [
+            SettingsRow(
+              label: name.isEmpty ? 'No machine yet' : name,
+              sub: active == null ? 'Add one to begin' : null,
+              subWidget: active == null
                   ? null
-                  : '${fmtSi(_usageTokens!)} this week'),
-        ]),
-        SettingsGroup(
-          header: 'Agents',
-          footer: 'Approvals apply to every session on this machine.',
-          children: [
-            ApprovalsRow(client: widget.client),
-            _settingsRow('Memory', 'book-marked', page: SettingsPage.memory),
-            _settingsRow('Wakes', 'repeat', page: SettingsPage.wakes),
-            _settingsRow('Vault', 'lock',
-                page: SettingsPage.vault, value: _vaultCount?.toString()),
-            _settingsRow('Web search', 'globe', page: SettingsPage.webSearch),
-            _settingsRow('Voice', 'mic',
-                page: SettingsPage.voice,
-                value: _ambientOn == null
-                    ? null
-                    : _ambientOn!
-                        ? 'Listening'
-                        : 'Off'),
-          ],
-        ),
-        ListenableBuilder(
-          listenable: ThemeManager.instance,
-          builder: (context, _) {
-            final accent = tm.customAccent;
-            return SettingsGroup(
-              header: 'This device',
-              footer: 'Theme, accent and fonts are saved on this device.',
-              children: [
-                _settingsRow(
-                  'Theme and accent',
-                  'sliders',
-                  page: SettingsPage.appearance,
-                  value: accent == null
-                      ? tm.baseTheme.label
-                      : '${tm.baseTheme.label} · ${accent.name}',
-                ),
-                if (kCanNotify) _notifRow(),
-              ],
-            );
-          },
-        ),
+                  : Text.rich(
+                      TextSpan(children: [
+                        TextSpan(
+                            text: 'Connected',
+                            style: Grouped.subStyle(AppColors.ok)),
+                        if (live != null) TextSpan(text: ' · $live live'),
+                      ]),
+                      style: Grouped.subStyle(),
+                    ),
+              leading: _SettingsTile(null,
+                  iconData: PhIcons.monitor, ok: active != null),
+              chevron: true,
+              onTap: () => widget.onSection?.call(SettingsPage.general),
+            ),
+          ]),
+        ..._mobileModelAgentGroups(),
+        if (_settingsQuery.trim().isEmpty)
+          ListenableBuilder(
+            listenable: ThemeManager.instance,
+            builder: (context, _) {
+              final accent = tm.customAccent;
+              return SettingsGroup(
+                header: 'This device',
+                footer: 'Theme, accent and fonts are saved on this device.',
+                children: [
+                  _settingsRow(
+                    'Theme and accent',
+                    'sliders',
+                    page: SettingsPage.appearance,
+                    sub: 'Theme, accent and fonts',
+                    value: accent == null
+                        ? tm.baseTheme.label
+                        : '${tm.baseTheme.label} · ${accent.name}',
+                  ),
+                  if (kCanNotify) _notifRow(),
+                ],
+              );
+            },
+          ),
       ],
     );
   }
@@ -1104,8 +1245,7 @@ class SettingsPanelState extends State<SettingsPanel> {
         builder: (anchor) => _V5SettingsRow(
           label: i.label,
           subtitle: hostOf(i.url),
-          leading:
-              _SettingsTile(null, iconData: PhIcons.monitor, ok: isActive),
+          leading: _SettingsTile(null, iconData: PhIcons.monitor, ok: isActive),
           value: isActive ? 'Active' : (canConnect ? 'Connect' : null),
           trailing: const SizedBox.shrink(),
           onTap: () => _showMachineMenu(

@@ -165,7 +165,15 @@ class _QuietRecoveredLineState extends State<QuietRecoveredLine> {
 /// one sentence, and the one action that gets it going again.
 class QuietNeedsYou extends StatelessWidget {
   const QuietNeedsYou(
-      {super.key, required this.title, this.detail, this.action, this.onAction});
+      {super.key,
+      required this.title,
+      this.detail,
+      this.action,
+      this.onAction,
+      this.secondary,
+      this.onSecondary});
+  final String? secondary;
+  final VoidCallback? onSecondary;
   final String title;
   final String? detail;
   final String? action;
@@ -199,10 +207,19 @@ class QuietNeedsYou extends StatelessWidget {
                 if (action != null)
                   Padding(
                     padding: EdgeInsets.only(top: S.s12),
-                    child: Btn(action!,
-                        small: true,
-                        variant: BtnVariant.secondary,
-                        onTap: onAction),
+                    child: Row(children: [
+                      Btn(action!,
+                          small: true,
+                          variant: BtnVariant.secondary,
+                          onTap: onAction),
+                      if (secondary != null) ...[
+                        SizedBox(width: S.s8),
+                        Btn(secondary!,
+                            small: true,
+                            variant: BtnVariant.ghost,
+                            onTap: onSecondary),
+                      ],
+                    ]),
                   ),
               ],
             ),

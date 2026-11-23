@@ -1,4 +1,6 @@
 import '../phosphor_icons.dart';
+import '../quiet.dart' show QuietRow, QuietNeedsYou, QuietRecoveredLine;
+import '../composer/composer_attachments.dart' show ComposerAttachmentController;
 import '../chat/ledger_line.dart' show LedgerLiveScope;
 import '../chat/system_notice.dart';
 import '../diagnostics.dart';

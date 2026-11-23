@@ -54,6 +54,36 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
     );
   }
 
+  /// A file already in this session's workspace: attached by path, no upload.
+  Future<void> _attachSessionFile() async {
+    final ws = (_state?.workspace ?? '').trim();
+    if (ws.isEmpty) {
+      _toast('This session has no workspace');
+      return;
+    }
+    List<String> all;
+    try {
+      all = await widget.client.fsFiles(ws);
+    } catch (e) {
+      if (mounted) _toast('$e');
+      return;
+    }
+    if (!mounted) return;
+    final picked = await showAppSheet<String>(context,
+        title: 'Attach a session file',
+        maxHeight: 640,
+        child: _SessionFilePicker(root: ws, files: all));
+    if (picked == null) return;
+    final name = picked.split('/').last;
+    final a = _Attachment(
+        name: name,
+        isImage: _isImageName(name),
+        isAudio: isAudioAttachmentPath(name))
+      ..remotePath = picked.startsWith('/') ? picked : '$ws/$picked'
+      ..uploading = false;
+    _setState(() => _attachments.add(a));
+  }
+
   Future<void> _pickFiles() async {
     List<PickedLocalFile> files;
     try {
@@ -245,3 +275,73 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
 
 /// The newest samples, right-aligned so the wave scrolls in as you speak; in
 /// review the part already played is drawn in the accent.
+
+class _SessionFilePicker extends StatefulWidget {
+  const _SessionFilePicker({required this.root, required this.files});
+  final String root;
+  final List<String> files;
+
+  @override
+  State<_SessionFilePicker> createState() => _SessionFilePickerState();
+}
+
+class _SessionFilePickerState extends State<_SessionFilePicker> {
+  final _ctl = TextEditingController();
+  String _q = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _ctl.addListener(() => setState(() => _q = _ctl.text));
+  }
+
+  @override
+  void dispose() {
+    _ctl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final q = _q.trim().toLowerCase();
+    final shown = [
+      for (final f in widget.files)
+        if (q.isEmpty || f.toLowerCase().contains(q)) f
+    ].take(60).toList();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppField(controller: _ctl, hint: 'Search files', icon: 'search'),
+        SizedBox(height: S.s8),
+        Flexible(
+          child: shown.isEmpty
+              ? Padding(
+                  padding: EdgeInsets.all(S.s24),
+                  child: Center(
+                      child: Text('No files match',
+                          style: sans(14, color: AppColors.fg3))))
+              : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: shown.length,
+                  itemBuilder: (_, i) {
+                    final f = shown[i];
+                    final name = f.split('/').last;
+                    final dir = f.contains('/')
+                        ? f.substring(0, f.lastIndexOf('/'))
+                        : '';
+                    return QuietRow(
+                      title: name,
+                      sub: dir.isEmpty ? null : dir,
+                      leading: AppIcon(
+                          ComposerAttachmentController.isImageName(name) ? 'image' : 'file',
+                          size: 20,
+                          color: AppColors.fg2),
+                      onTap: () => Navigator.pop(context, f),
+                    );
+                  }),
+        ),
+      ],
+    );
+  }
+}
