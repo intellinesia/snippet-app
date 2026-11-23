@@ -335,14 +335,14 @@ class GroupRow extends StatelessWidget {
           : (backdrop) => Stack(clipBehavior: Clip.none, children: [
                 Positioned(
                     left: 0,
-                    top: 1,
+                    top: 0,
                     child: LitTile.agent(shown[0],
-                        size: rowAvatarSize(32) - 1)),
+                        size: rowAvatarSize(34))),
                 Positioned(
-                    left: 9,
-                    top: 1,
+                    left: 10,
+                    top: 0,
                     child: LitTile.agent(shown[1],
-                        size: rowAvatarSize(32) - 1, ring: backdrop)),
+                        size: rowAvatarSize(34), ring: backdrop)),
                 if (agents.length > 2)
                   Positioned(
                     right: -8,
@@ -629,8 +629,8 @@ class _AgentPickRow extends StatelessWidget {
             padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s8),
             child: Row(children: [
               kMobile
-                  ? AgentMochi(agent.id, size: 28)
-                  : LitTile.agent(agent.id, size: 22),
+                  ? AgentMochi(agent.id, size: rowAvatarSize(56, max: 40))
+                  : LitTile.agent(agent.id, size: rowAvatarSize(44, max: 28)),
               SizedBox(width: S.s12),
               Expanded(
                 child: Column(
