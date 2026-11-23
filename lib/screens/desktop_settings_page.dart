@@ -90,7 +90,7 @@ const List<(String, List<_NavEntry>)> _groups = [
       (
         page: SettingsPage.usage,
         label: 'Usage',
-        icon: 'gauge',
+        icon: 'analytics',
         iconData: null,
       ),
     ],

@@ -142,7 +142,6 @@ abstract final class PhIcons {
   static const IconData slidersHorizontal = IconData(0xe434, fontFamily: 'Phosphor');
   static const IconData sparkle = IconData(0xe6a2, fontFamily: 'Phosphor');
   static const IconData speakerHigh = IconData(0xe44a, fontFamily: 'Phosphor');
-  static const IconData speedometer = IconData(0xee74, fontFamily: 'Phosphor');
   static const IconData squaresFour = IconData(0xe464, fontFamily: 'Phosphor');
   static const IconData stack = IconData(0xe466, fontFamily: 'Phosphor');
   static const IconData star = IconData(0xe46a, fontFamily: 'Phosphor');
@@ -310,7 +309,6 @@ abstract final class PhIconsFill {
   static const IconData slidersHorizontal = IconData(0xe434, fontFamily: 'PhosphorFill');
   static const IconData sparkle = IconData(0xe6a2, fontFamily: 'PhosphorFill');
   static const IconData speakerHigh = IconData(0xe44a, fontFamily: 'PhosphorFill');
-  static const IconData speedometer = IconData(0xee74, fontFamily: 'PhosphorFill');
   static const IconData squaresFour = IconData(0xe464, fontFamily: 'PhosphorFill');
   static const IconData stack = IconData(0xe466, fontFamily: 'PhosphorFill');
   static const IconData star = IconData(0xe46a, fontFamily: 'PhosphorFill');

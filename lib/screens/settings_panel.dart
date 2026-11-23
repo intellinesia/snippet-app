@@ -363,7 +363,7 @@ class SettingsPanelState extends State<SettingsPanel> {
     (SettingsPage.models, 'sparkles', 'Profiles'),
     (SettingsPage.routing, 'route', 'Routing'),
     (SettingsPage.accounts, 'users', 'Accounts'),
-    (SettingsPage.usage, 'gauge', 'Usage'),
+    (SettingsPage.usage, 'analytics', 'Usage'),
     (SettingsPage.memory, 'book-marked', 'Memory'),
     (SettingsPage.wakes, 'repeat', 'Wakes'),
     (SettingsPage.vault, 'lock', 'Vault'),
@@ -668,7 +668,7 @@ class SettingsPanelState extends State<SettingsPanel> {
               page: SettingsPage.models, value: _profileCount?.toString()),
           _settingsRow('Routing', 'route', page: SettingsPage.routing),
           _settingsRow('Accounts', 'users', page: SettingsPage.accounts),
-          _settingsRow('Usage', 'gauge',
+          _settingsRow('Usage', 'analytics',
               page: SettingsPage.usage,
               value: _usageTokens == null
                   ? null

@@ -1158,7 +1158,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
                   )),
                   _footerFit(Builder(
                     builder: (ctx) => _FooterBtn(
-                        icon: 'speedometer',
+                        icon: 'analytics',
                         tooltip: 'Usage',
                         onTap: () => showUsagePopover(ctx, _client!)),
                   )),
