@@ -313,6 +313,10 @@ class _DesktopShellState extends State<DesktopShell>
   /// through `_ShellTab.groupSessionKey`.
   final Map<_Pane, String> _groupRootKey = {};
 
+  /// When each session tab was last in view here; outlives list reloads so a
+  /// just-viewed tab does not show the unread dot.
+  final Map<String, int> _seenLocal = {};
+
   /// A file opened from a side-pane readout goes to the main pane, next to the
   /// session, not over the readout it was opened from.
   void _openFileFromRightPane(String path, String name) {
@@ -1886,8 +1890,21 @@ class _DesktopShellState extends State<DesktopShell>
       WidgetsBinding.instance.addPostFrameCallback(
           (_) => openAgentTab.value = _activeTab?.readout?.agent?.id);
     }
+    final seenId = _activeTab?.sessionId;
+    if (seenId != null && !(_activeTab?.isLead ?? false)) {
+      _seenLocal[seenId] = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    }
     final reqId = _activeTab?.readout?.request?.id ?? '';
     final openGroup = reqId.startsWith('group:') ? reqId.substring(6) : null;
+    final place = _activeTab?.isHome == true
+        ? 'home'
+        : reqId == 'all-agents'
+            ? 'agents'
+            : '';
+    if (activeShellPlace.value != place) {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => activeShellPlace.value = place);
+    }
     if (openGroupTab.value != openGroup) {
       WidgetsBinding.instance
           .addPostFrameCallback((_) => openGroupTab.value = openGroup);

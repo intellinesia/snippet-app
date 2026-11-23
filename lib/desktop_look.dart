@@ -28,7 +28,7 @@ class DesktopLook extends ChangeNotifier {
   static const none = 'none';
   static const image = 'image';
 
-  bool _tactile = true;
+  bool _tactile = false;
   String _wallpaper = none;
   String? _imagePath;
   double _strength = 0.7;
@@ -49,7 +49,7 @@ class DesktopLook extends ChangeNotifier {
     if (kMobile || _loaded) return;
     _loaded = true;
     final p = await SharedPreferences.getInstance();
-    _tactile = p.getBool(_tactileKey) ?? true;
+    _tactile = p.getBool(_tactileKey) ?? false;
     _wallpaper = p.getString(_wallKey) ?? none;
     final img = p.getString(_wallImageKey);
     _imagePath = img != null && File(img).existsSync() ? img : null;

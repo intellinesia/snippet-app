@@ -14,6 +14,7 @@ import 'agent_view_mode.dart' show openAgentTab, openGroupTab;
 import '../theme.dart';
 import '../widgets.dart';
 import 'agent_card.dart';
+import 'session_list_row.dart' show sessionNeedsYou;
 import 'create_agent_form.dart';
 import '../mochi.dart';
 import 'group_messaging.dart';
@@ -527,7 +528,8 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
           if (bp == null) return -1;
           return bp.compareTo(ap);
         }
-        if (a.at != b.at) {
+        // Desktop keeps a stable order so a row never moves under the pointer.
+        if (kMobile && a.at != b.at) {
           if (a.at == null) return 1;
           if (b.at == null) return -1;
           return b.at!.compareTo(a.at!);
@@ -705,7 +707,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
               ));
             }
           }
-          if (mcCard != null) {
+          if (mcCard != null && kMobile) {
             ranked.add((
               row: mcCard,
               at: latest(_mcLast?.at, seen(mc?.lastActive)),
@@ -721,12 +723,27 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
               if (bp == null) return -1;
               return bp.compareTo(ap);
             }
-            if (a.at == b.at) return a.i.compareTo(b.i);
+            if (!kMobile || a.at == b.at) return a.i.compareTo(b.i);
             if (a.at == null) return 1;
             if (b.at == null) return -1;
             return b.at!.compareTo(a.at!);
           });
+          final leadRow = !kMobile && mc != null && onOpenMc != null && q.isEmpty
+              ? AgentRowShell(
+                  key: const ValueKey('agents-lead-row'),
+                  avatar: AgentMochi('lead', size: 28),
+                  name: 'Lead',
+                  preview: '',
+                  onTap: onOpenMc,
+                  stateIcon: sessionNeedsYou(mc)
+                      ? const QuietHand(size: 14)
+                      : mc.running
+                          ? Spinner(size: 12, color: AppColors.fg2)
+                          : null,
+                )
+              : null;
           final agentRows = [
+            if (leadRow != null) leadRow,
             for (final r in ranked) ...[
               r.row,
               if (r.nest != null) r.nest!,

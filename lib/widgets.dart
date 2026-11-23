@@ -12,7 +12,8 @@ import 'package:flutter/services.dart';
 
 import 'platform.dart';
 import 'shell_panel.dart' show openSessionInTab;
-import 'package:flutter/gestures.dart' show kTouchSlop, kMiddleMouseButton, PointerDeviceKind;
+import 'package:flutter/gestures.dart'
+    show kTouchSlop, kMiddleMouseButton, PointerDeviceKind;
 import 'gesture_physics.dart';
 import 'api.dart';
 import 'chat_links.dart';
@@ -1231,6 +1232,7 @@ bool middleClickOpen = false;
 
 class _HoverSurfaceState extends State<HoverSurface> {
   bool _hover = false;
+  bool _focus = false;
 
   @override
   Widget build(BuildContext context) {
@@ -1241,57 +1243,82 @@ class _HoverSurfaceState extends State<HoverSurface> {
             ? (widget.hoverColor ?? AppColors.surface1)
             : rest;
     final r = BorderRadius.circular(widget.radius);
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: Listener(
-        onPointerDown: widget.onTap == null
-            ? null
-            : (e) {
-                if (e.kind == PointerDeviceKind.mouse &&
-                    e.buttons & kMiddleMouseButton != 0) {
-                  middleClickOpen = true;
-                  widget.onTap!();
-                  middleClickOpen = false;
-                }
-              },
-        child: Pressable(
-          kind: PressKind.row,
-          radius: widget.radius,
-          lift: widget.onLongPress != null,
-          enabled: widget.onTap != null || widget.onLongPress != null,
-          child: Tactile(
-            radius: r,
-            enabled: widget.selected,
-            child: AnimatedContainer(
-              duration: reduceMotion(context) ? Duration.zero : Motion.quick,
-              curve: Curves.easeOut,
-              decoration: BoxDecoration(color: color, borderRadius: r),
-              child: Material(
-                type: MaterialType.transparency,
-                child: InkWell(
-                  borderRadius: r,
-                  hoverColor: Colors.transparent,
-                  onTap: widget.onTap == null
-                      ? null
-                      : () {
-                          tapHaptic();
-                          widget.onTap!();
-                        },
-                  onLongPress: widget.onLongPress == null
-                      ? null
-                      : () {
-                          holdHaptic();
-                          widget.onLongPress!();
-                        },
-                  onSecondaryTapDown: widget.onSecondaryTapDown,
-                  child: widget.child,
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (v) => setState(() => _focus = v &&
+          FocusManager.instance.highlightMode ==
+              FocusHighlightMode.traditional),
+      child: Stack(fit: StackFit.passthrough, clipBehavior: Clip.none, children: [
+        MouseRegion(
+          onEnter: (_) => setState(() => _hover = true),
+          onExit: (_) => setState(() => _hover = false),
+          child: Listener(
+            onPointerDown: widget.onTap == null
+                ? null
+                : (e) {
+                    if (e.kind == PointerDeviceKind.mouse &&
+                        e.buttons & kMiddleMouseButton != 0) {
+                      middleClickOpen = true;
+                      widget.onTap!();
+                      middleClickOpen = false;
+                    }
+                  },
+            child: Pressable(
+              kind: PressKind.row,
+              radius: widget.radius,
+              lift: widget.onLongPress != null,
+              enabled: widget.onTap != null || widget.onLongPress != null,
+              child: Tactile(
+                radius: r,
+                enabled: widget.selected,
+                child: AnimatedContainer(
+                  duration:
+                      reduceMotion(context) ? Duration.zero : Motion.quick,
+                  curve: Curves.easeOut,
+                  decoration: BoxDecoration(color: color, borderRadius: r),
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: InkWell(
+                      borderRadius: r,
+                      hoverColor: Colors.transparent,
+                      onTap: widget.onTap == null
+                          ? null
+                          : () {
+                              tapHaptic();
+                              widget.onTap!();
+                            },
+                      onLongPress: widget.onLongPress == null
+                          ? null
+                          : () {
+                              holdHaptic();
+                              widget.onLongPress!();
+                            },
+                      onSecondaryTapDown: widget.onSecondaryTapDown,
+                      child: widget.child,
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
         ),
-      ),
+        if (_focus)
+          Positioned(
+            left: -4,
+            top: -4,
+            right: -4,
+            bottom: -4,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(widget.radius + 2),
+                  border: Border.all(color: AppColors.fg1, width: 2),
+                ),
+              ),
+            ),
+          ),
+      ]),
     );
   }
 }

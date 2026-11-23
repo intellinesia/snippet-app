@@ -28,6 +28,7 @@ import '../motion.dart';
 import '../page_stack.dart';
 import '../mochi.dart';
 import '../chat_scene.dart' show ChatScene;
+import 'agent_view_mode.dart' show activeShellPlace;
 import 'all_agents_view.dart';
 import '../panel.dart' show presentScreen;
 import '../shell_panel.dart' show ShellPanelPurpose;
@@ -1519,12 +1520,15 @@ child: PhoneAgentPage(
     final needs = all.where(sessionNeedsYou).length;
     return Padding(
       padding: EdgeInsets.only(top: S.s4, bottom: S.s4),
-      child: _PlaceRow(
-        label: 'Home',
-        icon: 'home',
-        selected: _place == QuietPlace.home,
-        badge: needs > 0 ? needs : null,
-        onTap: () => _selectPlace(QuietPlace.home),
+      child: ValueListenableBuilder<String>(
+        valueListenable: activeShellPlace,
+        builder: (_, place, __) => _PlaceRow(
+          label: 'Home',
+          icon: 'home',
+          selected: place == 'home',
+          badge: needs > 0 ? needs : null,
+          onTap: () => _selectPlace(QuietPlace.home),
+        ),
       ),
     );
   }
@@ -1533,11 +1537,14 @@ child: PhoneAgentPage(
   Widget _desktopBottom() => Padding(
         padding: EdgeInsets.only(top: S.s8, bottom: S.s4),
         child: Column(children: [
-          _PlaceRow(
-            label: 'All agents and groups',
-            icon: 'users',
-            selected: false,
-            onTap: () => _selectPlace(QuietPlace.agents),
+          ValueListenableBuilder<String>(
+            valueListenable: activeShellPlace,
+            builder: (_, place, __) => _PlaceRow(
+              label: 'All agents and groups',
+              icon: 'users',
+              selected: place == 'agents',
+              onTap: () => _selectPlace(QuietPlace.agents),
+            ),
           ),
           _PlaceRow(
             label: 'All sessions',
@@ -1587,7 +1594,10 @@ child: PhoneAgentPage(
                     if (hasClient) _desktopTop(all),
                     if (hasClient && _place != QuietPlace.sessions) ...[
                       // New agents and sessions come from the top + menu.
-                      const SidebarSectionHeader('Agents'),
+                      SidebarSectionHeader('Agents',
+                          addTooltip: 'New agent or group',
+                          addBuilder: (ctx) => _agentsPanelKey.currentState
+                              ?.openCreateMenu(ctx, above: false)),
                       _agentList(widget.client!,
                           lead: mc,
                           onOpenLead: widget.onOpenLead,

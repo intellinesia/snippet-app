@@ -67,7 +67,7 @@ void main() {
     expect(handleFinder, findsOneWidget);
 
     // Drag right past max (380) and verify clamp + persistence.
-    await tester.drag(handleFinder, const Offset(150, 0));
+    await tester.drag(handleFinder, const Offset(200, 0));
     await tester.pump();
     expect(
       tester.widget<ShellSplitView>(find.byType(ShellSplitView)).sidebarWidth,
@@ -90,7 +90,7 @@ void main() {
       expect(prefs.getDouble(kSidebarWidthPref), kSidebarMinWidth);
     });
 
-    // Double-click resets to default (kSidebarWidth = 304) and persists.
+    // Double-click resets to default (kSidebarWidth = 248) and persists.
     final handleCenter = tester.getCenter(handleFinder);
     await tester.tapAt(handleCenter);
     await tester.pump(const Duration(milliseconds: 50));

@@ -428,7 +428,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
       t.isHome ||
       t.isBoard;
 
-  bool _canCloseTopTab(_ShellTab t) => !t.isLead;
+  bool _canCloseTopTab(_ShellTab t) => !t.isLead && !t.isHome;
 
   void _closeTab(int i, {bool force = false}) {
     if (i < 0 || i >= _tabs.length) return;
@@ -630,6 +630,14 @@ extension _DesktopShellTabsExt on _DesktopShellState {
   }
 
   void _openMainTab(_ShellTab? tab, int existing) {
+    if (_newTabIntent) {
+      // Middle or Cmd/Ctrl click opens beside, without taking focus.
+      if (existing < 0) {
+        _setState(() => _placeTab(tab!..pane = _Pane.left));
+        _persistTabs();
+      }
+      return;
+    }
     _setState(() {
       if (existing >= 0) {
         _activeIndex = existing;
@@ -1057,6 +1065,8 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     final s = _sessions?.where((x) => x.id == id).firstOrNull;
     final done = s?.finishedAt;
     if (s == null || done == null || s.running) return false;
+    final local = _seenLocal[id];
+    if (local != null && local >= done) return false;
     final seen = s.userSeenAt;
     return seen == null || seen < done;
   }

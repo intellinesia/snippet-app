@@ -99,7 +99,7 @@ class _DesktopHomeState extends State<DesktopHome> {
         if (!e.agent.available) e
     ];
     return ColoredBox(
-      color: AppColors.bg,
+      color: AppColors.panelBg,
       child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(

@@ -933,14 +933,12 @@ class AppColors {
       ? currentTheme.bg
       : (_deskBlack
               ? const Color(0xFF09090A)
-              // Quiet: the sidebar is recessed below the raised panel.
-              : currentTheme.name == 'quiet'
-                  ? Color.lerp(currentTheme.bg, const Color(0xFF000000), 0.22)!
-                  : currentTheme.name == 'quiet-light'
-                      ? currentTheme.surface2
-                      : Color.lerp(
-                          currentTheme.bg, currentTheme.surface1, 0.45)!)
-          .withValues(alpha: chromeAlpha ?? (solidChrome ? 1 : 0.92));
+              // Quiet: the sidebar sits on bg, the raised panel on s1.
+              : (currentTheme.name == 'quiet' ||
+                      currentTheme.name == 'quiet-light')
+                  ? currentTheme.bg
+                  : Color.lerp(currentTheme.bg, currentTheme.surface1, 0.45)!)
+          .withValues(alpha: chromeAlpha ?? 1);
 
   /// Desktop window chrome; see-through while a scene plays behind the window.
   static Color get windowChrome => !kMobile && ChatScene.instance.active
@@ -960,7 +958,7 @@ class AppColors {
       _deskBlack ? const Color(0xFF252526) : currentTheme.border;
   static Color get sidebarPanel => kMobile
       ? currentTheme.surface1
-      : currentTheme.surface1.withValues(alpha: chromeAlpha ?? 0.92);
+      : currentTheme.surface1.withValues(alpha: chromeAlpha ?? 1);
   static Color get paneBg =>
       kMobile ? currentTheme.bg : const Color(0x00000000);
   static Color get tint1 => kMobile

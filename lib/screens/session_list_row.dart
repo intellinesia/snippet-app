@@ -683,7 +683,7 @@ class SessionListRow extends StatelessWidget {
                       ? AppColors.fg3
                       : (selected || hover)
                           ? AppColors.fg1
-                          : AppColors.fg3));
+                          : AppColors.fg2));
       final machineName = (machine ?? '').trim();
       final showMeta = renameField == null &&
           (provider != null ||

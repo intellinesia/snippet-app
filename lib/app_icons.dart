@@ -152,6 +152,7 @@ const appIcons = <String, IconData>{
   'panel-right': PhIcons.sidebarSimple,
   'paperclip': PhIcons.paperclip,
   'pause': PhIcons.pause,
+  'moon': IconData(0xe330, fontFamily: 'Phosphor'),
   'pdf': PhIcons.filePdf,
   'pencil': PhIcons.pencilSimple,
   'pencil-line': PhIcons.pencilSimpleLine,

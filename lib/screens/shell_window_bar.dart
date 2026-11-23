@@ -134,48 +134,60 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
         ? AppColors.surface3
         : (_hover ? AppColors.surface2 : Colors.transparent);
 
-    Widget cell(Widget child, {required double width}) => FocusableActionDetector(
+    Widget cell(Widget child, {required double width}) =>
+        FocusableActionDetector(
           onShowFocusHighlight: (v) => setState(() => _focus = v),
           actions: {
-            ActivateIntent: CallbackAction<ActivateIntent>(
-                onInvoke: (_) {
+            ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) {
               widget.onTap();
               return null;
             }),
           },
           child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          onEnter: (_) => setState(() => _hover = true),
-          onExit: (_) => setState(() => _hover = false),
-          child: TapDetector(
-            onTap: widget.onTap,
-            child: Tactile(
-              radius: BorderRadius.circular(R.of(8)),
-              enabled: widget.isActive,
-              child: AnimatedContainer(
-                key: widget.chipKey,
-                duration: Motion.quick,
-                curve: const Cubic(.23, 1, .32, 1),
-                height: 28,
-                width: width,
-                // Focus ring: 2 pt, fg1, drawn over the chip edge.
-                foregroundDecoration: _focus
-                    ? BoxDecoration(
-                        borderRadius: BorderRadius.circular(R.of(8)),
-                        border: Border.all(color: AppColors.fg1, width: 2))
-                    : null,
-                decoration: BoxDecoration(
-                  color: bg,
-                  borderRadius: BorderRadius.circular(R.of(8)),
+            cursor: SystemMouseCursors.click,
+            onEnter: (_) => setState(() => _hover = true),
+            onExit: (_) => setState(() => _hover = false),
+            child: TapDetector(
+              onTap: widget.onTap,
+              child: Tactile(
+                radius: BorderRadius.circular(R.of(8)),
+                enabled: widget.isActive,
+                child: AnimatedContainer(
+                  key: widget.chipKey,
+                  duration: Motion.quick,
+                  curve: const Cubic(.23, 1, .32, 1),
+                  height: 28,
+                  width: width,
+                  decoration: BoxDecoration(
+                    color: bg,
+                    borderRadius: BorderRadius.circular(R.of(8)),
+                  ),
+                  child: child,
                 ),
-                child: child,
               ),
             ),
           ),
-          ),
         );
+    Widget ring(Widget c) => Stack(fit: StackFit.passthrough, clipBehavior: Clip.none, children: [
+          c,
+          if (_focus)
+            Positioned(
+              left: -4,
+              top: -4,
+              right: -4,
+              bottom: -4,
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(R.of(8) + 2),
+                    border: Border.all(color: AppColors.fg1, width: 2),
+                  ),
+                ),
+              ),
+            ),
+        ]);
 
-    if (t.isLead) {
+    if (t.isLead || t.isHome) {
       return Tooltip(
         message: title,
         waitDuration: const Duration(milliseconds: 600),
@@ -196,8 +208,11 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
                 borderRadius: BorderRadius.circular(R.of(8)),
               ),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                AgentMochi('lead', size: 18),
-                if (widget.attentionCount > 0) ...[
+                if (t.isHome)
+                  AppIcon('home', size: 16, color: AppColors.fg2)
+                else
+                  AgentMochi('lead', size: 18),
+                if (t.isLead && widget.attentionCount > 0) ...[
                   SizedBox(width: S.s6),
                   Text('${widget.attentionCount}',
                       style: mono(10.5, color: AppColors.run)),
@@ -212,9 +227,8 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
     final f = widget.folder?.trim();
     final tip = f != null && f.isNotEmpty ? '$title\n$f' : title;
     final showClose = closable && (active || _hover);
-    final chip = cell(
+    final chip = ring(cell(
       Stack(children: [
-
         // Fill the cell so the row centres vertically.
         Positioned.fill(
           child: Padding(
@@ -261,7 +275,7 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
         ),
       ]),
       width: widget.width,
-    );
+    ));
     return Tooltip(
       message: tip,
       waitDuration: const Duration(milliseconds: 600),
@@ -395,8 +409,9 @@ class _MainTabsStripState extends State<MainTabsStrip> {
 
   @override
   Widget build(BuildContext context) {
-    final mc = widget.tabs.where((t) => t.isLead).toList();
-    final rest = widget.tabs.where((t) => !t.isLead).toList();
+    final mc = widget.tabs.where((t) => t.isLead || t.isHome).toList()
+      ..sort((a, b) => (b.isHome ? 1 : 0) - (a.isHome ? 1 : 0));
+    final rest = widget.tabs.where((t) => !t.isLead && !t.isHome).toList();
     return LayoutBuilder(builder: (context, box) {
       const plusW = 28.0 + _gap;
       const moreW = 64.0 + _gap;
@@ -431,13 +446,13 @@ class _MainTabsStripState extends State<MainTabsStrip> {
           : (avail / visible.length - _gap).clamp(_minTab, _maxTab);
 
       Widget chip(ShellTab t, {bool leaving = false}) => _TabSlot(
-            key: ValueKey('slot-${t.key}'),
-            animate: _ready,
-            leaving: leaving,
-            onGone: () {
-              if (mounted) setState(() => _leaving.remove(t.key));
-            },
-            child: Padding(
+          key: ValueKey('slot-${t.key}'),
+          animate: _ready,
+          leaving: leaving,
+          onGone: () {
+            if (mounted) setState(() => _leaving.remove(t.key));
+          },
+          child: Padding(
             padding: const EdgeInsets.only(right: _gap),
             child: Center(
               child: TopWorkspaceTabChip(
@@ -453,8 +468,7 @@ class _MainTabsStripState extends State<MainTabsStrip> {
                 onTap: () => widget.onActivateTab(t),
                 onClose: () => widget.onCloseTab(t),
                 chipKey: widget.chipKeyFor(t.key),
-                attentionCount:
-                    t.isLead ? widget.mcAttentionCount : 0,
+                attentionCount: t.isLead ? widget.mcAttentionCount : 0,
               ),
             ),
           ));
@@ -573,7 +587,8 @@ class _TabSlotState extends State<_TabSlot>
 
   @override
   Widget build(BuildContext context) {
-    final child = widget.leaving ? IgnorePointer(child: widget.child) : widget.child;
+    final child =
+        widget.leaving ? IgnorePointer(child: widget.child) : widget.child;
     return AnimatedBuilder(
       animation: _curve,
       builder: (_, c) => ClipRect(
@@ -891,7 +906,7 @@ class MacWindowBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       // 36 under the card's 8 px top inset centres it at 26, with the sidebar.
-      height: kMobile ? 44 : 36,
+      height: kMobile ? 44 : 40,
       padding: EdgeInsets.fromLTRB(S.s8, 0, S.of(10), 0),
       decoration: kMobile
           ? BoxDecoration(
@@ -949,4 +964,3 @@ class MacWindowBar extends StatelessWidget {
     );
   }
 }
-
