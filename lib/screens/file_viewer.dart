@@ -436,6 +436,24 @@ class _FileViewerState extends State<FileViewer> {
     final actions = <Widget>[
       IconBtn('download',
           tooltip: 'Download', onTap: _downloading ? null : _download),
+      Builder(
+        builder: (a) => IconBtn('more-horizontal',
+            tooltip: 'More',
+            onTap: () async {
+              final pick = await showAppMenu<String>(context,
+                  anchor: a,
+                  below: true,
+                  alignEnd: true,
+                  items: [
+                    appMenuItem(
+                        value: 'copy', icon: 'copy', label: 'Copy path'),
+                  ]);
+              if (pick == 'copy' && context.mounted) {
+                Clipboard.setData(ClipboardData(text: widget.path));
+                toast(context, 'Path copied');
+              }
+            }),
+      ),
       if (editable && kMobile) _EditPill(onTap: edit),
     ];
     // The Mac window bar has no file actions; other desktops get them from CardTabStrip.

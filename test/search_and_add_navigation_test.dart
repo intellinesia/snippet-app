@@ -164,7 +164,7 @@ void main() {
       // Empty sessions
       await tester.pumpWidget(buildWidget([]));
       await tester.pumpAndSettle();
-      expect(find.text('No sessions here.'), findsOneWidget);
+      expect(find.text('No sessions yet'), findsOneWidget);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

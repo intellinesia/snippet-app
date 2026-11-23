@@ -487,43 +487,18 @@ class _SessionTermViewState extends State<SessionTermView> {
     });
   }
 
-  Widget _footer() {
-    final cwd = widget.cwd?.trim() ?? '';
-    final branch = widget.branch?.trim() ?? '';
-    final style = codeMono(12, height: 1.4, color: AppColors.fg4);
-    return Container(
-      key: const ValueKey('term-footer'),
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.border)),
-      ),
-      child: Row(children: [
-        Expanded(
-          child: Row(children: [
-            if (cwd.isNotEmpty)
-              Flexible(
-                child: Text(cwd,
-                    maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
-              ),
-            if (branch.isNotEmpty) ...[
-              if (cwd.isNotEmpty) const SizedBox(width: 12),
-              Flexible(
-                child: Text(branch,
-                    maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
-              ),
-            ],
-          ]),
-        ),
-      ]),
-    );
-  }
-
   Widget _chrome() {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(S.s12, S.s8, S.s8, S.s6),
+    final cwd = widget.cwd?.trim() ?? '';
+    return SizedBox(
+      height: 40,
+      child: Padding(
+      padding: EdgeInsets.fromLTRB(S.s16, 0, S.s8, 0),
       child: Row(children: [
-        Text(widget.alive ? 'Shell' : 'Shell · starting',
-            style: TS.label(AppColors.fg1)),
+        Tooltip(
+          message: cwd,
+          child: Text(widget.alive ? 'Shell' : 'Shell · starting',
+              style: sans(13, weight: FontWeight.w500, color: AppColors.fg1)),
+        ),
         const Spacer(),
         if (widget.onNew != null)
           IconBtn('plus',
@@ -534,7 +509,7 @@ class _SessionTermViewState extends State<SessionTermView> {
         IconBtn('x',
             size: 28, iconSize: 14, tooltip: 'Close', onTap: widget.onClose),
       ]),
-    );
+    ));
   }
 
   @override
@@ -564,8 +539,7 @@ class _SessionTermViewState extends State<SessionTermView> {
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       if (widget.showChrome) _chrome(),
-      Expanded(child: _body(const EdgeInsets.fromLTRB(16, 12, 16, 12))),
-      _footer(),
+      Expanded(child: _body(const EdgeInsets.fromLTRB(16, 4, 16, 12))),
     ]);
   }
 }

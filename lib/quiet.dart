@@ -32,7 +32,7 @@ class QuietSectionLabel extends StatelessWidget {
 
 /// A list row: leading mark, one-line title, quiet second line, trailing meta.
 /// 52pt tall on phone so the tap target clears 48.
-class QuietRow extends StatelessWidget {
+class QuietRow extends StatefulWidget {
   const QuietRow({
     super.key,
     required this.title,
@@ -43,7 +43,15 @@ class QuietRow extends StatelessWidget {
     this.onTap,
     this.onLongPress,
     this.titleLines = 1,
+    this.selected = false,
+    this.disabled = false,
   });
+
+  /// Two surface steps up and weight 500.
+  final bool selected;
+
+  /// fg4 text and no target.
+  final bool disabled;
   final int titleLines;
   final String title;
   final String? sub;
@@ -54,7 +62,24 @@ class QuietRow extends StatelessWidget {
   final VoidCallback? onLongPress;
 
   @override
+  State<QuietRow> createState() => _QuietRowState();
+}
+
+class _QuietRowState extends State<QuietRow> {
+  bool _hover = false, _pressed = false;
+
+  String get title => widget.title;
+  String? get sub => widget.sub;
+  Widget? get leading => widget.leading;
+  Widget? get trailing => widget.trailing;
+  String? get meta => widget.meta;
+  int get titleLines => widget.titleLines;
+  VoidCallback? get onTap => widget.disabled ? null : widget.onTap;
+  VoidCallback? get onLongPress => widget.disabled ? null : widget.onLongPress;
+
+  @override
   Widget build(BuildContext context) {
+    final fg = widget.disabled ? AppColors.fg4 : AppColors.fg1;
     final row = ConstrainedBox(
       constraints: BoxConstraints(minHeight: quietRowHeight),
       child: Padding(
@@ -70,7 +95,9 @@ class QuietRow extends StatelessWidget {
                     maxLines: titleLines,
                     overflow: TextOverflow.ellipsis,
                     style: sans(kQuietRowSize,
-                        height: 20 / kQuietRowSize, color: AppColors.fg1)),
+                        height: 20 / kQuietRowSize,
+                        weight: widget.selected ? FontWeight.w500 : null,
+                        color: fg)),
                 if (sub != null && sub!.isNotEmpty)
                   Text(sub!,
                       maxLines: 1,
@@ -88,12 +115,31 @@ class QuietRow extends StatelessWidget {
         ]),
       ),
     );
-    if (onTap == null && onLongPress == null) return row;
-    return TapDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        onLongPress: onLongPress,
+    // One surface step on hover, two on press or selection.
+    final fill = widget.selected || _pressed
+        ? AppColors.surface3
+        : _hover
+            ? AppColors.surface2
+            : Colors.transparent;
+    final body = AnimatedContainer(
+        duration: const Duration(milliseconds: 100),
+        margin: EdgeInsets.symmetric(horizontal: S.s4),
+        decoration: BoxDecoration(
+            color: fill, borderRadius: BorderRadius.circular(14)),
         child: row);
+    if (onTap == null && onLongPress == null) return body;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: TapDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: (_) => setState(() => _pressed = true),
+          onTapUp: (_) => setState(() => _pressed = false),
+          onTapCancel: () => setState(() => _pressed = false),
+          onTap: onTap,
+          onLongPress: onLongPress,
+          child: body),
+    );
   }
 }
 

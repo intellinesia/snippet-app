@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../crew_status.dart';
-import '../../menu_widgets.dart' show relativeTime;
+import '../../menu_widgets.dart' show relativeTime, showAppMenu, appMenuItem;
 import '../../mochi.dart';
 import '../../models.dart';
 import '../../quiet.dart';
@@ -108,6 +108,7 @@ class QuietHomeScreen extends StatelessWidget {
     this.onOpenAgent,
     this.onOpenLead,
     this.onAllAgents,
+    this.onProfile,
     this.onDecide,
     this.offline,
     this.groupCount = 0,
@@ -124,6 +125,7 @@ class QuietHomeScreen extends StatelessWidget {
   final void Function(CoordinationAgent a)? onOpenAgent;
   final VoidCallback? onOpenLead;
   final VoidCallback? onAllAgents;
+  final void Function(CoordinationAgent a)? onProfile;
   final int groupCount;
   final Future<bool> Function(SessionInfo s, bool approve)? onDecide;
 
@@ -173,7 +175,8 @@ class QuietHomeScreen extends StatelessWidget {
         if (strip.isNotEmpty)
           _FaceStrip(
               items: strip,
-              onOpen: (a) => onOpenAgent?.call(a)),
+              onOpen: (a) => onOpenAgent?.call(a),
+              onProfile: onProfile),
         if (asks.isNotEmpty) ...[
           QuietSectionLabel('Needs you', count: asks.length),
           for (final a in asks)
@@ -220,7 +223,9 @@ class QuietHomeScreen extends StatelessWidget {
 
 /// Who is here: 56 pt faces with a 16 pt state badge, scrolling sideways.
 class _FaceStrip extends StatelessWidget {
-  const _FaceStrip({required this.items, required this.onOpen});
+  const _FaceStrip(
+      {required this.items, required this.onOpen, this.onProfile});
+  final void Function(CoordinationAgent a)? onProfile;
   final List<(CoordinationAgent, CrewState)> items;
   final void Function(CoordinationAgent a) onOpen;
 
@@ -240,6 +245,16 @@ class _FaceStrip extends StatelessWidget {
               child: TapDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () => onOpen(a),
+                onLongPress: () async {
+                  final pick = await showAppMenu<String>(context, items: [
+                    appMenuItem(
+                        value: 'message', icon: 'message', label: 'Message'),
+                    appMenuItem(
+                        value: 'profile', icon: 'user', label: 'Profile'),
+                  ]);
+                  if (pick == 'message') onOpen(a);
+                  if (pick == 'profile') onProfile?.call(a);
+                },
                 child: SizedBox(
                   width: 56,
                   child: Column(children: [
@@ -413,7 +428,17 @@ class QuietSessionsScreen extends StatefulWidget {
     required this.onOpenSession,
     this.onSessionActions,
     this.onNew,
+    this.selecting = false,
+    this.selected = const {},
+    this.onToggle,
+    this.onExitSelect,
+    this.onSelectAll,
   });
+  final bool selecting;
+  final Set<String> selected;
+  final void Function(SessionInfo s)? onToggle;
+  final VoidCallback? onExitSelect;
+  final void Function(List<SessionInfo> shown)? onSelectAll;
   final VoidCallback? onNew;
   final List<SessionInfo> sessions;
   final List<CoordinationAgent> agents;
@@ -462,6 +487,31 @@ class _QuietSessionsScreenState extends State<QuietSessionsScreen> {
             ? 'Yesterday'
             : 'Earlier';
     final children = <Widget>[
+      if (widget.selecting)
+        Padding(
+          padding: EdgeInsets.fromLTRB(S.s4, S.s8, S.s16, S.s4),
+          child: Row(children: [
+            IconBtn('x',
+                size: 48, iconSize: 20, tooltip: 'Cancel', onTap: widget.onExitSelect),
+            Expanded(
+              child: Text(
+                  widget.selected.isEmpty
+                      ? 'Select sessions'
+                      : '${widget.selected.length} selected',
+                  style: sans(17, weight: W.label, color: AppColors.fg1)),
+            ),
+            TapDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => widget.onSelectAll?.call(shown),
+              child: Padding(
+                padding: EdgeInsets.all(S.s12),
+                child: Text('Select all',
+                    style: sans(13, weight: W.label, color: AppColors.fg1)),
+              ),
+            ),
+          ]),
+        )
+      else
       QuietPlaceHeader(
           title: 'Sessions',
           onSearch: () => setState(() {
@@ -515,9 +565,20 @@ class _QuietSessionsScreenState extends State<QuietSessionsScreen> {
         titleLines: 2,
         sub: '${_agentName(s, names)} · ${_stateWord(s)}',
         meta: relativeTime(s.lastActive),
-        leading: _stateMark(s),
-        onTap: () => widget.onOpenSession(s),
-        onLongPress: widget.onSessionActions == null
+        selected: widget.selecting && widget.selected.contains(s.id),
+        leading: widget.selecting
+            ? AppIcon(
+                widget.selected.contains(s.id) ? 'check-circle' : 'circle',
+                size: 22,
+                color: widget.selected.contains(s.id)
+                    ? AppColors.fg1
+                    : AppColors.fg4,
+                filled: widget.selected.contains(s.id))
+            : _stateMark(s),
+        onTap: () => widget.selecting
+            ? widget.onToggle?.call(s)
+            : widget.onOpenSession(s),
+        onLongPress: widget.onSessionActions == null || widget.selecting
             ? null
             : () => widget.onSessionActions!(s),
       ));
@@ -526,7 +587,7 @@ class _QuietSessionsScreenState extends State<QuietSessionsScreen> {
       children.add(Padding(
         padding: EdgeInsets.fromLTRB(S.s16, S.s24, S.s16, S.s8),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(widget.sessions.isEmpty ? 'No sessions yet' : 'No sessions here',
+          Text(widget.sessions.isEmpty ? 'No sessions yet' : 'No sessions here.',
               style: sans(14, weight: W.label, color: AppColors.fg1)),
           SizedBox(height: S.s4),
           Text(

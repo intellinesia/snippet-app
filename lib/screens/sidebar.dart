@@ -1,3 +1,4 @@
+import 'agent_profile_panel.dart' show showAgentProfileSettings;
 import 'dart:async';
 
 import '../desktop_look.dart';
@@ -534,8 +535,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _selectionHeader(),
-                Expanded(child: _sessionList()),
+                Expanded(child: _mobileHome(client!, MobileHome.chats)),
                 _mobileSelectionActions(),
               ],
             )
@@ -584,6 +584,10 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           onOpenAgent: widget.onAgent,
           onOpenLead: widget.onOpenLead,
           onAllAgents: () => widget.onMobileHome(MobileHome.agents),
+          onProfile: (a) => showAgentProfileSettings(context,
+              client: client,
+              agent: a,
+              name: a.displayName),
           onDecide: _decideHero,
           offline: widget.sessionsError == null
               ? null
@@ -600,6 +604,16 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           onOpenSession: (s) => widget.onOpenSession(s.id, s.title, s.profile),
           onSessionActions: _sessionActions,
           onNew: widget.onNewSession,
+          selecting: _selecting,
+          selected: _selected,
+          onToggle: (s) => _toggleSelected(s.id),
+          onExitSelect: _exitSelect,
+          onSelectAll: (shown) => setState(() {
+            _selected.addAll([
+              for (final s in shown)
+                if (!isDedicatedLeadSession(s.id)) s.id
+            ]);
+          }),
         );
       default:
         return _agentsHome(client);

@@ -1166,10 +1166,16 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
         if (kMobile)
           appMenuRow<String>(
               value: 'download', icon: 'download', label: 'Download'),
+        appMenuRow<String>(value: 'copy', icon: 'copy', label: 'Copy path'),
       ],
     );
     if (!mounted) return;
     switch (picked) {
+      case 'copy':
+        final v = _version;
+        Clipboard.setData(ClipboardData(
+            text: v == null || v.source.isEmpty ? widget.id : v.source));
+        toast(context, 'Path copied');
       case 'browser':
         _openInBrowser();
       case 'latest':
