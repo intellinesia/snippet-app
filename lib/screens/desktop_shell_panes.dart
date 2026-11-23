@@ -83,6 +83,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         },
         onStart: (folder, mode, profile, text) =>
             _startDraft(t, folder, mode, profile, text),
+        onStartWithFiles: (folder, mode, profile, text, files) =>
+            _startDraft(t, folder, mode, profile, text, files),
       );
     }
     if (t.isPrs) {
@@ -728,11 +730,10 @@ extension _DesktopShellPanesExt on _DesktopShellState {
                   border: Border(left: BorderSide(color: AppColors.line))),
               padding: EdgeInsets.only(left: S.s6, right: S.s6),
               child: Row(children: [
-                const StripChip(icon: 'list', label: 'Overview'),
                 Builder(
                   builder: (ctx) => StripSquareButton(
                       icon: 'plus',
-                      tooltip: 'Add to this pane',
+                      tooltip: 'More inspector views',
                       onTap: () => _showPanelAddMenu(ctx)),
                 ),
                 const Spacer(),

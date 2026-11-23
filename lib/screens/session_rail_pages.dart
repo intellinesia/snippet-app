@@ -48,7 +48,7 @@ extension _RailPages on _SessionRailState {
           trailing,
         ] else if (onTap != null) ...[
           const SizedBox(width: 6),
-          AppIcon('chevron-right', size: 14, color: AppColors.fg4),
+          AppIcon('chevron-right', size: 14, color: AppColors.fg3),
         ],
       ]),
     );
@@ -60,8 +60,8 @@ extension _RailPages on _SessionRailState {
           Expanded(
               child: Text(title,
                   style:
-                      sans(12, weight: FontWeight.w500, color: AppColors.fg3))),
-          if (meta != null) Text(meta, style: sans(11.5, color: AppColors.fg4)),
+                      sans(12, weight: FontWeight.w500, color: AppColors.fg2))),
+          if (meta != null) Text(meta, style: sans(12, color: AppColors.fg2)),
         ]),
       );
 
@@ -104,240 +104,247 @@ extension _RailPages on _SessionRailState {
         _armedRewind = null;
       });
 
-  /// One 48 px stepped-surface row: icon tile, label, quiet sub line, chevron.
-  Widget _overviewRow(String icon, String label, String sub,
-      {VoidCallback? onTap}) {
-    return _RailCard(
-      onTap: onTap,
-      pad: const EdgeInsets.symmetric(horizontal: 10),
-      radius: R.of(10),
-      child: SizedBox(
-        height: 48,
-        child: Row(children: [
-          Container(
-            width: 28,
-            height: 28,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColors.surface3,
-              borderRadius: BorderRadius.circular(R.of(8)),
-            ),
-            child: AppIcon(icon, size: 15, color: AppColors.fg2),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(13, color: AppColors.fg1)),
-                  Text(sub,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(11.5, color: AppColors.fg4)),
-                ]),
-          ),
-          const SizedBox(width: 6),
-          AppIcon('chevron-right', size: 14, color: AppColors.fg4),
-        ]),
-      ),
-    );
-  }
-
-  /// Desktop session panel, quiet by default: the goal and plan when there are
-  /// any, the places to go, then usage and keep warm.
-  List<Widget> _overviewRoot() {
-    final s = widget.state;
-    final w = widget;
-    final plan = _SessionRailState._plan(s);
-    final t = _tasks.where((t) => t.sessionId == widget.sessionId).firstOrNull;
-    final goalOn = (s?.goal?.ongoing ?? false) || _editingGoal;
-    final quiet = !w.floating && !goalOn && plan == null && t == null;
-    return [
-      if (w.floating)
-        Container(
-          height: 40,
-          padding: const EdgeInsets.only(left: 4),
+  Widget _flatSectionHead(String title,
+          {String? meta, VoidCallback? onTap, double top = 0}) =>
+      Padding(
+        padding: EdgeInsets.only(top: top, bottom: 8),
+        child: TapDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
           child: Row(children: [
             Expanded(
-                child: Text('Overview',
-                    style: sans(13, weight: W.strong, color: AppColors.fg1))),
-            if (w.floating)
-              IconBtn('x',
-                  size: 30,
-                  iconSize: 15,
-                  tooltip: 'Close',
-                  onTap: () => sessionRailFloating.value = false),
-          ]),
-        ),
-      if (goalOn) _goalCard(),
-      if (t != null && w.onOpenTask != null)
-        Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: _RailRow(
-            icon: 'task',
-            label: t.title,
-            value: t.workPlan.isEmpty
-                ? t.status.label
-                : '${t.workPlan.where((p) => p.done).length} of ${t.workPlan.length}',
-            chevron: true,
-            onTap: () => w.onOpenTask!(t.id),
-          ),
-        ),
-      if (plan != null)
-        _card2('Plan', [Column(children: _planRows(plan))],
-            meta:
-                '${plan.where((p) => _SessionRailState._stepState(p) == 2).length} of ${plan.length} done'),
-      if (quiet)
-        SizedBox(
-          height: (_bodyH - 6).clamp(320.0, double.infinity),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Expanded(
-              child: Center(
-                child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (w.agentId != null) ...[
-                        Center(child: _quietMascot(w.agentId!)),
-                        const SizedBox(height: 20),
-                      ],
-                      ..._places(),
-                    ]),
-              ),
+              child: Text(title,
+                  style: sans(12, weight: W.label, color: AppColors.fg2)),
             ),
+            if (meta != null)
+              Text(meta, style: sans(12, color: AppColors.fg2, tabular: true)),
           ]),
-        )
-      else ...[
-        const SizedBox(height: 10),
-        ..._places(),
-      ],
-      const SizedBox(height: 6),
-    ];
-  }
-
-  /// The session's own mascot, greyed and still, above a quiet Overview.
-  Widget _quietMascot(String agentId) => Opacity(
-        opacity: 0.55,
-        child: ColorFiltered(
-          colorFilter: const ColorFilter.matrix(<double>[
-            0.2126,
-            0.7152,
-            0.0722,
-            0,
-            0,
-            0.2126,
-            0.7152,
-            0.0722,
-            0,
-            0,
-            0.2126,
-            0.7152,
-            0.0722,
-            0,
-            0,
-            0,
-            0,
-            0,
-            1,
-            0,
-          ]),
-          child: AgentMochi(agentId, size: 84),
         ),
       );
 
-  List<Widget> _places() {
+  /// Desktop session inspector (W22-W25): one vertical hairline on the left,
+  /// flat on the panel with three sections (Plan, Changes, Task/Files), no
+  /// cards and no fg4 text.
+  List<Widget> _overviewRoot() {
     final s = widget.state;
     final w = widget;
-    final lanes = [...?s?.lanes];
-    final running = lanes.where((l) => l.running).length;
-    // The worktree is what the Changes view lists; session edits are a fallback.
+    final agentId = (w.agentId ?? w.ownAgent ?? 'snippet').trim();
+    final agentLabel = agentId.isEmpty
+        ? 'Agent'
+        : '${agentId[0].toUpperCase()}${agentId.substring(1)}';
+    final statusWord = switch (s?.status) {
+      'running' || 'thinking' || 'tool' => 'Running',
+      'waiting_approval' || 'waiting_question' => 'Waiting on you',
+      _ => 'Idle',
+    };
+    final head = Padding(
+      padding: const EdgeInsets.fromLTRB(4, 6, 4, 16),
+      child: Row(children: [
+        AgentMochi(agentId.isEmpty ? 'snippet' : agentId, size: 16),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text('$agentLabel \u00b7 $statusWord',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(12, color: AppColors.fg2)),
+        ),
+        if (w.floating)
+          IconBtn('x',
+              size: 28,
+              iconSize: 15,
+              tooltip: 'Close',
+              onTap: () => sessionRailFloating.value = false),
+      ]),
+    );
+    if (s == null && _loading) {
+      return [
+        head,
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 24),
+          child: Center(child: Spinner(size: 16)),
+        ),
+      ];
+    }
+    if (s == null && _loadFailed) {
+      return [
+        head,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Details did not load',
+                  style: sans(13, weight: W.label, color: AppColors.fg1)),
+              const SizedBox(height: 4),
+              Text('The session still runs.',
+                  style: sans(12, color: AppColors.fg2)),
+              const SizedBox(height: 12),
+              Btn('Try again',
+                  small: true, variant: BtnVariant.outline, onTap: _load),
+            ],
+          ),
+        ),
+      ];
+    }
+    final plan = _SessionRailState._plan(s);
+    final t = _tasks.where((t) => t.sessionId == widget.sessionId).firstOrNull;
+    final goalOn = (s?.goal?.ongoing ?? false) || _editingGoal;
     final git = _git;
-    final changed = git != null && git.ok
-        ? git.files.length
-        : fileChanges(sessionChangeSteps(s?.events ?? const [])).length;
-    final jobs = _procs.where((p) => p['running'] == true).length;
+    final gitFiles =
+        git != null && git.ok ? git.files : const <GitFile>[];
+    final fallbackFiles = gitFiles.isEmpty
+        ? fileChanges(sessionChangeSteps(s?.events ?? const []))
+        : const <FileChange>[];
     final ws = (s?.workspace ?? '').trim();
-    Widget gap() => const SizedBox(height: 6);
+    final wsLabel = ws.isEmpty ? '' : lastPathSegment(ws, ifEmpty: ws);
+    final doneCount = plan == null
+        ? 0
+        : plan.where((p) => _SessionRailState._stepState(p) == 2).length;
     return [
-      if (w.onChanges != null) ...[
-        if (git != null && git.ok && git.files.isNotEmpty)
-          _card2('Changes', [
-            for (final f in git.files.take(5))
-              InkWell(
-                onTap: () => _go('changes'),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(children: [
-                    AppIcon('file', size: 14, color: AppColors.fg3),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(f.path,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: codeMono(12, color: AppColors.fg2)),
+      head,
+      if (goalOn) ...[
+        _goalCard(),
+        const SizedBox(height: 16),
+      ],
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _flatSectionHead(
+              'Plan',
+              meta: plan != null && plan.isNotEmpty
+                  ? '$doneCount of ${plan.length}'
+                  : null,
+            ),
+            if (plan != null && plan.isNotEmpty)
+              ..._planRows(plan)
+            else
+              Text(
+                'No plan yet. $agentLabel writes one when the work has steps.',
+                style: sans(12, height: 1.4, color: AppColors.fg2),
+              ),
+            _flatSectionHead(
+              'Changes',
+              top: 20,
+              onTap: w.onChanges != null ? () => _go('changes') : null,
+            ),
+            if (gitFiles.isNotEmpty)
+              for (final f in gitFiles.take(6))
+                TapDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => w.onOpenDiff != null
+                      ? w.onOpenDiff!(f)
+                      : _go('changes'),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 28),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(children: [
+                        AppIcon('file', size: 14, color: AppColors.fg2),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                              lastPathSegment(f.path, ifEmpty: f.path),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: sans(13, color: AppColors.fg1)),
+                        ),
+                        if (_lineCounts[
+                                '${f.path}|${f.staged}|${f.unstaged}']
+                            case (final a, final r)) ...[
+                          const SizedBox(width: 8),
+                          Text('+$a \u2212$r',
+                              style: sans(12,
+                                  color: AppColors.fg2, tabular: true)),
+                        ],
+                      ]),
                     ),
-                    if (_lineCounts['${f.path}|${f.staged}|${f.unstaged}']
-                        case (final a, final r)) ...[
-                      const SizedBox(width: 8),
-                      Text('+$a',
-                          style: codeMono(11.5, color: AppColors.ok)),
-                      const SizedBox(width: 6),
-                      Text('\u2212$r',
-                          style: codeMono(11.5, color: AppColors.fg3)),
-                    ],
-                  ]),
+                  ),
+                )
+            else if (fallbackFiles.isNotEmpty)
+              for (final f in fallbackFiles.take(6))
+                TapDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _go('changes'),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 28),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(children: [
+                        AppIcon('file', size: 14, color: AppColors.fg2),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                              lastPathSegment(f.path, ifEmpty: f.path),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: sans(13, color: AppColors.fg1)),
+                        ),
+                      ]),
+                    ),
+                  ),
+                )
+            else
+              Text('No changes yet.', style: sans(12, color: AppColors.fg2)),
+            if (t != null) ...[
+              _flatSectionHead(
+                'Task',
+                top: 20,
+                onTap: w.onOpenTask != null ? () => w.onOpenTask!(t.id) : null,
+              ),
+              TapDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: w.onOpenTask != null ? () => w.onOpenTask!(t.id) : null,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(t.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(13, height: 1.35, color: AppColors.fg1)),
+                    const SizedBox(height: 4),
+                    Text(
+                      t.workPlan.isEmpty
+                          ? t.status.label
+                          : '${t.workPlan.where((p) => p.done).length} of ${t.workPlan.length} done',
+                      style: sans(12, color: AppColors.fg2),
+                    ),
+                  ],
                 ),
               ),
+            ] else ...[
+              _flatSectionHead(
+                'Files',
+                top: 20,
+                onTap: w.onFiles != null ? () => _go('files') : null,
+              ),
+              if (wsLabel.isNotEmpty && w.onFiles != null)
+                TapDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _go('files'),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 28),
+                    child: Row(children: [
+                      AppIcon('folder', size: 14, color: AppColors.fg2),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(wsLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(13, color: AppColors.fg1)),
+                      ),
+                    ]),
+                  ),
+                )
+              else
+                Text('Nothing attached.',
+                    style: sans(12, color: AppColors.fg2)),
+            ],
           ],
-              meta: '$changed file${changed == 1 ? '' : 's'}')
-        else
-          _overviewRow('file-diff', 'Changes', 'No changes yet',
-              onTap: () => _go('changes')),
-        gap(),
-      ],
-      if (w.onFiles != null) ...[
-        _overviewRow(
-            'folder',
-            'Files',
-            ws.isEmpty
-                ? 'Browse the workspace'
-                : lastPathSegment(ws, ifEmpty: ws),
-            onTap: () => _go('files')),
-        gap(),
-      ],
-      if (w.onShell != null) ...[
-        _overviewRow('terminal', 'Shell', 'Terminal in the workspace',
-            onTap: w.onShell),
-        gap(),
-      ],
-      if (w.onProcesses != null) ...[
-        _overviewRow(
-            'activity',
-            'Activity',
-            jobs > 0
-                ? '$jobs job${jobs == 1 ? '' : 's'} running'
-                : 'No background jobs',
-            onTap: () => _go('jobs')),
-        gap(),
-      ],
-      _overviewRow('book-marked', 'Memory', 'What this session remembers',
-          onTap: () => _go('memory')),
-      gap(),
-      if (w.onLanes != null)
-        _overviewRow(
-            'git-branch',
-            'Lanes',
-            lanes.isEmpty
-                ? 'None yet'
-                : running > 0
-                    ? '$running running · ${lanes.length}'
-                    : '${lanes.length} finished',
-            onTap: () => _go('lanes')),
+        ),
+      ),
+      const SizedBox(height: 12),
     ];
   }
 
@@ -351,7 +358,7 @@ extension _RailPages on _SessionRailState {
           Text(title, style: sans(13, weight: W.strong, color: AppColors.fg1)),
           if (meta != null) ...[
             const SizedBox(width: 8),
-            Text(meta, style: mono(12, color: AppColors.fg4)),
+            Text(meta, style: mono(12, color: AppColors.fg3)),
           ],
           const Spacer(),
           if (widget.floating)

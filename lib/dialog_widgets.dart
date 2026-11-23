@@ -669,6 +669,7 @@ Future<T?> showAnchoredPanel<T>(
   double maxHeight = 460,
   bool above = false,
   bool alignRight = false,
+  Color? borderColor,
 }) {
   final box = anchor.findRenderObject() as RenderBox?;
   final overlay = Overlay.of(anchor, rootOverlay: true)
@@ -722,8 +723,8 @@ Future<T?> showAnchoredPanel<T>(
                 elevation: 10,
                 shadowColor: Colors.black.withValues(alpha: 0.5),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(R.of(14)),
-                  side: BorderSide(color: AppColors.border2),
+                  borderRadius: BorderRadius.circular(R.of(12)),
+                  side: BorderSide(color: borderColor ?? AppColors.line),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: ConstrainedBox(

@@ -17,12 +17,7 @@ extension DecidedKindLook on DecidedKind {
         DecidedKind.outdated => 'Outdated',
       };
 
-  Tone get tone => switch (this) {
-        DecidedKind.approved => Tone.ok,
-        DecidedKind.denied => Tone.danger,
-        DecidedKind.answered => Tone.accent,
-        DecidedKind.skipped || DecidedKind.outdated => Tone.neutral,
-      };
+  Tone get tone => Tone.neutral;
 
   String get icon => switch (this) {
         DecidedKind.approved || DecidedKind.answered => 'check',
@@ -34,7 +29,7 @@ extension DecidedKindLook on DecidedKind {
   Color get iconColor => switch (this) {
         DecidedKind.approved || DecidedKind.answered => AppColors.fg2,
         DecidedKind.denied => AppColors.fg1,
-        DecidedKind.skipped || DecidedKind.outdated => AppColors.fg4,
+        DecidedKind.skipped || DecidedKind.outdated => AppColors.fg3,
       };
 }
 

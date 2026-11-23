@@ -12,7 +12,6 @@ import '../theme.dart';
 import '../widgets.dart';
 import '../chat/agent_cluster.dart';
 import 'group_messaging.dart' show openGroupThread;
-import 'lead/lead_state.dart' show isDedicatedLeadSession;
 
 /// Desktop Home, agent first: who needs you, then what each agent is doing,
 /// on one 720 pt measure.
@@ -40,6 +39,8 @@ class _DesktopHomeState extends State<DesktopHome> {
   List<CoordinationAgent> _agents = const [];
   final Set<String> _busy = {};
   List<GroupSummary> _groups = const [];
+  Map<String, String> _providers = const {};
+  String? _activeProvider;
 
   @override
   void initState() {
@@ -50,6 +51,38 @@ class _DesktopHomeState extends State<DesktopHome> {
     widget.client.groups().then((g) {
       if (mounted) setState(() => _groups = g);
     }).catchError((_) {});
+    widget.client.getConfig().then((cfg) {
+      if (!mounted) return;
+      final active = cfg.profiles.where((p) => p.active).firstOrNull;
+      setState(() {
+        _providers = {for (final p in cfg.profiles) p.name: p.provider};
+        _activeProvider = active?.provider;
+      });
+    }).catchError((_) {});
+  }
+
+  /// Strips raw backticks, markdown links and internal UUIDs/ids from row subs.
+  static String _cleanSubtitle(String raw) {
+    var s = raw;
+    // `[title](session:...)` / `[title](task:...)` -> `title`
+    s = s.replaceAllMapped(
+        RegExp(r'\[([^\]]+)\]\([^)]+\)'), (m) => m.group(1) ?? '');
+    // Remove inline code backticks.
+    s = s.replaceAll('`', '');
+    // Strip raw UUIDs (with optional surrounding parens/brackets).
+    s = s.replaceAll(
+        RegExp(
+            r'[\(\[]?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}[\)\]]?',
+            caseSensitive: false),
+        '');
+    // Strip internal session/task/agent prefixes like `session:abc123def456`.
+    s = s.replaceAll(
+        RegExp(r'\b(?:session|task|agent|artifact|thread):[a-z0-9_/-]+',
+            caseSensitive: false),
+        '');
+    // Strip standalone long hex ids (8+ hex chars with digits).
+    s = s.replaceAll(RegExp(r'\b(?=[0-9a-f]*\d)[0-9a-f]{8,}\b'), '');
+    return s.replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 
   Future<void> _approve(CrewEntry e) async {
@@ -67,10 +100,8 @@ class _DesktopHomeState extends State<DesktopHome> {
 
   @override
   Widget build(BuildContext context) {
-    final sessions = [
-      for (final s in widget.sessions ?? const <SessionInfo>[])
-        if (!isDedicatedLeadSession(s.id)) s
-    ];
+    // Keep Lead's dedicated session so Lead moves into Working when active.
+    final sessions = widget.sessions ?? const <SessionInfo>[];
     final crew = deriveCrew(_agents, sessions);
     final needs = [
       for (final e in crew)
@@ -164,8 +195,9 @@ class _DesktopHomeState extends State<DesktopHome> {
       child: ChatCard(
         children: [
           ChatCardHeader(
-            title: e.line,
+            title: _cleanSubtitle(e.line),
             subtitle: s == null || s.title.isEmpty ? null : s.title,
+            padBottom: false,
             eyebrow: Row(children: [
               const QuietHand(size: 14),
               const SizedBox(width: 8),
@@ -176,6 +208,7 @@ class _DesktopHomeState extends State<DesktopHome> {
               Text(when, style: sans(12, color: AppColors.fg3)),
             ]),
           ),
+          const SizedBox(height: 16),
           ChatCardActions(buttons: [
             if (approval)
               ChatCardButton('Approve',
@@ -193,15 +226,19 @@ class _DesktopHomeState extends State<DesktopHome> {
     final a = e.agent;
     final n = e.sessions.length;
     final profile = a.deskProfile ?? a.profile;
+    final provider =
+        (profile != null ? (_providers[profile] ?? profile) : null) ??
+            _activeProvider;
     final when = e.lead == null ? '' : relativeTime(e.lead!.lastActive);
+    final rawSub = e.state == CrewState.standingBy && !a.available
+        ? 'Wakes when you send'
+        : _cleanSubtitle(e.line);
     return _HomeRow(
       onTap: () => widget.onOpenAgent(a),
       leading: AgentMochi(a.id, size: 28),
       title: a.displayName,
-      sub: e.state == CrewState.standingBy && !a.available
-          ? 'Wakes when you send'
-          : e.line,
-      provider: profile,
+      sub: rawSub.isEmpty ? 'Standing by' : rawSub,
+      provider: provider,
       count: e.state == CrewState.working && n > 0
           ? (n == 1 ? '1 session' : '$n sessions')
           : null,

@@ -725,27 +725,41 @@ class Btn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Theme.of(context); // Rebuild on theme change
-    final (Color bg, Color fg, Color? bd) = switch (variant) {
-      BtnVariant.primary => (AppColors.accentFill, AppColors.accentFg, null),
-      BtnVariant.secondary => (
-          AppColors.surface2,
-          AppColors.fg1,
-          AppColors.border
-        ),
-      // Ladder, not a line: the fill is the separation.
-      BtnVariant.surface => (AppColors.surface3, AppColors.fg2, null),
-      BtnVariant.outline => (
-          Colors.transparent,
-          AppColors.fg1,
-          AppColors.border
-        ),
-      BtnVariant.ghost => (Colors.transparent, AppColors.fg2, null),
-      BtnVariant.danger => (
-          AppColors.dangerBg,
-          AppColors.danger,
-          AppColors.danger.withValues(alpha: 0.3)
-        ),
-    };
+    final (Color bg, Color fg, Color? bd) = disabled
+        ? switch (variant) {
+            BtnVariant.outline => (
+                Colors.transparent,
+                AppColors.fg3,
+                AppColors.border
+              ),
+            BtnVariant.ghost => (Colors.transparent, AppColors.fg3, null),
+            _ => (AppColors.surface3, AppColors.fg2, null),
+          }
+        : switch (variant) {
+            BtnVariant.primary => (
+                AppColors.accentFill,
+                AppColors.accentFg,
+                null
+              ),
+            BtnVariant.secondary => (
+                AppColors.surface2,
+                AppColors.fg1,
+                AppColors.border
+              ),
+            // Ladder, not a line: the fill is the separation.
+            BtnVariant.surface => (AppColors.surface3, AppColors.fg2, null),
+            BtnVariant.outline => (
+                Colors.transparent,
+                AppColors.fg1,
+                AppColors.border
+              ),
+            BtnVariant.ghost => (Colors.transparent, AppColors.fg2, null),
+            BtnVariant.danger => (
+                AppColors.dangerBg,
+                AppColors.danger,
+                AppColors.danger.withValues(alpha: 0.3)
+              ),
+          };
     // Compact on desktop (mouse), roomy touch targets on mobile.
     // 44 on mobile for BOTH variants. `small` was 34 — under Apple's 44pt and
     // Material's 48dp floors — and it is the primary action of the agent thread
@@ -761,49 +775,49 @@ class Btn extends StatelessWidget {
           AppIcon(icon!, size: small ? 15 : 17, color: fg),
           SizedBox(width: S.s8)
         ],
-        Text(label,
-            style: kMobile
-                ? sans(small ? 13 : 15, weight: W.strong, color: fg)
-                : sans(small ? 12 : 13, weight: W.label, color: fg)),
+        Flexible(
+          child: Text(label,
+              style: kMobile
+                  ? sans(small ? 13 : 15, weight: W.strong, color: fg)
+                  : sans(small ? 12 : 13, weight: W.label, color: fg)),
+        ),
         if (iconRight != null) ...[
           SizedBox(width: S.s8),
           AppIcon(iconRight!, size: small ? 15 : 17, color: fg)
         ],
       ],
     );
-    return Opacity(
-      opacity: disabled ? 0.45 : 1,
-      child: Pressable(
-        enabled: !disabled && onTap != null,
-        child: Tactile(
-          radius: BorderRadius.circular(radius),
-          enabled:
-              variant == BtnVariant.primary || variant == BtnVariant.secondary,
-          child: Material(
-            color: bg,
+    return Pressable(
+      enabled: !disabled && onTap != null,
+      child: Tactile(
+        radius: BorderRadius.circular(radius),
+        enabled: !disabled &&
+            (variant == BtnVariant.primary || variant == BtnVariant.secondary),
+        child: Material(
+          color: bg,
+          borderRadius: BorderRadius.circular(radius),
+          child: InkWell(
+            onTap: disabled || onTap == null
+                ? null
+                : () {
+                    tapHaptic();
+                    onTap!();
+                  },
             borderRadius: BorderRadius.circular(radius),
-            child: InkWell(
-              onTap: disabled || onTap == null
-                  ? null
-                  : () {
-                      tapHaptic();
-                      onTap!();
-                    },
-              borderRadius: BorderRadius.circular(radius),
-              child: Container(
-                height: h,
-                width: full ? double.infinity : null,
-                padding:
-                    EdgeInsets.symmetric(horizontal: small ? S.s12 : S.s16),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(radius),
-                  border: bd != null &&
-                          !(kMobile && variant == BtnVariant.secondary)
-                      ? Border.all(color: bd)
-                      : null,
-                ),
-                child: child,
+            child: Container(
+              constraints: BoxConstraints(minHeight: h),
+              width: full ? double.infinity : null,
+              alignment: full ? Alignment.center : null,
+              padding: EdgeInsets.symmetric(
+                  horizontal: small ? S.s12 : S.s16, vertical: 4),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(radius),
+                border: bd != null &&
+                        !(kMobile && variant == BtnVariant.secondary)
+                    ? Border.all(color: bd)
+                    : null,
               ),
+              child: child,
             ),
           ),
         ),
@@ -2566,10 +2580,20 @@ String? providerLogoAsset(String? provider) {
     'xai' || 'grok' => 'xai',
     'openrouter' => 'openrouter',
     'opencode-zen' || 'opencode-go' || 'opencode' => 'opencode',
-    // Profile names such as claude-opus or gpt-5 read as their provider.
-    _ when p.startsWith('claude') => 'claude',
-    _ when p.startsWith('gpt') || p.startsWith('codex') => 'openai',
+    // Profile names such as claude-opus, opus, sonnet or gpt-5 read as their provider.
+    _ when p.startsWith('claude') ||
+            p.startsWith('opus') ||
+            p.startsWith('sonnet') ||
+            p.startsWith('haiku') =>
+      'claude',
+    _ when p.startsWith('gpt') ||
+            p.startsWith('codex') ||
+            p.startsWith('o1') ||
+            p.startsWith('o3') ||
+            p.startsWith('o4') =>
+      'openai',
     _ when p.startsWith('gemini') => 'gemini',
+    _ when p.startsWith('agy') || p.startsWith('antigravity') => 'antigravity',
     _ when p.startsWith('grok') => 'xai',
     _ => null,
   };

@@ -52,6 +52,10 @@ class _FakeClient extends DaemonClient {
       ServerConfig.fromJson({'profiles': []});
 
   @override
+  Future<List<SessionInfo>> sessions({String? folder, int? limit}) async =>
+      const [];
+
+  @override
   Future<DirectThreadPage> agentThreadPage({
     required String peerId,
     String actorKind = 'human',

@@ -436,8 +436,8 @@ class _DesktopShellState extends State<DesktopShell>
   ShellSection get _effectiveSection =>
       _hiddenSections.contains(_section) ? ShellSection.sessions : _section;
 
-  /// An agent tab's panel holds only the pages opened from its Actions menu.
-  bool _agentPanelHidden = true;
+  /// Agent right rail is open by default on desktop (V3); toggled by the bar.
+  bool _agentPanelHidden = false;
 
   CoordinationAgent? _mcAgent;
 
@@ -1396,53 +1396,45 @@ class _DesktopShellState extends State<DesktopShell>
     }
   }
 
-  // Desktop opens the sheet in a dialog; the phone never reaches this.
+  // Desktop opens the new-session draft as an in-tab hero (W1/W3/W4); the
+  // phone uses the picker flow in `_newSessionFlow`.
   void _openDraftTab([String? folder]) {
     final client = _client;
-    if (client == null || _active == null) return;
-    presentScreen(
-      context,
-      style: PanelStyle.dialog,
-      maxWidth: 640,
-      maxHeight: 720,
-      builder: (_, close) => NewSessionDraft(
-        client: client,
-        machineLabel: _active?.label ?? '',
-        folder: folder,
-        source: _draftSource(folder),
-        recentSessions: _sessions,
-        layout: NewSessionLayout.sheet,
-        onCancel: close,
-        onStart: (f, mode, profile, text) async {
-          await _startSheet(client, f, mode, profile, text, const []);
-          close();
-        },
-        onStartWithFiles: (f, mode, profile, text, files) async {
-          await _startSheet(client, f, mode, profile, text, files);
-          close();
-        },
-      ),
-    );
+    final active = _active;
+    if (client == null || active == null) return;
+    final existing =
+        _tabs.indexWhere((t) => t.isDraft && t.instanceUrl == active.url);
+    setState(() {
+      if (existing >= 0) {
+        if (folder != null) _tabs[existing].draftFolder = folder;
+        _activeIndex = existing;
+      } else {
+        _tabs.add(_ShellTab.draft(
+            client: client, instanceUrl: active.url, folder: folder));
+        _activeIndex = _tabs.length - 1;
+      }
+      final t = _tabs[_activeIndex];
+      _activePane = _Pane.left;
+      _groupRootKey[_Pane.left] = t.key;
+      _activeKey[_Pane.left] = t.key;
+    });
+    _persistTabs();
+    _syncPage();
   }
 
   Future<void> _startSheet(DaemonClient c, String folder, WorkspaceMode mode,
       String? profile, String text, List<PickedLocalFile> files) async {
-    try {
-      final id = await c.openSession(folder,
-          workspace: mode, profile: profile, newConversation: true);
-      _openSession(id, 'New session', profile,
-          share: SharedInbound(
-            type: files.isEmpty ? 'text' : 'file',
-            text: text,
-            paths: [for (final f in files) f.path],
-            names: [for (final f in files) f.name],
-            send: true,
-          ));
-      _loadSessions();
-    } catch (e) {
-      if (mounted) toast(context, '$e', danger: true);
-      rethrow;
-    }
+    final id = await c.openSession(folder,
+        workspace: mode, profile: profile, newConversation: true);
+    _openSession(id, 'New session', profile,
+        share: SharedInbound(
+          type: files.isEmpty ? 'text' : 'file',
+          text: text,
+          paths: [for (final f in files) f.path],
+          names: [for (final f in files) f.name],
+          send: true,
+        ));
+    _loadSessions();
   }
 
   void _showNewMenu(BuildContext anchor) {
@@ -1467,7 +1459,8 @@ class _DesktopShellState extends State<DesktopShell>
   }
 
   Future<void> _startDraft(_ShellTab draft, String folder, WorkspaceMode mode,
-      String? profile, String text) async {
+      String? profile, String text,
+      [List<PickedLocalFile> files = const []]) async {
     final c = draft.client;
     final id = await c.openSession(folder,
         workspace: mode, profile: profile, newConversation: true);
@@ -1479,7 +1472,13 @@ class _DesktopShellState extends State<DesktopShell>
           sessionId: id,
           title: 'New session',
           profile: profile,
-          inboundShare: SharedInbound(type: 'text', text: text, send: true));
+          inboundShare: SharedInbound(
+            type: files.isEmpty ? 'text' : 'file',
+            text: text,
+            paths: [for (final f in files) f.path],
+            names: [for (final f in files) f.name],
+            send: true,
+          ));
       final i = _tabs.indexOf(draft);
       if (i >= 0) {
         _tabs[i] = tab;

@@ -1,5 +1,6 @@
 import 'models.dart';
 import 'presence.dart';
+import 'screens/lead/lead_state.dart' show isDedicatedLeadSession;
 
 enum CrewState { needsYou, working, standingBy }
 
@@ -85,6 +86,7 @@ class CrewEntry {
 }
 
 String? crewOwner(SessionInfo s) {
+  if (isDedicatedLeadSession(s.id)) return 'lead';
   final id = s.displayAgentId;
   if (id == null || id.isEmpty) return null;
   // 'snippet' is the fallback owner of every plain session; only live ones

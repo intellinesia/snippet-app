@@ -297,7 +297,7 @@ class ApprovalBarState extends State<ApprovalBar> {
               if (subtitle != null) subtitle,
               if (total > 1) '$index of $total',
             ].join(' \u00b7 '),
-            style: sans(12, color: AppColors.fg3)),
+            style: sans(12, color: AppColors.fg2)),
         children: [
           DeskPinTitle(headline, why: reason.isEmpty ? null : reason),
           if (detail.isNotEmpty)
@@ -372,9 +372,10 @@ class ApprovalBarState extends State<ApprovalBar> {
                   eyebrow:
                       kMobile && widget.agentId != null ? _askRow(req) : null,
                   trailing: total > 1 ? ChatCardPill('$index of $total') : null,
+                  padBottom: detail.isNotEmpty || isVault,
                 ),
-                // Header plus this gap makes the 16pt run before the actions.
-                if (detail.isEmpty && !isVault) const SizedBox(height: 8),
+                // Exact 16pt gap between title and actions when there is no body.
+                if (detail.isEmpty && !isVault) const SizedBox(height: 16),
                 if (detail.isNotEmpty)
                   ChatCardBody(
                     child: Tactile(

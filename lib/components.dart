@@ -13,7 +13,7 @@ import 'widgets.dart'
 enum Tone { neutral, accent, ok, run, danger }
 
 (Color fg, Color bg) toneColors(Tone tone) => switch (tone) {
-      Tone.neutral => (AppColors.fg3, AppColors.hover),
+      Tone.neutral => (AppColors.fg2, AppColors.hover),
       Tone.accent => (AppColors.accent, AppColors.accentBg),
       Tone.ok => (AppColors.ok, AppColors.okBg),
       Tone.run => (AppColors.run, AppColors.runBg),

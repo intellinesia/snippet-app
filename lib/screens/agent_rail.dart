@@ -103,8 +103,9 @@ class AgentRail extends StatelessWidget {
             padding: const EdgeInsets.only(top: 2, right: 8),
             child: needs
                 ? const QuietHand(size: 14)
-                : AppIcon(busy ? 'circle' : 'check',
-                    size: 14, color: busy ? AppColors.fg1 : AppColors.fg3),
+                : busy
+                    ? Spinner(size: 14, color: AppColors.fg1)
+                    : AppIcon('check', size: 14, color: AppColors.fg3),
           ),
           Expanded(
             child: Column(

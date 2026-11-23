@@ -1,5 +1,9 @@
 import 'agent_profile_popover.dart';
 import 'dart:async';
+import '../chat/signal_row.dart' show prettyModel, prettyProfile;
+import '../quiet.dart' show QuietHand;
+import 'session_list_row.dart' show sessionNeedsYou;
+import 'shell_nav.dart' show sessionBusy;
 
 import '../motion_routes.dart';
 import 'package:flutter/material.dart';
@@ -1889,15 +1893,25 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     );
   }
 
-  Map<String, String> _providers = const {};
+  Map<String, InferenceProfile> _profiles = const {};
+  List<SessionInfo> _agentSessions = const [];
 
   Future<void> _loadProviders() async {
     try {
       final cfg = await widget.client.getConfig();
-      if (!mounted) return;
-      setState(() => _providers = {
-            for (final p in cfg.profiles) p.name: p.provider,
-          });
+      if (mounted) {
+        setState(() => _profiles = {
+              for (final p in cfg.profiles) p.name: p,
+            });
+      }
+    } catch (_) {}
+    try {
+      final all = await widget.client.sessions();
+      final mine = [
+        for (final s in all)
+          if (s.displayAgentId == widget.agentId) s
+      ]..sort((a, b) => b.lastActive.compareTo(a.lastActive));
+      if (mounted) setState(() => _agentSessions = mine);
     } catch (_) {}
   }
 
@@ -1913,37 +1927,70 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         ),
       );
 
-  /// Desktop: the agent's identity at the top of its transcript.
+  /// Desktop: the agent's identity at the top of its transcript (V2/V3).
   Widget _agentHead() {
     final a = _agent;
-    final mc =
-        widget.agentId == 'lead' || (a?.isLead ?? false);
-    final purpose = mc
-        ? 'Coordinates your agents and sessions'
-        : (a?.capabilities.isNotEmpty ?? false)
-            ? a!.capabilities.join(', ')
-            : (widget.subtitle ?? '').trim();
-    final model = a?.profile ?? '';
-    final open = a?.tasksIn({'in_progress', 'todo'}) ?? 0;
-    final done = a?.tasksIn({'done', 'completed'}) ?? 0;
-    final meta = [
-      if ((a?.needsYou ?? 0) > 0)
-        'Needs you'
-      else if (a?.presence?.live ?? false)
-        'Working',
-      if (open > 0) '$open open',
-      if (done > 0) '$done done',
-    ].join(' \u00b7 ');
+    final live = [
+      for (final s in _agentSessions)
+        if (!s.settled && (sessionNeedsYou(s) || sessionBusy(s))) s
+    ];
+    final asking = [
+      for (final s in _agentSessions)
+        if (sessionNeedsYou(s)) s
+    ];
+    final needs = (a?.needsYou ?? 0) > 0 || asking.isNotEmpty;
+    final working = !needs && ((a?.presence?.live ?? false) || live.isNotEmpty);
+    final asleep = a != null && !a.available && !needs && !working;
+    final Widget? stateIcon = needs
+        ? const QuietHand(size: 14)
+        : working
+            ? Spinner(size: 12, color: AppColors.fg2)
+            : asleep
+                ? AppIcon('moon', size: 12, color: AppColors.fg2)
+                : null;
+    String stateText;
+    if (needs) {
+      final ts = asking.isNotEmpty ? asking.first.lastActive : 0;
+      final rel = ts > 0 ? relativeTime(ts) : '';
+      stateText = rel.isEmpty || rel == 'now'
+          ? 'Needs you'
+          : 'Needs you \u00b7 asked $rel ago';
+    } else if (working) {
+      final n = live.isNotEmpty ? live.length : _agentSessions.length;
+      stateText =
+          n > 0 ? 'Working \u00b7 $n ${n == 1 ? 'session' : 'sessions'}' : 'Working';
+    } else if (asleep) {
+      stateText = 'Asleep';
+    } else {
+      final n = _agentSessions.length;
+      stateText = n > 0
+          ? 'Available \u00b7 $n ${n == 1 ? 'session' : 'sessions'}'
+          : 'Available';
+    }
+    final profileKey = (a?.deskProfile ?? a?.profile ?? '').trim();
+    final prof = _profiles[profileKey];
+    final modelLabel = prof != null && prof.model.trim().isNotEmpty
+        ? prettyModel(prof.model)
+        : (profileKey.isNotEmpty ? prettyProfile(profileKey) : '');
+    final providerKey = prof?.provider ?? (profileKey.isEmpty ? null : profileKey);
+    final rawFolder = _agentSessions
+            .map((s) => s.projectFolder.trim())
+            .where((f) => f.isNotEmpty)
+            .firstOrNull ??
+        '';
+    final wsName =
+        rawFolder.isEmpty ? '' : lastPathSegment(rawFolder, ifEmpty: rawFolder);
     Widget quiet(String icon, String tip, VoidCallback? onTap) =>
         DeskIconButton(icon, tooltip: tip, onTap: onTap, iconSize: 15);
     return AgentTranscriptHead(
       key: const Key('agentHead'),
       agentId: widget.agentId,
       name: widget.agentName,
-      purpose: purpose,
-      model: model,
-      provider: _providers[model],
-      meta: meta,
+      stateIcon: stateIcon,
+      stateText: stateText,
+      model: modelLabel,
+      provider: providerKey,
+      workspace: wsName.isEmpty ? '' : 'in $wsName',
       actions: [
         // A tab has the window bar's panel toggle instead.
         if (!widget.embedded)
@@ -1955,7 +2002,9 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                 label: 'Profile',
                 onTap: () => showAgentProfilePopover(c,
                     client: widget.client,
-                    agent: a, onAction: widget.onAgentAction!)),
+                    agent: a,
+                    workspace: wsName.isEmpty ? null : wsName,
+                    onAction: widget.onAgentAction!)),
           ),
         // In a tab the window bar already switches Chat and Work.
         if (!_noChrome)

@@ -304,6 +304,8 @@ class _SessionRailState extends State<SessionRail> {
   List<SessionInfo> _sessions = const [];
   int _gen = 0;
   int _liveGen = 0;
+  bool _loading = true;
+  bool _loadFailed = false;
 
   bool _editingGoal = false;
 
@@ -434,6 +436,12 @@ class _SessionRailState extends State<SessionRail> {
   Future<void> _load() async {
     final gen = ++_gen;
     ++_liveGen;
+    if (mounted) {
+      setState(() {
+        _loading = true;
+        _loadFailed = false;
+      });
+    }
     final c = widget.client;
     final id = widget.sessionId;
     final mc = widget.isLead;
@@ -450,7 +458,10 @@ class _SessionRailState extends State<SessionRail> {
     ]);
     if (!mounted || gen != _gen) return;
     final auto = r[4] as Map<String, dynamic>?;
+    final allNull = !mc && r[0] == null && r[3] == null && r[5] == null;
     setState(() {
+      _loading = false;
+      _loadFailed = allNull && widget.state == null;
       _git = r[0] as GitStatus?;
       _countLines();
       _wakeKnown = true;
@@ -1418,24 +1429,21 @@ class _SessionRailState extends State<SessionRail> {
                 width: 14,
                 child: Center(
                   child: switch (_stepState(p)) {
-                    2 => AppIcon('check', size: 12, color: AppColors.fg4),
+                    2 => AppIcon('check', size: 12, color: AppColors.fg2),
                     1 => Container(
-                        width: 9,
-                        height: 9,
+                        width: 7,
+                        height: 7,
                         decoration: BoxDecoration(
-                            color: AppColors.accent,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                  color: AppColors.accentBg, spreadRadius: 3)
-                            ])),
+                          color: AppColors.fg1,
+                          shape: BoxShape.circle,
+                        )),
                     _ => Container(
-                        width: 9,
-                        height: 9,
+                        width: 8,
+                        height: 8,
                         decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border:
-                                Border.all(color: AppColors.fg4, width: 1.3))),
+                                Border.all(color: AppColors.fg3, width: 1.3))),
                   },
                 ),
               ),
@@ -1446,7 +1454,7 @@ class _SessionRailState extends State<SessionRail> {
                     overflow: TextOverflow.ellipsis,
                     style: sans(13,
                         color: switch (_stepState(p)) {
-                          2 => AppColors.fg4,
+                          2 => AppColors.fg2,
                           1 => AppColors.fg1,
                           _ => AppColors.fg3,
                         })),
@@ -1989,15 +1997,9 @@ class _MoreRow extends StatelessWidget {
 
 /// A flat-pane row card: 8 px on surface2, hover surface3.
 class _RailCard extends StatefulWidget {
-  const _RailCard(
-      {required this.child,
-      this.onTap,
-      this.pad = const EdgeInsets.all(8),
-      this.radius});
+  const _RailCard({required this.child, this.onTap});
   final Widget child;
   final VoidCallback? onTap;
-  final EdgeInsets pad;
-  final double? radius;
 
   @override
   State<_RailCard> createState() => _RailCardState();
@@ -2018,12 +2020,12 @@ class _RailCardState extends State<_RailCard> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
             curve: const Cubic(.23, 1, .32, 1),
-            padding: widget.pad,
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: _hover && widget.onTap != null
                   ? AppColors.surface3
                   : AppColors.surface2,
-              borderRadius: BorderRadius.circular(widget.radius ?? R.of(8)),
+              borderRadius: BorderRadius.circular(R.of(8)),
             ),
             child: widget.child,
           ),

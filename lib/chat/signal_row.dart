@@ -244,6 +244,42 @@ String prettyProfile(String raw) {
       .join(' ');
 }
 
+String prettyProvider(String raw) {
+  final p = raw.trim().toLowerCase();
+  return switch (p) {
+    'claude-code' => 'Claude Code',
+    'anthropic' || 'anthropic-compatible' => 'Anthropic',
+    'openai' || 'openai-compatible' => 'OpenAI',
+    'chatgpt' => 'ChatGPT',
+    'codex' => 'Codex',
+    'gemini' || 'google' => 'Gemini',
+    'antigravity' => 'Antigravity',
+    'xai' => 'xAI',
+    'openrouter' => 'OpenRouter',
+    'opencode' || 'opencode-zen' || 'opencode-go' => 'OpenCode',
+    'devin' => 'Devin',
+    '' => '',
+    _ => prettyProfile(raw),
+  };
+}
+
+String prettyModel(String raw) {
+  var m = raw.trim();
+  if (m.isEmpty) return '';
+  if (m.contains('/')) m = m.split('/').last;
+  // Strip trailing date stamps like -20250929.
+  m = m.replaceFirst(RegExp(r'-20\d{6}$'), '');
+  final claude = RegExp(r'^claude-(opus|sonnet|haiku)-(\d+)-(\d+)(?:-(.+))?$',
+          caseSensitive: false)
+      .firstMatch(m);
+  if (claude != null) {
+    final fam = claude.group(1)!;
+    final cap = '${fam[0].toUpperCase()}${fam.substring(1).toLowerCase()}';
+    return '$cap ${claude.group(2)}.${claude.group(3)}';
+  }
+  return prettyProfile(m);
+}
+
 /// Rebuilds when the display names arrive.
 class AgentNamesBuilder extends StatelessWidget {
   const AgentNamesBuilder({super.key, required this.builder});

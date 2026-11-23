@@ -457,19 +457,19 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
           borderRadius: BorderRadius.circular(R.of(5)),
           onTap: onTap,
           child: Container(
-            height: 24,
-            padding: EdgeInsets.symmetric(horizontal: S.of(9)),
+            constraints: const BoxConstraints(minHeight: 24),
+            padding: EdgeInsets.symmetric(horizontal: S.of(9), vertical: 3),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               if (lead != null) ...[lead, SizedBox(width: S.s6)],
               ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 180),
+                constraints: const BoxConstraints(maxWidth: 200),
                 child: Text(label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: sans(12, color: AppColors.fg2)),
               ),
               SizedBox(width: S.s4),
-              AppIcon('chevron-down', size: 10, color: AppColors.fg4),
+              AppIcon('chevron-down', size: 10, color: AppColors.fg3),
             ]),
           ),
         ),
@@ -489,7 +489,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                   ? const Spinner(size: 14)
                   : AppIcon('arrow-up',
                       size: 15,
-                      color: canSend ? AppColors.accentFg : AppColors.fg4),
+                      color: canSend ? AppColors.accentFg : AppColors.fg3),
             ),
           ),
         ),
@@ -498,7 +498,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
   Widget _field(String label, Widget child) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: sans(11.5, weight: W.label, color: AppColors.fg4)),
+          Text(label, style: sans(11.5, weight: W.label, color: AppColors.fg3)),
           SizedBox(height: S.s6),
           child,
         ],
@@ -516,14 +516,14 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
         color: AppColors.surface2,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(R.of(8)),
-          side: BorderSide(color: on ? AppColors.fg4 : AppColors.line),
+          side: BorderSide(color: on ? AppColors.fg3 : AppColors.line),
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(R.of(8)),
           onTap: onTap,
           child: Container(
-            height: 34,
-            padding: EdgeInsets.symmetric(horizontal: S.of(10)),
+            constraints: const BoxConstraints(minHeight: 34),
+            padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: 6),
             child: Row(children: [
               if (lead != null) ...[lead, SizedBox(width: S.s8)],
               Expanded(
@@ -540,13 +540,13 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                       child: Text(hint,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: sans(12, color: AppColors.fg4)),
+                          style: sans(12, color: AppColors.fg3)),
                     ),
                   ],
                 ]),
               ),
               SizedBox(width: S.s6),
-              AppIcon('chevron-down', size: 12, color: AppColors.fg4),
+              AppIcon('chevron-down', size: 12, color: AppColors.fg3),
             ]),
           ),
         ),
@@ -554,7 +554,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
 
   Widget _segmented(List<(String, String?, bool, VoidCallback?)> items) =>
       Container(
-        height: 34,
+        constraints: const BoxConstraints(minHeight: 34),
         padding: const EdgeInsets.all(2),
         decoration: BoxDecoration(
           color: AppColors.surface2,
@@ -570,22 +570,25 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                 child: InkWell(
                   borderRadius: BorderRadius.circular(R.of(6)),
                   onTap: tap,
-                  child: Center(
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      if (icon != null) ...[
-                        AppIcon(icon,
-                            size: 13,
-                            color: on ? AppColors.fg1 : AppColors.fg3),
-                        SizedBox(width: S.s6),
-                      ],
-                      Flexible(
-                        child: Text(label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(12.5,
-                                color: on ? AppColors.fg1 : AppColors.fg3)),
-                      ),
-                    ]),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Center(
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        if (icon != null) ...[
+                          AppIcon(icon,
+                              size: 13,
+                              color: on ? AppColors.fg1 : AppColors.fg3),
+                          SizedBox(width: S.s6),
+                        ],
+                        Flexible(
+                          child: Text(label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: sans(12.5,
+                                  color: on ? AppColors.fg1 : AppColors.fg3)),
+                        ),
+                      ]),
+                    ),
                   ),
                 ),
               ),
@@ -594,8 +597,8 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
       );
 
   Widget _fileChip(int i) => Container(
-        height: 24,
-        padding: EdgeInsets.only(left: S.of(7), right: S.s4),
+        constraints: const BoxConstraints(minHeight: 24),
+        padding: EdgeInsets.fromLTRB(S.of(7), 2, S.s4, 2),
         decoration: BoxDecoration(
           color: AppColors.surface3,
           borderRadius: BorderRadius.circular(R.of(5)),
@@ -631,7 +634,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
           isCollapsed: true,
           border: InputBorder.none,
           hintText: 'Ask, build, or type / for commands',
-          hintStyle: sans(sheet ? 16 : 15, color: AppColors.fg4),
+          hintStyle: sans(sheet ? 16 : 15, color: AppColors.fg3),
         ),
       );
 
@@ -650,7 +653,8 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
   InferenceProfile? get _current =>
       _profiles.where((p) => p.name == _profile).firstOrNull;
 
-  /// The start failed: say so plainly, keep the message, offer the retry.
+  /// The start failed (W4): say so plainly, keep the message, offer retry and
+  /// choosing another agent as secondary outlined buttons.
   Widget _startFailure(String why) => Padding(
         padding: EdgeInsets.only(bottom: S.s16),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -660,14 +664,30 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('The session did not start',
+                Text('$_agentName did not start',
                     style: sans(14, weight: W.label, color: AppColors.fg1)),
+                SizedBox(height: S.s2),
                 Text('$why Your message is kept.',
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(13, color: AppColors.fg3)),
-                SizedBox(height: S.s8),
-                Btn('Try again', small: true, onTap: _start),
+                    style: sans(13, color: AppColors.fg2)),
+                SizedBox(height: S.s12),
+                Wrap(
+                  spacing: S.s8,
+                  runSpacing: S.s8,
+                  children: [
+                    Btn('Try again',
+                        small: true,
+                        variant: BtnVariant.outline,
+                        onTap: _start),
+                    Builder(
+                      builder: (a) => Btn('Choose another agent',
+                          small: true,
+                          variant: BtnVariant.outline,
+                          onTap: () => _pickAgent(a)),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -848,7 +868,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                             Padding(
                               padding: const EdgeInsets.only(right: 2),
                               child: Text('Recent',
-                                  style: TS.caption(AppColors.fg4)),
+                                  style: TS.caption(AppColors.fg3)),
                             ),
                             for (final s in _recents) _recentChip(s),
                           ],
@@ -906,7 +926,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                           : 'on ${widget.machineLabel}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(12, color: AppColors.fg4)),
+                      style: sans(12, color: AppColors.fg3)),
                 ),
                 if (widget.onCancel != null)
                   IconBtn('x',
@@ -956,9 +976,9 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                               borderRadius: BorderRadius.circular(R.of(5)),
                               onTap: _addFiles,
                               child: Container(
-                                height: 24,
-                                padding:
-                                    EdgeInsets.symmetric(horizontal: S.of(9)),
+                                constraints: const BoxConstraints(minHeight: 24),
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: S.of(9), vertical: 3),
                                 child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
@@ -980,6 +1000,11 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                 ),
               ),
             ),
+            if (_startError != null)
+              Padding(
+                padding: EdgeInsets.fromLTRB(S.s20, S.s12, S.s20, 0),
+                child: _startFailure(_startError!),
+              ),
             Padding(
               padding: EdgeInsets.fromLTRB(S.s20, S.s16, S.s20, 0),
               child:
@@ -1067,7 +1092,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
               padding: EdgeInsets.fromLTRB(S.s20, S.s8, S.s20, 0),
               child: Text(
                   _isRepo ? hint : 'This folder is not a git repository.',
-                  style: sans(12, color: AppColors.fg4)),
+                  style: sans(12, color: AppColors.fg3)),
             ),
             SizedBox(height: S.s16),
             Container(
@@ -1077,7 +1102,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
               ),
               child: Row(children: [
                 Text(kMacOS ? '⌘↵ to start' : 'Ctrl ↵ to start',
-                    style: sans(12, color: AppColors.fg4)),
+                    style: sans(12, color: AppColors.fg3)),
                 const Spacer(),
                 if (widget.onCancel != null) ...[
                   Btn('Cancel',
