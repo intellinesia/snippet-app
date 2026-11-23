@@ -12,7 +12,7 @@ APP = {
 'eye':'eye','eye-off':'eye-slash','file':'file','file-archive':'file-zip','file-audio':'file-audio','file-axis':'file','file-badge':'file',
 'file-box':'file','file-braces':'brackets-curly','file-chart':'chart-line','file-clock':'file','file-code':'file-code','file-cog':'file',
 'file-diff':'git-diff','file-digit':'file','file-image':'file-image','file-json':'brackets-curly','file-key':'file','file-lock':'file-lock',
-'file-play':'file-video','file-plus':'file-plus','file-signature':'file','file-sliders':'file','file-spreadsheet':'table','file-stack':'stack',
+'file-play':'file-video','file-plus':'file-plus','file-signature':'file','file-sliders':'file','file-spreadsheet':'table','file-stack':'database',
 'file-terminal':'terminal-window','file-text':'file-text','file-type':'file-text','file-video':'file-video','film':'film-strip',
 'folder':'folder','folder-archive':'folder','folder-bookmark':'folder','folder-check':'folder','folder-clock':'folder','folder-code':'folder',
 'folder-cog':'folder','folder-git':'git-branch','folder-heart':'folder-star','folder-kanban':'kanban','folder-key':'folder-lock',
@@ -26,14 +26,14 @@ APP = {
 'mic':'microphone','mic-off':'microphone-slash','minimize':'arrows-in','minus':'minus','monitor':'monitor','more-horizontal':'dots-three',
 'more-vertical':'dots-three-vertical','music':'music-note','package':'package','panel-left':'sidebar-simple','panel-right':'sidebar-simple',
 'paperclip':'paperclip','pause':'pause','pdf':'file-pdf','pencil':'pencil-simple','pencil-line':'pencil-simple-line','phone':'phone',
-'phone-off':'phone-slash','pin':'push-pin','pin-off':'push-pin-slash','play':'play','plus':'plus','processes':'gear','pull-request':'git-pull-request',
+'phone-off':'phone-slash','pin':'push-pin','pin-off':'push-pin-slash','play':'play','plus':'plus','processes':'queue','pull-request':'git-pull-request',
 'redo':'arrow-u-up-right','refresh':'arrows-clockwise','repeat':'repeat','reply':'arrow-bend-up-left','rotate':'arrow-clockwise','route':'path',
 'scan':'scan','scheduled':'calendar','search':'magnifying-glass','send':'paper-plane-tilt','server':'hard-drives','settings':'gear',
 'share':'share-network','shield':'shield','shield-check':'shield-check','shrink':'arrows-in-simple','sidebar':'sidebar','sliders':'sliders',
 'sliders-horizontal':'sliders-horizontal','sparkles':'sparkle','split':'arrows-split','square-pen':'note-pencil','square-terminal':'terminal-window',
 'star':'star','stop':'stop','task':'list-checks','terminal':'terminal','thumbs-up':'thumbs-up','timer':'timer','transfer':'arrows-left-right',
 'trash':'trash','trash-2':'trash','undo':'arrow-u-up-left','upload':'upload-simple','user':'user','user-plus':'user-plus','users':'users',
-'volume':'speaker-high','wifi-off':'wifi-slash','worktree':'git-merge','wrap':'text-align-justify','x':'x','x-circle':'x-circle','zap':'lightning',
+'volume':'speaker-high','wifi-off':'wifi-slash','worktree':'tree-structure','wrap':'text-align-left','x':'x','x-circle':'x-circle','zap':'lightning',
 }
 # Old Myna class member -> Phosphor kebab, for the direct MynaIcons.* references that predate this mapping.
 MYNA = {

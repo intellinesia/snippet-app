@@ -86,7 +86,6 @@ abstract final class PhIcons {
   static const IconData gitCommit = IconData(0xe27a, fontFamily: 'Phosphor');
   static const IconData gitDiff = IconData(0xe27c, fontFamily: 'Phosphor');
   static const IconData gitFork = IconData(0xe27e, fontFamily: 'Phosphor');
-  static const IconData gitMerge = IconData(0xe280, fontFamily: 'Phosphor');
   static const IconData gitPullRequest = IconData(0xe282, fontFamily: 'Phosphor');
   static const IconData globe = IconData(0xe288, fontFamily: 'Phosphor');
   static const IconData graph = IconData(0xeb58, fontFamily: 'Phosphor');
@@ -130,6 +129,7 @@ abstract final class PhIcons {
   static const IconData pushPin = IconData(0xe3e2, fontFamily: 'Phosphor');
   static const IconData pushPinSlash = IconData(0xe3e4, fontFamily: 'Phosphor');
   static const IconData question = IconData(0xe3e8, fontFamily: 'Phosphor');
+  static const IconData queue = IconData(0xe6ac, fontFamily: 'Phosphor');
   static const IconData repeat = IconData(0xe3f6, fontFamily: 'Phosphor');
   static const IconData robot = IconData(0xe762, fontFamily: 'Phosphor');
   static const IconData scan = IconData(0xebb6, fontFamily: 'Phosphor');
@@ -150,11 +150,12 @@ abstract final class PhIcons {
   static const IconData target = IconData(0xe47c, fontFamily: 'Phosphor');
   static const IconData terminal = IconData(0xe47e, fontFamily: 'Phosphor');
   static const IconData terminalWindow = IconData(0xeae8, fontFamily: 'Phosphor');
-  static const IconData textAlignJustify = IconData(0xe482, fontFamily: 'Phosphor');
+  static const IconData textAlignLeft = IconData(0xe484, fontFamily: 'Phosphor');
   static const IconData thumbsUp = IconData(0xe48e, fontFamily: 'Phosphor');
   static const IconData timer = IconData(0xe492, fontFamily: 'Phosphor');
   static const IconData trash = IconData(0xe4a6, fontFamily: 'Phosphor');
   static const IconData tray = IconData(0xe4aa, fontFamily: 'Phosphor');
+  static const IconData treeStructure = IconData(0xe67c, fontFamily: 'Phosphor');
   static const IconData uploadSimple = IconData(0xe4c0, fontFamily: 'Phosphor');
   static const IconData user = IconData(0xe4c2, fontFamily: 'Phosphor');
   static const IconData userPlus = IconData(0xe4d0, fontFamily: 'Phosphor');
@@ -252,7 +253,6 @@ abstract final class PhIconsFill {
   static const IconData gitCommit = IconData(0xe27a, fontFamily: 'PhosphorFill');
   static const IconData gitDiff = IconData(0xe27c, fontFamily: 'PhosphorFill');
   static const IconData gitFork = IconData(0xe27e, fontFamily: 'PhosphorFill');
-  static const IconData gitMerge = IconData(0xe280, fontFamily: 'PhosphorFill');
   static const IconData gitPullRequest = IconData(0xe282, fontFamily: 'PhosphorFill');
   static const IconData globe = IconData(0xe288, fontFamily: 'PhosphorFill');
   static const IconData graph = IconData(0xeb58, fontFamily: 'PhosphorFill');
@@ -296,6 +296,7 @@ abstract final class PhIconsFill {
   static const IconData pushPin = IconData(0xe3e2, fontFamily: 'PhosphorFill');
   static const IconData pushPinSlash = IconData(0xe3e4, fontFamily: 'PhosphorFill');
   static const IconData question = IconData(0xe3e8, fontFamily: 'PhosphorFill');
+  static const IconData queue = IconData(0xe6ac, fontFamily: 'PhosphorFill');
   static const IconData repeat = IconData(0xe3f6, fontFamily: 'PhosphorFill');
   static const IconData robot = IconData(0xe762, fontFamily: 'PhosphorFill');
   static const IconData scan = IconData(0xebb6, fontFamily: 'PhosphorFill');
@@ -316,11 +317,12 @@ abstract final class PhIconsFill {
   static const IconData target = IconData(0xe47c, fontFamily: 'PhosphorFill');
   static const IconData terminal = IconData(0xe47e, fontFamily: 'PhosphorFill');
   static const IconData terminalWindow = IconData(0xeae8, fontFamily: 'PhosphorFill');
-  static const IconData textAlignJustify = IconData(0xe482, fontFamily: 'PhosphorFill');
+  static const IconData textAlignLeft = IconData(0xe484, fontFamily: 'PhosphorFill');
   static const IconData thumbsUp = IconData(0xe48e, fontFamily: 'PhosphorFill');
   static const IconData timer = IconData(0xe492, fontFamily: 'PhosphorFill');
   static const IconData trash = IconData(0xe4a6, fontFamily: 'PhosphorFill');
   static const IconData tray = IconData(0xe4aa, fontFamily: 'PhosphorFill');
+  static const IconData treeStructure = IconData(0xe67c, fontFamily: 'PhosphorFill');
   static const IconData uploadSimple = IconData(0xe4c0, fontFamily: 'PhosphorFill');
   static const IconData user = IconData(0xe4c2, fontFamily: 'PhosphorFill');
   static const IconData userPlus = IconData(0xe4d0, fontFamily: 'PhosphorFill');
