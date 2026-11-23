@@ -1977,13 +1977,16 @@ class _DesktopShellState extends State<DesktopShell>
                         ),
                         // Narrow: the toolbar's sidebar-toggle is at the far left under the
                         // traffic lights, so inset the whole pane below them.
-                        body: SafeArea(
-                          child: Padding(
-                            padding:
-                                EdgeInsets.only(top: kMacOS ? kMacTitlebar : 0),
-                            child: _mainPane(
-                                onMenu: () =>
-                                    _scaffoldKey.currentState?.openDrawer()),
+                        body: ColoredBox(
+                          color: AppColors.windowChrome,
+                          child: SafeArea(
+                            child: Padding(
+                              padding: EdgeInsets.only(
+                                  top: kMacOS ? kMacTitlebar : 0),
+                              child: _mainPane(
+                                  onMenu: () =>
+                                      _scaffoldKey.currentState?.openDrawer()),
+                            ),
                           ),
                         ),
                       ),

@@ -432,7 +432,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           return _rightTabBody(r, s, controls);
         },
         fallbackBuilder: _paneFallback,
-        rightPanel: _sessionSidePanel(),
+        // The canvas takes the inspector's place while it has content.
+        rightPanel: _tabsIn(_Pane.right).isEmpty ? _sessionSidePanel() : null,
         hideRight: _activeTab != null &&
             (_activeTab!.isDraft ||
                 (_activeTab!.isReadout && !_dockedInfo) ||
