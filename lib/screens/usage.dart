@@ -113,23 +113,23 @@ class _UsageScreenState extends State<UsageScreen> {
     final Widget content;
     if (data == null && _usage.error == null) {
       content = kMobile
-          ? const Padding(
-              padding: EdgeInsets.symmetric(vertical: 48),
-              child: Center(child: Spinner(size: 18)),
+          ? Padding(
+              padding: EdgeInsets.symmetric(vertical: S.of(48)),
+              child: const Center(child: Spinner(size: 18)),
             )
           : const SettingsGroup(children: [SettingsRow(label: 'Loading usage…')]);
     } else if (data == null) {
       content = kMobile
           ? Padding(
-              padding: const EdgeInsets.symmetric(vertical: S.s24),
+              padding: EdgeInsets.symmetric(vertical: S.s24),
               child: Column(children: [
                 Text('Unable to load usage',
                     style: sans(13, color: AppColors.fg1)),
-                const SizedBox(height: 6),
+                SizedBox(height: S.s6),
                 Text('${_usage.error}',
                     textAlign: TextAlign.center,
                     style: mono(11, color: AppColors.fg3)),
-                const SizedBox(height: 10),
+                SizedBox(height: S.of(10)),
                 Btn('Retry', small: true, onTap: _refresh),
               ]),
             )
@@ -147,7 +147,7 @@ class _UsageScreenState extends State<UsageScreen> {
     } else if (data.providers.isEmpty) {
       content = kMobile
           ? Padding(
-              padding: const EdgeInsets.symmetric(vertical: S.s32),
+              padding: EdgeInsets.symmetric(vertical: S.s32),
               child: Text('No model calls in this period.',
                   textAlign: TextAlign.center, style: TS.meta()),
             )
@@ -166,10 +166,10 @@ class _UsageScreenState extends State<UsageScreen> {
     final Widget body;
     if (kMobile) {
       body = ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+        padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s40),
         children: [
           _PeriodTabs(value: _period, onChanged: _setPeriod),
-          const SizedBox(height: 18),
+          SizedBox(height: S.of(18)),
           AnimatedSwitcher(
             duration: Motion.quick,
             child: KeyedSubtree(
@@ -180,7 +180,7 @@ class _UsageScreenState extends State<UsageScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(4, 2, 4, 0),
+            padding: EdgeInsets.fromLTRB(S.s4, S.s2, S.s4, 0),
             child: Text(
               'Every model call is recorded against the provider and model that served it. Input includes cached tokens; rate limits come from each provider\'s own reports.',
               style: sans(13, height: 1.5, color: AppColors.fg4),
@@ -196,7 +196,7 @@ class _UsageScreenState extends State<UsageScreen> {
             alignment: Alignment.centerLeft,
             child: _PeriodTabs(value: _period, onChanged: _setPeriod),
           ),
-          const SizedBox(height: S.s16),
+          SizedBox(height: S.s16),
           AnimatedSwitcher(
             duration: Motion.quick,
             child: KeyedSubtree(
@@ -207,7 +207,7 @@ class _UsageScreenState extends State<UsageScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(4, 0, 4, 0),
+            padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, 0),
             child: Text(
               'Every model call is recorded against the provider and model that served it. Input includes cached tokens; rate limits come from each provider\'s own reports.',
               style: sans(13, height: 1.5, color: AppColors.fg4),
@@ -218,7 +218,7 @@ class _UsageScreenState extends State<UsageScreen> {
       body = widget.embedded
           ? column
           : SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s40),
+              padding: EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s40),
               child: column);
     }
 
@@ -295,8 +295,8 @@ class _ProviderSection extends StatelessWidget {
         if (hasTokens)
           Padding(
             padding: EdgeInsets.symmetric(
-              horizontal: kMobile ? 16 : 14,
-              vertical: kMobile ? 12 : 10,
+              horizontal: kMobile ? S.s16 : S.of(14),
+              vertical: kMobile ? S.s12 : S.of(10),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -337,7 +337,7 @@ class _Metric extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label, style: sans(12, color: AppColors.fg4)),
-          const SizedBox(height: 3),
+          SizedBox(height: S.of(3)),
           Text(
             value,
             style: mono(
@@ -381,7 +381,7 @@ class _RateRow extends StatelessWidget {
           SizedBox(
             width: kMobile ? 76 : 120,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(3),
+              borderRadius: BorderRadius.circular(R.of(3)),
               child: SizedBox(
                 height: 5,
                 child: Stack(
@@ -398,7 +398,7 @@ class _RateRow extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: S.of(10)),
           SizedBox(
             width: 68,
             child: Text(
@@ -422,10 +422,10 @@ class _PeriodTabs extends StatelessWidget {
   Widget build(BuildContext context) {
     if (kMobile) {
       return Container(
-        padding: const EdgeInsets.all(3),
+        padding: EdgeInsets.all(S.of(3)),
         decoration: BoxDecoration(
           color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(11),
+          borderRadius: BorderRadius.circular(R.of(11)),
           border: Border.all(color: AppColors.line),
         ),
         child: Row(children: [
@@ -440,7 +440,7 @@ class _PeriodTabs extends StatelessWidget {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: p == value ? AppColors.surface3 : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(R.md),
                   ),
                   child: Text(
                     p.label,
@@ -458,10 +458,10 @@ class _PeriodTabs extends StatelessWidget {
       );
     }
     return Container(
-      padding: const EdgeInsets.all(2),
+      padding: EdgeInsets.all(S.s2),
       decoration: BoxDecoration(
         color: AppColors.tint1,
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(R.of(9)),
         border: Border.all(color: AppColors.line),
       ),
       child: Row(
@@ -474,11 +474,11 @@ class _PeriodTabs extends StatelessWidget {
               child: AnimatedContainer(
                 duration: Motion.quick,
                 height: 26,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
+                padding: EdgeInsets.symmetric(horizontal: S.of(10)),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: p == value ? AppColors.tint2 : Colors.transparent,
-                  borderRadius: BorderRadius.circular(7),
+                  borderRadius: BorderRadius.circular(R.of(7)),
                 ),
                 child: Text(
                   p.label,

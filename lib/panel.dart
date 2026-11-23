@@ -71,7 +71,7 @@ Future<T?> presentScreen<T>(
         if (style == PanelStyle.dialog) {
           return Center(
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(S.s24),
               child: ConstrainedBox(
                   constraints:
                       BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
@@ -143,7 +143,7 @@ Future<T?> showModal<T>(
     transitionDuration: Motion.fast,
     pageBuilder: (ctx, _, __) => Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(S.s24),
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: width, maxHeight: height),
           child: _frame(child, rounded: true),

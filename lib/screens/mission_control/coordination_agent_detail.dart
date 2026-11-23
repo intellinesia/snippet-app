@@ -70,7 +70,7 @@ class _NoConnection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 8, 10),
+            padding: EdgeInsets.fromLTRB(S.s16, S.s12, S.s8, S.of(10)),
             child: Row(children: [
               Expanded(
                 child: Text(name,
@@ -90,7 +90,7 @@ class _NoConnection extends StatelessWidget {
           Expanded(
             child: Center(
               child: Padding(
-                padding: const EdgeInsets.all(28),
+                padding: EdgeInsets.all(S.of(28)),
                 child: Text('Connect to a machine to message this agent.',
                     textAlign: TextAlign.center,
                     style: TS.meta()),

@@ -38,14 +38,14 @@ class ComposerCard extends StatelessWidget {
   static double get radius => kMobile ? 20 : 16;
 
   static EdgeInsets get _padding => kMobile
-      ? const EdgeInsets.fromLTRB(6, 6, 6, 6)
-      : const EdgeInsets.fromLTRB(6, 5, 6, 5);
+      ? EdgeInsets.fromLTRB(S.s6, S.s6, S.s6, S.s6)
+      : EdgeInsets.fromLTRB(S.s6, S.of(5), S.s6, S.of(5));
 
   static InputDecoration decoration(String hint) => InputDecoration(
         isCollapsed: true,
         // One line fills the button slot exactly, so the controls sit centred.
         contentPadding:
-            EdgeInsets.fromLTRB(4, kMobile ? 6 : 5, 4, kMobile ? 6 : 5),
+            EdgeInsets.fromLTRB(S.s4, kMobile ? S.s6 : S.of(5), S.s4, kMobile ? S.s6 : S.of(5)),
         border: InputBorder.none,
         hintText: hint,
         hintMaxLines: 1,
@@ -77,7 +77,7 @@ class ComposerCard extends StatelessWidget {
             valueListenable: text ?? ValueNotifier(TextEditingValue.empty),
             builder: (context, v, _) {
               final compact = _compact(box.maxWidth, v.text);
-              final slot = kMobile ? 36.0 : 32.0;
+              final slot = kMobile ? 36.0 : 28.0;
               Widget inSlot(Widget w) =>
                   SizedBox(height: slot, child: Center(child: w));
               return Column(
@@ -98,7 +98,7 @@ class ComposerCard extends StatelessWidget {
                       ),
                       if (trailing != null) inSlot(trailing!(compact)),
                       if (mic != null) inSlot(mic!),
-                      const SizedBox(width: 4),
+                      SizedBox(width: S.s4),
                       inSlot(send),
                     ],
                   ),
@@ -143,7 +143,7 @@ class ComposerIconButton extends StatelessWidget {
         },
         borderRadius: BorderRadius.circular(R.sm),
         child: SizedBox.square(
-          dimension: kMobile ? 34 : 30,
+          dimension: kMobile ? 34 : 28,
           child: Center(
               child: AppIcon(icon,
                   size: kMobile ? 18 : 17, color: color ?? AppColors.fg3)),
@@ -192,7 +192,7 @@ class ComposerSendButton extends StatelessWidget {
               }
             : onTap,
         child: SizedBox.square(
-          dimension: kMobile ? 36 : 32,
+          dimension: kMobile ? 36 : 28,
           child: Center(
             child: sending
                 ? Spinner(size: 14, color: ink)
@@ -228,17 +228,17 @@ class ComposerChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
         color: selected ? AppColors.accentBg : Colors.transparent,
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(R.of(9)),
         child: InkWell(
           onTap: () {
             pickHaptic();
             onTap();
           },
-          borderRadius: BorderRadius.circular(9),
+          borderRadius: BorderRadius.circular(R.of(9)),
           child: Container(
             height: 28,
-            padding: EdgeInsets.fromLTRB(compact ? 8 : (kMobile ? 9 : 8), 0,
-                compact ? 8 : (onClear == null ? (kMobile ? 8 : 7) : 4), 0),
+            padding: EdgeInsets.fromLTRB(compact ? S.s8 : (kMobile ? S.of(9) : S.s8), 0,
+                compact ? S.s8 : (onClear == null ? (kMobile ? S.s8 : S.of(7)) : S.s4), 0),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -246,7 +246,7 @@ class ComposerChip extends StatelessWidget {
                 AppIcon(icon,
                     size: 13.5,
                     color: selected ? AppColors.accent : AppColors.fg3),
-                if (!compact) const SizedBox(width: 6),
+                if (!compact) SizedBox(width: S.s6),
                 if (!compact)
                   ConstrainedBox(
                     constraints: BoxConstraints(maxWidth: kMobile ? 110 : 140),
@@ -263,7 +263,7 @@ class ComposerChip extends StatelessWidget {
                   IconBtn('x',
                       size: 22, iconSize: 12, tooltip: 'Clear', onTap: onClear)
                 else ...[
-                  const SizedBox(width: 5),
+                  SizedBox(width: S.of(5)),
                   AppIcon('chevron-down',
                       size: 12,
                       color: selected ? AppColors.accent : AppColors.fg4),

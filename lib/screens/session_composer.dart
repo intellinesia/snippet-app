@@ -317,22 +317,22 @@ extension _SessionScreenComposerExt on _SessionScreenState {
           behavior: HitTestBehavior.opaque,
           child: Padding(
             padding:
-                const EdgeInsets.symmetric(horizontal: S.s6, vertical: S.s2),
+                EdgeInsets.symmetric(horizontal: S.s6, vertical: S.s2),
             child: Text(label, style: sans(12, color: color)),
           ),
         );
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: S.s6),
+      padding: EdgeInsets.only(bottom: S.s6),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (count > 1)
             Padding(
-              padding: const EdgeInsets.only(bottom: S.s4),
+              padding: EdgeInsets.only(bottom: S.s4),
               child: Row(children: [
-                const SizedBox(width: S.s6),
+                SizedBox(width: S.s6),
                 Text('$count queued', style: sans(12, color: AppColors.fg4)),
                 const Spacer(),
                 textAction('Clear', _cancelAllQueued, AppColors.fg4),
@@ -345,7 +345,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
               shrinkWrap: true,
               padding: EdgeInsets.zero,
               itemCount: count,
-              separatorBuilder: (_, __) => const SizedBox(height: S.s4),
+              separatorBuilder: (_, __) => SizedBox(height: S.s4),
               itemBuilder: (_, qi) => _queuedItemRow(qi, queue[qi]),
             ),
           ),
@@ -372,10 +372,10 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     Widget thumb(String path) => Container(
           width: 22,
           height: 22,
-          margin: const EdgeInsets.only(right: 3),
+          margin: EdgeInsets.only(right: S.of(3)),
           decoration: BoxDecoration(
             color: AppColors.surface2,
-            borderRadius: BorderRadius.circular(5),
+            borderRadius: BorderRadius.circular(R.of(5)),
             border: Border.all(color: AppColors.line),
           ),
           clipBehavior: Clip.antiAlias,
@@ -418,12 +418,12 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       },
       child: AnimatedContainer(
         duration: Motion.quick,
-        height: kMobile ? 38 : 32,
+        height: kMobile ? 38 : 26,
         padding: EdgeInsets.only(
             left: images.isNotEmpty ? S.s6 : S.s12, right: S.s4),
         decoration: BoxDecoration(
           color: isHovered ? AppColors.raised : AppColors.surface1,
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(R.pill),
           border: Border.all(color: AppColors.line),
         ),
         child: Row(children: [
@@ -435,7 +435,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
               Text('+${images.length - 3}',
                   style: sans(11, tabular: true, color: AppColors.fg4)),
           ],
-          const SizedBox(width: S.s8),
+          SizedBox(width: S.s8),
           Expanded(
             child: Text(
               label,
@@ -446,7 +446,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
             ),
           ),
           if (others > 0) ...[
-            const SizedBox(width: S.s6),
+            SizedBox(width: S.s6),
             AttachmentPill(audio: counts.$1, images: 0, files: counts.$3),
           ],
           AnimatedOpacity(
@@ -599,16 +599,16 @@ extension _SessionScreenComposerExt on _SessionScreenState {
   /// The composer's status line: where this session runs, and how much context
   /// is left. Sits under the card so the transcript keeps the full width.
   Widget _goalBanner() => Container(
-        margin: const EdgeInsets.only(bottom: 10),
+        margin: EdgeInsets.only(bottom: S.of(10)),
         padding: EdgeInsets.fromLTRB(
-            10, kMobile ? 4 : 8, kMobile ? 4 : 8, kMobile ? 4 : 8),
+            S.of(10), kMobile ? S.s4 : S.s8, kMobile ? S.s4 : S.s8, kMobile ? S.s4 : S.s8),
         decoration: BoxDecoration(
           color: AppColors.surface2,
           borderRadius: BorderRadius.circular(R.sm),
         ),
         child: Row(children: [
           AppIcon('goal', size: 14, color: AppColors.accent),
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           Expanded(
             child: Text(plainInline(_state!.goal!.text),
                 maxLines: 1,
@@ -617,7 +617,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
           ),
           Text(_state!.goal!.paused ? 'paused' : 'active',
               style: mono(10, color: AppColors.accent)),
-          const SizedBox(width: 5),
+          SizedBox(width: S.of(5)),
           kMobile
               ? GestureDetector(
                   behavior: HitTestBehavior.opaque,
@@ -671,7 +671,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
   Widget? _recipientChip() {
     if (_isMissionControl || _recipientAgentId == null) return null;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: EdgeInsets.only(bottom: S.s4),
       child: Align(
         alignment: Alignment.centerLeft,
         child: Builder(
@@ -765,16 +765,16 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     final matches = _mentionMatches;
     final loading = _mentionAgents == null && _mentionLoading;
     return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.all(4),
+      margin: EdgeInsets.only(bottom: S.s6),
+      padding: EdgeInsets.all(S.s4),
       decoration: BoxDecoration(
         color: AppColors.raised,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(R.lg),
         border: Border.all(color: AppColors.border),
       ),
       child: matches.isEmpty
           ? Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+              padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.of(9)),
               child: Text(
                   loading
                       ? 'Loading agents…'
@@ -789,13 +789,13 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                   color: i == _mentionIndex && !kMobile
                       ? AppColors.surface2
                       : Colors.transparent,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(R.md),
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(R.md),
                     onTap: () => _applyMention(matches[i]),
                     child: Container(
                       height: kMobile ? 44 : 34,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      padding: EdgeInsets.symmetric(horizontal: S.of(10)),
                       child: Row(children: [
                         Container(
                           width: 6,
@@ -807,7 +807,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                                 : AppColors.ok,
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        SizedBox(width: S.of(10)),
                         Flexible(
                           child: Text(
                               matches[i].displayName.trim().isEmpty
@@ -903,10 +903,10 @@ extension _SessionScreenComposerExt on _SessionScreenState {
             // Inset from the pane on EVERY layout. Embedded used to be 0, which is
             // why the composer stuck to the sides of the shell.
             padding: EdgeInsets.fromLTRB(
-                kMobile ? M.gutter : (widget.embedded ? kComposerGutter : 20),
-                8,
-                kMobile ? M.gutter : (widget.embedded ? kComposerGutter : 20),
-                10 + (keyboard > 0 ? 8 : mq.padding.bottom)),
+                kMobile ? M.gutter : (widget.embedded ? kComposerGutter : S.s20),
+                S.s8,
+                kMobile ? M.gutter : (widget.embedded ? kComposerGutter : S.s20),
+                S.of(10 ) + (keyboard > 0 ? S.s8 : mq.padding.bottom)),
             child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -971,7 +971,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       body = Container(
         height: ComposerAttachmentTile.side,
         width: 176,
-        padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
+        padding: EdgeInsets.fromLTRB(S.of(10), S.s8, S.s12, S.s8),
         decoration: BoxDecoration(
           color: AppColors.surface2,
           borderRadius: BorderRadius.circular(R.md),
@@ -983,11 +983,11 @@ extension _SessionScreenComposerExt on _SessionScreenState {
           children: [
             Row(children: [
               AppIcon('file-text', size: 12, color: AppColors.fg3),
-              const SizedBox(width: 5),
+              SizedBox(width: S.of(5)),
               Text('Pasted · $lines lines',
                   style: sans(11, weight: W.label, color: AppColors.fg2)),
             ]),
-            const SizedBox(height: 4),
+            SizedBox(height: S.s4),
             Text(firstLine,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -1091,7 +1091,7 @@ class SessionContextBar extends StatelessWidget {
   Widget build(BuildContext context) {
     if (termCount == 0) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: EdgeInsets.only(bottom: S.s6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
@@ -1124,25 +1124,25 @@ class _ContextChip extends StatelessWidget {
   Widget build(BuildContext context) => Material(
         color: AppColors.surface1,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(R.lg),
           side: BorderSide(color: AppColors.line),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(R.lg),
           child: SizedBox(
             height: 24,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 9),
+              padding: EdgeInsets.symmetric(horizontal: S.of(9)),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   AppIcon(icon, size: 12, color: AppColors.fg3),
-                  const SizedBox(width: 6),
+                  SizedBox(width: S.s6),
                   Text(label, style: TS.caption(AppColors.fg3)),
                   if (running) ...[
-                    const SizedBox(width: 6),
+                    SizedBox(width: S.s6),
                     Container(
                       width: 6,
                       height: 6,
@@ -1206,12 +1206,12 @@ class SessionContextFooter extends StatelessWidget {
     }
     if (items.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 6, 4, 0),
+      padding: EdgeInsets.fromLTRB(S.s4, S.s6, S.s4, 0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           for (var i = 0; i < items.length; i++) ...[
-            if (i > 0) const SizedBox(width: 12),
+            if (i > 0) SizedBox(width: S.s12),
             items[i],
           ],
         ],
@@ -1240,7 +1240,7 @@ class _ContextRingStat extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 5),
+          SizedBox(width: S.of(5)),
           Text(label, style: TS.caption(AppColors.fg4)),
         ],
       );

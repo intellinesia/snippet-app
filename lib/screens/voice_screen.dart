@@ -890,8 +890,8 @@ class _VoiceScreenState extends State<VoiceScreen> {
     } else {
       body = ListView(
         padding: kMobile
-            ? const EdgeInsets.fromLTRB(16, 8, 16, 40)
-            : const EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s40),
+            ? EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s40)
+            : EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s40),
         children: _groups(v),
       );
     }
@@ -921,15 +921,15 @@ class _VoiceButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
         color: kMobile ? Colors.transparent : AppColors.surface2,
-        borderRadius: BorderRadius.circular(7),
+        borderRadius: BorderRadius.circular(R.of(7)),
         child: InkWell(
-          borderRadius: BorderRadius.circular(7),
+          borderRadius: BorderRadius.circular(R.of(7)),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.s6),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Text(label, style: sans(kMobile ? 15 : 13, color: AppColors.fg2)),
-              const SizedBox(width: 6),
+              SizedBox(width: S.s6),
               AppIcon('chevron-right', size: 14, color: AppColors.fg3),
             ]),
           ),
