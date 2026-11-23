@@ -345,10 +345,8 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
     final human = humanSessions(sessions);
     final working = rows.working.length;
     final bottom = MediaQuery.paddingOf(context).bottom;
-    final askers = {for (final r in rows.needs) r.agent.id};
-    final groupAsks =
-        groups.where((g) => g.agentIds.any(askers.contains)).length;
-    final waiting = asks.length + groupAsks;
+    // Dead path; aligned with the live Home: distinct asks only.
+    final waiting = asks.length;
     final statusDot = working > 0
         ? AppColors.fg2
         : (waiting > 0 ? askAmber : AppColors.fg2);

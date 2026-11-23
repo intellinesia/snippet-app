@@ -182,7 +182,7 @@ class _HomeComposerState extends State<HomeComposer> {
       input: _input,
       focus: _focus,
       hint: widget.hint,
-      hintColor: AppColors.fg3,
+      hintColor: AppColors.fg2,
       voice: _voice,
       listen: _attachments,
       recipient: widget.agentName,

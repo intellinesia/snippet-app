@@ -555,7 +555,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
               contentPadding: EdgeInsets.only(right: S.s4),
               hintText: 'Ask, build, or type / for commands',
               hintStyle: sans(kMobile ? 17 : 15,
-                  height: kMobile ? 24 / 17 : 22 / 15, color: AppColors.fg4),
+                  height: kMobile ? 24 / 17 : 22 / 15, color: AppColors.fg2),
             ),
           ),
           if (_attachments.isNotEmpty) ...[

@@ -690,7 +690,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     _kit.start();
     _loadLine();
     _loadUnread();
-    if (!kMobile) _loadProviders();
+    _loadProviders();
     _thread = Swr<DirectThreadPage>(
       client: widget.client,
       key: 'agent-thread:${widget.agentId}',
@@ -1138,7 +1138,8 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   String _stageSubtitle(String subtitle) {
     final p = widget.client.presence.presenceForAgentId(widget.agentId);
     final prof = _agent?.deskProfile ?? _agent?.profile;
-    final model = (_agent?.deskModel ?? '').trim();
+    final rawModel = (_profiles[prof ?? '']?.model ?? '').trim();
+    final model = rawModel.isEmpty ? '' : prettyModel(rawModel);
     // Provider and model, never the raw profile id.
     final named = prof == null || prof.trim().isEmpty
         ? ''

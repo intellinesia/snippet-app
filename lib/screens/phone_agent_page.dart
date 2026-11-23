@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../chat/chat_card.dart';
-import '../chat/signal_row.dart' show prettyProfile;
+import '../chat/signal_row.dart' show prettyModel, prettyProfile;
 import '../mochi.dart';
 import '../models.dart';
 import '../quiet.dart';
@@ -42,6 +42,17 @@ class PhoneAgentPage extends StatefulWidget {
 class _PhoneAgentPageState extends State<PhoneAgentPage> {
   bool _chat = false;
   bool _busy = false;
+  Map<String, InferenceProfile> _profiles = const {};
+
+  @override
+  void initState() {
+    super.initState();
+    widget.client.getConfig().then((cfg) {
+      if (mounted) {
+        setState(() => _profiles = {for (final p in cfg.profiles) p.name: p});
+      }
+    }).catchError((_) {});
+  }
 
   CoordinationAgent get a => widget.agent;
   String get _name =>
@@ -103,7 +114,11 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
                 ],
                 Flexible(
                   child: Text(
-                      [prettyProfile(profile), if ((a.deskModel ?? '').trim().isNotEmpty) a.deskModel!.trim()].join(' · '),
+                      [
+                        prettyProfile(profile),
+                        if ((_profiles[profile]?.model ?? '').trim().isNotEmpty)
+                          prettyModel(_profiles[profile]!.model)
+                      ].join(' · '),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(14, color: AppColors.fg2)),
