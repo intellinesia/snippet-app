@@ -1,4 +1,4 @@
-import '../myna_icons.dart';
+import '../phosphor_icons.dart';
 import '../chat/ledger_line.dart' show LedgerLiveScope;
 import '../chat/system_notice.dart';
 import '../diagnostics.dart';

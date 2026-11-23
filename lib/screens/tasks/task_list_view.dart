@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import '../../api.dart';
 import '../../desktop_layout.dart';
 import '../../models.dart';
-import '../../myna_icons.dart';
+import '../../phosphor_icons.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
 import '../../tap_detector.dart';
@@ -353,19 +353,19 @@ class _TaskListViewState extends State<TaskListView> {
           Builder(
               builder: (a) => _BarBtn(
                   label: 'Filter',
-                  icon: MynaIcons.fineTune,
+                  icon: PhIcons.slidersHorizontal,
                   onTap: () => _filterMenu(a))),
           const SizedBox(width: 6),
           Builder(
               builder: (a) => _BarBtn(
                   label: _sort.label,
-                  icon: MynaIcons.chevronsUpDown,
+                  icon: PhIcons.caretUpDown,
                   onTap: () => _sortMenu(a))),
           const SizedBox(width: 6),
           _BarBtn(
               label: 'New task',
               hint: 'C',
-              icon: MynaIcons.plus,
+              icon: PhIcons.plus,
               primary: true,
               onTap: () => setState(() => _creating = true)),
         ]),

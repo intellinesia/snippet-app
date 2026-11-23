@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../myna_icons.dart';
+import '../phosphor_icons.dart';
 
 import 'package:snippet_render/snippet_render.dart';
 
@@ -658,7 +658,7 @@ class SettingsPanelState extends State<SettingsPanel> {
                     style: Grouped.subStyle(),
                   ),
             leading: _SettingsTile(null,
-                iconData: MynaIcons.monitor, ok: active != null),
+                iconData: PhIcons.monitor, ok: active != null),
             chevron: true,
             onTap: () => widget.onSection?.call(SettingsPage.general),
           ),
@@ -1105,7 +1105,7 @@ class SettingsPanelState extends State<SettingsPanel> {
           label: i.label,
           subtitle: hostOf(i.url),
           leading:
-              _SettingsTile(null, iconData: MynaIcons.monitor, ok: isActive),
+              _SettingsTile(null, iconData: PhIcons.monitor, ok: isActive),
           value: isActive ? 'Active' : (canConnect ? 'Connect' : null),
           trailing: const SizedBox.shrink(),
           onTap: () => _showMachineMenu(
@@ -1132,7 +1132,7 @@ class SettingsPanelState extends State<SettingsPanel> {
           child: Row(
             children: [
               if (compact)
-                _SettingsTile(null, iconData: MynaIcons.monitor, ok: isActive)
+                _SettingsTile(null, iconData: PhIcons.monitor, ok: isActive)
               else
                 IconTile('server', tone: isActive ? Tone.ok : Tone.neutral),
               SizedBox(width: S.s12),
@@ -1774,7 +1774,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     if (_renamingUrl == i.url) {
       return SettingsRow(
         label: i.label,
-        iconData: MynaIcons.monitor,
+        iconData: PhIcons.monitor,
         iconColor: isActive ? AppColors.ok : null,
         labelWidget: InlineEditField(
           controller: _renameController,
@@ -1791,7 +1791,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     final host = hostOf(i.url);
     return Builder(
       builder: (anchor) => SettingsRow(
-        iconData: MynaIcons.monitor,
+        iconData: PhIcons.monitor,
         iconColor: isActive ? AppColors.ok : null,
         label: i.label.isEmpty ? host : i.label,
         sub: isActive && live != null ? '$host · $live live' : host,
@@ -1833,7 +1833,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
             ),
           if (_instances.isEmpty && !_connecting)
             const SettingsRow(
-              iconData: MynaIcons.monitor,
+              iconData: PhIcons.monitor,
               label: 'No saved machines',
               sub: 'Run snippet serve on one and add its link.',
             )
@@ -3347,7 +3347,7 @@ class _AccentSwatchStrip extends StatelessWidget {
                     ),
                     alignment: Alignment.center,
                     child: custom?.name == a.name
-                        ? Icon(MynaIcons.check, size: 14, color: a.accentFg)
+                        ? Icon(PhIcons.check, size: 14, color: a.accentFg)
                         : null,
                   ),
                 ),

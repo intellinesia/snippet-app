@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:snippet/myna_icons.dart';
+import 'package:snippet/phosphor_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:snippet/api.dart';
@@ -176,7 +176,7 @@ void main() {
   testWidgets('sent-only human bubble shows no ticks or delivery line',
       (t) async {
     await _open(t, DirectThreadPage(events: [_ev('h1', 1, 'human', 'hi')]));
-    expect(find.byIcon(MynaIcons.checkCircle), findsNothing);
+    expect(find.byIcon(PhIcons.checkCircle), findsNothing);
     expect(find.text('Delivered'), findsNothing);
     expect(find.textContaining('Read '), findsNothing);
     await t.pumpWidget(const SizedBox());

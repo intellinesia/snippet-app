@@ -490,11 +490,11 @@ MarkdownStyleSheet thinkingMarkdownStyle(BuildContext context) {
 
 /// Live thinking/reasoning stream — full markdown, dimmed.
 
-/// Myna glyphs sit inside a padded 24 grid; this brings them level with the
-/// text beside them at 16 to 24 pt.
-const double _mynaOptical = 1.1;
+/// Phosphor glyphs use 224 of their 256 grid, so a small lift keeps the ink
+/// level with the text beside it at 16 to 24 pt.
+const double _iconOptical = 1.08;
 
-/// One icon set (Myna UI) drawn from the bundled MynaIcons font, in an explicit
+/// One icon set (Phosphor) drawn from the bundled Phosphor fonts, in an explicit
 /// square so glyphs never push their neighbours around.
 class AppIcon extends StatelessWidget {
   final String name;
@@ -503,8 +503,15 @@ class AppIcon extends StatelessWidget {
 
   /// Optical size correction for a glyph that over- or under-fills its box.
   final double visualScale;
+
+  /// Fill weight for selected or active states.
+  final bool filled;
   const AppIcon(this.name,
-      {super.key, this.size = 18, this.color, this.visualScale = 1.0});
+      {super.key,
+      this.size = 18,
+      this.color,
+      this.visualScale = 1.0,
+      this.filled = false});
 
   @override
   Widget build(BuildContext context) {
@@ -514,8 +521,11 @@ class AppIcon extends StatelessWidget {
     return SizedBox.square(
       dimension: size,
       child: Center(
-        child: Icon(appIcons[name] ?? appIcons['circle']!,
-            size: size * visualScale * _mynaOptical,
+        child: Icon(
+            (filled ? appIconsFilled[name] : null) ??
+                appIcons[name] ??
+                appIcons['circle']!,
+            size: size * visualScale * _iconOptical,
             color: color ?? AppColors.fg2),
       ),
     );

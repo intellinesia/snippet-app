@@ -4,7 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'myna_icons.dart';
+import 'phosphor_icons.dart';
 
 import 'chat/message_focus_overlay.dart';
 import 'media_views.dart';
@@ -955,7 +955,7 @@ class _MessageBubbleInteractiveState extends State<MessageBubbleInteractive>
                     ),
                     alignment: Alignment.center,
                     child: Icon(
-                      MynaIcons.cornerUpLeft,
+                      PhIcons.arrowElbowUpLeft,
                       size: 16,
                       color: armed ? AppColors.accent : AppColors.fg3,
                     ),

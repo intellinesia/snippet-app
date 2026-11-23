@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../desktop_look.dart';
 import 'package:flutter/services.dart';
-import '../myna_icons.dart';
+import '../phosphor_icons.dart';
 
 import '../api.dart';
 import '../models.dart';
@@ -62,7 +62,7 @@ const List<(String, List<_NavEntry>)> _groups = [
         page: SettingsPage.general,
         label: 'Machines',
         icon: null,
-        iconData: MynaIcons.monitor,
+        iconData: PhIcons.monitor,
       ),
     ],
   ),

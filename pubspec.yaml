@@ -103,9 +103,12 @@ flutter:
     - assets/avatars/35/
     - assets/avatars/36/
   fonts:
-    - family: MynaIcons
+    - family: Phosphor
       fonts:
-        - asset: assets/fonts/MynaIcons.ttf
+        - asset: assets/fonts/Phosphor.ttf
+    - family: PhosphorFill
+      fonts:
+        - asset: assets/fonts/Phosphor-Fill.ttf
     - family: Cove
       fonts:
         - asset: assets/fonts/Cove-400.ttf

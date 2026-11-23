@@ -39,7 +39,7 @@ import '../screens/tasks/task_common.dart' show openTaskDetail;
 import 'agent_panel_body.dart';
 import '../settings_form.dart'
     show Grouped, SettingsGroup, SettingsHero, SettingsRow, SettingsSwitch;
-import '../myna_icons.dart';
+import '../phosphor_icons.dart';
 import '../tap_detector.dart';
 
 /// Lets rows inside a docked [AgentInfoPanel] push a nested page instead of
@@ -528,7 +528,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
               AgentPageRow(
                   label: 'Appearance',
                   subtitle: 'Avatar and colour across the app',
-                  iconData: MynaIcons.star,
+                  iconData: PhIcons.star,
                   onTap: () => _openAppearance(ctx)),
             ]),
         const AgentPageCaption('Work'),
@@ -543,18 +543,18 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
             AgentPageRow(
                 label: 'Board',
                 subtitle: 'What it dispatched, reported and noted',
-                iconData: MynaIcons.columns,
+                iconData: PhIcons.columns,
                 onTap: () => _go(widget.onOpenBoard!)),
           if (widget.onOpenDesk != null && !mc)
             AgentPageRow(
                 label: 'Desk session',
                 subtitle: 'The conversation where its mail arrives',
-                iconData: MynaIcons.message,
+                iconData: PhIcons.chatCircle,
                 onTap: () => _go(widget.onOpenDesk!)),
           AgentPageRow(
               label: 'Memory',
               subtitle: 'What this agent remembers',
-              iconData: MynaIcons.bookOpen,
+              iconData: PhIcons.bookOpen,
               onTap: () => _openMemory(ctx)),
         ]),
         // Destructive last, in its own group, away from everyday rows.

@@ -7,7 +7,7 @@ import 'package:flutter/services.dart';
 
 import '../chat/chat_info.dart' show showAgentInfo;
 import '../chat/choices.dart';
-import '../myna_icons.dart';
+import '../phosphor_icons.dart';
 import '../glass.dart';
 import '../ambient_loop.dart';
 import '../api.dart';
@@ -1852,7 +1852,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       key: const Key('agentWaitingLine'),
       padding: EdgeInsets.symmetric(vertical: S.s12),
       child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(MynaIcons.hand, size: 14, color: AppColors.accent),
+        Icon(PhIcons.hand, size: 14, color: AppColors.accent),
         SizedBox(width: S.s8),
         Text('Waiting on', style: sans(12.5, color: AppColors.fg2)),
         SizedBox(width: S.s4),

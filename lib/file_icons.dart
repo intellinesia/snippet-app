@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'theme.dart';
-import 'myna_icons.dart';
+import 'phosphor_icons.dart';
 
 const _orange = Color(0xFFD97757);
 const _blue = Color(0xFF8AB4F8);
@@ -21,28 +21,28 @@ String _ext(String name) {
 
 (IconData, Color)? _byName(String lower) {
   if (lower == '.env' || lower.startsWith('.env.')) {
-    return (MynaIcons.file, _amber);
+    return (PhIcons.file, _amber);
   }
   if (lower.startsWith('license') ||
       lower.startsWith('licence') ||
       lower == 'copying') {
-    return (MynaIcons.file, _amber);
+    return (PhIcons.file, _amber);
   }
-  if (lower.startsWith('readme')) return (MynaIcons.fileText, _blue);
-  if (lower.startsWith('changelog')) return (MynaIcons.file, _blue);
+  if (lower.startsWith('readme')) return (PhIcons.fileText, _blue);
+  if (lower.startsWith('changelog')) return (PhIcons.file, _blue);
   if (lower == 'dockerfile' ||
       lower.startsWith('dockerfile.') ||
       lower.startsWith('docker-compose') ||
       lower.startsWith('compose.')) {
-    return (MynaIcons.file, _blue);
+    return (PhIcons.file, _blue);
   }
   if (lower == 'makefile' ||
       lower == 'justfile' ||
       lower == 'procfile' ||
       lower == 'rakefile') {
-    return (MynaIcons.terminal, _orange);
+    return (PhIcons.terminalWindow, _orange);
   }
-  if (lower.startsWith('.git')) return (MynaIcons.gitDiff, _orange);
+  if (lower.startsWith('.git')) return (PhIcons.gitDiff, _orange);
   if (const {
     'package.json',
     'cargo.toml',
@@ -59,13 +59,13 @@ String _ext(String name) {
     'deno.json',
     'bun.lockb',
   }.contains(lower)) {
-    return (MynaIcons.file, _green);
+    return (PhIcons.file, _green);
   }
   if (lower.endsWith('.lock') ||
       lower.endsWith('-lock.json') ||
       lower.endsWith('-lock.yaml') ||
       lower == 'go.sum') {
-    return (MynaIcons.file, _grey);
+    return (PhIcons.file, _grey);
   }
   if (lower.startsWith('tsconfig') ||
       lower.startsWith('jsconfig') ||
@@ -77,7 +77,7 @@ String _ext(String name) {
       lower == 'analysis_options.yaml' ||
       lower.startsWith('.npmrc') ||
       lower.startsWith('.nvmrc')) {
-    return (MynaIcons.file, _teal);
+    return (PhIcons.file, _teal);
   }
   return null;
 }
@@ -87,38 +87,38 @@ String _ext(String name) {
   final named = _byName(lower);
   if (named != null) return named;
   return switch (_ext(lower)) {
-    'rs' => (MynaIcons.codeSquare, _orange),
+    'rs' => (PhIcons.fileCode, _orange),
     'swift' || 'kt' || 'kts' || 'java' || 'scala' => (
-        MynaIcons.codeSquare,
+        PhIcons.fileCode,
         _orange
       ),
-    'dart' || 'go' || 'py' || 'pyi' => (MynaIcons.codeSquare, _blue),
+    'dart' || 'go' || 'py' || 'pyi' => (PhIcons.fileCode, _blue),
     'c' || 'h' || 'cc' || 'cpp' || 'hpp' || 'cs' || 'm' || 'mm' => (
-        MynaIcons.codeSquare,
+        PhIcons.fileCode,
         _blue
       ),
-    'ts' || 'tsx' || 'mts' || 'cts' => (MynaIcons.codeSquare, _blue),
-    'js' || 'jsx' || 'mjs' || 'cjs' => (MynaIcons.codeSquare, _yellow),
+    'ts' || 'tsx' || 'mts' || 'cts' => (PhIcons.fileCode, _blue),
+    'js' || 'jsx' || 'mjs' || 'cjs' => (PhIcons.fileCode, _yellow),
     'rb' || 'erb' || 'ex' || 'exs' || 'erl' || 'clj' => (
-        MynaIcons.codeSquare,
+        PhIcons.fileCode,
         _red
       ),
     'php' || 'lua' || 'zig' || 'nim' || 'jl' || 'r' || 'hs' || 'ml' => (
-        MynaIcons.codeSquare,
+        PhIcons.fileCode,
         _purple
       ),
-    'vue' || 'svelte' || 'astro' => (MynaIcons.codeSquare, _green),
-    'html' || 'htm' || 'xml' || 'xhtml' => (MynaIcons.codeSquare, _orange),
+    'vue' || 'svelte' || 'astro' => (PhIcons.fileCode, _green),
+    'html' || 'htm' || 'xml' || 'xhtml' => (PhIcons.fileCode, _orange),
     'css' || 'scss' || 'sass' || 'less' || 'styl' => (
-        MynaIcons.codeSquare,
+        PhIcons.fileCode,
         _purple
       ),
     'sql' || 'prisma' || 'graphql' || 'gql' || 'proto' => (
-        MynaIcons.codeSquare,
+        PhIcons.fileCode,
         _teal
       ),
     'json' || 'jsonc' || 'json5' || 'jsonl' || 'ndjson' => (
-        MynaIcons.code,
+        PhIcons.code,
         _yellow
       ),
     'yaml' ||
@@ -130,21 +130,21 @@ String _ext(String name) {
     'properties' ||
     'plist' ||
     'env' =>
-      (MynaIcons.file, _green),
+      (PhIcons.file, _green),
     'md' || 'mdx' || 'markdown' || 'rst' || 'adoc' || 'org' || 'tex' => (
-        MynaIcons.fileText,
+        PhIcons.fileText,
         _blue
       ),
-    'txt' || 'rtf' => (MynaIcons.fileText, _grey),
-    'log' => (MynaIcons.file, _grey),
-    'pdf' => (MynaIcons.fileText, _red),
-    'doc' || 'docx' || 'odt' || 'pages' => (MynaIcons.fileText, _blue),
+    'txt' || 'rtf' => (PhIcons.fileText, _grey),
+    'log' => (PhIcons.file, _grey),
+    'pdf' => (PhIcons.fileText, _red),
+    'doc' || 'docx' || 'odt' || 'pages' => (PhIcons.fileText, _blue),
     'csv' || 'tsv' || 'xls' || 'xlsx' || 'ods' || 'numbers' || 'parquet' => (
-        MynaIcons.table,
+        PhIcons.table,
         _green
       ),
-    'ppt' || 'pptx' || 'odp' => (MynaIcons.film, _orange),
-    'ipynb' => (MynaIcons.chartLine, _orange),
+    'ppt' || 'pptx' || 'odp' => (PhIcons.filmStrip, _orange),
+    'ipynb' => (PhIcons.chartLine, _orange),
     'png' ||
     'jpg' ||
     'jpeg' ||
@@ -157,15 +157,15 @@ String _ext(String name) {
     'tif' ||
     'tiff' ||
     'psd' =>
-      (MynaIcons.image, _purple),
-    'svg' => (MynaIcons.image, _yellow),
-    'fig' || 'sketch' || 'xd' => (MynaIcons.image, _red),
+      (PhIcons.image, _purple),
+    'svg' => (PhIcons.image, _yellow),
+    'fig' || 'sketch' || 'xd' => (PhIcons.image, _red),
     'mp4' || 'mov' || 'webm' || 'mkv' || 'avi' || 'm4v' => (
-        MynaIcons.film,
+        PhIcons.filmStrip,
         _red
       ),
     'mp3' || 'wav' || 'm4a' || 'flac' || 'ogg' || 'aac' || 'aiff' => (
-        MynaIcons.music,
+        PhIcons.musicNote,
         _purple
       ),
     'zip' ||
@@ -179,44 +179,44 @@ String _ext(String name) {
     'rar' ||
     'jar' ||
     'war' =>
-      (MynaIcons.file, _amber),
+      (PhIcons.file, _amber),
     'apk' || 'aab' || 'ipa' || 'dmg' || 'pkg' || 'deb' || 'rpm' || 'msi' => (
-        MynaIcons.file,
+        PhIcons.file,
         _amber
       ),
     'sh' || 'bash' || 'zsh' || 'fish' || 'ps1' || 'bat' || 'cmd' || 'nu' => (
-        MynaIcons.terminal,
+        PhIcons.terminalWindow,
         _green
       ),
     'ttf' || 'otf' || 'woff' || 'woff2' || 'eot' => (
-        MynaIcons.fileText,
+        PhIcons.fileText,
         _red
       ),
     'pem' || 'crt' || 'cer' || 'p12' || 'pfx' || 'pub' || 'gpg' || 'asc' => (
-        MynaIcons.file,
+        PhIcons.file,
         _amber
       ),
-    'diff' || 'patch' => (MynaIcons.gitDiff, _orange),
-    'db' || 'sqlite' || 'sqlite3' || 'wal' => (MynaIcons.database, _teal),
+    'diff' || 'patch' => (PhIcons.gitDiff, _orange),
+    'db' || 'sqlite' || 'sqlite3' || 'wal' => (PhIcons.database, _teal),
     'glb' || 'gltf' || 'obj' || 'fbx' || 'stl' || 'blend' || 'usdz' => (
-        MynaIcons.file,
+        PhIcons.file,
         _purple
       ),
     'wasm' || 'so' || 'dylib' || 'dll' || 'exe' || 'bin' || 'o' || 'a' => (
-        MynaIcons.file,
+        PhIcons.file,
         _grey
       ),
-    'lock' => (MynaIcons.file, _grey),
-    'csr' || 'sig' => (MynaIcons.file, _amber),
-    _ => (MynaIcons.file, _grey),
+    'lock' => (PhIcons.file, _grey),
+    'csr' || 'sig' => (PhIcons.file, _amber),
+    _ => (PhIcons.file, _grey),
   };
 }
 
 (IconData, Color) folderIconFor(String name, {bool open = false}) {
   final l = name.toLowerCase();
   return switch (l) {
-    '.git' => (MynaIcons.gitBranch, _orange),
-    '.github' || '.gitlab' || '.circleci' => (MynaIcons.gitBranch, _grey),
+    '.git' => (PhIcons.gitBranch, _orange),
+    '.github' || '.gitlab' || '.circleci' => (PhIcons.gitBranch, _grey),
     'src' ||
     'lib' ||
     'app' ||
@@ -228,7 +228,7 @@ String _ext(String name) {
     'crates' ||
     'components' ||
     'modules' =>
-      (MynaIcons.folder, _blue),
+      (PhIcons.folder, _blue),
     'test' ||
     'tests' ||
     '__tests__' ||
@@ -238,9 +238,9 @@ String _ext(String name) {
     'integration_test' ||
     'testdata' ||
     'fixtures' =>
-      (MynaIcons.folderCheck, _green),
+      (PhIcons.folder, _green),
     'docs' || 'doc' || 'documentation' || 'wiki' || 'notes' => (
-        MynaIcons.folder,
+        PhIcons.folder,
         _blue
       ),
     'node_modules' ||
@@ -250,7 +250,7 @@ String _ext(String name) {
     'venv' ||
     '.dart_tool' ||
     'pods' =>
-      (MynaIcons.folder, _grey),
+      (PhIcons.folder, _grey),
     'build' ||
     'dist' ||
     'out' ||
@@ -261,7 +261,7 @@ String _ext(String name) {
     'release' ||
     'bin' ||
     'obj' =>
-      (MynaIcons.folder, _grey),
+      (PhIcons.folder, _grey),
     'config' ||
     '.config' ||
     '.vscode' ||
@@ -269,9 +269,9 @@ String _ext(String name) {
     'settings' ||
     '.claude' ||
     '.cursor' =>
-      (MynaIcons.folder, _teal),
+      (PhIcons.folder, _teal),
     'scripts' || 'tools' || 'hack' || 'ci' || '.husky' => (
-        MynaIcons.folder,
+        PhIcons.folder,
         _green
       ),
     'assets' ||
@@ -284,25 +284,25 @@ String _ext(String name) {
     'fonts' ||
     'res' ||
     'resources' =>
-      (MynaIcons.folderHeart, _purple),
-    'secrets' || 'keys' || '.ssh' || 'certs' => (MynaIcons.folder, _amber),
+      (PhIcons.folderStar, _purple),
+    'secrets' || 'keys' || '.ssh' || 'certs' => (PhIcons.folder, _amber),
     'tmp' || 'temp' || 'cache' || '.cache' || 'logs' => (
-        MynaIcons.folder,
+        PhIcons.folder,
         _grey
       ),
     'android' || 'ios' || 'macos' || 'linux' || 'windows' || 'web' => (
-        MynaIcons.folder,
+        PhIcons.folder,
         _green
       ),
     'migrations' || 'db' || 'data' || 'database' => (
-        MynaIcons.folder,
+        PhIcons.folder,
         _teal
       ),
     'examples' || 'samples' || 'demo' || 'templates' => (
-        MynaIcons.folderKanban,
+        PhIcons.kanban,
         _yellow
       ),
-    _ => (open ? MynaIcons.folderOne : MynaIcons.folder, _grey),
+    _ => (open ? PhIcons.folderOpen : PhIcons.folder, _grey),
   };
 }
 
@@ -378,7 +378,7 @@ class FileGlyph extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = AppColors.fg3;
     if (isDir) {
-      return Icon(open ? MynaIcons.folderOne : MynaIcons.folder,
+      return Icon(open ? PhIcons.folderOpen : PhIcons.folder,
           size: size, color: color);
     }
     return Icon(fileIconFor(name).$1, size: size, color: color);

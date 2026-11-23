@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:snippet/myna_icons.dart';
+import 'package:snippet/phosphor_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:snippet/api.dart';
@@ -72,13 +72,13 @@ void main() {
       await t.pump();
       await gesture.moveBy(const Offset(55, 0));
       await t.pump();
-      expect(find.byIcon(MynaIcons.cornerUpLeft), findsOneWidget);
+      expect(find.byIcon(PhIcons.arrowElbowUpLeft), findsOneWidget);
 
       await gesture.up();
       await _pumpFrames(t);
       expect(replies, 1);
       // After spring back, the reply icon hides again.
-      expect(find.byIcon(MynaIcons.cornerUpLeft), findsNothing);
+      expect(find.byIcon(PhIcons.arrowElbowUpLeft), findsNothing);
       } finally {
         debugDefaultTargetPlatformOverride = null;
       }
@@ -243,8 +243,8 @@ void main() {
       expect(find.bySemanticsLabel('More reactions'), findsOneWidget);
       expect(find.text('Reply'), findsOneWidget);
       expect(find.text('Copy'), findsOneWidget);
-      expect(find.byIcon(MynaIcons.cornerUpLeft), findsOneWidget);
-      expect(find.byIcon(MynaIcons.copy), findsOneWidget);
+      expect(find.byIcon(PhIcons.arrowElbowUpLeft), findsOneWidget);
+      expect(find.byIcon(PhIcons.copy), findsOneWidget);
 
       // Tap outside dismisses.
       await t.tapAt(const Offset(20, 40));
