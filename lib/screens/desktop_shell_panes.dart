@@ -527,6 +527,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             if (s.displayAgentId == agent.id) s
         ],
         onOpenSession: (s) => _openSession(s.id, s.title, s.profile),
+        onAllSessions: SidebarState.showAllSessions,
         client: tab.client,
         agent: agent,
         onHide: _togglePanel,

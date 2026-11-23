@@ -82,6 +82,7 @@ class TopWorkspaceTabChip extends StatefulWidget {
 
 class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
   bool _hover = false;
+  bool _focus = false;
 
   Widget _icon(String? status, bool working) {
     final t = widget.tab;
@@ -131,7 +132,16 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
         ? AppColors.surface3
         : (_hover ? AppColors.surface2 : Colors.transparent);
 
-    Widget cell(Widget child, {required double width}) => MouseRegion(
+    Widget cell(Widget child, {required double width}) => FocusableActionDetector(
+          onShowFocusHighlight: (v) => setState(() => _focus = v),
+          actions: {
+            ActivateIntent: CallbackAction<ActivateIntent>(
+                onInvoke: (_) {
+              widget.onTap();
+              return null;
+            }),
+          },
+          child: MouseRegion(
           cursor: SystemMouseCursors.click,
           onEnter: (_) => setState(() => _hover = true),
           onExit: (_) => setState(() => _hover = false),
@@ -146,6 +156,12 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
                 curve: const Cubic(.23, 1, .32, 1),
                 height: 28,
                 width: width,
+                // Focus ring: 2 pt, fg1, drawn over the chip edge.
+                foregroundDecoration: _focus
+                    ? BoxDecoration(
+                        borderRadius: BorderRadius.circular(R.of(8)),
+                        border: Border.all(color: AppColors.fg1, width: 2))
+                    : null,
                 decoration: BoxDecoration(
                   color: bg,
                   borderRadius: BorderRadius.circular(R.of(8)),
@@ -153,6 +169,7 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
                 child: child,
               ),
             ),
+          ),
           ),
         );
 

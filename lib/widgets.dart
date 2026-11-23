@@ -12,7 +12,7 @@ import 'package:flutter/services.dart';
 
 import 'platform.dart';
 import 'shell_panel.dart' show openSessionInTab;
-import 'package:flutter/gestures.dart' show kTouchSlop;
+import 'package:flutter/gestures.dart' show kTouchSlop, kMiddleMouseButton, PointerDeviceKind;
 import 'gesture_physics.dart';
 import 'api.dart';
 import 'chat_links.dart';
@@ -176,8 +176,8 @@ final _codedLink = RegExp(
 final _diffFenceOpenRe = RegExp(r'^([ \t]{0,3})(`{3,})(diff|patch)\s*$');
 final _innerBacktickLineRe = RegExp(r'^[ +\-]?[ \t]*`{3,}');
 
-String unwrapCodedLinks(String md) => _widenDiffFences(
-    md.replaceAllMapped(_codedLink, (m) => m.group(1)!));
+String unwrapCodedLinks(String md) =>
+    _widenDiffFences(md.replaceAllMapped(_codedLink, (m) => m.group(1)!));
 
 /// Unified diffs of Markdown files often contain unchanged context lines like
 /// ` ``` ` (1 leading space + 3 backticks), which CommonMark treats as closing
@@ -240,8 +240,7 @@ void openMarkdownLink(String? href, [BuildContext? context, String? text]) {
     if (context == null) return;
     final client = DaemonScope.maybeOf(context) ?? DaemonScope.current;
     if (client == null) {
-      toast(context, 'Connect to the machine to open this link.',
-          danger: true);
+      toast(context, 'Connect to the machine to open this link.', danger: true);
       return;
     }
     openChatLink(context, client, link, text);
@@ -498,8 +497,22 @@ const double _iconOptical = 1.08;
 /// beside their labels. The layout box and tap area keep the requested size.
 double iconStep(double size) {
   const steps = <int, double>{
-    30: 26, 28: 24, 26: 22, 24: 20, 22: 19, 20: 18, 19: 17, 18: 16,
-    17: 15, 16: 14, 15: 13, 14: 13, 13: 12, 12: 11, 11: 10, 10: 9,
+    30: 26,
+    28: 24,
+    26: 22,
+    24: 20,
+    22: 19,
+    20: 18,
+    19: 17,
+    18: 16,
+    17: 15,
+    16: 14,
+    15: 13,
+    14: 13,
+    13: 12,
+    12: 11,
+    11: 10,
+    10: 9,
   };
   return steps[size.round()] ?? size * 0.88;
 }
@@ -526,7 +539,8 @@ class AppIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (name.startsWith('provider:')) {
-      return ProviderLogo(name.substring(9), size: size * visualScale, color: color);
+      return ProviderLogo(name.substring(9),
+          size: size * visualScale, color: color);
     }
     return SizedBox.square(
       dimension: size,
@@ -1211,6 +1225,10 @@ class HoverSurface extends StatefulWidget {
   State<HoverSurface> createState() => _HoverSurfaceState();
 }
 
+/// True while a middle click is being delivered as a tap, so the shell opens
+/// the target in a new tab instead of the active one.
+bool middleClickOpen = false;
+
 class _HoverSurfaceState extends State<HoverSurface> {
   bool _hover = false;
 
@@ -1226,37 +1244,49 @@ class _HoverSurfaceState extends State<HoverSurface> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
-      child: Pressable(
-        kind: PressKind.row,
-        radius: widget.radius,
-        lift: widget.onLongPress != null,
-        enabled: widget.onTap != null || widget.onLongPress != null,
-        child: Tactile(
-          radius: r,
-          enabled: widget.selected,
-          child: AnimatedContainer(
-            duration: reduceMotion(context) ? Duration.zero : Motion.quick,
-            curve: Curves.easeOut,
-            decoration: BoxDecoration(color: color, borderRadius: r),
-            child: Material(
-              type: MaterialType.transparency,
-              child: InkWell(
-                borderRadius: r,
-                hoverColor: Colors.transparent,
-                onTap: widget.onTap == null
-                    ? null
-                    : () {
-                        tapHaptic();
-                        widget.onTap!();
-                      },
-                onLongPress: widget.onLongPress == null
-                    ? null
-                    : () {
-                        holdHaptic();
-                        widget.onLongPress!();
-                      },
-                onSecondaryTapDown: widget.onSecondaryTapDown,
-                child: widget.child,
+      child: Listener(
+        onPointerDown: widget.onTap == null
+            ? null
+            : (e) {
+                if (e.kind == PointerDeviceKind.mouse &&
+                    e.buttons & kMiddleMouseButton != 0) {
+                  middleClickOpen = true;
+                  widget.onTap!();
+                  middleClickOpen = false;
+                }
+              },
+        child: Pressable(
+          kind: PressKind.row,
+          radius: widget.radius,
+          lift: widget.onLongPress != null,
+          enabled: widget.onTap != null || widget.onLongPress != null,
+          child: Tactile(
+            radius: r,
+            enabled: widget.selected,
+            child: AnimatedContainer(
+              duration: reduceMotion(context) ? Duration.zero : Motion.quick,
+              curve: Curves.easeOut,
+              decoration: BoxDecoration(color: color, borderRadius: r),
+              child: Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  borderRadius: r,
+                  hoverColor: Colors.transparent,
+                  onTap: widget.onTap == null
+                      ? null
+                      : () {
+                          tapHaptic();
+                          widget.onTap!();
+                        },
+                  onLongPress: widget.onLongPress == null
+                      ? null
+                      : () {
+                          holdHaptic();
+                          widget.onLongPress!();
+                        },
+                  onSecondaryTapDown: widget.onSecondaryTapDown,
+                  child: widget.child,
+                ),
               ),
             ),
           ),
@@ -1825,57 +1855,57 @@ class Bubble extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-            if (media != null)
-              for (final m in media) ...[
-                m,
-                SizedBox(height: S.s6),
-              ],
-            if (shown.isNotEmpty && chatBubbles)
-              ChatBubble(
-                mine: true,
-                child: MarkdownBody(
-                  data: unwrapCodedLinks(shown),
-                  selectable: false,
-                  styleSheet: chatMarkdownStyle(context, mine: true),
-                  builders: {'pre': PreBlockBuilder()},
-                  onTapLink: (txt, href, title) =>
-                      openMarkdownLink(href, context, txt),
+              if (media != null)
+                for (final m in media) ...[
+                  m,
+                  SizedBox(height: S.s6),
+                ],
+              if (shown.isNotEmpty && chatBubbles)
+                ChatBubble(
+                  mine: true,
+                  child: MarkdownBody(
+                    data: unwrapCodedLinks(shown),
+                    selectable: false,
+                    styleSheet: chatMarkdownStyle(context, mine: true),
+                    builders: {'pre': PreBlockBuilder()},
+                    onTapLink: (txt, href, title) =>
+                        openMarkdownLink(href, context, txt),
+                  ),
+                )
+              else if (shown.isNotEmpty)
+                Container(
+                  padding: kMobile
+                      ? EdgeInsets.fromLTRB(
+                          S.of(15), S.of(10), S.of(15), S.of(11))
+                      : const EdgeInsets.fromLTRB(11, 7, 11, 7),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface2,
+                    borderRadius: kMobile
+                        ? BorderRadius.only(
+                            topLeft: Radius.circular(R.of(20)),
+                            topRight: Radius.circular(R.of(20)),
+                            bottomLeft: Radius.circular(R.of(20)),
+                            bottomRight: Radius.circular(R.sm),
+                          )
+                        : BorderRadius.circular(R.of(8)),
+                  ),
+                  child: DefaultTextStyle.merge(
+                    textWidthBasis: TextWidthBasis.longestLine,
+                    child: mineText,
+                  ),
                 ),
-              )
-            else if (shown.isNotEmpty)
-              Container(
-                padding: kMobile
-                    ? EdgeInsets.fromLTRB(
-                        S.of(15), S.of(10), S.of(15), S.of(11))
-                    : const EdgeInsets.fromLTRB(11, 7, 11, 7),
-                decoration: BoxDecoration(
-                  color: AppColors.surface2,
-                  borderRadius: kMobile
-                      ? BorderRadius.only(
-                          topLeft: Radius.circular(R.of(20)),
-                          topRight: Radius.circular(R.of(20)),
-                          bottomLeft: Radius.circular(R.of(20)),
-                          bottomRight: Radius.circular(R.sm),
-                        )
-                      : BorderRadius.circular(R.of(8)),
-                ),
-                child: DefaultTextStyle.merge(
-                  textWidthBasis: TextWidthBasis.longestLine,
-                  child: mineText,
-                ),
-              ),
-            if (media == null || media.isEmpty) ...[
-              for (final v in voice) ...[
-                SizedBox(height: S.s6),
-                v,
+              if (media == null || media.isEmpty) ...[
+                for (final v in voice) ...[
+                  SizedBox(height: S.s6),
+                  v,
+                ],
+                for (final extra in extras) ...[
+                  SizedBox(height: S.s6),
+                  extra,
+                ],
               ],
-              for (final extra in extras) ...[
-                SizedBox(height: S.s6),
-                extra,
-              ],
+              ...pastedCards,
             ],
-            ...pastedCards,
-          ],
           ),
         ),
       );
@@ -2339,7 +2369,8 @@ class SnAppBar extends StatelessWidget {
                           : kMobile
                               ? sans(titleSize ?? 18,
                                   spacing: -0.3, color: AppColors.fg1)
-                              : display((titleSize ?? 15).clamp(0, 15).toDouble())),
+                              : display(
+                                  (titleSize ?? 15).clamp(0, 15).toDouble())),
                 if (subtitle != null)
                   Text(subtitle!,
                       maxLines: 1,

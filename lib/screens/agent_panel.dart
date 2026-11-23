@@ -252,11 +252,13 @@ class AgentSidePanel extends StatelessWidget {
     this.onModel,
     this.railSessions,
     this.onOpenSession,
+    this.onAllSessions,
   });
 
   /// Sessions this agent owns; when given, the rail replaces the About page.
   final List<SessionInfo>? railSessions;
   final void Function(SessionInfo s)? onOpenSession;
+  final VoidCallback? onAllSessions;
 
   /// Lead's session, for its model and cold-resume rows.
   final String? sessionId;
@@ -350,7 +352,8 @@ class AgentSidePanel extends StatelessWidget {
                   ? AgentRail(
                       key: ValueKey('agent-rail-$agentId'),
                       sessions: railSessions!,
-                      onOpenSession: onOpenSession!)
+                      onOpenSession: onOpenSession!,
+                      onAllSessions: onAllSessions)
                   : AgentInfoPanel(
                       key: ValueKey('agent-info-$agentId'),
                       client: client,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../chat/signal_row.dart' show prettyProfile;
+import '../api.dart';
 import '../models.dart';
 import '../tap_detector.dart';
 import '../theme.dart';
@@ -11,6 +12,7 @@ import '../widgets.dart';
 /// About column.
 Future<void> showAgentProfilePopover(
   BuildContext anchor, {
+  required DaemonClient client,
   required CoordinationAgent agent,
   required ValueChanged<String> onAction,
 }) =>
@@ -18,14 +20,74 @@ Future<void> showAgentProfilePopover(
       anchor,
       width: 300,
       alignRight: true,
-      child: _ProfileCard(agent: agent, onAction: onAction),
+      child: _ProfileCard(client: client, agent: agent, onAction: onAction),
     );
 
-class _ProfileCard extends StatelessWidget {
-  const _ProfileCard({required this.agent, required this.onAction});
+class _ProfileCard extends StatefulWidget {
+  const _ProfileCard(
+      {required this.client, required this.agent, required this.onAction});
 
+  final DaemonClient client;
   final CoordinationAgent agent;
   final ValueChanged<String> onAction;
+
+  @override
+  State<_ProfileCard> createState() => _ProfileCardState();
+}
+
+class _ProfileCardState extends State<_ProfileCard> {
+  CoordinationAgent get agent => widget.agent;
+  ValueChanged<String> get onAction => widget.onAction;
+
+  // Null until loaded; '' when the call failed, so the row reads as unknown.
+  String? _reach, _memory, _wakes;
+
+  @override
+  void initState() {
+    super.initState();
+    final c = widget.client;
+    c.agentReach(agent.id).then((r) {
+      final on = [
+        for (final ch in r.policy['question'] ?? const <String>[])
+          if (r.channel(ch).enabled) _channelName(ch)
+      ];
+      if (mounted) setState(() => _reach = on.isEmpty ? 'Chat only' : on.join(', '));
+    }).catchError((_) {
+      if (mounted) setState(() => _reach = '');
+    });
+    c.memoryScopes().then((all) {
+      final s = all.where((x) => x.key == 'agent:${agent.id}').firstOrNull;
+      final n = s?.entries ?? 0;
+      if (mounted) {
+        setState(() =>
+            _memory = n == 0 ? 'Nothing saved yet' : '$n ${n == 1 ? 'entry' : 'entries'}');
+      }
+    }).catchError((_) {
+      if (mounted) setState(() => _memory = '');
+    });
+    c.wakes().then((all) {
+      final mine = [
+        for (final w in all.wakes)
+          if (w.owner == agent.id && w.enabled) w
+      ];
+      final text = mine.isEmpty
+          ? 'None set'
+          : mine.length == 1
+              ? mine.first.scheduleText
+              : '${mine.first.scheduleText} and ${mine.length - 1} more';
+      if (mounted) setState(() => _wakes = text);
+    }).catchError((_) {
+      if (mounted) setState(() => _wakes = '');
+    });
+  }
+
+  static String _channelName(String c) => switch (c) {
+        'push' => 'Push',
+        'chat' => 'Chat',
+        'voice' => 'Voice',
+        'task_room' => 'Task room',
+        _ => c,
+      };
 
   void _go(BuildContext context, String action) {
     Navigator.of(context).pop();
@@ -54,9 +116,9 @@ class _ProfileCard extends StatelessWidget {
                             style: sans(13, color: AppColors.fg1)),
                       ),
                     ])),
-          _row(context, 'Reaches you', 'reach', 'Channels and sound'),
-          _row(context, 'Memory', 'memory', 'Topics it keeps'),
-          _row(context, 'Wakes', 'wakes', 'Schedule'),
+          _row(context, 'Reaches you', 'reach', _reach),
+          _row(context, 'Memory', 'memory', _memory),
+          _row(context, 'Wakes', 'wakes', _wakes),
           if (skills.isNotEmpty) _row(context, 'Skills', null, skills),
           const SizedBox(height: 12),
           Align(
@@ -83,10 +145,11 @@ class _ProfileCard extends StatelessWidget {
         ),
         Expanded(
           child: lead ??
-              Text(value ?? '',
+              Text(value == null ? 'Loading' : (value.isEmpty ? 'Open' : value),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(13, color: AppColors.fg1)),
+                  style: sans(13,
+                      color: value == null ? AppColors.fg4 : AppColors.fg1)),
         ),
       ]),
     );

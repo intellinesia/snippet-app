@@ -166,6 +166,12 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     st._agentsPanelKey.currentState?.openCreateMenu(anchor, above: false);
   }
 
+  /// The agent rail's "All sessions" link switches the sidebar to its list.
+  static void showAllSessions() {
+    final st = _desktop;
+    if (st != null && st.mounted) st._selectPlace(QuietPlace.sessions);
+  }
+
   final Set<String> _selected = {};
 
   /// Phone search: a filter field at the top of each tab.

@@ -1274,7 +1274,23 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     return null;
   }
 
+  /// Desktop agent tab: the head stays above the transcript instead of
+  /// scrolling away, with the Profile button in reach.
+  bool get _pinHead =>
+      _deskHead && widget.embedded && widget.onAgentAction != null;
+
   Widget _body() {
+    final inner = _bodyList();
+    if (!_pinHead) return inner;
+    return Column(children: [
+      _wideCap(Padding(
+          padding: EdgeInsets.fromLTRB(S.s16, 8, S.s16, 0),
+          child: _agentHead())),
+      Expanded(child: inner),
+    ]);
+  }
+
+  Widget _bodyList() {
     final topPad = _noChrome ? 12.0 : (_deskHead ? 8.0 : StageBar.height);
     if (_loading) {
       return Column(children: [
@@ -1937,6 +1953,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
             builder: (c) => _HeadButton(
                 label: 'Profile',
                 onTap: () => showAgentProfilePopover(c,
+                    client: widget.client,
                     agent: a, onAction: widget.onAgentAction!)),
           ),
         // In a tab the window bar already switches Chat and Work.

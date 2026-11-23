@@ -596,7 +596,8 @@ extension _DesktopShellTabsExt on _DesktopShellState {
   /// else loads into the active tab. Cmd or Ctrl asks for a new tab.
   bool get _newTabIntent =>
       !kMobile &&
-      (HardwareKeyboard.instance.isMetaPressed ||
+      (middleClickOpen ||
+          HardwareKeyboard.instance.isMetaPressed ||
           HardwareKeyboard.instance.isControlPressed);
 
   /// The index [probe] may take over, or -1 when it must be a new tab: Lead

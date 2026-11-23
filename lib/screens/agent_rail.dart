@@ -15,10 +15,12 @@ class AgentRail extends StatelessWidget {
     super.key,
     required this.sessions,
     required this.onOpenSession,
+    this.onAllSessions,
   });
 
   final List<SessionInfo> sessions;
   final void Function(SessionInfo s) onOpenSession;
+  final VoidCallback? onAllSessions;
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +51,20 @@ class AgentRail extends StatelessWidget {
             _label('Earlier', top: now.isEmpty ? 0 : 20),
             for (final s in earlier) _row(s),
           ],
+          if (onAllSessions != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: TapDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onAllSessions,
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 24),
+                  alignment: Alignment.centerLeft,
+                  child: Text('All sessions',
+                      style: sans(13, color: AppColors.fg2)),
+                ),
+              ),
+            ),
         ],
       ),
     );

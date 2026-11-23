@@ -1,3 +1,4 @@
+import 'sidebar.dart' show SidebarState;
 import 'dart:async';
 
 import '../desk_attention.dart';

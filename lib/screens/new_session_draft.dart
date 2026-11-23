@@ -1,3 +1,4 @@
+import '../quiet.dart' show QuietHand;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -87,6 +88,9 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
   /// following the agent's profile means omitting `profile`.
   bool _profileExplicit = false;
   bool _starting = false;
+
+  /// Why the last start failed; the message in the box is kept.
+  String? _startError;
   List<SessionInfo>? _recentPool;
   final List<PickedLocalFile> _files = [];
 
@@ -268,7 +272,10 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
         ? WorkspaceMode.worktree
         : WorkspaceMode.folder;
     final profile = _profileExplicit ? _profile : null;
-    setState(() => _starting = true);
+    setState(() {
+      _starting = true;
+      _startError = null;
+    });
     try {
       final withFiles = widget.onStartWithFiles;
       if (withFiles != null) {
@@ -277,7 +284,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
         await widget.onStart(folder, mode, profile, text);
       }
     } catch (e) {
-      if (mounted) toast(context, '$e', danger: true);
+      if (mounted) setState(() => _startError = '$e'.replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _starting = false);
     }
@@ -660,6 +667,30 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
     );
   }
 
+  /// The start failed: say so plainly, keep the message, offer the retry.
+  Widget _startFailure(String why) => Padding(
+        padding: EdgeInsets.only(bottom: S.s16),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const QuietHand(size: 16),
+          SizedBox(width: S.s12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('The session did not start',
+                    style: sans(14, weight: W.label, color: AppColors.fg1)),
+                Text('$why Your message is kept.',
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13, color: AppColors.fg3)),
+                SizedBox(height: S.s8),
+                Btn('Try again', small: true, onTap: _start),
+              ],
+            ),
+          ),
+        ]),
+      );
+
   Widget _hero() {
     final canSend = !_starting && _input.text.trim().isNotEmpty;
     final current = _current;
@@ -690,6 +721,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                               color: AppColors.fg1)),
                     )),
                     SizedBox(height: S.s24),
+                    if (_startError != null) _startFailure(_startError!),
                     Container(
                       padding: EdgeInsets.fromLTRB(
                           S.of(16), S.of(14), S.of(10), S.s8),
