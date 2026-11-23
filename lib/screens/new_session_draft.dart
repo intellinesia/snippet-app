@@ -7,8 +7,6 @@ import '../desktop_pick.dart';
 import '../mochi.dart';
 import '../platform.dart';
 import '../models.dart';
-import '../dotted_mochi.dart';
-import '../motion.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -284,7 +282,8 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
         await widget.onStart(folder, mode, profile, text);
       }
     } catch (e) {
-      if (mounted) setState(() => _startError = '$e'.replaceFirst('Exception: ', ''));
+      if (mounted)
+        setState(() => _startError = '$e'.replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _starting = false);
     }
@@ -651,22 +650,6 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
   InferenceProfile? get _current =>
       _profiles.where((p) => p.name == _profile).firstOrNull;
 
-  // Lifts the hero away while the session opens so the handoff reads as one step.
-  Widget _leaving(Widget child) {
-    final d = reduceMotion(context) ? Duration.zero : Motion.base;
-    return AnimatedSlide(
-      offset: _starting ? const Offset(0, -0.08) : Offset.zero,
-      duration: d,
-      curve: Motion.exit,
-      child: AnimatedOpacity(
-        opacity: _starting ? 0 : 1,
-        duration: Motion.base,
-        curve: Motion.exit,
-        child: child,
-      ),
-    );
-  }
-
   /// The start failed: say so plainly, keep the message, offer the retry.
   Widget _startFailure(String why) => Padding(
         padding: EdgeInsets.only(bottom: S.s16),
@@ -691,6 +674,63 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
         ]),
       );
 
+  /// Who this session goes to: face, name and one meta line.
+  Widget _identity() {
+    final where = [
+      if (_folder != null) _folderLabel,
+      if (_folder != null) _worktreeLabel,
+    ].join(' \u00b7 ');
+    return Row(children: [
+      ClipRRect(
+          borderRadius: BorderRadius.circular(R.of(10)),
+          child: AgentMochi(_agentId, size: 40)),
+      SizedBox(width: S.s12),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(_agentName,
+                style: sans(20, weight: W.label, color: AppColors.fg1)),
+            Row(children: [
+              if (_starting) ...[
+                const Spinner(size: 12),
+                SizedBox(width: S.s6),
+              ],
+              Flexible(
+                child: Text(
+                    _starting
+                        ? (where.isEmpty ? 'Starting' : 'Starting on $where')
+                        : (where.isEmpty ? 'Choose a folder to start' : where),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13, color: AppColors.fg3)),
+              ),
+            ]),
+          ],
+        ),
+      ),
+    ]);
+  }
+
+  /// While the session opens, the message shows as sent and waits for the agent.
+  Widget _sentMessage() => Padding(
+        padding: EdgeInsets.only(bottom: S.s16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: S.s16, vertical: S.s12),
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(R.of(16)),
+            ),
+            child: Text(_input.text.trim(),
+                style: sans(15, height: 1.35, color: AppColors.fg1)),
+          ),
+          SizedBox(height: S.s4),
+          Text('Sends when $_agentName is ready',
+              style: sans(12, color: AppColors.fg3)),
+        ]),
+      );
+
   Widget _hero() {
     final canSend = !_starting && _input.text.trim().isNotEmpty;
     final current = _current;
@@ -703,116 +743,119 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
               padding: EdgeInsets.fromLTRB(S.s32, S.s24, S.s32, 70),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 680),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _leaving(const Appear(
-                        offset: 12,
-                        child: Center(child: DottedMochi(width: 300)))),
-                    SizedBox(height: S.of(10)),
-                    _leaving(Appear(
-                      index: 2,
-                      child: Text('What are we making?',
-                          textAlign: TextAlign.center,
-                          style: sans(26,
-                              weight: W.label,
-                              spacing: -0.5,
-                              color: AppColors.fg1)),
-                    )),
-                    SizedBox(height: S.s24),
-                    if (_startError != null) _startFailure(_startError!),
-                    Container(
-                      padding: EdgeInsets.fromLTRB(
-                          S.of(16), S.of(14), S.of(10), S.s8),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface1,
-                        borderRadius: BorderRadius.circular(R.lg),
-                        border: Border.all(color: AppColors.border2),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          CallbackShortcuts(
-                            bindings: {
-                              const SingleActivator(LogicalKeyboardKey.enter):
-                                  _start,
-                            },
-                            child: _messageBox(false),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _identity(),
+                      SizedBox(height: S.s24),
+                      if (_starting && _input.text.trim().isNotEmpty)
+                        _sentMessage(),
+                      if (_startError != null) _startFailure(_startError!),
+                      if (!_starting)
+                        Container(
+                          padding: EdgeInsets.fromLTRB(
+                              S.of(16), S.of(14), S.of(10), S.s8),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface1,
+                            borderRadius: BorderRadius.circular(R.lg),
+                            border: Border.all(color: AppColors.border2),
                           ),
-                          SizedBox(height: S.s8),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.end,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Expanded(
-                                child: Wrap(
-                                  spacing: S.s4,
-                                  runSpacing: S.s4,
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  children: [
-                                    _chip(
-                                        AppIcon('folder',
-                                            size: 12, color: AppColors.fg3),
-                                        _folderLabel,
-                                        key: _folderKey,
-                                        onTap: _pickFolder),
-                                    Builder(
-                                      builder: (a) => _chip(
-                                          _agentMark(), _agentName,
-                                          onTap: () => _pickAgent(a)),
-                                    ),
-                                    if (current != null)
-                                      Builder(
-                                        builder: (a) => _chip(
-                                            null, current.name,
-                                            onTap: () => _pickProfile(a)),
-                                      ),
-                                    Builder(
-                                      builder: (a) => _chip(
-                                          AppIcon('git-branch',
-                                              size: 12, color: AppColors.fg3),
-                                          _worktreeLabel,
-                                          onTap: () => _pickWorktree(a)),
-                                    ),
-                                    for (var i = 0; i < _files.length; i++)
-                                      _fileChip(i),
-                                  ],
-                                ),
+                              CallbackShortcuts(
+                                bindings: {
+                                  const SingleActivator(
+                                      LogicalKeyboardKey.enter): _start,
+                                },
+                                child: _messageBox(false),
                               ),
-                              if (widget.onStartWithFiles != null)
-                                IconBtn('paperclip',
-                                    size: 28,
-                                    iconSize: 15,
-                                    tooltip: 'Add context',
-                                    onTap: _addFiles),
-                              SizedBox(width: S.s4),
-                              _sendButton(canSend),
+                              SizedBox(height: S.s8),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Expanded(
+                                    child: Wrap(
+                                      spacing: S.s4,
+                                      runSpacing: S.s4,
+                                      crossAxisAlignment:
+                                          WrapCrossAlignment.center,
+                                      children: [
+                                        _chip(
+                                            AppIcon('folder',
+                                                size: 12, color: AppColors.fg3),
+                                            _folderLabel,
+                                            key: _folderKey,
+                                            onTap: _pickFolder),
+                                        Builder(
+                                          builder: (a) => _chip(
+                                              _agentMark(), _agentName,
+                                              onTap: () => _pickAgent(a)),
+                                        ),
+                                        if (current != null)
+                                          Builder(
+                                            builder: (a) => _chip(
+                                                null, current.name,
+                                                onTap: () => _pickProfile(a)),
+                                          ),
+                                        Builder(
+                                          builder: (a) => _chip(
+                                              AppIcon('git-branch',
+                                                  size: 12,
+                                                  color: AppColors.fg3),
+                                              _worktreeLabel,
+                                              onTap: () => _pickWorktree(a)),
+                                        ),
+                                        for (var i = 0; i < _files.length; i++)
+                                          _fileChip(i),
+                                      ],
+                                    ),
+                                  ),
+                                  if (widget.onStartWithFiles != null)
+                                    IconBtn('paperclip',
+                                        size: 28,
+                                        iconSize: 15,
+                                        tooltip: 'Add context',
+                                        onTap: _addFiles),
+                                  SizedBox(width: S.s4),
+                                  _sendButton(canSend),
+                                ],
+                              ),
                             ],
                           ),
-                        ],
-                      ),
-                    ),
-                    if (widget.footer != null)
-                      widget.footer!
-                    else if (widget.onOpenSession != null &&
-                        _recents.isNotEmpty) ...[
-                      SizedBox(height: S.of(14)),
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: 6,
-                        runSpacing: 6,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(right: 2),
-                            child: Text('Recent',
-                                style: TS.caption(AppColors.fg4)),
-                          ),
-                          for (final s in _recents) _recentChip(s),
-                        ],
-                      ),
+                        ),
+                      if (!_starting)
+                        Padding(
+                          padding: EdgeInsets.only(top: S.s8, left: S.s12),
+                          child: Text(
+                              'Enter sends \u00b7 Shift Enter for a new line \u00b7 @ names another agent',
+                              style: sans(12, color: AppColors.fg3)),
+                        ),
+                      if (widget.footer != null)
+                        widget.footer!
+                      else if (widget.onOpenSession != null &&
+                          _recents.isNotEmpty) ...[
+                        SizedBox(height: S.of(14)),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: 6,
+                          runSpacing: 6,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(right: 2),
+                              child: Text('Recent',
+                                  style: TS.caption(AppColors.fg4)),
+                            ),
+                            for (final s in _recents) _recentChip(s),
+                          ],
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),

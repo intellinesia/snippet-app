@@ -2264,8 +2264,8 @@ class _HeadButtonState extends State<_HeadButton> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
             curve: const Cubic(.23, 1, .32, 1),
-            height: 28,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+            constraints: const BoxConstraints(minHeight: 28),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: AppColors.fg1.withValues(alpha: _hover ? 0.11 : 0.07),

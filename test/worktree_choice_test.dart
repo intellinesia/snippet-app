@@ -127,7 +127,6 @@ void main() {
   testWidgets('in a repo a new chat defaults to a new worktree',
       (tester) async {
     final res = await _pump(tester, _FakeDaemon(repo: true));
-    expect(find.text('What are we making?'), findsOneWidget);
     // Works in sits as a chip under the prompt.
     expect(find.text('New worktree'), findsOneWidget);
     await sendPrompt(tester, 'Build it');

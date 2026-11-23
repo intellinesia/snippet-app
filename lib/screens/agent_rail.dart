@@ -102,7 +102,7 @@ class AgentRail extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(s.title.isEmpty ? 'Untitled session' : s.title,
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: sans(13, color: AppColors.fg1)),
                 Text('$word · ${relativeTime(s.lastActive)}',

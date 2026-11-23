@@ -55,6 +55,7 @@ class TopWorkspaceTabChip extends StatefulWidget {
   final String? provider;
   final String? agentId;
   final String? folder;
+  final bool unread;
   final int attentionCount;
 
   /// Width of a regular tab; Lead is always its compact form.
@@ -72,6 +73,7 @@ class TopWorkspaceTabChip extends StatefulWidget {
     this.provider,
     this.agentId,
     this.folder,
+    this.unread = false,
     this.attentionCount = 0,
     this.width = 168,
   });
@@ -232,7 +234,15 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
                           : (_hover ? AppColors.fg1 : AppColors.fg2)),
                 ),
               ),
-              if (closable)
+              if (widget.unread && !active && !showClose)
+                Container(
+                  width: 6,
+                  height: 6,
+                  margin: const EdgeInsets.only(right: 9),
+                  decoration: BoxDecoration(
+                      color: AppColors.fg2, shape: BoxShape.circle),
+                ),
+              if (closable && (showClose || !widget.unread || active))
                 Opacity(
                   opacity: showClose ? 1 : 0,
                   child: TapDetector(
@@ -282,6 +292,7 @@ class MainTabsStrip extends StatefulWidget {
   final String? Function(ShellTab)? providerFor;
   final String? Function(ShellTab)? agentFor;
   final String? Function(ShellTab)? folderFor;
+  final bool Function(ShellTab)? unreadFor;
   final int mcAttentionCount;
   final VoidCallback? onCloseOthers;
   final VoidCallback? onCloseAll;
@@ -299,6 +310,7 @@ class MainTabsStrip extends StatefulWidget {
     required this.chipKeyFor,
     this.providerFor,
     this.agentFor,
+    this.unreadFor,
     this.folderFor,
     this.mcAttentionCount = 0,
     this.onCloseOthers,
@@ -434,6 +446,7 @@ class _MainTabsStripState extends State<MainTabsStrip> {
                 provider: widget.providerFor?.call(t),
                 agentId: widget.agentFor?.call(t),
                 folder: widget.folderFor?.call(t),
+                unread: widget.unreadFor?.call(t) ?? false,
                 isActive: t == active,
                 status: widget.statusForTab(t),
                 canClose: widget.canCloseTab(t),

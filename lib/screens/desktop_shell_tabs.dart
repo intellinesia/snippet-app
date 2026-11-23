@@ -1050,6 +1050,17 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     return null;
   }
 
+  /// A finished session the user has not looked at since it finished.
+  bool _tabUnread(ShellTab t) {
+    final id = t.sessionId;
+    if (id == null || t.isLead) return false;
+    final s = _sessions?.where((x) => x.id == id).firstOrNull;
+    final done = s?.finishedAt;
+    if (s == null || done == null || s.running) return false;
+    final seen = s.userSeenAt;
+    return seen == null || seen < done;
+  }
+
   Widget _mainTabsRow() => MainTabsStrip(
         controller: _stripController,
         tabs: _mainTabs,
@@ -1063,6 +1074,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
         providerFor: (t) => _tabProviders[t.profile],
         agentFor: _agentForTab,
         folderFor: _folderForTab,
+        unreadFor: _tabUnread,
         mcAttentionCount: _mcAttentionCount,
         onCloseOthers: () {
           final a = _activeTab;
