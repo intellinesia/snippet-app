@@ -643,6 +643,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     final pane = _canvasPane;
     final group = _activeGroupKeyFor(pane) ?? _activeTab?.key;
     if (group == null) return;
+    sessionRailCollapsed.value = true;
     _setState(() {
       final t = existing >= 0 ? _tabs[existing] : probe;
       t
@@ -659,6 +660,8 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     final pane = _canvasPane;
     final group = _activeGroupKeyFor(pane) ?? _activeTab?.key;
     if (group == null) return;
+    // The canvas takes the inspector's place.
+    sessionRailCollapsed.value = true;
     final existing = _tabs.indexWhere(
         (t) => t.isFile && t.instanceUrl == url && t.filePath == path);
     _setState(() {

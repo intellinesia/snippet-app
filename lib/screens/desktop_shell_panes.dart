@@ -1168,6 +1168,24 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       for (final s in _sessions ?? const <SessionInfo>[])
         if (sessionNeedsYou(s)) s
     ].isNotEmpty;
+    final machine = _active?.label ?? '';
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      if (_client != null && machine.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 4, 12, 0),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text('$machine \u00b7 Connected',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(11.5, color: AppColors.fg3)),
+          ),
+        ),
+      _sidebarFooterRow(needsYou),
+    ]);
+  }
+
+  Widget _sidebarFooterRow(bool needsYou) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(9, 6, 9, 10),
       // Settings on the left; tools packed at the right. Flexible children
