@@ -20,7 +20,8 @@ bool shouldRestoreShellTab(OpenTabDescriptor tab, {required bool mobile}) =>
 /// Which top-level place the phone home is showing. The floating action bar
 /// switches this; desktop keeps its sidebar rail instead, so this is phone-only.
 enum MobileHome {
-  chats('Sessions', 'chat'),
+  home('Home', 'home'),
+  chats('Sessions', 'layers'),
   tasks('Tasks', 'task'),
   agents('Agents', 'users'),
   settings('Settings', 'settings');
@@ -28,6 +29,9 @@ enum MobileHome {
   const MobileHome(this.label, this.icon);
   final String label;
   final String icon;
+
+  /// The two list places that front the session pager.
+  bool get isSessionsHome => this == home || this == chats;
 }
 
 /// One open tab in the shell — a live chat session, an opened file, a single git

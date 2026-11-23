@@ -5,8 +5,10 @@ import '../gesture_physics.dart';
 import '../motion_routes.dart' show AppPageRoute, backSwipeStays;
 import '../page_stack.dart';
 import '../glass.dart' show GlassTopFrame, StatusInset;
+import '../quiet.dart';
 import '../theme.dart';
 import 'shell_models.dart';
+import 'sidebar_mode.dart' show homeFirstTab;
 import '../chat_scene.dart' show SceneBackdrop;
 
 /// Full-screen mobile shell layout with sliding sidebar and platform back handling.
@@ -26,6 +28,9 @@ class MobileShell extends StatefulWidget {
   final bool missionPair;
   final VoidCallback? onSwipeToSessions;
 
+  /// Shows the floating tab bar on the top-level places when set.
+  final VoidCallback? onNew;
+
   const MobileShell({
     super.key,
     required this.activeTabBody,
@@ -42,6 +47,7 @@ class MobileShell extends StatefulWidget {
     this.onPopRoute,
     this.missionPair = false,
     this.onSwipeToSessions,
+    this.onNew,
   });
 
   @override
@@ -177,7 +183,7 @@ class _MobileShellState extends State<MobileShell>
     final chatsVisible = _chatsVisible;
     final canPopRoute = widget.canPopRoute;
     final canPop = canPopRoute ??
-        (!chatsVisible || drilledDown || mobileHome != MobileHome.chats);
+        (!chatsVisible || drilledDown || !mobileHome.isSessionsHome);
 
     void handleBack() {
       final route = ModalRoute.of(context);
@@ -197,8 +203,8 @@ class _MobileShellState extends State<MobileShell>
         }
       } else if (drilledDown) {
         onClearDrillDown();
-      } else if (mobileHome != MobileHome.chats) {
-        onMobileHome(MobileHome.chats);
+      } else if (!mobileHome.isSessionsHome) {
+        onMobileHome(homeFirstTab());
       }
     }
 
@@ -318,8 +324,36 @@ class _MobileShellState extends State<MobileShell>
         ),
       ),
     );
+    final showBar = widget.onNew != null &&
+        chatsVisible &&
+        !drilledDown &&
+        mobileHome != MobileHome.settings;
     final shell = Scaffold(
       backgroundColor: AppColors.bg,
+      bottomNavigationBar: showBar
+          ? ColoredBox(
+              color: AppColors.bg,
+              child: SafeArea(
+                top: false,
+                child: QuietTabBar(
+                  selected: switch (mobileHome) {
+                    MobileHome.home => QuietPlace.home,
+                    MobileHome.chats => QuietPlace.sessions,
+                    MobileHome.tasks => QuietPlace.tasks,
+                    MobileHome.agents => QuietPlace.agents,
+                    MobileHome.settings => null,
+                  },
+                  onSelect: (p) => onMobileHome(switch (p) {
+                    QuietPlace.home => MobileHome.home,
+                    QuietPlace.sessions => MobileHome.chats,
+                    QuietPlace.tasks => MobileHome.tasks,
+                    QuietPlace.agents => MobileHome.agents,
+                  }),
+                  onNew: widget.onNew!,
+                ),
+              ),
+            )
+          : null,
       body: Stack(children: [
         if (missionPair) ...[
           if (chatLayer != null) chatLayer,

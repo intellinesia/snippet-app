@@ -114,7 +114,7 @@ extension _DesktopShellMobileExt on _DesktopShellState {
   Widget _mobileShell() {
     final tab = _activeTab;
     final visible = _appForeground && !_mobileChatsOpen &&
-        _mobileHome == _MobileHome.chats &&
+        _mobileHome.isSessionsHome &&
         tab != null && !tab.isBoard && !tab.isTask && !tab.isFile && !tab.isDiff && !tab.isTerminal;
     reportVisibleNotificationSession(
         visible ? tab.instanceUrl : null, visible ? tab.sessionId : null);
@@ -143,9 +143,10 @@ extension _DesktopShellMobileExt on _DesktopShellState {
       mobileHome: _mobileHome,
       missionPair: tab != null &&
           tab.isLead &&
-          _mobileHome == MobileHome.chats &&
+          _mobileHome.isSessionsHome &&
           !_mobileDrilledDown,
-      onSwipeToSessions: () => _goMobileHome(MobileHome.chats),
+      onSwipeToSessions: () => _goMobileHome(homeFirstTab()),
+      onNew: _newSessionFlow,
       canPopRoute: _mobileRouteHistory.length > 1,
       onPopRoute: () {
         _handleMobileBack();

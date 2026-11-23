@@ -1,6 +1,7 @@
 // "Ledger line": desktop tool activity as one sentence of hoverable phrases
 // while finished, and a single 40px strip while a step is running.
 
+import '../quiet.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -735,7 +736,7 @@ class _LedgerGanttState extends State<LedgerGantt> {
               const SizedBox(width: 12),
             ],
             if (failed > 0)
-              Text('$failed failed', style: sans(12, color: AppColors.danger)),
+              Text('$failed failed', style: sans(12, color: AppColors.fg3)),
             const Spacer(),
             if (el != null)
               Text(_clock(el), style: mono(11.5, color: AppColors.fg4)),
@@ -985,6 +986,10 @@ class _LedgerStripState extends State<LedgerStrip> {
       }
     }
     final fail = failAt >= 0 && failAt != _dismissedFail ? steps[failAt] : null;
+    // Quiet rule: a failure a later step got past is one muted line; only a
+    // failure nothing recovered from becomes the amber hand.
+    final recovered = fail != null &&
+        steps.skip(failAt + 1).any((s) => !s.running && !_stepFailed(s));
     // No call in flight: the model is between steps.
     final label = live == null ? 'Thinking' : ledgerLiveLabel(live);
     final target = live == null ? '' : stepTarget(live);
@@ -1061,19 +1066,28 @@ class _LedgerStripState extends State<LedgerStrip> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (fail != null) ...[
+        if (fail != null && recovered)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+            child: QuietRecoveredLine(
+              summary:
+                  '${_failLabel(fail)}, recovered${fail.exitCode != null ? ' (exit ${fail.exitCode})' : ''}',
+              detail: _tail(fail, n: 12).join('\n'),
+            ),
+          )
+        else if (fail != null) ...[
           Container(
             height: 32,
             padding: const EdgeInsets.only(left: 9, right: 3),
             decoration: BoxDecoration(
-              color: AppColors.danger.withValues(alpha: 0.13),
+              color: quietAmber.withValues(alpha: 0.13),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(children: [
-              AppIcon('alert-circle', size: 14, color: AppColors.danger),
+              const QuietHand(size: 14),
               const SizedBox(width: 10),
               Text(_failLabel(fail),
-                  style: sans(13, weight: W.label, color: AppColors.danger)),
+                  style: sans(13, weight: W.label, color: quietAmber)),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(

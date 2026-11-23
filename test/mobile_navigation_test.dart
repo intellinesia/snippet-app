@@ -100,7 +100,7 @@ void main() {
       await pump();
       var shell = tester.widget<MobileShell>(find.byType(MobileShell));
       expect(shell.chatsOpen, isTrue);
-      expect(shell.mobileHome, MobileHome.chats);
+      expect(shell.mobileHome, MobileHome.home);
       expect(shell.canPopRoute, isFalse);
 
       notify('http://127.0.0.1:9091');
@@ -154,7 +154,7 @@ void main() {
 
       final shell = tester.widget<MobileShell>(find.byType(MobileShell));
       expect(shell.chatsOpen, isTrue);
-      expect(shell.mobileHome, MobileHome.chats);
+      expect(shell.mobileHome, MobileHome.home);
       expect(closed, isFalse);
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
@@ -192,7 +192,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump(const Duration(milliseconds: 400));
       shell = tester.widget<MobileShell>(find.byType(MobileShell));
-      expect(shell.mobileHome, MobileHome.chats);
+      expect(shell.mobileHome, MobileHome.home);
       expect(find.byType(CoordinationAgentDetail), findsNothing);
       expect(find.byType(MobileHomeScreen), findsOneWidget);
 

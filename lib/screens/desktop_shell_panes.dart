@@ -169,7 +169,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       mobileActive: !kMobile ||
           (_appForeground &&
               !_mobileChatsOpen &&
-              _mobileHome == _MobileHome.chats),
+              _mobileHome.isSessionsHome),
       onTitle: (title) => _onSessionTitle(t.sessionId!, title),
       onDeleted: primary ? () => _onSessionDeleted(t.sessionId!) : null,
       onMenu: kMobile ? _showMobileChats : null,

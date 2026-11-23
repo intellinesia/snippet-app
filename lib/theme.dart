@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:ui' show PlatformDispatcher;
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -212,11 +213,11 @@ ThemePreset _palette({
   Color fg2 = const Color(0xFFDCDCDC),
   Color fg3 = const Color(0xFFABABAB),
   Color fg4 = const Color(0xFF7A7A7A),
+  Color ok = const Color(0xFF34D399),
+  Color run = const Color(0xFFF59E0B),
+  Color danger = const Color(0xFFFF5C5C),
 }) {
   final hover = _lighten(accent, 0.06);
-  const ok = Color(0xFF34D399);
-  const run = Color(0xFFF59E0B);
-  const danger = Color(0xFFFF5C5C);
   return ThemePreset(
     name: name,
     label: label,
@@ -253,6 +254,48 @@ ThemePreset _palette({
     diffGutter: border2,
   );
 }
+
+// Quiet: warm graphite and paper, one amber signal kept for "needs you".
+// Surfaces separate by tone; hairlines only where structure needs them.
+final _quiet = _palette(
+  name: 'quiet',
+  label: 'Quiet',
+  bg: const Color(0xFF121211),
+  surface1: const Color(0xFF191918),
+  surface2: const Color(0xFF222220),
+  surface3: const Color(0xFF2C2C2A),
+  border: const Color(0xFF2A2A28),
+  border2: const Color(0xFF3A3A37),
+  accent: const Color(0xFFEDEDEA),
+  accentFg: const Color(0xFF121211),
+  fg1: const Color(0xFFEDEDEA),
+  fg2: const Color(0xFFB5B5B0),
+  fg3: const Color(0xFF93938D),
+  fg4: const Color(0xFF6A6A65),
+  ok: const Color(0xFF5FC28E),
+  run: const Color(0xFFE9B44C),
+  danger: const Color(0xFFF07167),
+);
+
+final _quietLight = _palette(
+  name: 'quiet-light',
+  label: 'Quiet Light',
+  bg: const Color(0xFFFAFAF8),
+  surface1: const Color(0xFFFFFFFF),
+  surface2: const Color(0xFFF0F0EC),
+  surface3: const Color(0xFFE6E6E1),
+  border: const Color(0xFFE4E4DF),
+  border2: const Color(0xFFD2D2CC),
+  accent: const Color(0xFF1C1C1A),
+  accentFg: const Color(0xFFFFFFFF),
+  fg1: const Color(0xFF1C1C1A),
+  fg2: const Color(0xFF55554F),
+  fg3: const Color(0xFF6B6B65),
+  fg4: const Color(0xFFA3A39C),
+  ok: const Color(0xFF1F7A4D),
+  run: const Color(0xFF8A5A00),
+  danger: const Color(0xFFB3261E),
+);
 
 // Modelled on Vercel's Geist dark scale: true black, neutral greys, colour only for status.
 final _black = _palette(
@@ -848,6 +891,8 @@ final _amberPhosphor = _palette(
 );
 
 final List<ThemePreset> allPresets = [
+  _quiet,
+  _quietLight,
   _black,
   _ember,
   _stone,
@@ -1171,8 +1216,8 @@ class ThemeManager extends ChangeNotifier {
   static const _legacyIndexKey = 'theme_index';
   static const _prefsKey = 'theme_name';
   static const activeJsonPrefsKey = 'theme_active_json';
-  static const defaultTheme = 'black';
-  static const defaultFont = 'Geist';
+  static const defaultTheme = 'quiet';
+  static const defaultFont = 'Inter';
   static const defaultMonoFont = 'GeistMono';
   static const _accentPrefsKey = 'accent_name';
   static const _fontPrefsKey = 'ui_font_family';
@@ -1181,7 +1226,7 @@ class ThemeManager extends ChangeNotifier {
   static final ThemeManager instance = ThemeManager._();
   ThemeManager._();
 
-  ResolvedTheme _resolved = ResolvedTheme.fromPreset(_black);
+  ResolvedTheme _resolved = ResolvedTheme.fromPreset(_quiet);
   ResolvedTheme? _signedFor;
   String _signature = '';
 
@@ -1280,7 +1325,7 @@ class ThemeManager extends ChangeNotifier {
 
   @visibleForTesting
   void resetForTest() {
-    _resolved = ResolvedTheme.fromPreset(_black);
+    _resolved = ResolvedTheme.fromPreset(_quiet);
     _activeId = null;
     notifyListeners();
   }
@@ -1298,8 +1343,11 @@ class ThemeManager extends ChangeNotifier {
     }
     if (name == 'white') name = defaultTheme;
 
-    final fallbackPreset = allPresets[
-        _indexOr(allPresets.map((t) => t.name), name ?? defaultTheme)];
+    // First run follows the system; a saved choice always wins.
+    final systemLight = PlatformDispatcher.instance.platformBrightness ==
+        Brightness.light;
+    final fallbackPreset = allPresets[_indexOr(allPresets.map((t) => t.name),
+        name ?? (systemLight ? 'quiet-light' : defaultTheme))];
     final savedAccent = p.getString(_accentPrefsKey);
     final accentName = savedAccent != null &&
             savedAccent.isNotEmpty &&
@@ -1323,7 +1371,7 @@ class ThemeManager extends ChangeNotifier {
         final decoded = jsonDecode(cachedJson);
         if (decoded is Map<String, dynamic>) {
           final cached =
-              ResolvedTheme.fromJson(decoded, fallbackPreset: _black);
+              ResolvedTheme.fromJson(decoded, fallbackPreset: _quiet);
           if (cached.id != 'white') {
             _resolved = cached;
             _activeId = cached.id;
@@ -1346,7 +1394,7 @@ class ThemeManager extends ChangeNotifier {
 
   // Local only until the daemon theme store ships; the cache is what init restores.
   Future<void> _commit(ResolvedTheme next) async {
-    final safe = next.id == 'white' ? ResolvedTheme.fromPreset(_black) : next;
+    final safe = next.id == 'white' ? ResolvedTheme.fromPreset(_quiet) : next;
     _resolved = safe;
     _activeId = safe.id;
     notifyListeners();

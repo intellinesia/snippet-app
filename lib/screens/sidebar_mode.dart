@@ -25,7 +25,9 @@ Future<void> loadSidebarAgentsFirst() async {
 /// home list; desktop follows its sidebar mode.
 MobileHome homeFirstTab() => !kMobile && sidebarAgentsFirst.value
     ? MobileHome.agents
-    : MobileHome.chats;
+    : kMobile
+        ? MobileHome.home
+        : MobileHome.chats;
 
 void setSidebarAgentsFirst(bool agents) {
   if (sidebarAgentsFirst.value == agents) return;

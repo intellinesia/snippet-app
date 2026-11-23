@@ -446,7 +446,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
 
   /// Sessions and Agents share one pager layer; everything else is its own.
   static MobileHome _slot(MobileHome h) =>
-      h == MobileHome.agents ? MobileHome.chats : h;
+      h == MobileHome.agents || h == MobileHome.home ? MobileHome.chats : h;
 
   Widget _buildMobileHomeStack(bool hasClient) {
     final prev = _prevHome == null ? null : _slot(_prevHome!);
@@ -612,6 +612,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       [MobileHome? home]) {
     final destination = home ?? widget.mobileHome;
     switch (destination) {
+      case MobileHome.home:
       case MobileHome.chats:
         return !hasClient
             ? _mobileUnavailable('Add a machine to begin.')
