@@ -193,9 +193,13 @@ class _RoutingScreenState extends State<RoutingScreen> {
     bool add = false,
     String? tip,
   }) {
-    final radius = BorderRadius.circular(kMobile ? R.md : R.sm);
+    final radius = BorderRadius.circular(kMobile ? 999 : R.sm);
     final body = Material(
-      color: add ? Colors.transparent : AppColors.surface3,
+      color: add
+          ? Colors.transparent
+          : primary
+              ? AppColors.surface3
+              : AppColors.surface2,
       borderRadius: radius,
       child: InkWell(
         borderRadius: radius,
@@ -203,14 +207,10 @@ class _RoutingScreenState extends State<RoutingScreen> {
         child: Container(
           constraints: BoxConstraints(minHeight: kMobile ? 40 : 32),
           padding: EdgeInsets.symmetric(
-              horizontal: kMobile ? S.of(10) : S.s8, vertical: S.s4),
+              horizontal: kMobile ? S.of(14) : S.s8, vertical: S.s4),
           decoration: BoxDecoration(
             borderRadius: radius,
-            border: primary
-                ? Border.all(color: AppColors.accent)
-                : add
-                    ? Border.all(color: AppColors.border2)
-                    : null,
+            border: add ? Border.all(color: AppColors.border) : null,
           ),
           child: child,
         ),
@@ -336,7 +336,7 @@ class _RoutingScreenState extends State<RoutingScreen> {
       decoration: BoxDecoration(
         color: kMobile ? AppColors.surface1 : Grouped.card,
         borderRadius: BorderRadius.circular(kMobile ? R.lg : Grouped.radiusEnd),
-        border: Border.all(color: kMobile ? AppColors.line : Grouped.cardBorder),
+        border: kMobile ? null : Border.all(color: Grouped.cardBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

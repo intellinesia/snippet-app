@@ -1516,13 +1516,9 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   Widget _disconnectedBanner() {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: S.s16, vertical: S.of(10)),
-      decoration: BoxDecoration(
-          color: AppColors.dangerBg,
-          border: Border(
-              bottom:
-                  BorderSide(color: AppColors.danger.withValues(alpha: 0.25)))),
+      decoration: BoxDecoration(color: AppColors.surface2),
       child: Row(children: [
-        AppIcon('wifi-off', size: 15, color: AppColors.danger),
+        AppIcon('wifi-off', size: 15, color: AppColors.run),
         SizedBox(width: S.of(9)),
         Expanded(
             child: Text(
@@ -1534,7 +1530,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
           onTap: _retryNow,
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Text('Retry now',
-                style: sans(12, weight: W.label, color: AppColors.danger)),
+                style: sans(12, weight: W.label, color: AppColors.fg1)),
           ]),
         ),
       ]),

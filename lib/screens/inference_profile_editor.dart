@@ -865,7 +865,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
       if (_error != null)
         Padding(
           padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s12),
-          child: Text(_error!, style: sans(12, color: AppColors.danger)),
+          child: Text(_error!, style: sans(12, color: AppColors.run)),
         ),
     ]);
   }
@@ -1161,7 +1161,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
         if (_error != null)
           Padding(
             padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s12),
-            child: Text(_error!, style: sans(12, color: AppColors.danger)),
+            child: Text(_error!, style: sans(12, color: AppColors.run)),
           ),
           ],
         );
@@ -1399,7 +1399,7 @@ class _CliAgentStatusState extends State<_CliAgentStatus> {
         Expanded(
             child: Text(_err ?? 'Checking this machine…',
                 style: sans(12,
-                    color: _err == null ? AppColors.fg3 : AppColors.danger))),
+                    color: _err == null ? AppColors.fg3 : AppColors.run))),
         recheck,
       ]);
     } else {
@@ -1591,7 +1591,7 @@ class _SubSignInState extends State<_SubSignIn> {
       Btn(widget.buttonLabel, icon: 'key', small: true, onTap: _begin),
       if (_err != null) ...[
         SizedBox(height: S.s8),
-        Text(_err!, style: sans(12, color: AppColors.danger))
+        Text(_err!, style: sans(12, color: AppColors.run))
       ],
     ]);
   }

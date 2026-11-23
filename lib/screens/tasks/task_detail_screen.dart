@@ -754,7 +754,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   padding: EdgeInsets.all(S.s24),
                   child: Text(error!,
                       textAlign: TextAlign.center,
-                      style: sans(12, color: AppColors.danger)),
+                      style: sans(12, color: AppColors.run)),
                 ),
               )
             : t == null
@@ -1164,7 +1164,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           padding: EdgeInsets.all(S.s24),
           child: Text(error!,
               textAlign: TextAlign.center,
-              style: sans(12, color: AppColors.danger)),
+              style: sans(12, color: AppColors.run)),
         ),
       );
     }

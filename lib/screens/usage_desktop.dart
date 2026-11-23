@@ -236,9 +236,8 @@ class _Chip extends StatelessWidget {
             padding: EdgeInsets.symmetric(horizontal: S.of(10)),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: selected ? AppColors.tint2 : Colors.transparent,
-              borderRadius: BorderRadius.circular(R.of(7)),
-              border: Border.all(color: selected ? AppColors.lineStrong : AppColors.line),
+              color: selected ? AppColors.surface3 : AppColors.surface2,
+              borderRadius: BorderRadius.circular(999),
             ),
             child: Text(label,
                 style: sans(12,
@@ -258,8 +257,9 @@ class _Card extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: padding ?? EdgeInsets.all(S.s16),
         decoration: BoxDecoration(
-          color: Grouped.row,
-          borderRadius: BorderRadius.circular(Grouped.radiusEnd),
+          color: kMobile ? AppColors.surface1 : Grouped.row,
+          borderRadius:
+              BorderRadius.circular(kMobile ? R.lg : Grouped.radiusEnd),
         ),
         child: child,
       );

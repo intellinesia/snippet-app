@@ -536,7 +536,7 @@ class PhoneTaskRow extends StatelessWidget {
         TaskStatus.inReview => ('Ready for review', AppColors.ok),
         TaskStatus.blocked => ('Blocked', _warn),
         TaskStatus.inProgress => ('Working', AppColors.accent),
-        TaskStatus.failed => ('Failed', AppColors.danger),
+        TaskStatus.failed => ('Failed', AppColors.run),
         TaskStatus.todo => ('To do', AppColors.fg3),
         TaskStatus.done => ('Done', AppColors.ok),
         TaskStatus.cancelled => ('Cancelled', AppColors.fg3),

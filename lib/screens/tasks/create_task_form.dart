@@ -193,7 +193,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             ),
             if (_error != null) ...[
               SizedBox(height: S.s8),
-              Text(_error!, style: sans(12, color: AppColors.danger)),
+              Text(_error!, style: sans(12, color: AppColors.run)),
             ],
             SizedBox(height: S.s12),
             Text(

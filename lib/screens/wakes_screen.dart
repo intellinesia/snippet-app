@@ -168,7 +168,7 @@ class _WakesScreenState extends State<WakesScreen> {
           return page([
             Padding(
               padding: EdgeInsets.fromLTRB(S.s4, S.s8, S.s4, S.s24),
-              child: Text('${snap.error}', style: TS.ui(AppColors.danger)),
+              child: Text('${snap.error}', style: TS.ui(AppColors.run)),
             ),
           ]);
         }

@@ -1349,6 +1349,7 @@ class ThemeManager extends ChangeNotifier {
       if (name != null) {
         name = null;
         await p.remove(_prefsKey);
+        await p.remove(activeJsonPrefsKey);
       }
     }
 

@@ -1293,11 +1293,11 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                AppIcon('alert-circle', size: 24, color: AppColors.danger),
+                AppIcon('hand', size: 24, color: AppColors.run, filled: true),
                 SizedBox(height: S.of(10)),
                 Text(_error!,
                     textAlign: TextAlign.center,
-                    style: sans(13, color: AppColors.danger)),
+                    style: sans(13, color: AppColors.fg2)),
                 SizedBox(height: S.of(14)),
                 Btn('Retry', small: true, onTap: () => _load(silent: false)),
               ],

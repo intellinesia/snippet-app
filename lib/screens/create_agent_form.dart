@@ -298,7 +298,7 @@ class _CreateAgentFormState extends State<CreateAgentForm> {
         ],
         if (_error != null) ...[
           SizedBox(height: S.s12),
-          Text(_error!, style: sans(13, color: AppColors.danger)),
+          Text(_error!, style: sans(13, color: AppColors.run)),
         ],
         SizedBox(height: S.of(18)),
         // Full width on phones; a trailing button on desktop.

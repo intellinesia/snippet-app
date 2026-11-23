@@ -120,7 +120,7 @@ String sessionPrLabel(SessionPr pr) {
 }
 
 Color sessionPrColor(SessionPr pr) => switch (pr.checks) {
-      'failing' => AppColors.danger,
+      'failing' => AppColors.run,
       'passing' => AppColors.ok,
       'pending' => AppColors.run,
       _ => AppColors.fg3,
@@ -593,7 +593,7 @@ class SessionListRow extends StatelessWidget {
                               if (diff.removed > 0)
                                 Text('-${compactCount(diff.removed)}',
                                     maxLines: 1,
-                                    style: TS.meta(AppColors.danger)),
+                                    style: TS.meta(AppColors.run)),
                             ],
                           ],
                         ]),
