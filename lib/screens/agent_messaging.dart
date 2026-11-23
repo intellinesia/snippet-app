@@ -1143,7 +1143,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     // Provider and model, never the raw profile id.
     final named = prof == null || prof.trim().isEmpty
         ? ''
-        : (model.isEmpty ? prettyProfile(prof) : '${prettyProfile(prof)} $model');
+        : (model.isEmpty ? prettyProfile(prof) : model);
     final status = p == null
         ? ''
         : (_typing ? 'typing\u2026' : PresenceStore.chatWord(p));

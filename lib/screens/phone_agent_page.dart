@@ -114,11 +114,9 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
                 ],
                 Flexible(
                   child: Text(
-                      [
-                        prettyProfile(profile),
-                        if ((_profiles[profile]?.model ?? '').trim().isNotEmpty)
-                          prettyModel(_profiles[profile]!.model)
-                      ].join(' · '),
+                      (_profiles[profile]?.model ?? '').trim().isNotEmpty
+                          ? prettyModel(_profiles[profile]!.model)
+                          : prettyProfile(profile),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(14, color: AppColors.fg2)),
