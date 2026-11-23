@@ -99,7 +99,7 @@ class _StatusPainter extends CustomPainter {
 const double kTaskRowInset = 14;
 
 /// Id column width, shared so the fold text can align to the title.
-const double kTaskIdWidth = 46;
+const double kTaskIdWidth = 62;
 
 /// A status group's heading: mark, label, count.
 class TaskGroupHeader extends StatelessWidget {
@@ -197,7 +197,11 @@ class _DenseTaskRowState extends State<DenseTaskRow> {
             const SizedBox(width: 4),
             SizedBox(
                 width: kTaskIdWidth,
-                child: Text(id, style: mono(11.5, color: AppColors.fg4))),
+                child: Text(id,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.clip,
+                    style: mono(11.5, color: AppColors.fg4))),
             Expanded(
               child: Text(t.title,
                   maxLines: 1,

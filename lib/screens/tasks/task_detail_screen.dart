@@ -1,3 +1,4 @@
+import '../session_list_row.dart' show compactCount;
 import '../../task_reason.dart';
 import 'dart:async';
 
@@ -409,18 +410,19 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   Widget _turnsSection() {
     if (turns.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: EdgeInsets.only(top: S.of(14)),
+      padding: EdgeInsets.only(top: kMobile ? S.of(14) : 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: EdgeInsets.only(bottom: S.s8),
-            child: Text('TURNS',
-                style: kMobile
-                    ? sans(12,
-                        weight: W.label, spacing: 0.7, color: AppColors.fg4)
-                    : caps(11, color: AppColors.fg3)),
-          ),
+          if (kMobile)
+            Padding(
+              padding: EdgeInsets.only(bottom: S.s8),
+              child: Text('TURNS',
+                  style: sans(12,
+                      weight: W.label, spacing: 0.7, color: AppColors.fg4)),
+            )
+          else
+            _paneHead('Turns', count: '${turns.length}'),
           for (final turn in turns.reversed) _turnRow(turn),
         ],
       ),
@@ -434,16 +436,17 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         ? log
         : log.sublist(0, collapsed);
     return Padding(
-      padding: EdgeInsets.only(top: S.of(14)),
+      padding: EdgeInsets.only(top: kMobile ? S.of(14) : 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('LOG',
-              style: kMobile
-                  ? sans(12,
-                      weight: W.label, spacing: 0.7, color: AppColors.fg4)
-                  : caps(11, color: AppColors.fg3)),
-          SizedBox(height: S.s4),
+          if (kMobile) ...[
+            Text('LOG',
+                style: sans(12,
+                    weight: W.label, spacing: 0.7, color: AppColors.fg4)),
+            SizedBox(height: S.s4),
+          ] else
+            _paneHead('Log', count: '${log.length}'),
           BoardLog(entries: shown, showAgent: true),
           if (log.length > collapsed)
             TextButton(
@@ -805,20 +808,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           Text('Tasks', style: sans(12, color: AppColors.fg4)),
           Text('  /  ', style: sans(12, color: AppColors.fg4)),
           Text(id, style: mono(12, color: AppColors.fg4)),
-        ]),
-        const SizedBox(height: 6),
-        Row(children: [
-          Flexible(
-            child: Text(t?.title ?? 'Task',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: sans(kMobile ? 20 : 16,
-                    weight: FontWeight.w600,
-                    spacing: -0.2,
-                    color: AppColors.fg1)),
-          ),
-          if (t != null) ...[
-            const SizedBox(width: 10),
+          const Spacer(),
+          if (t != null)
             _paneChip(
                 switch (t.status) {
                   TaskStatus.inReview => 'Ready for review',
@@ -827,19 +818,22 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 t.status == TaskStatus.blocked
                     ? AppColors.run
                     : statusColor(t.status)),
-          ],
         ]),
+        const SizedBox(height: 8),
+        Text(t?.title ?? 'Task',
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: sans(kMobile ? 20 : 16,
+                weight: FontWeight.w600,
+                spacing: -0.2,
+                color: AppColors.fg1)),
         if (t?.goalTitle != null) _goalLine(t!),
       ]),
     );
   }
 
   Widget _fact(String k, Widget v, {bool last = false}) => Container(
-        padding: const EdgeInsets.fromLTRB(0, 9, 18, 9),
-        margin: EdgeInsets.only(right: last ? 0 : 18),
-        decoration: BoxDecoration(
-          border: last ? null : Border(right: BorderSide(color: taskHairline)),
-        ),
+        padding: const EdgeInsets.fromLTRB(0, 9, 0, 9),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(k, style: sans(11, color: AppColors.fg4)),
           const SizedBox(height: 2),
@@ -901,13 +895,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           ].where((x) => x.isNotEmpty).join(' · '))
         ),
       if (branch.isNotEmpty) ('Branch', _factText(branch, code: true)),
-      if (changes != null)
+      if (changes != null && changes.files <= 300)
         (
           'Changes',
           Row(mainAxisSize: MainAxisSize.min, children: [
-            Text('+${changes.added}', style: mono(12, color: AppColors.ok)),
+            Text('+${compactCount(changes.added)}',
+                style: mono(12, color: AppColors.ok)),
             const SizedBox(width: 6),
-            Text('−${changes.removed}',
+            Text('−${compactCount(changes.removed)}',
                 style: mono(12, color: AppColors.danger)),
             if (changes.files > 0) ...[
               const SizedBox(width: 6),
@@ -921,24 +916,26 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     ];
     return Container(
       margin: const EdgeInsets.only(top: 14),
-      alignment: Alignment.centerLeft,
+      width: double.infinity,
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(color: taskHairline),
           bottom: BorderSide(color: taskHairline),
         ),
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(mainAxisAlignment: MainAxisAlignment.start, children: [
+      child: Wrap(
+        spacing: 26,
+        children: [
           for (var i = 0; i < facts.length; i++)
-            _fact(facts[i].$1, facts[i].$2, last: i == facts.length - 1),
-        ]),
+            _fact(facts[i].$1, facts[i].$2, last: true),
+        ],
       ),
     );
   }
 
-  Widget _paneHead(String label, {String? count, String? right}) => Padding(
+  Widget _paneHead(String label,
+          {String? count, String? right, Widget? trailing}) =>
+      Padding(
         padding: const EdgeInsets.only(bottom: 6),
         child: Row(children: [
           Text(label,
@@ -950,6 +947,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           const Spacer(),
           if (right != null)
             Text(right, style: sans(11.5, color: AppColors.fg4)),
+          if (trailing != null) trailing,
         ]),
       );
 
@@ -1005,27 +1003,19 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     ]);
   }
 
-  Widget _paneAgents() => Container(
-        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-        decoration: _sheetCardDecoration,
+  Widget _paneAgents() => Padding(
+        padding: const EdgeInsets.only(top: 18),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Text('Agents',
-                style:
-                    sans(12.5, weight: FontWeight.w600, color: AppColors.fg1)),
-            const SizedBox(width: 8),
-            Text('${roster.length}', style: mono(11, color: AppColors.fg4)),
-            const Spacer(),
-            TapDetector(
-              onTap: _addAgent,
-              behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: const EdgeInsets.all(2),
-                child: AppIcon('plus', size: 14, color: AppColors.fg3),
-              ),
-            ),
-          ]),
-          const SizedBox(height: 4),
+          _paneHead('Agents',
+              count: '${roster.length}',
+              trailing: TapDetector(
+                onTap: _addAgent,
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.all(2),
+                  child: AppIcon('plus', size: 14, color: AppColors.fg3),
+                ),
+              )),
           if (roster.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
@@ -1081,25 +1071,18 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         ]),
       );
 
-  Widget _paneRelated() => Container(
-        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-        decoration: _sheetCardDecoration,
+  Widget _paneRelated() => Padding(
+        padding: const EdgeInsets.only(top: 18),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Text('Related',
-                style:
-                    sans(12.5, weight: FontWeight.w600, color: AppColors.fg1)),
-            const Spacer(),
-            TapDetector(
-              onTap: _linkTask,
-              behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: const EdgeInsets.all(2),
-                child: AppIcon('plus', size: 14, color: AppColors.fg3),
-              ),
-            ),
-          ]),
-          const SizedBox(height: 6),
+          _paneHead('Related',
+              trailing: TapDetector(
+                onTap: _linkTask,
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.all(2),
+                  child: AppIcon('plus', size: 14, color: AppColors.fg3),
+                ),
+              )),
           if (links.links.isEmpty && links.blockedBy.isEmpty)
             Text('No linked tasks.', style: sans(12, color: AppColors.fg4))
           else ...[
@@ -1197,20 +1180,23 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   }
 
   /// A 470pt split pane: one scrolling column, the room pinned underneath.
-  Widget _narrowPaneBody(TaskItem t, BoardEntry? report, Widget? stands) =>
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Column(children: [
-          _paneFacts(t),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.only(top: 16, bottom: 12),
+  Widget _narrowPaneBody(TaskItem t, BoardEntry? report, Widget? stands) {
+    const gutter = EdgeInsets.symmetric(horizontal: 20);
+    SliverPadding pad(Widget sliver) =>
+        SliverPadding(padding: gutter, sliver: sliver);
+    return Column(children: [
+      Padding(padding: gutter, child: _paneFacts(t)),
+      Expanded(
+        child: CustomScrollView(slivers: [
+          pad(SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 16),
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _paneBrief(t),
                     if (stands != null) ...[
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 18),
                       stands,
                     ],
                     if (report != null) ...[
@@ -1222,24 +1208,29 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       _WorkPlan(steps: t.workPlan),
                     ],
                     if (t.status == TaskStatus.inReview) ...[
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 18),
                       _paneVerdict(),
                     ],
-                    const SizedBox(height: 18),
                     _paneAgents(),
-                    const SizedBox(height: 12),
                     _paneRelated(),
                     if (turns.isNotEmpty) _turnsSection(),
-                    const SizedBox(height: 14),
                     _paneChanged(),
                     if (log.isNotEmpty) _logSection(),
+                    const SizedBox(height: 18),
+                    _paneHead('The room', count: '${room?.events.length ?? 0}'),
                   ]),
             ),
-          ),
-          SizedBox(height: 250, child: _paneRoom()),
-          const SizedBox(height: 12),
+          )),
+          for (final sl in _roomSlivers()) pad(sl),
+          const SliverToBoxAdapter(child: SizedBox(height: 12)),
         ]),
-      );
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+        child: Column(children: [_addresseeBar(), _composerBar()]),
+      ),
+    ]);
+  }
 
   Widget _widePaneBody(TaskItem t, BoardEntry? report, Widget? stands) {
     return Padding(
