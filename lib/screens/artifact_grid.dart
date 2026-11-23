@@ -52,7 +52,7 @@ class _ArtifactGridState extends State<ArtifactGrid> {
   Widget _chip(String label, int n) {
     final on = _filter == label;
     return Padding(
-      padding: const EdgeInsets.only(right: 4),
+      padding: EdgeInsets.only(right: S.s4),
       child: Material(
         color: on ? AppColors.tint2 : Colors.transparent,
         shape: RoundedRectangleBorder(
@@ -63,7 +63,7 @@ class _ArtifactGridState extends State<ArtifactGrid> {
           onTap: () => setState(() => _filter = label),
           child: Container(
             height: 24,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+            padding: EdgeInsets.symmetric(horizontal: S.of(10)),
             alignment: Alignment.center,
             child: Text('$label $n',
                 style: sans(12, color: on ? AppColors.fg1 : AppColors.fg3)),
@@ -123,11 +123,11 @@ class _ArtifactGridState extends State<ArtifactGrid> {
           ),
       ];
       return ListView(
-        padding: EdgeInsets.fromLTRB(side, wide ? 20 : 2, side, 24),
+        padding: EdgeInsets.fromLTRB(side, wide ? S.s20 : S.s2, side, S.s24),
         children: [
           if (wide)
             Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: EdgeInsets.only(bottom: S.s12),
               child: Text('Artifacts',
                   style: sans(18, weight: W.label, color: AppColors.fg1)),
             ),
@@ -140,7 +140,7 @@ class _ArtifactGridState extends State<ArtifactGrid> {
               if (widget.files.isNotEmpty) _chip('Files', widget.files.length),
             ]),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: S.s12),
           GridView.count(
             crossAxisCount: cols,
             shrinkWrap: true,
@@ -184,7 +184,7 @@ class _CardState extends State<_Card> {
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: AppColors.tint1,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(R.lg),
             border: Border.all(
                 color: _hover
                     ? AppColors.accent.withValues(alpha: 0.45)
@@ -195,7 +195,7 @@ class _CardState extends State<_Card> {
               child: Container(color: AppColors.surface2.withValues(alpha: 0.5), child: widget.thumb),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 9),
+              padding: EdgeInsets.fromLTRB(S.of(10), S.s8, S.of(10), S.of(9)),
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -203,7 +203,7 @@ class _CardState extends State<_Card> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: sans(13, color: AppColors.fg1)),
-                    const SizedBox(height: 2),
+                    SizedBox(height: S.s2),
                     Text(widget.meta,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -240,48 +240,48 @@ class _ArtifactThumbState extends State<_ArtifactThumb> {
   }
 
   Widget _page() => Padding(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.all(S.s12),
         child: Container(
-          padding: const EdgeInsets.all(9),
+          padding: EdgeInsets.all(S.of(9)),
           decoration: BoxDecoration(
             color: AppColors.bg,
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(R.sm),
             border: Border.all(color: AppColors.line),
           ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
               AppIcon('globe', size: 10, color: AppColors.fg4),
-              const SizedBox(width: 5),
+              SizedBox(width: S.of(5)),
               Container(
                   width: 46,
                   height: 5,
                   decoration: BoxDecoration(
                       color: AppColors.surface3,
-                      borderRadius: BorderRadius.circular(3))),
+                      borderRadius: BorderRadius.circular(R.of(3)))),
             ]),
-            const SizedBox(height: 7),
+            SizedBox(height: S.of(7)),
             Expanded(
               child: Container(
                   decoration: BoxDecoration(
                       color: AppColors.surface2,
-                      borderRadius: BorderRadius.circular(4))),
+                      borderRadius: BorderRadius.circular(R.xs))),
             ),
-            const SizedBox(height: 5),
+            SizedBox(height: S.of(5)),
             Row(children: [
               Expanded(
                 child: Container(
                     height: 14,
                     decoration: BoxDecoration(
                         color: AppColors.surface2,
-                        borderRadius: BorderRadius.circular(4))),
+                        borderRadius: BorderRadius.circular(R.xs))),
               ),
-              const SizedBox(width: 5),
+              SizedBox(width: S.of(5)),
               Expanded(
                 child: Container(
                     height: 14,
                     decoration: BoxDecoration(
                         color: AppColors.accent.withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(4))),
+                        borderRadius: BorderRadius.circular(R.xs))),
               ),
             ]),
           ]),
@@ -302,7 +302,7 @@ class _ArtifactThumbState extends State<_ArtifactThumb> {
     }
     if (a.kind == 'svg') {
       return Padding(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.all(S.s12),
         child: SvgPicture.network(uri, fit: BoxFit.contain),
       );
     }
@@ -311,7 +311,7 @@ class _ArtifactThumbState extends State<_ArtifactThumb> {
       return FutureBuilder<String>(
         future: _text,
         builder: (_, snap) => Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+          padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, 0),
           child: Text(
             (snap.data ?? '').split('\n').take(9).join('\n'),
             maxLines: 9,

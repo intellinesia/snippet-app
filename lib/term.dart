@@ -8,6 +8,39 @@ import 'platform.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
+/// Terminal colour palette derived from the active theme's `terminal.ansi`
+/// slots, falling back to the default palette for missing entries.
+TerminalTheme resolvedTerminalTheme() {
+  final ansi = ThemeManager.instance.resolved.terminal.ansi;
+  Color slot(int i) =>
+      i < ansi.length ? ansi[i] : ThemeTerminalTokens.defaultAnsi[i];
+  return TerminalTheme(
+    cursor: const Color(0xff9DB0FF),
+    selection: const Color(0x559DB0FF),
+    foreground: const Color(0xffEDE7DD),
+    background: const Color(0xff0b0b0b),
+    black: slot(0),
+    red: slot(1),
+    green: slot(2),
+    yellow: slot(3),
+    blue: slot(4),
+    magenta: slot(5),
+    cyan: slot(6),
+    white: slot(7),
+    brightBlack: slot(8),
+    brightRed: slot(9),
+    brightGreen: slot(10),
+    brightYellow: slot(11),
+    brightBlue: slot(12),
+    brightMagenta: slot(13),
+    brightCyan: slot(14),
+    brightWhite: slot(15),
+    searchHitBackground: const Color(0xffD4923C),
+    searchHitBackgroundCurrent: const Color(0xffE3A85A),
+    searchHitForeground: const Color(0xff000000),
+  );
+}
+
 /// Session-shell view backed by xterm.dart so cursor, wrap, and CSI
 /// come from a real emulator instead of the homemade VT parser.
 class SessionTermView extends StatefulWidget {
@@ -60,33 +93,7 @@ class _SessionTermViewState extends State<SessionTermView> {
     ('F10', TerminalKey.f10),
   ];
 
-  static final _emberTheme = TerminalTheme(
-    cursor: const Color(0xff9DB0FF),
-    selection: const Color(0x559DB0FF),
-    foreground: const Color(0xffEDE7DD),
-    background: const Color(0xff0b0b0b),
-    black: const Color(0xff1B1917),
-    red: const Color(0xffE5745F),
-    green: const Color(0xff7FB88F),
-    yellow: const Color(0xffD4923C),
-    blue: const Color(0xff9DB0FF),
-    magenta: const Color(0xffC79BD8),
-    cyan: const Color(0xff7FC4C0),
-    white: const Color(0xffCFC8BC),
-    brightBlack: const Color(0xff7A7368),
-    brightRed: const Color(0xffEE9583),
-    brightGreen: const Color(0xff9DCCA9),
-    brightYellow: const Color(0xffE3A85A),
-    brightBlue: const Color(0xffB4C3FF),
-    brightMagenta: const Color(0xffD8B4E6),
-    brightCyan: const Color(0xff9FD6D2),
-    brightWhite: const Color(0xffEDE7DD),
-    searchHitBackground: const Color(0xffD4923C),
-    searchHitBackgroundCurrent: const Color(0xffE3A85A),
-    searchHitForeground: const Color(0xff000000),
-  );
-
-  static TerminalTheme get _theme => _emberTheme;
+  static TerminalTheme get _theme => resolvedTerminalTheme();
 
   @override
   void initState() {
@@ -178,7 +185,7 @@ class _SessionTermViewState extends State<SessionTermView> {
       onTap: tap,
       borderRadius: BorderRadius.circular(R.sm),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.of(7)),
         decoration: BoxDecoration(
           color: on ? AppColors.accent.withValues(alpha: 0.18) : null,
           border: Border.all(color: on ? AppColors.accent : AppColors.border2),
@@ -194,15 +201,15 @@ class _SessionTermViewState extends State<SessionTermView> {
       {bool on = false, double minWidth = 0}) {
     return Material(
       color: on ? AppColors.accentFill : AppColors.surface2,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(R.card),
       child: InkWell(
         onTap: tap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(R.card),
         child: Container(
           constraints: BoxConstraints(
               minWidth: minWidth > 0 ? minWidth : 44, minHeight: 38),
           alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: EdgeInsets.symmetric(horizontal: S.s12),
           child: Text(label,
               style: sans(13, color: on ? AppColors.accentFg : AppColors.fg1)),
         ),
@@ -218,7 +225,7 @@ class _SessionTermViewState extends State<SessionTermView> {
       child: Container(
         constraints: BoxConstraints(minWidth: minWidth, minHeight: 34),
         alignment: minWidth > 0 ? Alignment.center : null,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.of(7)),
         decoration: BoxDecoration(
           border: Border.all(color: AppColors.border2),
           borderRadius: BorderRadius.circular(R.sm),
@@ -233,7 +240,7 @@ class _SessionTermViewState extends State<SessionTermView> {
           mainAxisSize: MainAxisSize.min,
           children: [
             for (var i = 0; i < kids.length; i++) ...[
-              if (i > 0) const SizedBox(width: 4),
+              if (i > 0) SizedBox(width: S.s4),
               kids[i],
             ],
           ],
@@ -245,7 +252,7 @@ class _SessionTermViewState extends State<SessionTermView> {
         row([
           _keyChip('↑', () => _sendKey(TerminalKey.arrowUp), minWidth: w),
         ]),
-        const SizedBox(height: 4),
+        SizedBox(height: S.s4),
         row([
           _keyChip('←', () => _sendKey(TerminalKey.arrowLeft), minWidth: w),
           _keyChip('↓', () => _sendKey(TerminalKey.arrowDown), minWidth: w),
@@ -260,7 +267,7 @@ class _SessionTermViewState extends State<SessionTermView> {
     return Column(children: [
       if (widget.showChrome)
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 8, 6),
+          padding: EdgeInsets.fromLTRB(S.s12, S.s8, S.s8, S.s6),
           child: Row(children: [
             Text(widget.alive ? 'Shell' : 'Shell · starting',
                 style: TS.label(AppColors.fg1)),
@@ -291,10 +298,10 @@ class _SessionTermViewState extends State<SessionTermView> {
           deleteDetection: widget.mobileKeys,
           keyboardType: TextInputType.visiblePassword,
           padding: widget.flat
-              ? const EdgeInsets.fromLTRB(18, 4, 14, 10)
+              ? EdgeInsets.fromLTRB(S.of(18), S.s4, S.of(14), S.of(10))
               : kMobile
-                  ? const EdgeInsets.fromLTRB(14, 8, 12, 8)
-                  : const EdgeInsets.fromLTRB(16, 12, 14, 12),
+                  ? EdgeInsets.fromLTRB(S.of(14), S.s8, S.s12, S.s8)
+                  : EdgeInsets.fromLTRB(S.s16, S.s12, S.of(14), S.s12),
           textStyle: TerminalStyle(fontSize: 13, fontFamily: kMonoFamily),
         ),
       ),
@@ -302,10 +309,11 @@ class _SessionTermViewState extends State<SessionTermView> {
         Container(
           color: kMobile ? AppColors.surface1 : null,
           padding: EdgeInsets.fromLTRB(
-              kMobile ? 12 : 8,
-              kMobile ? 10 : 4,
-              kMobile ? 12 : 8,
-              (kMobile ? 12 : 8) + MediaQuery.viewInsetsOf(context).bottom),
+              kMobile ? S.s12 : S.s8,
+              kMobile ? S.of(10) : S.s4,
+              kMobile ? S.s12 : S.s8,
+              (kMobile ? S.s12 : S.s8) +
+                  MediaQuery.viewInsetsOf(context).bottom),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -316,20 +324,20 @@ class _SessionTermViewState extends State<SessionTermView> {
                     Row(children: [
                       _modChip(
                           'Ctrl', _ctrl, () => setState(() => _ctrl = !_ctrl)),
-                      const SizedBox(width: 6),
+                      SizedBox(width: S.s6),
                       _modChip('Alt', _alt, () => setState(() => _alt = !_alt)),
-                      const SizedBox(width: 6),
+                      SizedBox(width: S.s6),
                       _keyChip('Esc', () => _sendKey(TerminalKey.escape)),
-                      const SizedBox(width: 6),
+                      SizedBox(width: S.s6),
                       _keyChip('Tab', () => _sendKey(TerminalKey.tab)),
                     ]),
-                    const SizedBox(height: 4),
+                    SizedBox(height: S.s4),
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
                           for (var i = 0; i < _extraKeys.length; i++) ...[
-                            if (i > 0) const SizedBox(width: 4),
+                            if (i > 0) SizedBox(width: S.s4),
                             _keyChip(
                               _extraKeys[i].$1,
                               () => _sendKey(_extraKeys[i].$2),
@@ -341,7 +349,7 @@ class _SessionTermViewState extends State<SessionTermView> {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: S.s8),
               _arrowPad(),
             ],
           ),

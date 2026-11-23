@@ -166,7 +166,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
         height: 8,
         decoration: BoxDecoration(color: mood, shape: BoxShape.circle),
       ),
-      const SizedBox(width: 10),
+      SizedBox(width: S.of(10)),
       Expanded(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -191,7 +191,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
         ),
       ),
       if (ago.isNotEmpty) ...[
-        const SizedBox(width: S.s8),
+        SizedBox(width: S.s8),
         Text(ago, style: sans(11, color: AppColors.fg4)),
       ],
       SizedBox(width: kMobile ? 18 : 14),
@@ -210,7 +210,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
           borderRadius: BorderRadius.circular(R.xs),
           child: Padding(
             padding:
-                EdgeInsets.symmetric(horizontal: 4, vertical: kMobile ? 6 : 3),
+                EdgeInsets.symmetric(horizontal: S.s4, vertical: kMobile ? S.s6 : S.of(3)),
             child: Text(label, style: link),
           ),
         );
@@ -227,7 +227,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
               variant: BtnVariant.secondary,
               disabled: busy,
               onTap: () => _send(const QuickDeny())),
-          const SizedBox(width: S.s6),
+          SizedBox(width: S.s6),
           Btn('Approve',
               small: true,
               disabled: busy,
@@ -253,7 +253,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
     };
 
     final expanded = Padding(
-      padding: const EdgeInsets.only(left: 18, right: S.s12, top: S.s6),
+      padding: EdgeInsets.only(left: S.of(18), right: S.s12, top: S.s6),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -268,7 +268,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
             ),
             if (approval.shownCommand.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(top: S.s4),
+                padding: EdgeInsets.only(top: S.s4),
                 child: ApprovalCode(
                   code: approval.shownCommand,
                   shell: attentionTool != 'change_files',
@@ -278,7 +278,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
               ),
             if (approval.secrets.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(top: S.s6),
+                padding: EdgeInsets.only(top: S.s6),
                 child: Wrap(spacing: S.s6, runSpacing: S.s4, children: [
                   for (final name in approval.secrets)
                     Tag(name, tone: Tone.run, icon: 'key', mono: true),
@@ -299,22 +299,22 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
                     height: 1.45, color: AppColors.fg1)),
           if (_moreQuestions > 0)
             Padding(
-              padding: const EdgeInsets.only(top: S.s4),
+              padding: EdgeInsets.only(top: S.s4),
               child: Text(
                   '+$_moreQuestions more question${_moreQuestions == 1 ? '' : 's'} in the chat',
                   style: sans(12, color: AppColors.fg3)),
             ),
           if (actions != null && _moreQuestions == 0)
-            Padding(padding: const EdgeInsets.only(top: 8), child: actions),
+            Padding(padding: EdgeInsets.only(top: S.s8), child: actions),
           if (_state == _Send.failed)
             Padding(
-              padding: const EdgeInsets.only(top: S.s6),
+              padding: EdgeInsets.only(top: S.s6),
               child: Text("Couldn't send. Open chat",
                   style: sans(12, color: AppColors.danger)),
             ),
           if (!isApproval || _moreQuestions > 0)
             Padding(
-              padding: const EdgeInsets.only(top: S.s4),
+              padding: EdgeInsets.only(top: S.s4),
               child: Wrap(
                   crossAxisAlignment: WrapCrossAlignment.center,
                   spacing: S.s8,
@@ -363,7 +363,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
               onTap: _toggle,
               child: Padding(
                 padding: EdgeInsets.fromLTRB(
-                    kMobile ? 18 : 14, kMobile ? 6 : 8, 4, kMobile ? 6 : 8),
+                    kMobile ? S.of(18) : S.of(14), kMobile ? S.s6 : S.s8, S.s4, kMobile ? S.s6 : S.s8),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -431,7 +431,7 @@ class _ReplyField extends StatelessWidget {
     final canSend = !busy && controller.text.trim().isNotEmpty;
     return Container(
       height: h,
-      padding: const EdgeInsets.only(left: S.s12),
+      padding: EdgeInsets.only(left: S.s12),
       decoration: BoxDecoration(
         color: AppColors.surface1,
         borderRadius: BorderRadius.circular(R.pill),
@@ -456,8 +456,8 @@ class _ReplyField extends StatelessWidget {
         SizedBox.square(
           dimension: h,
           child: busy
-              ? const Padding(
-                  padding: EdgeInsets.all(11),
+              ? Padding(
+                  padding: EdgeInsets.all(S.of(11)),
                   child: CircularProgressIndicator(strokeWidth: 1.6))
               : IconButton(
                   tooltip: 'Send',

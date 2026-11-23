@@ -191,19 +191,19 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 18, 18, 6),
+                      padding: EdgeInsets.fromLTRB(S.of(18), S.of(18), S.of(18), S.s6),
                       child: Text('Settings',
                           style: sans(16, weight: W.title, color: AppColors.fg1)),
                     ),
                     Expanded(
                       child: ListView(
-                        padding: const EdgeInsets.fromLTRB(
+                        padding: EdgeInsets.fromLTRB(
                             S.s8, 0, S.s8, S.s12),
                         children: [
                           for (final (group, entries) in _groups) ...[
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(
-                                  10, 14, 10, S.s4),
+                              padding: EdgeInsets.fromLTRB(
+                                  S.of(10), S.of(14), S.of(10), S.s4),
                               child: Text(group,
                                   style: sans(12, color: AppColors.fg4)),
                             ),
@@ -273,7 +273,7 @@ class _NavRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final iconColor = selected ? AppColors.fg1 : AppColors.fg3;
     return Padding(
-      padding: const EdgeInsets.only(bottom: S.s2),
+      padding: EdgeInsets.only(bottom: S.s2),
       child: HoverSurface(
         onTap: onTap,
         selected: selected,
@@ -283,13 +283,13 @@ class _NavRow extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 34),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.s6),
             child: Row(children: [
               if (entry.iconData != null)
                 Icon(entry.iconData, size: 16, color: iconColor)
               else
                 AppIcon(entry.icon!, size: 16, color: iconColor),
-              const SizedBox(width: 10),
+              SizedBox(width: S.of(10)),
               Expanded(
                 child: Text(
                   entry.label,

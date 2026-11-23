@@ -178,7 +178,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
         child: _error == null
             ? const Spinner(size: 20)
             : Padding(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(S.s24),
                 child: Text(_error!,
                     textAlign: TextAlign.center, style: TS.meta()),
               ),
@@ -200,7 +200,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
         index: index++,
         since: _shownAt,
         child: Padding(
-          padding: EdgeInsets.only(bottom: kMobile ? 0 : 18),
+          padding: EdgeInsets.only(bottom: kMobile ? 0 : S.of(18)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -238,7 +238,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
         children: [
           if (!kMobile)
             Padding(
-              padding: const EdgeInsets.fromLTRB(4, 0, 4, 16),
+              padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s16),
               child: Text(
                   'What your agents remember, kept as files in git. Agents write it as they work, and it is consolidated in the background.',
                   style: sans(13, height: 19 / 13, color: AppColors.fg3)),
@@ -277,7 +277,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(S.s32, S.s24, S.s32, 0),
+            padding: EdgeInsets.fromLTRB(S.s32, S.s24, S.s32, 0),
             child: Align(
               alignment: Alignment.topCenter,
               child: ConstrainedBox(
@@ -310,7 +310,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
           subtitle:
               'What your agents remember, kept as files in git and consolidated in the background.',
         ),
-        const SizedBox(height: S.s8),
+        SizedBox(height: S.s8),
         SettingsGroup(children: [
           _error == null
               ? const SettingsRow(label: 'Loading memory…')
@@ -356,7 +356,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
         subtitle:
             'What your agents remember, kept as files in git and consolidated in the background.',
       ),
-      const SizedBox(height: S.s8),
+      SizedBox(height: S.s8),
       if (scopes.isEmpty)
         const SettingsGroup(children: [
           SettingsRow(
@@ -517,14 +517,14 @@ class _ScopeViewState extends State<_ScopeView> {
         children: [
           if (s != null && !widget.hideSubtitle)
             Padding(
-              padding: EdgeInsets.fromLTRB(side + 4, 0, side, 8),
+              padding: EdgeInsets.fromLTRB(side + S.s4, 0, side, S.s8),
               child: Text(scopeStatus(s),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: sans(13, color: AppColors.fg4)),
             ),
           Padding(
-            padding: EdgeInsets.fromLTRB(side, 0, side, 10),
+            padding: EdgeInsets.fromLTRB(side, 0, side, S.of(10)),
             child: Row(children: [
               Pills<_Tab>(
                 items: const [
@@ -603,7 +603,7 @@ class _ScopeViewState extends State<_ScopeView> {
     }
     return SelectionArea(
       child: ListView(
-        padding: EdgeInsets.fromLTRB(side, 4, side, 40),
+        padding: EdgeInsets.fromLTRB(side, S.s4, side, S.s40),
         children: [
           if (_trail.length > 1)
             Align(
@@ -613,7 +613,7 @@ class _ScopeViewState extends State<_ScopeView> {
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.fg3,
                   minimumSize: kMobile ? const Size(0, 30) : const Size(0, 28),
-                  padding: EdgeInsets.symmetric(horizontal: kMobile ? 6 : 8),
+                  padding: EdgeInsets.symmetric(horizontal: kMobile ? S.s6 : S.s8),
                   tapTargetSize: kMobile
                       ? null
                       : MaterialTapTargetSize.shrinkWrap,
@@ -683,16 +683,16 @@ class _ScopeViewState extends State<_ScopeView> {
       children: [
         for (final c in history)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: EdgeInsets.symmetric(vertical: S.s8),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Padding(
-                padding: const EdgeInsets.only(top: 2),
+                padding: EdgeInsets.only(top: S.s2),
                 child: AppIcon(c.isConsolidation ? 'layers' : 'git-commit',
                     size: 15,
                     color:
                         c.isConsolidation ? AppColors.accent : AppColors.fg4),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: S.of(10)),
               Expanded(
                 child: Text(
                     c.isConsolidation
@@ -700,7 +700,7 @@ class _ScopeViewState extends State<_ScopeView> {
                         : c.subject,
                     style: sans(14, height: 19 / 14, color: AppColors.fg1)),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: S.of(10)),
               Text(relativeTime(c.date),
                   style: sans(12, color: AppColors.fg4, tabular: true)),
             ]),
