@@ -688,9 +688,9 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
     final l = raw.trim().isEmpty ? 'M' : raw.trim();
     final letter = l == '?' ? 'A' : l;
     final color = switch (letter) {
-      'A' => AppColors.ok,
-      'D' => AppColors.danger,
-      _ => AppColors.run,
+      'A' => AppColors.diffAddFg,
+      'D' => AppColors.diffDelFg,
+      _ => AppColors.fg2,
     };
     return Text(letter, style: mono(11, color: color));
   }
@@ -699,7 +699,7 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
     final raw = f.staged ? f.x : (f.untracked ? '?' : f.y);
     final letter = raw.trim().isEmpty ? 'M' : raw.trim();
     final color =
-        f.staged ? AppColors.ok : (f.untracked ? AppColors.fg3 : AppColors.run);
+        f.staged ? AppColors.fg1 : (f.untracked ? AppColors.fg3 : AppColors.fg2);
     return Tooltip(
       message: f.staged ? 'staged' : (f.untracked ? 'untracked' : 'unstaged'),
       child: Container(
@@ -707,7 +707,7 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
         height: kMobile ? 20 : 16,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.14),
+          color: AppColors.surface3,
           borderRadius: BorderRadius.circular(kMobile ? 6 : 4),
         ),
         child: Text(letter, style: mono(kMobile ? 11 : 10, color: color)),
