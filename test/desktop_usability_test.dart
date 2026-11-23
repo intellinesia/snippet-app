@@ -343,7 +343,7 @@ void main() {
           ),
         ));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Sessions').first);
+        await tester.tap(find.text('All sessions').first);
         await tester.pumpAndSettle();
 
         // One flat list, newest first: gamma (4000), alpha (3000), beta
@@ -413,7 +413,7 @@ void main() {
         ),
       ));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Sessions').first);
+      await tester.tap(find.text('All sessions').first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Fix the TUI hang'),
           buttons: kSecondaryMouseButton, kind: PointerDeviceKind.mouse);

@@ -1,3 +1,4 @@
+import 'agent_rail.dart';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
@@ -249,7 +250,13 @@ class AgentSidePanel extends StatelessWidget {
     this.onScheduled,
     this.sessionId,
     this.onModel,
+    this.railSessions,
+    this.onOpenSession,
   });
+
+  /// Sessions this agent owns; when given, the rail replaces the About page.
+  final List<SessionInfo>? railSessions;
+  final void Function(SessionInfo s)? onOpenSession;
 
   /// Lead's session, for its model and cold-resume rows.
   final String? sessionId;
@@ -339,26 +346,31 @@ class AgentSidePanel extends StatelessWidget {
         Expanded(
           child: reading != null && readoutBody != null
               ? readoutBody!(reading)
-              : AgentInfoPanel(
-                  key: ValueKey('agent-info-$agentId'),
-                  client: client,
-                  agentId: agentId,
-                  name: agentName,
-                  agent: agent,
-                  docked: true,
-                  onOpenInbox: () => onAction('inbox'),
-                  onOpenBoard: () => onAction('board'),
-                  onOpenDesk: () => onAction('desk'),
-                  onOpenMemory: () => onAction('memory'),
-                  onClose: onHide,
-                  contextUsed: contextUsed,
-                  contextWindow: contextWindow,
-                  onCompact: onCompact,
-                  onAutonomy: onAutonomy,
-                  onScheduled: onScheduled,
-                  sessionId: sessionId,
-                  onModel: onModel,
-                ),
+              : railSessions != null && onOpenSession != null
+                  ? AgentRail(
+                      key: ValueKey('agent-rail-$agentId'),
+                      sessions: railSessions!,
+                      onOpenSession: onOpenSession!)
+                  : AgentInfoPanel(
+                      key: ValueKey('agent-info-$agentId'),
+                      client: client,
+                      agentId: agentId,
+                      name: agentName,
+                      agent: agent,
+                      docked: true,
+                      onOpenInbox: () => onAction('inbox'),
+                      onOpenBoard: () => onAction('board'),
+                      onOpenDesk: () => onAction('desk'),
+                      onOpenMemory: () => onAction('memory'),
+                      onClose: onHide,
+                      contextUsed: contextUsed,
+                      contextWindow: contextWindow,
+                      onCompact: onCompact,
+                      onAutonomy: onAutonomy,
+                      onScheduled: onScheduled,
+                      sessionId: sessionId,
+                      onModel: onModel,
+                    ),
         ),
       ],
     );

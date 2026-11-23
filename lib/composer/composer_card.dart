@@ -242,8 +242,8 @@ class ComposerChip extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 AppIcon(icon,
-                    size: 15,
-                    color: selected ? AppColors.accent : AppColors.fg3),
+                    size: 14,
+                    color: selected ? AppColors.accent : AppColors.fg2),
                 if (!compact) SizedBox(width: S.s6),
                 if (!compact)
                   ConstrainedBox(

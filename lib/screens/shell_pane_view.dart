@@ -572,6 +572,7 @@ class RightTabBody extends StatelessWidget {
   final void Function(String path, String name)? onOpenFile;
   final Widget? deskTrailing;
   final VoidCallback? onDeskInfo;
+  final ValueChanged<String>? onAgentAction;
 
   const RightTabBody({
     super.key,
@@ -584,6 +585,7 @@ class RightTabBody extends StatelessWidget {
     this.onOpenFile,
     this.deskTrailing,
     this.onDeskInfo,
+    this.onAgentAction,
   });
 
   @override
@@ -618,6 +620,7 @@ class RightTabBody extends StatelessWidget {
         tabHeader: kMobile,
         deskTrailing: deskTrailing,
         onDeskInfo: onDeskInfo,
+        onAgentAction: onAgentAction,
       );
       final c = client;
       if (c == null) return chat;

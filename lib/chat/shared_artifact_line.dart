@@ -175,8 +175,8 @@ class _SharedArtifactLineState extends State<SharedArtifactLine> {
   Widget _chip() {
     final kind = _kind;
     final (icon, iconColor) = switch (kind) {
-      SharedArtifactKind.apk => ('package', AppColors.ok),
-      SharedArtifactKind.link => ('link', AppColors.accent),
+      SharedArtifactKind.apk => ('package', AppColors.fg2),
+      SharedArtifactKind.link => ('link', AppColors.fg2),
       SharedArtifactKind.image => ('image', AppColors.fg2),
       SharedArtifactKind.file => (artifactIcon(widget.kind), AppColors.fg2),
     };

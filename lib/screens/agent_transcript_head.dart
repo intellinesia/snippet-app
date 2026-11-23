@@ -79,10 +79,7 @@ class AgentTranscriptHead extends StatelessWidget {
               child: Row(children: [
                 if (model.isNotEmpty) ...[
                   ProviderLogo(provider,
-                      size: 12,
-                      color: providerLogoIsColour(provider)
-                          ? null
-                          : AppColors.fg4),
+                      size: 12, color: AppColors.fg3),
                   SizedBox(width: S.s4),
                   Flexible(
                     child: Text(model,

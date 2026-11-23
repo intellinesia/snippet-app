@@ -592,13 +592,48 @@ extension _DesktopShellTabsExt on _DesktopShellState {
         existing);
   }
 
+  /// Click model A: a sidebar or list click switches to the tab if it is open,
+  /// else loads into the active tab. Cmd or Ctrl asks for a new tab.
+  bool get _newTabIntent =>
+      !kMobile &&
+      (HardwareKeyboard.instance.isMetaPressed ||
+          HardwareKeyboard.instance.isControlPressed);
+
+  /// The index [probe] may take over, or -1 when it must be a new tab: Lead
+  /// is pinned, inner tabs hang off their root, and Cmd or Ctrl opens beside.
+  int _replaceableIndex() {
+    if (kMobile || _newTabIntent) return -1;
+    final i = _activeIndex;
+    if (i < 0 || i >= _tabs.length) return -1;
+    final t = _tabs[i];
+    if (t.isLead || t.pane != _Pane.left || _isAuxiliary(t) || t.isDraft) {
+      return -1;
+    }
+    if (_tabs.any((x) => x.groupSessionKey == t.key)) return -1;
+    return i;
+  }
+
+  /// Puts [tab] in the active tab's place, else appends it. Returns its index.
+  int _placeTab(_ShellTab tab) {
+    final r = _replaceableIndex();
+    if (r < 0) {
+      _tabs.add(tab);
+      return _tabs.length - 1;
+    }
+    final old = _tabs[r];
+    _tabs[r] = tab;
+    _clearTabState(old.key);
+    _activeKey.removeWhere((_, k) => k == old.key);
+    _groupRootKey.removeWhere((_, k) => k == old.key);
+    return r;
+  }
+
   void _openMainTab(_ShellTab? tab, int existing) {
     _setState(() {
       if (existing >= 0) {
         _activeIndex = existing;
       } else {
-        _tabs.add(tab!..pane = _Pane.left);
-        _activeIndex = _tabs.length - 1;
+        _activeIndex = _placeTab(tab!..pane = _Pane.left);
       }
       final t = _tabs[_activeIndex];
       _activePane = _Pane.left;

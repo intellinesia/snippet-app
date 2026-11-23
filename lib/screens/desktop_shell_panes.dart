@@ -33,9 +33,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         client: t.client,
         sessions: _sessions,
         onOpenSession: (s) => _openSession(s.id, s.title, s.profile),
-        onOpenSessions: () {},
-        onSettings: () => _openSettingsTab(null),
-        onSearch: _openCommandPalette,
+        onOpenAgent: _openRightAgent,
         onRefresh: _loadSessions,
       );
     }
@@ -65,6 +63,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           origin == null ? null : _macSessionControls[origin],
           deskTrailing: null,
           onDeskInfo: t.readout!.isAgent ? _showAgentInfo : null,
+          onAgentAction: t.readout!.isAgent ? _agentAction : null,
         ),
       );
     }
@@ -523,6 +522,11 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         onAutonomy: mc ? () => _dispatchSessionAction('autonomy') : null,
         sessionId: mc ? tab.sessionId : null,
         onModel: mc ? () => _dispatchSessionAction('model') : null,
+        railSessions: [
+          for (final s in _sessions ?? const <SessionInfo>[])
+            if (s.displayAgentId == agent.id) s
+        ],
+        onOpenSession: (s) => _openSession(s.id, s.title, s.profile),
         client: tab.client,
         agent: agent,
         onHide: _togglePanel,
@@ -891,6 +895,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     _MacSessionControls? controls, {
     Widget? deskTrailing,
     VoidCallback? onDeskInfo,
+    ValueChanged<String>? onAgentAction,
   }) =>
       RightTabBody(
         tab: t,
@@ -902,6 +907,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         onOpenFile: _openFileFromRightPane,
         deskTrailing: deskTrailing,
         onDeskInfo: onDeskInfo,
+        onAgentAction: onAgentAction,
       );
 
   Widget _mainPane({VoidCallback? onMenu}) => MainPaneView(

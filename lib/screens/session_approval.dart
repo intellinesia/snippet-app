@@ -370,6 +370,8 @@ class ApprovalBarState extends State<ApprovalBar> {
                       kMobile && widget.agentId != null ? _askRow(req) : null,
                   trailing: total > 1 ? ChatCardPill('$index of $total') : null,
                 ),
+                // Header plus this gap makes the 16pt run before the actions.
+                if (detail.isEmpty && !isVault) const SizedBox(height: 8),
                 if (detail.isNotEmpty)
                   ChatCardBody(
                     child: Tactile(

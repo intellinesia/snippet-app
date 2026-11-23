@@ -1314,7 +1314,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     final profile = s.profile ?? '';
     final provider = profile.isEmpty ? null : _profileProviders[profile];
     if (provider != null && providerLogoAsset(provider) != null) {
-      return ProviderLogo(provider, size: kMobile ? 18.0 : 15.0);
+      return ProviderLogo(provider, size: kMobile ? 16.0 : 14.0);
     }
     return Container(
       width: 6,
@@ -1471,28 +1471,53 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         widget.onOpenHome?.call();
       case QuietPlace.tasks:
         widget.onOpenTasks?.call();
-      case QuietPlace.sessions:
       case QuietPlace.agents:
+        // The roster is Home on desktop: who needs you, who is working.
+        widget.onOpenHome?.call();
+      case QuietPlace.sessions:
         break;
     }
   }
 
-  /// The four places, above the list they switch.
-  Widget _desktopPlaces(List<SessionInfo> all) {
+  /// Home sits above the agents.
+  Widget _desktopTop(List<SessionInfo> all) {
     final needs = all.where(sessionNeedsYou).length;
     return Padding(
       padding: EdgeInsets.only(top: S.s4, bottom: S.s4),
-      child: Column(children: [
-        for (final p in QuietPlace.values)
-          _PlaceRow(
-            place: p,
-            selected: _place == p,
-            badge: p == QuietPlace.home && needs > 0 ? needs : null,
-            onTap: () => _selectPlace(p),
-          ),
-      ]),
+      child: _PlaceRow(
+        label: 'Home',
+        icon: 'home',
+        selected: _place == QuietPlace.home,
+        badge: needs > 0 ? needs : null,
+        onTap: () => _selectPlace(QuietPlace.home),
+      ),
     );
   }
+
+  /// Rosters and queues below the agents: all agents, all sessions, Tasks.
+  Widget _desktopBottom() => Padding(
+        padding: EdgeInsets.only(top: S.s8, bottom: S.s4),
+        child: Column(children: [
+          _PlaceRow(
+            label: 'All agents and groups',
+            icon: 'users',
+            selected: false,
+            onTap: () => _selectPlace(QuietPlace.agents),
+          ),
+          _PlaceRow(
+            label: 'All sessions',
+            icon: 'layers',
+            selected: _place == QuietPlace.sessions,
+            onTap: () => _selectPlace(QuietPlace.sessions),
+          ),
+          _PlaceRow(
+            label: 'Tasks',
+            icon: 'list-checks',
+            selected: _place == QuietPlace.tasks,
+            onTap: () => _selectPlace(QuietPlace.tasks),
+          ),
+        ]),
+      );
 
   Widget _sectionedSidebar() {
     final hasClient = widget.client != null;
@@ -1524,7 +1549,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
                   children: [
-                    if (hasClient) _desktopPlaces(all),
+                    if (hasClient) _desktopTop(all),
                     if (hasClient && _place != QuietPlace.sessions) ...[
                       // New agents and sessions come from the top + menu.
                       const SidebarSectionHeader('Agents'),
@@ -1548,6 +1573,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                       else
                         ...rows,
                     ],
+                    if (hasClient) _desktopBottom(),
                   ],
                 ),
               ),
@@ -1928,11 +1954,13 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
 
 class _PlaceRow extends StatelessWidget {
   const _PlaceRow(
-      {required this.place,
+      {required this.label,
+      required this.icon,
       required this.selected,
       required this.onTap,
       this.badge});
-  final QuietPlace place;
+  final String label;
+  final String icon;
   final bool selected;
   final VoidCallback onTap;
   final int? badge;
@@ -1948,11 +1976,11 @@ class _PlaceRow extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(children: [
-              AppIcon(place.icon,
+              AppIcon(icon,
                   size: 15, color: selected ? AppColors.fg1 : AppColors.fg3),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(place.label,
+                child: Text(label,
                     style: sans(13,
                         weight: selected ? W.label : W.body,
                         color: selected ? AppColors.fg1 : AppColors.fg2)),

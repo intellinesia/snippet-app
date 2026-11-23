@@ -761,10 +761,7 @@ class SessionListRow extends StatelessWidget {
                     SizedBox(
                       width: 12,
                       child: ProviderLogo(provider,
-                          size: 11,
-                          color: providerLogoIsColour(provider)
-                              ? null
-                              : AppColors.fg3),
+                          size: 12, color: AppColors.fg3),
                     ),
                     const SizedBox(width: 6),
                   ],

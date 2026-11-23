@@ -1,3 +1,4 @@
+import '../quiet.dart' show QuietHand;
 import 'package:flutter/gestures.dart';
 import '../desktop_look.dart';
 import 'package:flutter/material.dart';
@@ -88,7 +89,17 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
     final groupIds = tabGroupAgentIds(t);
     final hasProvider =
         widget.provider != null && providerLogoAsset(widget.provider) != null;
-    if (t.isPrs) return AppIcon('pull-request', size: 13, color: AppColors.ok);
+    // Amber hand for needs-you and a spinner for running replace the face;
+    // amber is for needs-you only.
+    if (!t.isLead && working) {
+      return SizedBox.square(
+          dimension: 16,
+          child: Center(
+              child: status == 'running'
+                  ? Spinner(size: 13)
+                  : const QuietHand(size: 14)));
+    }
+    if (t.isPrs) return AppIcon('pull-request', size: 13, color: AppColors.fg2);
     if (t.isBoard) {
       return AppIcon('list',
           size: 14, color: active ? AppColors.fg2 : AppColors.fg4);
@@ -118,7 +129,7 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
     final closable = widget.canClose && widget.onClose != null;
     final bg = active
         ? AppColors.surface3
-        : (_hover ? AppColors.fg1.withValues(alpha: 0.07) : Colors.transparent);
+        : (_hover ? AppColors.surface2 : Colors.transparent);
 
     Widget cell(Widget child, {required double width}) => MouseRegion(
           cursor: SystemMouseCursors.click,
@@ -127,7 +138,7 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
           child: TapDetector(
             onTap: widget.onTap,
             child: Tactile(
-              radius: BorderRadius.circular(R.of(6)),
+              radius: BorderRadius.circular(R.of(8)),
               enabled: widget.isActive,
               child: AnimatedContainer(
                 key: widget.chipKey,
@@ -137,7 +148,7 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
                 width: width,
                 decoration: BoxDecoration(
                   color: bg,
-                  borderRadius: BorderRadius.circular(R.of(6)),
+                  borderRadius: BorderRadius.circular(R.of(8)),
                 ),
                 child: child,
               ),
@@ -163,7 +174,7 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
               padding: EdgeInsets.symmetric(horizontal: S.s8),
               decoration: BoxDecoration(
                 color: bg,
-                borderRadius: BorderRadius.circular(R.of(6)),
+                borderRadius: BorderRadius.circular(R.of(8)),
               ),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 AgentMochi('lead', size: 18),
@@ -184,22 +195,11 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
     final showClose = closable && (active || _hover);
     final chip = cell(
       Stack(children: [
-        if (working)
-          Positioned(
-            left: 4,
-            top: 11,
-            child: Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(
-                  color: needsInput ? AppColors.accent : AppColors.run,
-                  shape: BoxShape.circle),
-            ),
-          ),
+
         // Fill the cell so the row centres vertically.
         Positioned.fill(
           child: Padding(
-            padding: EdgeInsets.fromLTRB(S.of(working ? 13 : 10), 0, S.s8, 0),
+            padding: EdgeInsets.fromLTRB(S.of(10), 0, S.s8, 0),
             child: Row(children: [
               _icon(status, working),
               SizedBox(width: S.of(7)),
@@ -209,9 +209,10 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: sans(12.5,
+                      weight: active ? W.label : W.body,
                       color: active
                           ? AppColors.fg1
-                          : (_hover ? AppColors.fg2 : AppColors.fg3)),
+                          : (_hover ? AppColors.fg1 : AppColors.fg2)),
                 ),
               ),
               if (closable)
@@ -221,10 +222,10 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
                     onTap: showClose ? widget.onClose : null,
                     behavior: HitTestBehavior.opaque,
                     child: SizedBox(
-                      width: 18,
-                      height: 18,
+                      width: 24,
+                      height: 24,
                       child: Center(
-                          child: AppIcon('x', size: 11, color: AppColors.fg4)),
+                          child: AppIcon('x', size: 11, color: AppColors.fg3)),
                     ),
                   ),
                 ),

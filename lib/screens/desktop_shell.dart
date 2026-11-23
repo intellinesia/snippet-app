@@ -1618,14 +1618,13 @@ class _DesktopShellState extends State<DesktopShell>
         if (share != null) _tabs[existing].inboundShare = share;
         _activeIndex = existing;
       } else {
-        _tabs.add(_ShellTab.session(
+        _activeIndex = _placeTab(_ShellTab.session(
             client: client,
             instanceUrl: url,
             sessionId: id,
             title: title,
             profile: profile,
             inboundShare: share));
-        _activeIndex = _tabs.length - 1;
       }
       final root = _tabs[_activeIndex];
       _groupRootKey[root.pane] = root.key;

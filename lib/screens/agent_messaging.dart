@@ -1,3 +1,4 @@
+import 'agent_profile_popover.dart';
 import 'dart:async';
 
 import '../motion_routes.dart';
@@ -253,7 +254,7 @@ class _AgentWorkSheetState extends State<AgentWorkSheet> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (workspace.isNotEmpty) ...[
-          Text('workspace', style: mono(10, color: AppColors.fg3)),
+          Text('Workspace', style: sans(11, color: AppColors.fg3)),
           SizedBox(height: S.s4),
           Text(workspace,
               maxLines: 2,
@@ -261,7 +262,7 @@ class _AgentWorkSheetState extends State<AgentWorkSheet> {
               style: sans(12, color: AppColors.fg2)),
           SizedBox(height: S.of(14)),
         ],
-        Text('agent', style: mono(10, color: AppColors.fg3)),
+        Text('Agent', style: sans(11, color: AppColors.fg3)),
         SizedBox(height: S.s4),
         Material(
           color: AppColors.surface2,
@@ -300,7 +301,7 @@ class _AgentWorkSheetState extends State<AgentWorkSheet> {
         ),
         if (_error != null) ...[
           SizedBox(height: S.s12),
-          Text(_error!, style: sans(12, color: AppColors.danger)),
+          Text(_error!, style: sans(12, color: AppColors.fg1)),
         ],
         SizedBox(height: S.of(18)),
         Row(children: [
@@ -342,6 +343,7 @@ class AgentThreadScreen extends StatefulWidget {
     this.showBack = true,
     this.deskTrailing,
     this.onDeskInfo,
+    this.onAgentAction,
   });
 
   final DaemonClient client;
@@ -365,6 +367,10 @@ class AgentThreadScreen extends StatefulWidget {
 
   /// Desktop shell: the title opens the docked info panel instead of a dialog.
   final VoidCallback? onDeskInfo;
+
+  /// Desktop: opens an agent panel page (model, reach, memory, wakes) from the
+  /// Profile popover.
+  final ValueChanged<String>? onAgentAction;
 
   @override
   State<AgentThreadScreen> createState() => _AgentThreadScreenState();
@@ -1904,6 +1910,10 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     final open = a?.tasksIn({'in_progress', 'todo'}) ?? 0;
     final done = a?.tasksIn({'done', 'completed'}) ?? 0;
     final meta = [
+      if ((a?.needsYou ?? 0) > 0)
+        'Needs you'
+      else if (a?.presence?.live ?? false)
+        'Working',
       if (open > 0) '$open open',
       if (done > 0) '$done done',
     ].join(' \u00b7 ');
@@ -1921,7 +1931,14 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         // A tab has the window bar's panel toggle instead.
         if (!widget.embedded)
           _HeadButton(
-              label: 'View agent', onTap: widget.onDeskInfo ?? _openInfo),
+              label: 'View agent', onTap: widget.onDeskInfo ?? _openInfo)
+        else if (widget.onAgentAction != null && a != null)
+          Builder(
+            builder: (c) => _HeadButton(
+                label: 'Profile',
+                onTap: () => showAgentProfilePopover(c,
+                    agent: a, onAction: widget.onAgentAction!)),
+          ),
         // In a tab the window bar already switches Chat and Work.
         if (!_noChrome)
           Builder(

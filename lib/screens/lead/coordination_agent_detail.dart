@@ -19,6 +19,7 @@ class CoordinationAgentDetail extends StatelessWidget {
     this.onClose,
     this.deskTrailing,
     this.onDeskInfo,
+    this.onAgentAction,
   });
 
   /// Null only while no machine is connected; the screen says so rather than
@@ -30,6 +31,7 @@ class CoordinationAgentDetail extends StatelessWidget {
   final VoidCallback? onClose;
   final Widget? deskTrailing;
   final VoidCallback? onDeskInfo;
+  final ValueChanged<String>? onAgentAction;
 
   @override
   Widget build(BuildContext context) {
@@ -48,6 +50,7 @@ class CoordinationAgentDetail extends StatelessWidget {
       tabHeader: tabHeader,
       deskTrailing: deskTrailing,
       onDeskInfo: onDeskInfo,
+      onAgentAction: onAgentAction,
     );
   }
 }

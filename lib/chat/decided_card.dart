@@ -32,8 +32,8 @@ extension DecidedKindLook on DecidedKind {
       };
 
   Color get iconColor => switch (this) {
-        DecidedKind.approved || DecidedKind.answered => AppColors.ok,
-        DecidedKind.denied => AppColors.danger,
+        DecidedKind.approved || DecidedKind.answered => AppColors.fg2,
+        DecidedKind.denied => AppColors.fg1,
         DecidedKind.skipped || DecidedKind.outdated => AppColors.fg4,
       };
 }

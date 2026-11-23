@@ -1225,7 +1225,7 @@ class _SessionRailState extends State<SessionRail> {
               ),
             if (widget.onDelete != null || widget.onDeleteNow != null) ...[
               if (items.isNotEmpty)
-                Divider(height: 9, thickness: 1, color: AppColors.line),
+                const SizedBox(height: 8),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6),
                 child: widget.onDeleteNow == null
@@ -1845,11 +1845,8 @@ class _RailGroupState extends State<_RailGroup> {
       ),
     );
     return Container(
-      padding: EdgeInsets.fromLTRB(10, 8, 14, open ? 6 : 8),
-      decoration: BoxDecoration(
-          border: w.divider
-              ? Border(top: BorderSide(color: AppColors.line))
-              : null),
+      // Sections are set apart by space; the rail keeps one hairline.
+      padding: EdgeInsets.fromLTRB(10, w.divider ? 14 : 8, 14, open ? 6 : 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
