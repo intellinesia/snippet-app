@@ -17,7 +17,7 @@ APP = {
 'folder':'folder','folder-archive':'folder','folder-bookmark':'folder','folder-check':'folder','folder-clock':'folder','folder-code':'folder',
 'folder-cog':'folder','folder-git':'git-branch','folder-heart':'folder-star','folder-kanban':'kanban','folder-key':'folder-lock',
 'folder-open':'folder-open','folder-output':'folder','folder-plus':'folder-plus','folder-root':'folder','folder-sync':'folder',
-'folder-x':'folder-minus','gauge':'gauge','git-branch':'git-branch','git-commit':'git-commit','git-fork':'git-fork',
+'folder-x':'folder-minus','gauge':'gauge','speedometer':'speedometer','git-branch':'git-branch','git-commit':'git-commit','git-fork':'git-fork',
 'git-pull-request-arrow':'git-pull-request','globe':'globe','goal':'target','grid':'squares-four','grip':'dots-six-vertical','hand':'hand',
 'hash':'hash','help-circle':'question','history':'clock-counter-clockwise','home':'house','image':'image','inbox':'tray','info':'info',
 'kanban':'kanban','key':'key','key-round':'key','keyboard':'keyboard','laptop':'laptop','layers':'stack','link':'link','list':'list',
