@@ -118,11 +118,14 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
   void _submitText(CardAction action) {
     final t = _text.text.trim();
     if (t.isEmpty) return;
-    _send(action == CardAction.answer ? _answer(t) : QuickReply(t));
+    _send(action == CardAction.answer
+        ? _answer(t)
+        : QuickReply(t, via: 'notification'));
   }
 
   QuickAnswer _answer(String text) {
-    return QuickAnswer(answerText(widget.payload['attention'], text));
+    return QuickAnswer(answerText(widget.payload['attention'], text),
+        via: 'notification');
   }
 
   bool get _expandable => const {
@@ -226,12 +229,12 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
               small: true,
               variant: BtnVariant.secondary,
               disabled: busy,
-              onTap: () => _send(const QuickDeny())),
+              onTap: () => _send(const QuickDeny(via: 'notification'))),
           const SizedBox(width: S.s6),
           Btn('Approve',
               small: true,
               disabled: busy,
-              onTap: () => _send(const QuickApprove())),
+              onTap: () => _send(const QuickApprove(via: 'notification'))),
         ]),
       CardAction.answer when choices.isNotEmpty =>
         Wrap(spacing: S.s8, runSpacing: S.s8, children: [
