@@ -801,6 +801,29 @@ class DaemonClient {
     if (r.statusCode != 200) throw _err('wake session', r);
   }
 
+  /// POST /session/handoff — pass the session to [toAgent]. Returns
+  /// `{session, from, to, pending}`; `pending` means it applies at turn end.
+  Future<Map<String, dynamic>> handOffSession(String session, String toAgent,
+      {String? note}) async {
+    final r = await _post(_uri('/session/handoff'),
+        headers: _json,
+        body: jsonEncode({
+          'session': session,
+          'to_agent': toAgent,
+          if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+        }),
+        timeout: _long);
+    if (r.statusCode != 200) throw _err('hand off session', r);
+    return jsonDecode(r.body) as Map<String, dynamic>;
+  }
+
+  /// POST /session/seen — the user has this session open.
+  Future<void> sessionSeen(String session) async {
+    final r = await _post(_uri('/session/seen'),
+        headers: _json, body: jsonEncode({'session': session}));
+    if (r.statusCode != 200) throw _err('mark session seen', r);
+  }
+
   /// Whether the session's prompt cache has lapsed; `null` when unknown.
   Future<Map<String, dynamic>?> sessionCache(String sessionId) async {
     try {
