@@ -607,7 +607,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     final i = _activeIndex;
     if (i < 0 || i >= _tabs.length) return -1;
     final t = _tabs[i];
-    if (t.isLead || t.pane != _Pane.left || _isAuxiliary(t) || t.isDraft) {
+    if (t.isLead || t.isHome || t.pane != _Pane.left || _isAuxiliary(t) || t.isDraft) {
       return -1;
     }
     if (_tabs.any((x) => x.groupSessionKey == t.key)) return -1;

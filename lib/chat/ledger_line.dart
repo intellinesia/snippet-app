@@ -996,14 +996,14 @@ class _LedgerStripState extends State<LedgerStrip> {
             height: 32,
             padding: const EdgeInsets.only(left: 9, right: 3),
             decoration: BoxDecoration(
-              color: quietAmber.withValues(alpha: 0.13),
+              color: Colors.transparent,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(children: [
-              const QuietHand(size: 14),
+              AppIcon('alert-triangle', size: 14, color: AppColors.fg1),
               const SizedBox(width: 10),
               Text(_failLabel(fail),
-                  style: sans(13, weight: W.label, color: quietAmber)),
+                  style: sans(13, weight: W.label, color: AppColors.fg1)),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(

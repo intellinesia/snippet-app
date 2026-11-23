@@ -776,8 +776,7 @@ class _AgentRowShellState extends State<AgentRowShell> {
                                               widget.selected ||
                                               _hover
                                           ? AppColors.fg1
-                                          : Color.lerp(AppColors.fg2,
-                                              AppColors.fg3, 0.5)!)),
+                                          : AppColors.fg1)),
                         ),
                         if (widget.pinned) ...[
                           const SizedBox(width: 6),

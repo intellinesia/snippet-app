@@ -1525,7 +1525,7 @@ child: PhoneAgentPage(
         builder: (_, place, __) => _PlaceRow(
           label: 'Home',
           icon: 'home',
-          selected: place == 'home',
+          selected: place == 'home' && _place != QuietPlace.sessions,
           badge: needs > 0 ? needs : null,
           onTap: () => _selectPlace(QuietPlace.home),
         ),
@@ -1542,7 +1542,7 @@ child: PhoneAgentPage(
             builder: (_, place, __) => _PlaceRow(
               label: 'All agents and groups',
               icon: 'users',
-              selected: place == 'agents',
+              selected: place == 'agents' && _place != QuietPlace.sessions,
               onTap: () => _selectPlace(QuietPlace.agents),
             ),
           ),

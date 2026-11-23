@@ -1106,7 +1106,7 @@ class DeskReactionChip extends StatelessWidget {
     final g = group;
     final mine = g?.mine ?? false;
     final icon = _add ? 'plus' : _icons[g!.name];
-    final color = mine ? AppColors.accent : AppColors.fg3;
+    final color = mine ? AppColors.accent : AppColors.fg2;
     return Semantics(
       button: true,
       label: _add ? 'Add reaction' : '${g!.name} ${g.count}',

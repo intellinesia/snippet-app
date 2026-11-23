@@ -186,11 +186,10 @@ String toolObject(ToolStep step) {
   if (coordination != null) return coordination;
   if (name == 'manage_process' && step.args is Map) {
     final a = step.args as Map;
-    final id = a['id']?.toString().trim() ?? '';
     return switch (a['action']) {
-      'kill' => (isRunning ? 'Stopping' : 'Stopped', id),
-      'log' => (isRunning ? 'Reading the log of' : 'Read the log of', id),
-      'wait' => (isRunning ? 'Waiting for' : 'Waited for', id),
+      'kill' => (isRunning ? 'Stopping a process' : 'Stopped a process', ''),
+      'log' => (isRunning ? 'Reading a process log' : 'Read a process log', ''),
+      'wait' => (isRunning ? 'Waiting for a process' : 'Waited for a process', ''),
       _ => (isRunning ? 'Listing processes' : 'Listed processes', ''),
     };
   }

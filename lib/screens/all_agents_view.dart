@@ -24,7 +24,7 @@ class AllAgentsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: AppColors.bg,
+      color: AppColors.panelBg,
       child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(

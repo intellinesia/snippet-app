@@ -121,11 +121,11 @@ class SoftLane extends StatelessWidget {
                     ),
                     if (lead) ...[
                       const SizedBox(width: 6),
-                      Text('lead', style: sans(11, color: AppColors.fg4)),
+                      Text('lead', style: sans(11, color: AppColors.fg3)),
                     ],
                     if (time != null) ...[
                       const SizedBox(width: 8),
-                      Text(time!, style: mono(11, color: AppColors.fg4)),
+                      Text(time!, style: mono(11, color: AppColors.fg3)),
                     ],
                   ]),
                 ),

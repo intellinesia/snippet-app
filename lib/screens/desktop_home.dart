@@ -82,6 +82,11 @@ class _DesktopHomeState extends State<DesktopHome> {
         '');
     // Strip standalone long hex ids (8+ hex chars with digits).
     s = s.replaceAll(RegExp(r'\b(?=[0-9a-f]*\d)[0-9a-f]{8,}\b'), '');
+    // Tidy what id removal leaves behind: empty brackets, dangling joiners.
+    s = s.replaceAll(RegExp(r'[\(\[]\s*[\)\]]'), '');
+    s = s.replaceAll(RegExp(r'\b(?:of|for|to|from|on|in|about|against)\s*(?=[.,;:]|$)'), '');
+    s = s.replaceAll(RegExp(r'\s+([.,;:])'), r'\1');
+    s = s.replaceAll(RegExp(r'^[\s.,;:]+'), '');
     return s.replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 

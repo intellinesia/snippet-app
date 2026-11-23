@@ -439,7 +439,7 @@ class ChatGlassButton extends StatelessWidget {
                   child: Center(
                     child: AppIcon(icon,
                         size: kMobile ? 18 : 15,
-                        color: ChatColors.receivedText),
+                        color: AppColors.fg1),
                   ),
                 ),
               ),
@@ -534,7 +534,7 @@ class ChatHeader extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: sans(13,
-                      weight: W.label, color: ChatColors.receivedText)),
+                      weight: W.label, color: AppColors.fg1)),
             ),
             if (onTitleTap != null) ...[
               SizedBox(width: S.of(3)),
@@ -564,11 +564,11 @@ class ChatHeader extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   AppIcon('chevron-left',
-                      size: 18, color: ChatColors.receivedText),
+                      size: 18, color: AppColors.fg1),
                   if (backCount != null && backCount! > 0) ...[
                     SizedBox(width: S.s2),
                     Text('${backCount!}',
-                        style: sans(15, color: ChatColors.receivedText)),
+                        style: sans(15, color: AppColors.fg1)),
                   ],
                 ]),
               ),

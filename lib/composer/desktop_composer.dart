@@ -259,7 +259,7 @@ class DeskComposerCard extends StatelessWidget {
         hintText: hint,
         hintMaxLines: 1,
         hintStyle: fieldStyle.copyWith(
-            color: AppColors.fg4, overflow: TextOverflow.ellipsis),
+            color: AppColors.fg3, overflow: TextOverflow.ellipsis),
       );
 
   @override
@@ -557,7 +557,7 @@ class DeskVoiceCard extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: Text(label, style: sans(12.5, color: AppColors.fg4)),
+              child: Text(label, style: sans(12.5, color: AppColors.fg3)),
             ),
             Row(children: [
               if (recording)
