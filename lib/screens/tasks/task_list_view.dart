@@ -364,7 +364,6 @@ class _TaskListViewState extends State<TaskListView> {
           const SizedBox(width: 6),
           _BarBtn(
               label: 'New task',
-              hint: 'C',
               icon: PhIcons.plus,
               primary: true,
               onTap: () => setState(() => _creating = true)),
@@ -550,11 +549,9 @@ class _BarBtn extends StatelessWidget {
   const _BarBtn(
       {required this.label,
       required this.icon,
-      this.hint,
       this.primary = false,
       this.onTap});
   final String label;
-  final String? hint;
   final IconData icon;
   final bool primary;
   final VoidCallback? onTap;
@@ -571,17 +568,13 @@ class _BarBtn extends StatelessWidget {
         decoration: BoxDecoration(
           color: primary ? AppColors.accentFill : Colors.transparent,
           borderRadius: BorderRadius.circular(R.sm),
-          border: primary ? null : Border.all(color: taskHairline),
+          border: Border.all(color: primary ? AppColors.accentFill : taskHairline),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           Icon(icon, size: 13, color: fg),
           const SizedBox(width: 6),
           Text(label,
-              style: sans(12, weight: primary ? W.label : W.body, color: fg)),
-          if (hint != null) ...[
-            const SizedBox(width: 8),
-            Text(hint!, style: sans(11.5, color: fg.withValues(alpha: 0.6))),
-          ],
+              style: sans(12, weight: W.label, color: fg)),
         ]),
       ),
     );

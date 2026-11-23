@@ -434,9 +434,9 @@ class _PopoverMenuState<T> extends State<_PopoverMenu<T>> {
           children: [
             if (_hasSearch)
               Padding(
-                padding: EdgeInsets.all(S.s4),
+                padding: EdgeInsets.fromLTRB(S.s4, S.s4, S.s4, S.s6),
                 child: SizedBox(
-                  height: 28,
+                  height: 32,
                   child: TextField(
                     controller: _search,
                     autofocus: true,
@@ -452,19 +452,20 @@ class _PopoverMenuState<T> extends State<_PopoverMenu<T>> {
                       hintStyle: sans(13,
                           weight: FontWeight.w400, color: AppColors.fg4),
                       prefixIcon: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: S.s8),
+                        padding: EdgeInsets.only(left: S.s8, right: S.s8),
                         child:
                             AppIcon('search', size: 14, color: AppColors.fg4),
                       ),
                       prefixIconConstraints:
                           const BoxConstraints(minWidth: 0, minHeight: 0),
-                      contentPadding: EdgeInsets.zero,
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: S.s8, vertical: 8),
                       enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(R.sm),
+                          borderRadius: BorderRadius.circular(R.md),
                           borderSide: BorderSide(color: AppColors.line)),
                       focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(R.sm),
-                          borderSide: BorderSide(color: AppColors.border2)),
+                          borderRadius: BorderRadius.circular(R.md),
+                          borderSide: BorderSide(color: AppColors.lineStrong)),
                     ),
                   ),
                 ),
