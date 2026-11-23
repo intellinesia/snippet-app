@@ -1193,45 +1193,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       child: Row(children: [
         _FooterBtn(
             icon: 'settings', tooltip: 'Settings', onTap: _openShellSettings),
-        Expanded(
-          child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              spacing: 2,
-              children: [
-                if (_client != null) ...[
-                  _footerFit(_FooterBtn(
-                      icon: 'task',
-                      tooltip: 'Tasks',
-                      badge: needsYou,
-                      onTap: _openTasksTab)),
-                  _footerFit(_FooterBtn(
-                      icon: 'file',
-                      tooltip: 'Artifacts',
-                      onTap: _openArtifactsTile)),
-                  _footerFit(ListenableBuilder(
-                    listenable: AmbientController.instance,
-                    builder: (_, __) {
-                      final on = AmbientController.instance.status.running;
-                      return Builder(
-                        builder: (ctx) => _FooterBtn(
-                            icon: 'mic',
-                            tooltip: on
-                                ? 'Ambient voice is listening'
-                                : 'Listen (ambient voice)',
-                            active: on,
-                            onTap: () => showAmbientStage(ctx, _client!)),
-                      );
-                    },
-                  )),
-                  _footerFit(Builder(
-                    builder: (ctx) => _FooterBtn(
-                        icon: 'analytics',
-                        tooltip: 'Usage',
-                        onTap: () => showUsagePopover(ctx, _client!)),
-                  )),
-                ],
-              ]),
-        ),
       ]),
     );
   }
@@ -1314,9 +1275,6 @@ class _TbBtnState extends State<_TbBtn> {
 
 /// Quiet 28 px footer icon button; [active] tints the icon accent and
 /// [badge] adds a small accent dot.
-// Lets the icon row shrink below 28px per button at the narrowest sidebar.
-Widget _footerFit(Widget child) => Flexible(child: child);
-
 class _FooterBtn extends StatefulWidget {
   const _FooterBtn({
     required this.icon,

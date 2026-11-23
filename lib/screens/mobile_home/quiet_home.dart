@@ -88,6 +88,7 @@ class QuietHomeScreen extends StatelessWidget {
     required this.onOpenSessions,
     required this.onSettings,
     required this.onSearch,
+    this.onNew,
     this.onDecide,
     this.offline,
   });
@@ -99,6 +100,7 @@ class QuietHomeScreen extends StatelessWidget {
   final VoidCallback onOpenSessions;
   final VoidCallback onSettings;
   final VoidCallback onSearch;
+  final VoidCallback? onNew;
   final Future<bool> Function(SessionInfo s, bool approve)? onDecide;
 
   @override
@@ -144,7 +146,9 @@ class QuietHomeScreen extends StatelessWidget {
           ),
         ),
         if (offline != null) offline!,
-        if (asks.isEmpty)
+        if (asks.isEmpty && working.isEmpty)
+          _EmptyHome(finished: finished, onNew: onNew, onOpenSessions: onOpenSessions)
+        else if (asks.isEmpty)
           QuietRow(
             title: 'Nothing needs you',
             leading: AppIcon('check-circle', size: 20, color: AppColors.fg3),
@@ -165,7 +169,7 @@ class QuietHomeScreen extends StatelessWidget {
               onTap: () => onOpenSession(s),
             ),
         ],
-        if (finished > 0) ...[
+        if (finished > 0 && !(asks.isEmpty && working.isEmpty)) ...[
           SizedBox(height: S.s8),
           QuietRow(
             title: '$finished finished today',
@@ -456,4 +460,64 @@ class _Dashed extends CustomPainter {
 
   @override
   bool shouldRepaint(_Dashed old) => old.color != color;
+}
+
+class _EmptyHome extends StatelessWidget {
+  const _EmptyHome(
+      {required this.finished, required this.onNew, required this.onOpenSessions});
+  final int finished;
+  final VoidCallback? onNew;
+  final VoidCallback onOpenSessions;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(S.s32, S.s40 * 2, S.s32, S.s24),
+      child: Column(children: [
+        Container(
+          width: 64,
+          height: 64,
+          alignment: Alignment.center,
+          decoration:
+              BoxDecoration(color: AppColors.surface2, shape: BoxShape.circle),
+          child: AppIcon('check-circle', size: 28, color: AppColors.fg2),
+        ),
+        SizedBox(height: S.s16),
+        Text('Nothing needs you',
+            textAlign: TextAlign.center,
+            style: sans(20, weight: W.label, color: AppColors.fg1)),
+        SizedBox(height: S.s8),
+        Text('No agent is working. Start something, or ask Lead what is next.',
+            textAlign: TextAlign.center,
+            style: sans(14, color: AppColors.fg3, height: 1.4)),
+        if (onNew != null) ...[
+          SizedBox(height: S.s24),
+          TapDetector(
+            onTap: onNew,
+            child: Container(
+              height: 44,
+              padding: EdgeInsets.symmetric(horizontal: S.s20),
+              decoration: BoxDecoration(
+                  color: AppColors.accentFill,
+                  borderRadius: BorderRadius.circular(999)),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                AppIcon('edit', size: 16, color: AppColors.accentFg),
+                SizedBox(width: S.s8),
+                Text('New session',
+                    style: sans(14, weight: W.label, color: AppColors.accentFg)),
+              ]),
+            ),
+          ),
+        ],
+        if (finished > 0) ...[
+          SizedBox(height: S.s24),
+          TapDetector(
+            onTap: onOpenSessions,
+            child: Text('$finished finished today',
+                style: sans(13, color: AppColors.fg3)),
+          ),
+        ],
+      ]),
+    );
+  }
 }

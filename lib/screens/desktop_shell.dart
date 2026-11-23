@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../ambient/controller.dart';
 import '../api.dart';
 import '../github_models.dart';
 import '../swr.dart';
@@ -45,7 +44,6 @@ import 'files.dart';
 import 'git.dart';
 import 'inbound_share_picker.dart';
 import 'lead.dart';
-import 'lead/widgets/ambient_stage.dart' show showAmbientStage;
 import 'tasks/task_kanban.dart';
 import 'tasks/task_board.dart';
 import 'mobile_chrome.dart';

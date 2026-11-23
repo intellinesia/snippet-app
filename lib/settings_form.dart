@@ -117,9 +117,9 @@ abstract final class Grouped {
   static TextStyle footStyle() =>
       sans(footSize, height: footLine / footSize, color: muted);
   static TextStyle pageTitleStyle() =>
-      sans(pageTitleSize, weight: FontWeight.w600, color: AppColors.fg1);
+      sans(pageTitleSize, weight: FontWeight.w500, color: AppColors.fg1);
   static TextStyle heroStyle() =>
-      sans(heroSize, weight: FontWeight.w600, color: AppColors.fg1);
+      sans(heroSize, weight: FontWeight.w500, color: AppColors.fg1);
 }
 
 /// A bare leading icon in the row's icon column: no tile, 22 on phones.
@@ -359,7 +359,11 @@ class SettingsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = danger
+    // Quiet: a load failure is amber; red stays for destructive actions.
+    final failure = danger && RegExp(r"^(Couldn|Unable|Failed)").hasMatch(label);
+    final tint = failure
+        ? AppColors.run
+        : danger
         ? AppColors.danger
         : accent
             ? AppColors.accent
@@ -648,10 +652,10 @@ class GroupedCircleButton extends StatelessWidget {
       child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Container(
-          width: Grouped.circle,
-          height: Grouped.circle,
-          decoration: BoxDecoration(color: Grouped.row, shape: BoxShape.circle),
+        // Quiet: a bare glyph on a 48pt target, no plate.
+        child: SizedBox(
+          width: kMobile ? 48 : Grouped.circle,
+          height: kMobile ? 48 : Grouped.circle,
           child: Center(
             child: AppIcon(icon, size: kMobile ? 20 : 18, color: AppColors.fg1),
           ),

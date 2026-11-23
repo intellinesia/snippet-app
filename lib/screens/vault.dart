@@ -418,7 +418,7 @@ class VaultScreenState extends State<VaultScreen> {
                       height: 44,
                       child: Center(
                           child: Text('Remove',
-                              style: sans(12, color: AppColors.danger))),
+                              style: sans(12, color: AppColors.fg2))),
                     ),
                   ),
                 ),
@@ -456,7 +456,7 @@ class VaultScreenState extends State<VaultScreen> {
                   child: Padding(
                     padding: EdgeInsets.symmetric(vertical: S.s4),
                     child: Text('Remove',
-                        style: sans(12, color: AppColors.danger)),
+                        style: sans(12, color: AppColors.fg2)),
                   ),
                 ),
               ),

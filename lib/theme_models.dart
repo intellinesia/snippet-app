@@ -380,13 +380,14 @@ class ThemeShapeRadii {
   final double pill;
 
   const ThemeShapeRadii({
-    this.xs = 4.0,
-    this.sm = 6.0,
-    this.chip = 6.0,
-    this.md = 8.0,
-    this.card = 10.0,
-    this.lg = 12.0,
-    this.sheetTop = 20.0,
+    // Quiet v4 scale: xs 6, s 10, m 14, l 20.
+    this.xs = 6.0,
+    this.sm = 10.0,
+    this.chip = 10.0,
+    this.md = 14.0,
+    this.card = 14.0,
+    this.lg = 20.0,
+    this.sheetTop = 24.0,
     this.pill = 999.0,
   });
 

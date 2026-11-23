@@ -1342,6 +1342,15 @@ class ThemeManager extends ChangeNotifier {
       await p.remove(_legacyIndexKey);
     }
     if (name == 'white') name = defaultTheme;
+    // Quiet v4 shipped as the default, but a saved choice always won, so
+    // existing installs never saw it. Move them over once.
+    if (p.getBool('quiet_v4_migrated') != true) {
+      await p.setBool('quiet_v4_migrated', true);
+      if (name != null) {
+        name = null;
+        await p.remove(_prefsKey);
+      }
+    }
 
     // First run follows the system; a saved choice always wins.
     final systemLight = PlatformDispatcher.instance.platformBrightness ==

@@ -318,11 +318,12 @@ class QuietTabBar extends StatelessWidget {
         child: Row(children: [
           Expanded(
             child: Container(
-              height: 56,
+              height: 58,
               padding: EdgeInsets.symmetric(horizontal: S.s4),
               decoration: BoxDecoration(
                 color: AppColors.surface1,
-                borderRadius: BorderRadius.circular(R.of(18)),
+                borderRadius: BorderRadius.circular(29),
+                border: Border.all(color: AppColors.border),
               ),
               child: Row(children: [
                 for (final p in QuietPlace.values)
@@ -345,11 +346,11 @@ class QuietTabBar extends StatelessWidget {
               behavior: HitTestBehavior.opaque,
               onTap: onNew,
               child: Container(
-                width: 56,
-                height: 56,
+                width: 58,
+                height: 58,
                 decoration: BoxDecoration(
                   color: AppColors.accentFill,
-                  borderRadius: BorderRadius.circular(R.of(18)),
+                  shape: BoxShape.circle,
                 ),
                 child: Center(
                     child: AppIcon('edit', size: 22, color: AppColors.accentFg)),
@@ -381,10 +382,10 @@ class _Tab extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Container(
-          margin: EdgeInsets.symmetric(vertical: S.s4),
+          margin: EdgeInsets.symmetric(vertical: 5),
           decoration: BoxDecoration(
             color: selected ? AppColors.surface3 : Colors.transparent,
-            borderRadius: BorderRadius.circular(R.of(14)),
+            borderRadius: BorderRadius.circular(24),
           ),
           child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

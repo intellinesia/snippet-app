@@ -2155,7 +2155,10 @@ class EmptyState extends StatelessWidget {
               color: AppColors.surface2,
               borderRadius: BorderRadius.circular(R.md),
             ),
-            child: AppIcon(icon, size: 24, color: AppColors.fg3),
+            // Quiet: a failure is the amber hand, never a warning triangle.
+            child: icon == 'alert-triangle'
+                ? AppIcon('hand', size: 24, color: AppColors.run, filled: true)
+                : AppIcon(icon, size: 24, color: AppColors.fg3),
           ),
           SizedBox(height: S.s12),
           Text(title, style: TS.sectionTitle()),

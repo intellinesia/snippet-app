@@ -34,7 +34,6 @@ import 'mobile_session_home.dart';
 import 'phone_hero.dart';
 import '../session_quick_send.dart';
 import 'pull_requests.dart' show openPullRequest;
-import '../tap_detector.dart';
 export 'sidebar_mobile.dart';
 export 'sidebar_tiles.dart' show SidebarBrand;
 
@@ -581,6 +580,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           onOpenSessions: () => widget.onMobileHome(MobileHome.chats),
           onSettings: () => widget.onMobileHome(MobileHome.settings),
           onSearch: search,
+          onNew: widget.onNewSession,
           onDecide: _decideHero,
           offline: widget.sessionsError == null
               ? null
@@ -814,51 +814,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     return s.title.toLowerCase().contains(q) ||
         s.projectFolder.toLowerCase().contains(q) ||
         (s.branch?.toLowerCase().contains(q) ?? false);
-  }
-
-  Widget _settledTap({required VoidCallback onTap, required Widget child}) =>
-      kMobile
-          ? TapDetector(
-              behavior: HitTestBehavior.opaque, onTap: onTap, child: child)
-          : HoverSurface(radius: 8, onTap: onTap, child: child);
-
-  Widget _settledHeader(List<SessionInfo> rows, {required bool open}) {
-    return Padding(
-      padding: EdgeInsets.only(top: kMobile ? S.s8 : S.s4),
-      child: Semantics(
-        button: true,
-        expanded: open,
-        label: 'Settled, ${rows.length}',
-        child: ExcludeSemantics(
-          child: _settledTap(
-            onTap: () => setState(() => _settledOpen = !_settledOpen),
-            child: Container(
-              height: kMobile ? M.minTarget : 32,
-              padding:
-                  EdgeInsets.fromLTRB(kMobile ? 0 : 8, 0, kMobile ? 0 : 5, 0),
-              // 5, not 8: the thin chevron glyph is inset ~3 px in its box.
-              child: Row(children: [
-                Text('Settled',
-                    style: TS.label(kMobile ? AppColors.fg3 : AppColors.fg4)),
-                SizedBox(width: S.s8),
-                Text('${rows.length}',
-                    style:
-                        kMobile ? TS.meta() : mono(11, color: AppColors.fg4)),
-                const Spacer(),
-                AnimatedRotation(
-                  turns: open ? 0.25 : 0,
-                  duration: Motion.base,
-                  curve: Curves.easeOutCubic,
-                  child: AppIcon('chevron-right',
-                      size: kMobile ? 13 : 12,
-                      color: kMobile ? AppColors.fg3 : AppColors.fg4),
-                ),
-              ]),
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   Future<void> _setSettled(SessionInfo s, bool settle) async {
@@ -1407,44 +1362,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     );
   }
 
-  /// Settled chats sit pinned under the list and open upward over it.
-  Widget _settledPinned(List<SessionInfo> rows) {
-    final open = _settledOpen || _filterQuery.trim().isNotEmpty;
-    final maxHeight = MediaQuery.sizeOf(context).height * (kMobile ? 0.5 : 0.4);
-    return AnimatedContainer(
-      duration: Motion.base,
-      margin: EdgeInsets.only(
-          left: kMobile ? M.gutter : S.s8,
-          right: kMobile ? M.gutter : S.s8,
-          bottom: kMobile ? 0 : S.s6),
-      decoration: BoxDecoration(
-          border: Border(
-              top: BorderSide(
-                  color: open ? AppColors.line : Colors.transparent))),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        _settledHeader(rows, open: open),
-        Reveal(
-          show: open,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxHeight),
-            child: ListView(
-              shrinkWrap: true,
-              padding: EdgeInsets.only(bottom: S.s8),
-              children: [
-                for (var i = 0; i < rows.length; i++)
-                  _listRow(rows[i],
-                      above: i > 0 ? rows[i - 1] : null,
-                      below: i + 1 < rows.length ? rows[i + 1] : null,
-                      divider: kMobile && i + 1 < rows.length),
-              ],
-            ),
-          ),
-        ),
-        if (kMobile) SizedBox(height: _scrollBottomPad),
-      ]),
-    );
-  }
-
   /// The quiet search field: a palette opener when one is wired, else an
   /// inline filter for both lists.
   Widget _sidebarSearch() {
@@ -1567,7 +1484,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         !isInboxSessionRow(s) &&
         _matchesQuery(s))));
     final list = split.main;
-    final settledRows = split.settled;
     final mc = all.where((s) => isDedicatedLeadSession(s.id)).firstOrNull;
     _chatsShownAt ??= DateTime.now();
     final rows = _groupedRows(list, attentionFirst: true);
@@ -1609,7 +1525,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                       ),
                       if (!hasClient)
                         const SidebarEmpty('Add a machine to begin.')
-                      else if (list.isEmpty && settledRows.isEmpty)
+                      else if (list.isEmpty)
                         _emptySessions(searching: searching)
                       else
                         ...rows,
@@ -1618,8 +1534,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                 ),
               ),
             ),
-            if (hasClient && settledRows.isNotEmpty)
-              _settledPinned(settledRows),
           ]),
         ),
       ),
