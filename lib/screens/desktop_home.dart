@@ -84,7 +84,7 @@ class _DesktopHomeState extends State<DesktopHome> {
     s = s.replaceAll(RegExp(r'\b(?=[0-9a-f]*\d)[0-9a-f]{8,}\b'), '');
     // Tidy what id removal leaves behind: empty brackets, dangling joiners.
     s = s.replaceAll(RegExp(r'[\(\[]\s*[\)\]]'), '');
-    s = s.replaceAll(RegExp(r'\b(?:of|for|to|from|on|in|about|against)\s*(?=[.,;:]|$)'), '');
+    s = s.replaceAll(RegExp(r'\b(?:of|for|to|from|on|in|about|against|under|with|by|at|into|via|after|during|over|around)\s*(?=[.,;:]|$)'), '');
     s = s.replaceAllMapped(RegExp(r'\s+([.,;:])'), (m) => m[1]!);
     s = s.replaceAll(RegExp(r'^[\s.,;:]+'), '');
     return s.replaceAll(RegExp(r'\s+'), ' ').trim();
@@ -112,7 +112,11 @@ class _DesktopHomeState extends State<DesktopHome> {
       for (final e in crew)
         if (e.state == CrewState.needsYou) e
     ];
-    final askers = {for (final e in needs) e.agent.id: e.agent.displayName};
+    // Every asker has its own ask row here, so a group never adds a second one.
+    final askers = <String, String>{
+      for (final e in needs)
+        if (e.lead == null) e.agent.id: e.agent.displayName
+    };
     // A group needs you when any member is waiting on you.
     final groupAsks = [
       for (final g in _groups)

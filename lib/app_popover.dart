@@ -81,7 +81,7 @@ class AppPopoverRowBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = disabled
-        ? AppColors.fg4
+        ? AppColors.fg3
         : danger
             ? AppColors.danger
             : AppColors.fg1;
@@ -113,7 +113,7 @@ class AppPopoverRowBody extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: sans(11.5,
-                        weight: FontWeight.w400, color: AppColors.fg4)),
+                        weight: FontWeight.w400, color: AppColors.fg3)),
             ],
           ),
         ),
@@ -125,7 +125,7 @@ class AppPopoverRowBody extends StatelessWidget {
           SizedBox(width: S.s8),
           Text(trailing!,
               maxLines: 1,
-              style: sans(12, weight: FontWeight.w400, color: AppColors.fg4)),
+              style: sans(12, weight: FontWeight.w400, color: AppColors.fg3)),
         ],
         if (selected) ...[
           SizedBox(width: S.s8),
@@ -450,11 +450,11 @@ class _PopoverMenuState<T> extends State<_PopoverMenu<T>> {
                       fillColor: AppColors.surface1,
                       hintText: 'Search',
                       hintStyle: sans(13,
-                          weight: FontWeight.w400, color: AppColors.fg4),
+                          weight: FontWeight.w400, color: AppColors.fg3),
                       prefixIcon: Padding(
                         padding: EdgeInsets.only(left: S.s8, right: S.s8),
                         child:
-                            AppIcon('search', size: 14, color: AppColors.fg4),
+                            AppIcon('search', size: 14, color: AppColors.fg3),
                       ),
                       prefixIconConstraints:
                           const BoxConstraints(minWidth: 0, minHeight: 0),

@@ -151,7 +151,12 @@ class QuietHomeScreen extends StatelessWidget {
       for (final r in rows.working) (r.agent, r.state),
       for (final r in rows.asleep) (r.agent, r.state),
     ];
-    final askers = {for (final r in rows.needs) r.agent.id};
+    // A group ask counts only when its asker has no session ask of its own.
+    final withAsk = {for (final a in asks) a.agentId};
+    final askers = {
+      for (final r in rows.needs)
+        if (!withAsk.contains(r.agent.id)) r.agent.id
+    };
     final groupAsks = [
       for (final g in groups)
         if (g.agentIds.any(askers.contains)) g
@@ -167,7 +172,7 @@ class QuietHomeScreen extends StatelessWidget {
         .length;
     final total = agents.where((a) => !a.isLead).length + (lead != null ? 1 : 0);
     final allLabel = groupCount > 0
-        ? 'All $total agents and $groupCount groups'
+        ? 'All $total agents and $groupCount ${groupCount == 1 ? 'group' : 'groups'}'
         : 'All $total agents';
     return ListView(
       padding: EdgeInsets.only(bottom: S.s24),
@@ -261,7 +266,7 @@ class _FaceStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        height: 92,
+        height: 92 + (MediaQuery.textScalerOf(context).scale(11) - 11) * 2,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           padding: EdgeInsets.symmetric(horizontal: S.s16, vertical: S.s4),

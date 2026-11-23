@@ -102,7 +102,8 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
                   const SizedBox(width: 6),
                 ],
                 Flexible(
-                  child: Text(prettyProfile(profile),
+                  child: Text(
+                      [prettyProfile(profile), if ((a.deskModel ?? '').trim().isNotEmpty) a.deskModel!.trim()].join(' · '),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(14, color: AppColors.fg2)),
