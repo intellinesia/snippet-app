@@ -208,7 +208,7 @@ class _DenseTaskRowState extends State<DenseTaskRow> {
             ),
             if (agent.isNotEmpty) ...[
               const SizedBox(width: 10),
-              AgentMochi(agent, size: 16),
+              AgentMochi(agent, size: rowAvatarSize(32)),
             ],
             if ((widget.workspace ?? '').isNotEmpty) ...[
               const SizedBox(width: 8),

@@ -69,6 +69,11 @@ void setRememberedAgentCharacter(String id, String? character) {
   agentCharacters.value = next;
 }
 
+/// Avatar size for a list row: about two thirds of the row height, so the
+/// mark reads as part of the row rather than a speck in it.
+double rowAvatarSize(double rowHeight, {double min = 14, double max = 44}) =>
+    (rowHeight * 0.66).roundToDouble().clamp(min, max).toDouble();
+
 /// An agent's character, kept in step with the remembered picks.
 class AgentMochi extends StatelessWidget {
   const AgentMochi(this.agentId,

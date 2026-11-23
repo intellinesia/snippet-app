@@ -112,7 +112,7 @@ class SessionTile extends StatelessWidget {
                     width: 40,
                     child: Center(
                       child: AgentMochi(s.displayAgentId ?? 'snippet',
-                          size: 32, state: charState),
+                          size: rowAvatarSize(height, max: 40), state: charState),
                     ),
                   ),
                   SizedBox(width: S.s12),

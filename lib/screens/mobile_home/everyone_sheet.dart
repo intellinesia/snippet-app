@@ -713,8 +713,8 @@ class _SheetSessionRow extends StatelessWidget {
                   horizontal: kHomeMargin, vertical: 8),
               child: Row(children: [
                 AgentMochi(s.displayAgentId ?? 'snippet',
-                    size: 32, state: charState),
-                SizedBox(width: S.s12),
+                    size: rowAvatarSize(64, max: 40), state: charState),
+                SizedBox(width: S.of(14)),
                 Expanded(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,

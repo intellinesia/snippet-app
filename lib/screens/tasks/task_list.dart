@@ -365,7 +365,7 @@ class TaskRow extends StatelessWidget {
             : agent[0].toUpperCase() + agent.substring(1);
     final meta =
         [id, who, task.status.label].where((p) => p.isNotEmpty).join(' · ');
-    final avatar = kMobile ? 24.0 : 22.0;
+    final avatar = rowAvatarSize(kMobile ? 52 : 40);
     return Material(
       color: selected ? AppColors.accentBg : Colors.transparent,
       child: InkWell(
