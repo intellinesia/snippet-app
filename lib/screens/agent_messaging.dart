@@ -19,6 +19,7 @@ import '../composer/composer_attachments.dart';
 import '../composer/composer_card.dart';
 import '../composer/voice_note.dart';
 import '../message_reactions.dart';
+import '../mochi.dart';
 import '../motion.dart';
 import '../models.dart';
 import '../presence.dart';
@@ -929,7 +930,13 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     // Containers — no Material ancestor — while a TextField and the icon buttons
     // here require one.
     final hideChrome = _noChrome;
-    return Material(
+    return ValueListenableBuilder<Map<String, String>>(
+      valueListenable: agentColors,
+      builder: (_, __, child) => ChatAgentScope(
+        agentColor: mochiColorFor(widget.agentId),
+        child: child!,
+      ),
+      child: Material(
       color: kMobile ? AppColors.pageCanvas : Colors.transparent,
       child: _chrome(SafeArea(
         top: !hideChrome,
@@ -962,6 +969,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
           ],
         ),
       ), hideChrome),
+      ),
     );
   }
 

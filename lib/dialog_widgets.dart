@@ -361,7 +361,7 @@ Widget popoverBackdrop(Animation<double> animation, Widget child) {
             final scrim = ColoredBox(
                 color: AppColors.glassScrim
                     .withValues(alpha: AppColors.glassScrim.a * t));
-            if (!Glass.enabled || t < 0.001) return scrim;
+            if (!Glass.effectiveEnabled || t < 0.001) return scrim;
             return BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 16 * t, sigmaY: 16 * t),
               child: scrim,

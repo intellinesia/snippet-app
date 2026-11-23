@@ -301,7 +301,7 @@ class AppSheetSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fill = color ?? AppColors.raised;
-    final glass = kMobile && Glass.enabled;
+    final glass = kMobile && Glass.effectiveEnabled;
     final body = DecoratedBox(
       decoration: BoxDecoration(
         color: glass ? fill.withValues(alpha: 0.72) : fill,

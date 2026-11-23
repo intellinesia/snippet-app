@@ -324,7 +324,7 @@ class MessageFocusOverlay extends StatelessWidget {
           final scrimColor = AppColors.glassScrim
               .withValues(alpha: AppColors.glassScrim.a * t);
           Widget backdrop = ColoredBox(color: scrimColor);
-          if (Glass.enabled && t > 0.001) {
+          if (Glass.effectiveEnabled && t > 0.001) {
             backdrop = BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 20 * t, sigmaY: 20 * t),
               child: backdrop,
