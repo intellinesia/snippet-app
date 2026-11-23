@@ -16,9 +16,9 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
         title: 'Add context',
         child: Row(children: [
           _ctxOption('camera', 'Camera', 'camera'),
-          const SizedBox(width: S.s8),
+          SizedBox(width: S.s8),
           _ctxOption('image', 'Photos', 'photos'),
-          const SizedBox(width: S.s8),
+          SizedBox(width: S.s8),
           _ctxOption('file', 'Files', 'files'),
         ]));
     if (choice == 'camera') {
@@ -358,10 +358,10 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
           child: InkWell(
             onTap: () => Navigator.pop(tileContext, value),
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: S.s12),
+              padding: EdgeInsets.symmetric(vertical: S.s12),
               child: Column(children: [
                 AppIcon(icon, size: 20, color: AppColors.fg1),
-                const SizedBox(height: S.s6),
+                SizedBox(height: S.s6),
                 Text(label, style: TS.label(AppColors.fg2)),
               ]),
             ),

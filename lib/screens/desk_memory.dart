@@ -171,7 +171,7 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
   }
 
   Widget _chip(String label, bool on, VoidCallback tap) => Padding(
-        padding: const EdgeInsets.only(right: 4),
+        padding: EdgeInsets.only(right: S.s4),
         child: Material(
           color: on ? AppColors.surface2 : Colors.transparent,
           shape: RoundedRectangleBorder(
@@ -183,7 +183,7 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
             onTap: tap,
             child: Container(
               height: 24,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              padding: EdgeInsets.symmetric(horizontal: S.of(10)),
               alignment: Alignment.center,
               child: Text(label,
                   style: sans(12, color: on ? AppColors.fg1 : AppColors.fg3)),
@@ -196,13 +196,13 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
         height: 32,
         decoration: BoxDecoration(
           color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(R.md),
           border: Border.all(color: AppColors.line),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        padding: EdgeInsets.symmetric(horizontal: S.of(10)),
         child: Row(children: [
           AppIcon('search', size: 13, color: AppColors.fg4),
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           Expanded(
             child: TextField(
               controller: _search,
@@ -222,22 +222,22 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
     final sel = wide && identical(_selected, e);
     final when = _day(e.added);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.only(bottom: S.s8),
       child: Material(
         color: sel ? AppColors.surface2 : AppColors.surface1,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(R.card),
           side: BorderSide(color: sel ? Colors.transparent : AppColors.line),
         ),
         child: InkWell(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(R.card),
           onTap: () => _select(e),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.of(10)),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               if (e.file != null || when.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 5),
+                  padding: EdgeInsets.only(bottom: S.of(5)),
                   child: Row(children: [
                     if (e.file != null)
                       Expanded(
@@ -302,7 +302,7 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
 
   Widget _action(String label, VoidCallback onTap, {bool danger = false}) =>
       Padding(
-        padding: const EdgeInsets.only(left: 6),
+        padding: EdgeInsets.only(left: S.s6),
         child: Material(
           color: danger ? Colors.transparent : AppColors.surface2,
           shape: RoundedRectangleBorder(
@@ -316,7 +316,7 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
             onTap: onTap,
             child: Container(
               height: 28,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: EdgeInsets.symmetric(horizontal: S.s12),
               alignment: Alignment.center,
               child: Text(label,
                   style: sans(12,
@@ -338,8 +338,8 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
     return SelectionArea(
       child: ListView(
         padding: wide
-            ? const EdgeInsets.fromLTRB(40, 28, 40, 40)
-            : const EdgeInsets.fromLTRB(16, 4, 16, 24),
+            ? EdgeInsets.fromLTRB(S.s40, S.of(28), S.s40, S.s40)
+            : EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s24),
         children: [
           Row(children: [
             Expanded(
@@ -352,7 +352,7 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
             if (e.file == null) _action('Edit', () => _edit(e)),
             _action('Forget', () => _forget(e), danger: true),
           ]),
-          const SizedBox(height: 16),
+          SizedBox(height: S.s16),
           if (body == null)
             const Align(alignment: Alignment.centerLeft, child: Spinner(size: 14))
           else
@@ -379,14 +379,14 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
           child: Text('No history yet.', style: sans(13, color: AppColors.fg4)));
     }
     return ListView(
-      padding: const EdgeInsets.fromLTRB(14, 4, 14, 24),
+      padding: EdgeInsets.fromLTRB(S.of(14), S.s4, S.of(14), S.s24),
       children: [
         for (final c in h)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 7),
+            padding: EdgeInsets.symmetric(vertical: S.of(7)),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Padding(
-                padding: const EdgeInsets.only(top: 5),
+                padding: EdgeInsets.only(top: S.of(5)),
                 child: Container(
                   width: 6,
                   height: 6,
@@ -396,7 +396,7 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: S.of(10)),
               Expanded(
                 child: Text(
                     c.isConsolidation
@@ -404,7 +404,7 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
                         : c.subject,
                     style: sans(13, height: 1.45, color: AppColors.fg2)),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: S.s8),
               Text(relativeTime(c.date),
                   style: sans(11, color: AppColors.fg4, tabular: true)),
             ]),
@@ -431,7 +431,7 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
       final list = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         if (wide)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+            padding: EdgeInsets.fromLTRB(S.s16, S.s16, S.s16, S.of(10)),
             child: Row(children: [
               Expanded(
                 child: Text('Memory',
@@ -442,14 +442,14 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
             ]),
           ),
         Padding(
-          padding: EdgeInsets.fromLTRB(14, wide ? 0 : 2, 14, 8),
+          padding: EdgeInsets.fromLTRB(S.of(14), wide ? 0 : S.s2, S.of(14), S.s8),
           child: _searchField(),
         ),
         SizedBox(
           height: 30,
           child: ListView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
+            padding: EdgeInsets.symmetric(horizontal: S.of(14)),
             children: [
               if (project != null)
                 _chip('Project', _scope == project && !_history,
@@ -464,7 +464,7 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
             ],
           ),
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: S.s6),
         Expanded(
           child: _history
               ? _historyList()
@@ -472,7 +472,7 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
                   ? const Center(child: Spinner(size: 16))
                   : shown.isEmpty
                       ? Padding(
-                          padding: const EdgeInsets.all(24),
+                          padding: EdgeInsets.all(S.s24),
                           child: Text(
                               q.isEmpty
                                   ? 'Nothing remembered here yet. Agents save decisions and progress as they work.'
@@ -482,7 +482,7 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
                                   height: 1.5, color: AppColors.fg4)),
                         )
                       : ListView(
-                          padding: const EdgeInsets.fromLTRB(14, 2, 14, 16),
+                          padding: EdgeInsets.fromLTRB(S.of(14), S.s2, S.of(14), S.s16),
                           children: [
                             for (final e in shown) _card(e, wide: wide)
                           ],
@@ -490,7 +490,7 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
         ),
         if (!_history)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+            padding: EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.of(10)),
             child: Text('Saved by agents while they work.',
                 style: sans(12, color: AppColors.fg4)),
           ),
@@ -500,7 +500,7 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
         if (e != null) {
           return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
+              padding: EdgeInsets.fromLTRB(S.s8, 0, S.s8, 0),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
@@ -508,7 +508,7 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.fg3,
                     minimumSize: const Size(0, 44),
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    padding: EdgeInsets.symmetric(horizontal: S.s8),
                   ),
                   icon: AppIcon('chevron-left', size: 14, color: AppColors.fg3),
                   label: Text('Memory', style: sans(13, color: AppColors.fg3)),

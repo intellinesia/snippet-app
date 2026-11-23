@@ -7,9 +7,15 @@ import 'theme.dart';
 class GlassStyle {
   static bool get light => AppColors.bg.computeLuminance() > 0.18;
 
-  static Color get fill => light
-      ? AppColors.surface1.withValues(alpha: 0.72)
-      : AppColors.surface2.withValues(alpha: 0.62);
+  static Color get fill {
+    final alpha = ThemeManager.instance.resolved.translucency.glassFill.current;
+    return light
+        ? AppColors.surface1.withValues(alpha: alpha)
+        : AppColors.surface2.withValues(alpha: alpha);
+  }
+
+  static Color get edgeColor => AppColors.fg1.withValues(
+      alpha: ThemeManager.instance.resolved.border.glassEdgeAlpha);
 }
 
 /// Frosted surface for elements floating over content: blur behind a tinted,
@@ -21,34 +27,38 @@ class Glass extends StatelessWidget {
     this.radius,
     this.tint,
     this.border = true,
-    this.blur = 24,
+    this.blur,
   });
 
   final Widget child;
   final BorderRadius? radius;
   final Color? tint;
   final bool border;
-  final double blur;
+  final double? blur;
 
   /// Escape hatch for perf and tests: skips the blur and hardens the fill.
   static bool enabled = true;
 
+  static bool get effectiveEnabled =>
+      enabled && ThemeManager.instance.resolved.translucency.enabled;
+
   @override
   Widget build(BuildContext context) {
+    final on = Glass.effectiveEnabled;
     final fill = tint ?? GlassStyle.fill;
+    final sigma =
+        blur ?? ThemeManager.instance.resolved.translucency.glassBlur;
     Widget w = DecoratedBox(
       decoration: BoxDecoration(
-        color: Glass.enabled ? fill : fill.withValues(alpha: 0.96),
+        color: on ? fill : fill.withValues(alpha: 0.96),
         shape: radius == null ? BoxShape.circle : BoxShape.rectangle,
         borderRadius: radius,
-        border: border
-            ? Border.all(color: AppColors.fg1.withValues(alpha: 0.08))
-            : null,
+        border: border ? Border.all(color: GlassStyle.edgeColor) : null,
       ),
       child: child,
     );
-    if (Glass.enabled && !_Frosted.on(context)) {
-      final f = ImageFilter.blur(sigmaX: blur, sigmaY: blur);
+    if (on && sigma > 0 && !_Frosted.on(context)) {
+      final f = ImageFilter.blur(sigmaX: sigma, sigmaY: sigma);
       w = BackdropGroup.of(context) == null
           ? BackdropFilter(filter: f, child: w)
           : BackdropFilter.grouped(filter: f, child: w);
@@ -94,7 +104,8 @@ class GlassTopFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bg = color ?? AppColors.bg;
-    final on = Glass.enabled;
+    final on = Glass.effectiveEnabled;
+    final edgeBlur = on && ThemeManager.instance.resolved.translucency.edgeBlur;
     final up = StatusInset.of(context);
     final frame = Stack(clipBehavior: Clip.none, children: [
       Positioned(
@@ -104,7 +115,7 @@ class GlassTopFrame extends StatelessWidget {
         bottom: 0,
         child: IgnorePointer(
           child: Stack(children: [
-            if (on)
+            if (edgeBlur)
               // Bands share one backdrop read; overlapping stacked blurs cost a
               // full pass each and were the main source of scroll jank.
               Positioned.fill(child: LayoutBuilder(builder: (context, c) {
@@ -207,7 +218,7 @@ class ModalGlass extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final anim = ModalRoute.of(context)?.animation;
-    if (anim == null || !Glass.enabled || _phone(context)) return child;
+    if (anim == null || !Glass.effectiveEnabled || _phone(context)) return child;
     return Stack(fit: StackFit.passthrough, children: [
       Positioned.fill(
         child: IgnorePointer(

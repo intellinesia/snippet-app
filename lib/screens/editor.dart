@@ -153,15 +153,15 @@ class _EditorScreenState extends State<EditorScreen> {
             Text(
                 'This file was modified on the server since you opened it (likely by the agent). Keep your version, or reload theirs and lose your edits?',
                 style: TS.ui()),
-            const SizedBox(height: 16),
+            SizedBox(height: S.s16),
             Btn('Overwrite with mine',
                 icon: 'check',
                 onTap: () => Navigator.pop(context, 'overwrite')),
-            const SizedBox(height: 8),
+            SizedBox(height: S.s8),
             Btn('Reload theirs',
                 variant: BtnVariant.secondary,
                 onTap: () => Navigator.pop(context, 'reload')),
-            const SizedBox(height: 8),
+            SizedBox(height: S.s8),
             Btn('Cancel',
                 variant: BtnVariant.ghost, onTap: () => Navigator.pop(context)),
           ],
@@ -242,14 +242,14 @@ class _EditorScreenState extends State<EditorScreen> {
                         active: _wrap,
                         tooltip: _wrap ? 'Stop wrapping lines' : 'Wrap lines',
                         onTap: () => setState(() => _wrap = !_wrap)),
-                  const SizedBox(width: S.s4),
+                  SizedBox(width: S.s4),
                   Btn(_saving ? 'Saving' : 'Save',
                       small: true,
                       variant:
                           _dirty ? BtnVariant.primary : BtnVariant.secondary,
                       disabled: _saving || !_dirty,
                       onTap: () => _save()),
-                  const SizedBox(width: S.s8),
+                  SizedBox(width: S.s8),
                 ],
               ],
             ),
@@ -270,14 +270,14 @@ class _EditorScreenState extends State<EditorScreen> {
                   controller: _controller,
                   focusNode: _focus,
                   wordWrap: _wrap,
-                  padding: const EdgeInsets.fromLTRB(S.s4, S.s8, S.s12, S.s32),
+                  padding: EdgeInsets.fromLTRB(S.s4, S.s8, S.s12, S.s32),
                   style: codeEditorStyle(widget.name),
                   indicatorBuilder:
                       (context, editingController, chunkController, notifier) {
                     return Row(children: [
                       DefaultCodeLineNumber(
                           controller: editingController, notifier: notifier),
-                      if (kMobile) const SizedBox(width: S.s8),
+                      if (kMobile) SizedBox(width: S.s8),
                       if (!kMobile)
                         DefaultCodeChunkIndicator(
                             width: 20,
@@ -359,7 +359,7 @@ class _KeyBar extends StatelessWidget {
           child: ListView(
             scrollDirection: Axis.horizontal,
             padding:
-                const EdgeInsets.symmetric(horizontal: S.s6, vertical: S.s6),
+                EdgeInsets.symmetric(horizontal: S.s6, vertical: S.s6),
             children: [
               _Key(label: 'Tab', onTap: () => _tap(controller.applyIndent)),
               _Key(
@@ -380,7 +380,7 @@ class _KeyBar extends StatelessWidget {
                       _tap(() => controller.moveCursor(AxisDirection.down))),
               Container(
                 width: 1,
-                margin: const EdgeInsets.symmetric(
+                margin: EdgeInsets.symmetric(
                     horizontal: S.s6, vertical: S.s6),
                 color: AppColors.line,
               ),
@@ -392,7 +392,7 @@ class _KeyBar extends StatelessWidget {
           ),
         ),
         _Key(icon: 'keyboard', onTap: () => _tap(onDone)),
-        const SizedBox(width: S.s6),
+        SizedBox(width: S.s6),
       ]),
     );
   }
@@ -408,7 +408,7 @@ class _Key extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: S.s2),
+      padding: EdgeInsets.symmetric(horizontal: S.s2),
       child: Material(
         color: AppColors.hover,
         borderRadius: BorderRadius.circular(R.sm),
@@ -418,7 +418,7 @@ class _Key extends StatelessWidget {
           onTap: onTap,
           child: Container(
             constraints: const BoxConstraints(minWidth: 36),
-            padding: const EdgeInsets.symmetric(horizontal: S.s8),
+            padding: EdgeInsets.symmetric(horizontal: S.s8),
             alignment: Alignment.center,
             child: icon != null
                 ? AppIcon(icon!, size: 16, color: AppColors.fg1)

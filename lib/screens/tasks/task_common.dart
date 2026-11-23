@@ -152,9 +152,9 @@ Future<void> openTaskDetail(
               color: AppColors.bg,
               clipBehavior: Clip.antiAlias,
               borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
+                  BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
               child: Column(children: [
-                const SizedBox(height: 8),
+                SizedBox(height: S.s8),
                 Container(
                   width: 30,
                   height: 3,
@@ -163,7 +163,7 @@ Future<void> openTaskDetail(
                     borderRadius: BorderRadius.circular(R.pill),
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: S.s4),
                 Expanded(
                   child: TaskDetailScreen(
                     client: client,
@@ -214,7 +214,7 @@ class TaskNoteLines extends StatelessWidget {
     ];
     if (lines.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(top: 4),
+      padding: EdgeInsets.only(top: S.s4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

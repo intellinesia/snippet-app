@@ -119,7 +119,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
   }
 
   Widget _label(String text) => Padding(
-        padding: const EdgeInsets.fromLTRB(18, 14, 18, 8),
+        padding: EdgeInsets.fromLTRB(S.of(18), S.of(14), S.of(18), S.s8),
         child: Text(text.toUpperCase(),
             style: sans(11, spacing: 0.9, color: AppColors.fg4)),
       );
@@ -140,12 +140,12 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
     final sid = t.sessionId;
     return Material(
       color: Colors.transparent,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(R.md),
       child: InkWell(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(R.md),
         onTap: sid == null ? null : () => widget.onOpenSession(sid, t.title),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s8),
           child: Row(children: [
             Container(
               width: 8,
@@ -155,7 +155,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                 color: done ? AppColors.ok : AppColors.accent,
               ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: S.s12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -167,7 +167,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                           color: done ? AppColors.fg3 : AppColors.fg1)),
                   if (_note(t).line case final line?)
                     Padding(
-                      padding: const EdgeInsets.only(top: 2),
+                      padding: EdgeInsets.only(top: S.s2),
                       child: Text(line,
                           key: ValueKey('note-${t.id}'),
                           maxLines: 1,
@@ -180,7 +180,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                 ],
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: S.s8),
             Text(relativeTime(t.updatedAt),
                 style: sans(12, color: AppColors.fg4, tabular: true)),
           ]),
@@ -196,26 +196,26 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
   Widget _seg(String text, bool on, VoidCallback onTap,
       {VoidCallback? onClose}) {
     return Padding(
-      padding: const EdgeInsets.only(right: 2),
+      padding: EdgeInsets.only(right: S.s2),
       child: Material(
         color: on ? AppColors.surface2 : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(R.md),
         child: InkWell(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(R.md),
           onTap: onTap,
           child: Padding(
-            padding: EdgeInsets.fromLTRB(10, 6, onClose != null ? 6 : 10, 6),
+            padding: EdgeInsets.fromLTRB(S.of(10), S.s6, onClose != null ? S.s6 : S.of(10), S.s6),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Text(text,
                   style: sans(13,
                       color: on ? AppColors.fg1 : AppColors.fg3)),
               if (onClose != null) ...[
-                const SizedBox(width: 5),
+                SizedBox(width: S.of(5)),
                 GestureDetector(
                   onTap: onClose,
                   behavior: HitTestBehavior.opaque,
                   child: Padding(
-                    padding: const EdgeInsets.all(2),
+                    padding: EdgeInsets.all(S.s2),
                     child: AppIcon('x', size: 11, color: AppColors.fg3),
                   ),
                 ),
@@ -231,7 +231,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
     if (widget.readouts.isEmpty) {
       return Container(
         height: 46,
-        padding: const EdgeInsets.symmetric(horizontal: 18),
+        padding: EdgeInsets.symmetric(horizontal: S.of(18)),
         alignment: Alignment.centerLeft,
         child: Text('Board', style: sans(13, color: AppColors.fg3)),
       );
@@ -239,7 +239,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
     final reading = _readout;
     return Container(
       height: 46,
-      padding: const EdgeInsets.fromLTRB(10, 2, 8, 2),
+      padding: EdgeInsets.fromLTRB(S.of(10), S.s2, S.s8, S.s2),
       child: Row(children: [
         Expanded(
           child: SingleChildScrollView(
@@ -297,18 +297,18 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
       child: !_loaded
           ? Center(child: DelayedSpinner(size: 16))
           : ListView(
-              padding: const EdgeInsets.only(bottom: 24),
+              padding: EdgeInsets.only(bottom: S.s24),
               children: [
                 _headerBar(),
                 if (doing.isEmpty && _jobs.isEmpty && done.isEmpty && _goals.isEmpty)
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 120, 24, 0),
+                    padding: EdgeInsets.fromLTRB(S.s24, 120, S.s24, 0),
                     child: Column(children: [
                       const DottedMochi(width: 120),
-                      const SizedBox(height: 18),
+                      SizedBox(height: S.of(18)),
                       Text('All quiet',
                           style: sans(15, color: AppColors.fg1)),
-                      const SizedBox(height: 6),
+                      SizedBox(height: S.s6),
                       Text(
                           'Work your agents pick up, scheduled runs and '
                           'what finished today land here.',
@@ -320,7 +320,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                 if (_goals.isNotEmpty) ...[
                   _label('Goals'),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    padding: EdgeInsets.symmetric(horizontal: S.of(10)),
                     child: Column(children: [
                       for (final g in _goals.take(6))
                         GoalRow(
@@ -334,7 +334,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                 if (doing.isNotEmpty) ...[
                   _label('Working now'),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    padding: EdgeInsets.symmetric(horizontal: S.of(10)),
                     child: Column(children: [
                       for (final t in doing) _taskRow(t, done: false),
                     ]),
@@ -344,7 +344,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                   _label('Up next'),
                   for (final j in _jobs.take(6))
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 6, 18, 6),
+                      padding: EdgeInsets.fromLTRB(S.of(18), S.s6, S.of(18), S.s6),
                       child: Row(children: [
                         SizedBox(
                           width: 48,
@@ -363,7 +363,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                 if (done.isNotEmpty) ...[
                   _label('Done today'),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    padding: EdgeInsets.symmetric(horizontal: S.of(10)),
                     child: Column(children: [
                       for (final t in done.take(8)) _taskRow(t, done: true),
                     ]),

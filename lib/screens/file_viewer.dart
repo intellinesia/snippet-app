@@ -106,14 +106,14 @@ class _FileToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         height: 40,
-        padding: const EdgeInsets.only(left: 12, right: 8),
+        padding: EdgeInsets.only(left: S.s12, right: S.s8),
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: AppColors.border))),
         child: Row(children: [
           ...leading,
           const Spacer(),
           if (meta != null) Text(meta!, style: mono(10, color: AppColors.fg3)),
-          if (meta != null && actions.isNotEmpty) const SizedBox(width: 8),
+          if (meta != null && actions.isNotEmpty) SizedBox(width: S.s8),
           ...actions,
         ]),
       );
@@ -221,13 +221,13 @@ class _FileViewerState extends State<FileViewer> {
 
   Widget _modeTab(String label, bool on, VoidCallback onTap) => InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(R.md),
         child: AnimatedContainer(
           duration: Motion.quick,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.s4),
           decoration: BoxDecoration(
             color: on ? AppColors.surface2 : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(R.md),
           ),
           child: Text(label,
               style: sans(13, color: on ? AppColors.fg1 : AppColors.fg3)),
@@ -237,7 +237,7 @@ class _FileViewerState extends State<FileViewer> {
   Widget _markdownView(String content) => SelectionArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
-              kMobile ? M.gutter : 28, 20, kMobile ? M.gutter : 28, 48),
+              kMobile ? M.gutter : S.of(28), S.s20, kMobile ? M.gutter : S.of(28), S.of(48)),
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 760),
@@ -393,7 +393,7 @@ class _FileViewerState extends State<FileViewer> {
                 maxScale: 6,
                 child: Center(
                   child: Padding(
-                    padding: const EdgeInsets.all(S.s16),
+                    padding: EdgeInsets.all(S.s16),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(R.md),
                       child: Image.network(
@@ -468,7 +468,7 @@ class _FileViewerState extends State<FileViewer> {
                 if (_isMarkdown) ...[
                   _modeTab('Preview', !_source,
                       () => setState(() => _source = false)),
-                  const SizedBox(width: 4),
+                  SizedBox(width: S.s4),
                   _modeTab(
                       'Source', _source, () => setState(() => _source = true)),
                 ],
@@ -477,7 +477,7 @@ class _FileViewerState extends State<FileViewer> {
               actions: [
                 if (_inline && (_dirty || _saving))
                   Padding(
-                    padding: const EdgeInsets.only(left: 8),
+                    padding: EdgeInsets.only(left: S.s8),
                     child: Btn(_saving ? 'Saving…' : 'Save',
                         small: true,
                         disabled: _saving,
@@ -715,7 +715,7 @@ class _AudioViewState extends State<_AudioView> {
         : (_position.inMilliseconds / total).clamp(0.0, 1.0).toDouble();
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(S.s24),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(
             width: 76,
@@ -726,14 +726,14 @@ class _AudioViewState extends State<_AudioView> {
             ),
             child: AppIcon('music', size: 30, color: AppColors.fg3),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: S.s16),
           Text(widget.name,
               maxLines: 2,
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
               style: sans(kMobile ? 14 : 13,
                   weight: W.label, color: AppColors.fg1)),
-          const SizedBox(height: 18),
+          SizedBox(height: S.of(18)),
           // Scrubber. Seek is only offered once a duration is known, so an
           // unseekable source cannot produce a dead control.
           SliderTheme(
@@ -760,7 +760,7 @@ class _AudioViewState extends State<_AudioView> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
+            padding: EdgeInsets.symmetric(horizontal: S.s2),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -769,7 +769,7 @@ class _AudioViewState extends State<_AudioView> {
               ],
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: S.of(10)),
           if (!_ready && _error == null)
             // Not `const`: `AppColors.fg3` is a theme GETTER, not a compile-time
             // constant, so it cannot appear in a const expression.
@@ -901,18 +901,18 @@ Future<void> _downloadDoneSheetFor(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(name, style: sans(13, height: 1.4, color: AppColors.fg2)),
-          const SizedBox(height: 16),
+          SizedBox(height: S.s16),
           Btn('Open',
               icon: 'file',
               full: true,
               onTap: () => Navigator.pop(context, 'open')),
-          const SizedBox(height: 8),
+          SizedBox(height: S.s8),
           Btn('Share',
               icon: 'upload',
               variant: BtnVariant.secondary,
               full: true,
               onTap: () => Navigator.pop(context, 'share')),
-          const SizedBox(height: 4),
+          SizedBox(height: S.s4),
         ],
       ));
   if (action == 'open') {
