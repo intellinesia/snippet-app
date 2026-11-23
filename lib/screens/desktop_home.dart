@@ -85,7 +85,7 @@ class _DesktopHomeState extends State<DesktopHome> {
     // Tidy what id removal leaves behind: empty brackets, dangling joiners.
     s = s.replaceAll(RegExp(r'[\(\[]\s*[\)\]]'), '');
     s = s.replaceAll(RegExp(r'\b(?:of|for|to|from|on|in|about|against)\s*(?=[.,;:]|$)'), '');
-    s = s.replaceAll(RegExp(r'\s+([.,;:])'), r'\1');
+    s = s.replaceAllMapped(RegExp(r'\s+([.,;:])'), (m) => m[1]!);
     s = s.replaceAll(RegExp(r'^[\s.,;:]+'), '');
     return s.replaceAll(RegExp(r'\s+'), ' ').trim();
   }

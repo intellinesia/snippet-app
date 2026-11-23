@@ -133,13 +133,14 @@ class GlassTopFrame extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    // Eased fade: tinted at the status bar, gone at the lower edge.
+                    // Eased fade: tinted at the status bar, gone at the lower edge. The tint
+                    // stays strong because the blur shader is not drawn on every renderer.
                     stops: const [0, 0.45, 0.74, 0.9, 1],
                     colors: [
-                      bg.withValues(alpha: on ? 0.4 : 0.98),
-                      bg.withValues(alpha: on ? 0.3 : 0.94),
-                      bg.withValues(alpha: on ? 0.16 : 0.8),
-                      bg.withValues(alpha: on ? 0.04 : 0.35),
+                      bg.withValues(alpha: on ? 0.98 : 0.98),
+                      bg.withValues(alpha: on ? 0.96 : 0.94),
+                      bg.withValues(alpha: on ? 0.85 : 0.8),
+                      bg.withValues(alpha: on ? 0.35 : 0.35),
                       bg.withValues(alpha: 0),
                     ],
                   ),

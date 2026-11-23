@@ -693,7 +693,11 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                 at: latest(e.at, live),
                 pinnedAt: e.pinnedAt,
                 i: ranked.length,
-                nest: nestFor(openAgentTab, item.id, () => liveOf([item.id])),
+                nest: c != null && c.state != CrewState.standingBy
+                    ? (liveOf([item.id]).isEmpty
+                        ? null
+                        : nested(liveOf([item.id])))
+                    : nestFor(openAgentTab, item.id, () => liveOf([item.id])),
               ));
             } else {
               // Groups sit in the same list, ranked by their last event.

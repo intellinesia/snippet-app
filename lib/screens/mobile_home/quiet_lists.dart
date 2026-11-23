@@ -1,3 +1,4 @@
+import '../../chat/agent_cluster.dart';
 import 'package:flutter/material.dart';
 
 import '../../api.dart';
@@ -211,10 +212,10 @@ class _QuietAgentsScreenState extends State<QuietAgentsScreen> {
             filled: true,
             fillColor: AppColors.surface2,
             hintText: 'Search agents, groups',
-            hintStyle: sans(15, color: AppColors.fg4),
+            hintStyle: sans(15, color: AppColors.fg3),
             prefixIcon: Padding(
                 padding: EdgeInsets.symmetric(horizontal: S.s12),
-                child: AppIcon('search', size: 18, color: AppColors.fg4)),
+                child: AppIcon('search', size: 18, color: AppColors.fg3)),
             prefixIconConstraints:
                 const BoxConstraints(minWidth: 0, minHeight: 0),
             contentPadding: EdgeInsets.symmetric(vertical: 12),
@@ -237,7 +238,9 @@ class _QuietAgentsScreenState extends State<QuietAgentsScreen> {
           QuietRow(
             title: g.title.isEmpty ? 'Group' : g.title,
             sub: '${g.members.length} members',
-            leading: AppIcon('users', size: 22, color: AppColors.fg2),
+            leading: g.agentIds.isEmpty
+                ? AppIcon('users', size: 22, color: AppColors.fg2)
+                : AgentCluster(ids: g.agentIds, size: 28),
             onTap: () => openGroupThread(context, client: widget.client, group: g),
           ),
       ],

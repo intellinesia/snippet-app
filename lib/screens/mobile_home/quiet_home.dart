@@ -1,3 +1,4 @@
+import '../../chat/agent_cluster.dart';
 import 'package:flutter/material.dart';
 
 import '../../crew_status.dart';
@@ -111,7 +112,8 @@ class QuietHomeScreen extends StatelessWidget {
     this.onProfile,
     this.onDecide,
     this.offline,
-    this.groupCount = 0,
+    this.groups = const [],
+    this.onOpenGroup,
   });
 
   final Widget? offline;
@@ -126,7 +128,9 @@ class QuietHomeScreen extends StatelessWidget {
   final VoidCallback? onOpenLead;
   final VoidCallback? onAllAgents;
   final void Function(CoordinationAgent a)? onProfile;
-  final int groupCount;
+  final List<GroupSummary> groups;
+  final void Function(GroupSummary g)? onOpenGroup;
+  int get groupCount => groups.length;
   final Future<bool> Function(SessionInfo s, bool approve)? onDecide;
 
   @override
@@ -147,7 +151,12 @@ class QuietHomeScreen extends StatelessWidget {
       for (final r in rows.working) (r.agent, r.state),
       for (final r in rows.asleep) (r.agent, r.state),
     ];
-    final quiet = asks.isEmpty && working.isEmpty;
+    final askers = {for (final r in rows.needs) r.agent.id};
+    final groupAsks = [
+      for (final g in groups)
+        if (g.agentIds.any(askers.contains)) g
+    ];
+    final quiet = asks.isEmpty && working.isEmpty && groupAsks.isEmpty;
     final dayStart = DateTime.now()
             .copyWith(hour: 0, minute: 0, second: 0, millisecond: 0)
             .millisecondsSinceEpoch ~/
@@ -178,10 +187,21 @@ class QuietHomeScreen extends StatelessWidget {
               onOpen: (a) => onOpenAgent?.call(a),
               onProfile: onProfile),
         if (asks.isNotEmpty) ...[
-          QuietSectionLabel('Needs you', count: asks.length),
+          QuietSectionLabel('Needs you', count: asks.length + groupAsks.length),
           for (final a in asks)
             _Ask(item: a, names: names, onOpen: onOpenSession, onDecide: onDecide),
         ],
+        if (groupAsks.isNotEmpty && asks.isEmpty) ...[
+          QuietSectionLabel('Needs you', count: groupAsks.length),
+        ],
+        for (final g in groupAsks)
+          QuietRow(
+            title: g.title.isEmpty ? 'Group' : g.title,
+            sub: 'Waiting on ${[for (final id in g.agentIds) if (askers.contains(id)) ((names[id] ?? '').trim().isEmpty ? id : names[id]!)].join(', ')}',
+            leading: AgentCluster(ids: g.agentIds, size: 28),
+            trailing: const QuietHand(size: 14),
+            onTap: onOpenGroup == null ? null : () => onOpenGroup!(g),
+          ),
         if (working.isNotEmpty) ...[
           QuietSectionLabel('Working', count: working.length),
           for (final s in working)
@@ -197,6 +217,16 @@ class QuietHomeScreen extends StatelessWidget {
         if (quiet) ...[
           const QuietSectionLabel('Start'),
           _StartGroup(onOpenLead: onOpenLead, onNew: onNew),
+        ],
+        if (groups.isNotEmpty) ...[
+          QuietSectionLabel('Groups', count: groups.length),
+          for (final g in groups)
+            QuietRow(
+              title: g.title.isEmpty ? 'Group' : g.title,
+              sub: '${g.members.length} members',
+              leading: AgentCluster(ids: g.agentIds, size: 28),
+              onTap: onOpenGroup == null ? null : () => onOpenGroup!(g),
+            ),
         ],
         if (finished > 0) ...[
           SizedBox(height: S.s8),

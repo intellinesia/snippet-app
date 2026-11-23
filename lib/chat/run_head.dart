@@ -159,13 +159,13 @@ class SentMeta extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Text(time, style: sans(11, color: AppColors.fg4)),
+        Text(time, style: sans(11, color: AppColors.fg3)),
         if (r != null || delivered) ...[
           const SizedBox(width: 4),
           Tooltip(
             message: r ?? 'Delivered',
             child: Icon(r != null ? PhIcons.checkCircle : PhIcons.check,
-                size: 13, color: r != null ? AppColors.accent : AppColors.fg4),
+                size: 13, color: r != null ? AppColors.accent : AppColors.fg3),
           ),
         ],
       ]),

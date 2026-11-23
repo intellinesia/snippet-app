@@ -1,3 +1,4 @@
+import 'group_messaging.dart' show openGroupThread;
 import 'phone_agent_page.dart';
 import 'agent_profile_panel.dart' show showAgentProfileSettings;
 import 'dart:async';
@@ -231,6 +232,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   }
 
   List<CoordinationAgent> _heroAgents = const [];
+  List<GroupSummary> _heroGroups = const [];
   DateTime? _heroAgentsAt;
 
   Future<void> _loadHeroAgents() async {
@@ -243,6 +245,10 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     try {
       final all = await client.coordinationAgents();
       if (mounted) setState(() => _heroAgents = all);
+    } catch (_) {}
+    try {
+      final g = await client.groups();
+      if (mounted) setState(() => _heroGroups = g);
     } catch (_) {}
   }
 
@@ -590,6 +596,9 @@ child: PhoneAgentPage(
           key: const ValueKey('quiet-home'),
           sessions: list,
           agents: _heroAgents,
+          groups: _heroGroups,
+          onOpenGroup: (g) =>
+              openGroupThread(context, client: client, group: g),
           onOpenSession: (s) => widget.onOpenSession(s.id, s.title, s.profile),
           onOpenSessions: () => widget.onMobileHome(MobileHome.chats),
           onSettings: () => widget.onMobileHome(MobileHome.settings),

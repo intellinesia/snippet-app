@@ -5,12 +5,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../mochi.dart';
 import '../theme.dart';
 import '../tool_activity.dart';
 import '../tool_sheet.dart' show ToolBatch;
 import '../widgets.dart';
 import '../tap_detector.dart';
+import '../transcript.dart' show RunSpinner;
 
 /// A run in flight: its steps so far and when it began.
 class DockRun {
@@ -175,17 +175,13 @@ class _ActivityDockState extends State<ActivityDock> {
         behavior: HitTestBehavior.opaque,
         onTap: () => widget.onOpen(null),
         child: Container(
-          height: 44,
-          padding: const EdgeInsets.fromLTRB(10, 0, 14, 0),
-          decoration: BoxDecoration(
-            color: AppColors.surface3,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: AppColors.border2),
-          ),
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.fromLTRB(0, 0, 4, 0),
           child: Row(children: [
-            // The agent's own mascot hops while it works, as in the transcript.
-            AgentMochi(widget.agentId,
-                size: 30, state: AgentCharacterState.working),
+            SizedBox(
+                width: 16,
+                height: 16,
+                child: RunSpinner(size: 14, color: AppColors.fg2)),
             const SizedBox(width: 10),
             Expanded(
               child: Text(title,

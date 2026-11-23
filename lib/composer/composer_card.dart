@@ -54,7 +54,7 @@ class ComposerCard extends StatelessWidget {
         hintText: hint,
         hintMaxLines: 1,
         hintStyle: (style ?? TS.body()).copyWith(
-            color: hintColor ?? AppColors.fg4,
+            color: hintColor ?? AppColors.fg3,
             overflow: TextOverflow.ellipsis),
       );
 
