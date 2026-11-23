@@ -10,7 +10,6 @@ import 'ambient_loop.dart';
 import 'chat/ledger_line.dart';
 import 'chat/signal_row.dart';
 import 'api.dart' show DaemonClient;
-import 'quiet.dart' show quietAmber;
 import 'crew_widgets.dart' show AgentProviderMark;
 import 'mochi.dart';
 import 'models.dart';
@@ -51,7 +50,7 @@ List<InlineSpan> workSpans(WorkSummary w, TextStyle base) {
     spans.add(TextSpan(
         text: ' $outcome',
         style:
-            base.copyWith(color: w.failed ? AppColors.danger : AppColors.ok)));
+            base.copyWith(color: w.failed ? AppColors.fg1 : AppColors.fg2, fontWeight: w.failed ? W.label : null)));
   }
   return spans;
 }
@@ -172,7 +171,7 @@ class WorkLine extends StatelessWidget {
     final live = steps.where((s) => s.running).toList();
     final isRunning = running && live.isNotEmpty;
     final style = sans(kMobile ? 14 : 13,
-        height: 1.3, color: AppColors.fg3, tabular: true);
+        height: 1.3, color: AppColors.fg2, tabular: true);
     // The lead truncates; the counts after it always stay in view.
     var lead = TextSpan(
         text: isRunning ? liveStepText(live.last) : '',
@@ -187,7 +186,8 @@ class WorkLine extends StatelessWidget {
       final note = _failureNote(steps);
       if (note != null) {
         spans.add(TextSpan(
-            text: ' · $note', style: style.copyWith(color: quietAmber)));
+            text: ' · $note',
+            style: style.copyWith(color: AppColors.fg1, fontWeight: W.label)));
       }
     }
     Widget rule() => Expanded(
@@ -201,7 +201,7 @@ class WorkLine extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: SizedBox(
-        height: kMobile ? 40 : 32,
+        height: kMobile ? 48 : 32,
         child: LayoutBuilder(
           // The label is sized first so the rules only take what it leaves.
           builder: (context, c) => Row(children: [
@@ -222,7 +222,7 @@ class WorkLine extends StatelessWidget {
             ),
             if (isRunning) ...[
               const SizedBox(width: 6),
-              RunSpinner(size: 12, color: AppColors.accent),
+              RunSpinner(size: 12, color: AppColors.fg2),
             ],
             if (open) ...[const SizedBox(width: 12), rule()],
           ]),
@@ -467,15 +467,15 @@ enum _Object { text, path, code }
 /// Trailing facts of a step: lines, hits, +/− counts, a result, the time.
 List<Widget> _rowMeta(ToolStep step) {
   final base = kMobile
-      ? sans(13, color: AppColors.fg4, tabular: true)
-      : mono(11.5, color: AppColors.fg4);
+      ? sans(13, color: AppColors.fg2, tabular: true)
+      : mono(11.5, color: AppColors.fg2);
   final chip = stepChip(step);
   final out = <Widget>[];
   if (chip != null && (chip.added > 0 || chip.removed > 0)) {
     out.add(Text.rich(TextSpan(style: base, children: [
-      TextSpan(text: '+${chip.added}', style: TextStyle(color: AppColors.ok)),
+      TextSpan(text: '+${chip.added}', style: TextStyle(color: AppColors.fg2)),
       TextSpan(
-          text: ' −${chip.removed}', style: TextStyle(color: AppColors.danger)),
+          text: ' −${chip.removed}', style: TextStyle(color: AppColors.fg2)),
     ])));
   } else if (chip != null) {
     final danger = chip.tone == StepChipTone.danger;
@@ -483,9 +483,9 @@ List<Widget> _rowMeta(ToolStep step) {
         maxLines: 1,
         style: base.copyWith(
             color: switch (chip.tone) {
-          StepChipTone.ok => AppColors.ok,
-          StepChipTone.danger => AppColors.danger,
-          StepChipTone.neutral => AppColors.fg4,
+          StepChipTone.ok => AppColors.fg2,
+          StepChipTone.danger => AppColors.fg1,
+          StepChipTone.neutral => AppColors.fg2,
         })));
   } else if (!step.running && toolBaseName(step.tool) == 'search_content') {
     final hits = step.data?['matches'] ?? step.data?['results'];
@@ -583,7 +583,7 @@ class _DenseToolRowState extends State<DenseToolRow> {
                 text: verb,
                 style: TextStyle(
                     color: danger
-                        ? AppColors.danger
+                        ? AppColors.fg1
                         : kMobile || live
                             ? AppColors.fg1
                             : AppColors.fg3)),
@@ -695,12 +695,12 @@ class _TerminalBlockState extends State<TerminalBlock> {
               TextSpan(
                   text: '${i == 0 ? '' : '\n'}${outShown[i]}',
                   style: errorLineMarker.hasMatch(outShown[i])
-                      ? TextStyle(color: AppColors.danger)
+                      ? TextStyle(color: AppColors.fg1, fontWeight: W.label)
                       : null),
             for (var i = 0; i < errShown.length; i++)
               TextSpan(
                   text: '${outShown.isEmpty && i == 0 ? '' : '\n'}${errShown[i]}',
-                  style: TextStyle(color: AppColors.danger)),
+                  style: TextStyle(color: AppColors.fg1, fontWeight: W.label)),
           ]));
     final exit = step.exitCode;
     final (String, bool)? badge = step.running
@@ -723,7 +723,7 @@ class _TerminalBlockState extends State<TerminalBlock> {
                     if (i > 0) const TextSpan(text: '\n'),
                     TextSpan(
                         text: i == 0 ? r'$ ' : '  ',
-                        style: TextStyle(color: AppColors.fg4)),
+                        style: TextStyle(color: AppColors.fg3)),
                     TextSpan(
                         text: cmdLines[i],
                         style: TextStyle(color: AppColors.fg2)),
@@ -804,13 +804,13 @@ class _TerminalBlockState extends State<TerminalBlock> {
                         const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
                     decoration: BoxDecoration(
                       color: badge.$2
-                          ? AppColors.danger.withValues(alpha: 0.13)
+                          ? AppColors.surface3
                           : AppColors.surface3,
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(badge.$1,
                         style: sans(11,
-                            color: badge.$2 ? AppColors.danger : AppColors.fg3,
+                            color: badge.$2 ? AppColors.fg1 : AppColors.fg2,
                             tabular: true)),
                   ),
               ]),
@@ -1340,7 +1340,7 @@ class SystemRow extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.only(top: S.s2),
               child: Center(
-                  child: AppIcon('activity', size: 14, color: AppColors.fg4)),
+                  child: AppIcon('activity', size: 14, color: AppColors.fg3)),
             )),
         SizedBox(width: S.s8),
         Expanded(
