@@ -216,14 +216,14 @@ class _DenseToolRowState extends State<DenseToolRow> {
               SizedBox(
                   width: 16,
                   child: _Node(_nodeFor(step), icon: toolIcon(step.tool))),
-              const SizedBox(width: S.s8),
+              SizedBox(width: S.s8),
               Flexible(child: _sentence(verb, object)),
               if (added > 0) ...[
-                const SizedBox(width: S.s8),
+                SizedBox(width: S.s8),
                 Text('+$added', style: sans(_objectSize, color: AppColors.ok)),
               ],
               if (removed > 0) ...[
-                const SizedBox(width: S.s6),
+                SizedBox(width: S.s6),
                 Text('−$removed',
                     style: sans(_objectSize, color: AppColors.danger)),
               ],
@@ -236,7 +236,7 @@ class _DenseToolRowState extends State<DenseToolRow> {
           alignment: Alignment.topCenter,
           child: open
               ? Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 2, 0, 8),
+                  padding: EdgeInsets.fromLTRB(S.s24, S.s2, 0, S.s8),
                   child: _StepDetail(step: step),
                 )
               : const SizedBox(width: double.infinity),
@@ -289,10 +289,10 @@ class _StepDetailState extends State<_StepDetail> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+          padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.of(10)),
           decoration: BoxDecoration(
             color: AppColors.surface2,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(R.card),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -318,7 +318,7 @@ class _StepDetailState extends State<_StepDetail> {
                   behavior: HitTestBehavior.opaque,
                   onTap: () => setState(() => _full = !_full),
                   child: Padding(
-                    padding: const EdgeInsets.only(top: S.s8),
+                    padding: EdgeInsets.only(top: S.s8),
                     child: Text(_full ? 'Show less' : more,
                         style: sans(kMobile ? 13 : 13,
                             weight: W.label, color: AppColors.fg3)),
@@ -329,7 +329,7 @@ class _StepDetailState extends State<_StepDetail> {
         ),
         if (meta.isNotEmpty || copy.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: S.s6, left: 2),
+            padding: EdgeInsets.only(top: S.s6, left: S.s2),
             child: Row(children: [
               if (meta.isNotEmpty) Text(meta.join(' · '), style: metaStyle),
               if (meta.isNotEmpty && copy.isNotEmpty)
@@ -399,7 +399,7 @@ class _ToolRunState extends State<ToolRun> {
             ? _NodeState.failed
             : _NodeState.neutral;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: S.s4),
+      padding: EdgeInsets.symmetric(vertical: S.s4),
       child: Stack(children: [
         Positioned(
           left: 7.5,
@@ -418,7 +418,7 @@ class _ToolRunState extends State<ToolRun> {
                 child: Row(children: [
                   SizedBox(
                       width: 16, child: _Node(summaryNode, icon: 'layers')),
-                  const SizedBox(width: S.s8),
+                  SizedBox(width: S.s8),
                   Flexible(
                     child: Text(activitySummary(steps),
                         maxLines: 1,
@@ -427,11 +427,11 @@ class _ToolRunState extends State<ToolRun> {
                             height: 1.4, color: AppColors.fg2)),
                   ),
                   if (failures > 0) ...[
-                    const SizedBox(width: S.s8),
+                    SizedBox(width: S.s8),
                     Text('$failures failed',
                         style: sans(_objectSize, color: AppColors.danger)),
                   ],
-                  const SizedBox(width: S.s6),
+                  SizedBox(width: S.s6),
                   AnimatedRotation(
                     turns: open ? 0.25 : 0,
                     duration: Motion.fast,
@@ -491,7 +491,7 @@ class LaneWho extends StatelessWidget {
           AgentProviderMark(
               client: c, profile: model, size: size, orActive: true),
         if (name.isNotEmpty) ...[
-          const SizedBox(width: S.s4),
+          SizedBox(width: S.s4),
           Flexible(
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: maxTextWidth),
@@ -600,7 +600,7 @@ class _LaneNoticeState extends State<LaneNotice> {
                       ? color
                       : AppColors.fg4,
               size: 14),
-      const SizedBox(width: S.s6),
+      SizedBox(width: S.s6),
       Expanded(
         child: Text.rich(
           TextSpan(text: title.isEmpty ? 'Lane' : title),
@@ -611,7 +611,7 @@ class _LaneNoticeState extends State<LaneNotice> {
         ),
       ),
       if (agent.isNotEmpty || profile.isNotEmpty) ...[
-        const SizedBox(width: S.s8),
+        SizedBox(width: S.s8),
         Flexible(
           flex: 0,
           child: LaneWho(
@@ -623,7 +623,7 @@ class _LaneNoticeState extends State<LaneNotice> {
         ),
       ],
       if (status != null && status.isNotEmpty) ...[
-        const SizedBox(width: S.s8),
+        SizedBox(width: S.s8),
         running
             ? Text(status, style: sans(small - 1, color: AppColors.fg3))
             : CardStatus(status, tone: tone),
@@ -642,18 +642,18 @@ class _LaneNoticeState extends State<LaneNotice> {
           body: summary, preview: MarkdownPreview.plain(summary));
     }
     final pad = kMobile
-        ? const EdgeInsets.fromLTRB(12, 8, 12, 9)
-        : const EdgeInsets.fromLTRB(12, 6, 12, 7);
+        ? EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.of(9))
+        : EdgeInsets.fromLTRB(S.s12, S.s6, S.s12, S.of(7));
     return Semantics(
       button: true,
       label:
           '$title${agent.isEmpty ? '' : ', $agent'}${profile.isEmpty ? '' : ', on $profile'}, ${(status ?? '').toLowerCase()}. Open the lane.',
       onTap: widget.onOpen,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
+        padding: EdgeInsets.symmetric(vertical: S.of(3)),
         child: Material(
           color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(R.card),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: widget.onOpen,
@@ -666,7 +666,7 @@ class _LaneNoticeState extends State<LaneNotice> {
                   header,
                   if (body != null)
                     Padding(
-                      padding: const EdgeInsets.only(left: 20, top: S.s2),
+                      padding: EdgeInsets.only(left: S.s20, top: S.s2),
                       child: body,
                     ),
                 ],
@@ -774,7 +774,7 @@ class SystemRow extends StatelessWidget {
     if (isGoal) {
       if (step == 'goal_set') {
         return Padding(
-          padding: const EdgeInsets.only(top: 4, bottom: 20),
+          padding: EdgeInsets.only(top: S.s4, bottom: S.s20),
           child: Bubble(mine: true, text: reasoning),
         );
       }
@@ -791,12 +791,12 @@ class SystemRow extends StatelessWidget {
       }
       final detail = reasoning.trim();
       return Padding(
-        padding: const EdgeInsets.only(top: S.s4, bottom: S.s16),
+        padding: EdgeInsets.only(top: S.s4, bottom: S.s16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           _SystemDivider(label: label),
           if (detail.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(top: S.s8),
+              padding: EdgeInsets.only(top: S.s8),
               child: MarkdownBody(
                 data: detail,
                 selectable: true,
@@ -837,28 +837,28 @@ class SystemRow extends StatelessWidget {
         );
       case 'interrupted':
         return Padding(
-          padding: const EdgeInsets.symmetric(vertical: S.s6),
+          padding: EdgeInsets.symmetric(vertical: S.s6),
           child: Row(children: [
             SizedBox(
                 width: 16,
                 child: Center(
                     child: AppIcon('stop', size: 14, color: AppColors.danger))),
-            const SizedBox(width: S.s8),
+            SizedBox(width: S.s8),
             Text('You stopped the run', style: TS.label(AppColors.danger)),
           ]),
         );
     }
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: S.s4),
+      padding: EdgeInsets.symmetric(vertical: S.s4),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         SizedBox(
             width: 16,
             child: Padding(
-              padding: const EdgeInsets.only(top: 2),
+              padding: EdgeInsets.only(top: S.s2),
               child: Center(
                   child: AppIcon('activity', size: 14, color: AppColors.fg4)),
             )),
-        const SizedBox(width: S.s8),
+        SizedBox(width: S.s8),
         Expanded(
           child: Text(reasoning,
               maxLines: 3, overflow: TextOverflow.ellipsis, style: TS.meta()),
@@ -885,7 +885,7 @@ class _WatchLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasPath = path != null && path!.isNotEmpty;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: S.s4),
+      padding: EdgeInsets.symmetric(vertical: S.s4),
       child: Row(children: [
         Flexible(
           child: Text.rich(
@@ -902,7 +902,7 @@ class _WatchLine extends StatelessWidget {
           ),
         ),
         if (hasPath && !muted) ...[
-          const SizedBox(width: S.s8),
+          SizedBox(width: S.s8),
           Flexible(
             child: Text(path!,
                 maxLines: 1,
@@ -966,7 +966,7 @@ class _WatchFiredState extends State<_WatchFired> {
           behavior: HitTestBehavior.opaque,
           onTap: canExpand ? () => setState(() => _open = !_open) : null,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: S.s4),
+            padding: EdgeInsets.symmetric(vertical: S.s4),
             child: Row(children: [
               Expanded(
                 child: Text.rich(
@@ -979,7 +979,7 @@ class _WatchFiredState extends State<_WatchFired> {
                 ),
               ),
               if (canExpand) ...[
-                const SizedBox(width: S.s6),
+                SizedBox(width: S.s6),
                 AppIcon(_open ? 'chevron-down' : 'chevron-right',
                     size: 12, color: AppColors.fg4),
               ],
@@ -988,13 +988,13 @@ class _WatchFiredState extends State<_WatchFired> {
         ),
         if (_open && canExpand)
           Padding(
-            padding: const EdgeInsets.fromLTRB(0, S.s2, 0, S.s8),
+            padding: EdgeInsets.fromLTRB(0, S.s2, 0, S.s8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (widget.path.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: S.s4),
+                    padding: EdgeInsets.only(bottom: S.s4),
                     child: Text(widget.path, style: TS.meta(AppColors.fg4)),
                   ),
                 ConstrainedBox(
@@ -1040,22 +1040,22 @@ class AgentEventRow extends StatelessWidget {
     Theme.of(context);
     final color = accent ? AppColors.accent : AppColors.fg3;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+      padding: EdgeInsets.symmetric(vertical: S.s6, horizontal: S.s2),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 1),
+            padding: EdgeInsets.only(top: S.of(1)),
             child: AppIcon(icon, size: 13, color: color),
           ),
-          const SizedBox(width: 9),
+          SizedBox(width: S.of(9)),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label, style: sans(12, weight: W.label, color: color)),
                 if (detail.trim().isNotEmpty) ...[
-                  const SizedBox(height: 2),
+                  SizedBox(height: S.s2),
                   Text(detail,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -1080,11 +1080,11 @@ class _SystemDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: S.s12),
+      padding: EdgeInsets.symmetric(vertical: S.s12),
       child: Row(children: [
         Expanded(child: Container(height: 1, color: AppColors.line)),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: S.s12),
+          padding: EdgeInsets.symmetric(horizontal: S.s12),
           child: Text(label[0].toUpperCase() + label.substring(1),
               style: TS.meta(), maxLines: 1, overflow: TextOverflow.ellipsis),
         ),

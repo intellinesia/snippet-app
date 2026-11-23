@@ -606,14 +606,14 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       children: [
         ...tools,
         if (_activeTab?.readout?.agent != null) ...[
-          if (tools.isNotEmpty) const SizedBox(width: 4),
+          if (tools.isNotEmpty) SizedBox(width: S.s4),
           Tooltip(
             message: _panelHidden ? 'Show panel' : 'Hide panel',
             child: Material(
               color: _panelHidden ? Colors.transparent : AppColors.surface2,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(R.md),
               child: InkWell(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(R.md),
                 onTap: _togglePanel,
                 child: SizedBox.square(
                   dimension: 30,
@@ -832,17 +832,17 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     return SizedBox(
       height: 44,
       child: Row(children: [
-        if (kMacOS) const SizedBox(width: 78) else const SizedBox(width: 14),
+        if (kMacOS) const SizedBox(width: 78) else SizedBox(width: S.of(14)),
         const Spacer(),
         _TbBtn(
             icon: 'sidebar',
             tooltip: kMacOS ? 'Hide sidebar (⌘B)' : 'Hide sidebar (Ctrl+B)',
             onTap: _toggleSidebar),
-        const SizedBox(width: 6),
+        SizedBox(width: S.s6),
         _TbBtn(icon: 'list', tooltip: 'Tasks', onTap: _openTasksTab),
-        const SizedBox(width: 6),
+        SizedBox(width: S.s6),
         _TbBtn(icon: 'square-pen', tooltip: 'New session', onTap: _newSessionFlow),
-        const SizedBox(width: 10),
+        SizedBox(width: S.of(10)),
       ]),
     );
   }
@@ -850,7 +850,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   Widget _sidebarFooter() {
     final healthy = _active == null ? null : _health[_active!.url];
     return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+      padding: EdgeInsets.fromLTRB(S.of(10), S.s8, S.of(10), S.s8),
       child: Row(children: [
         Expanded(
           child: HoverSurface(
@@ -860,7 +860,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             onTap: _instances.isEmpty ? _addInstanceFlow : _openTopMachines,
             child: Container(
               height: 28,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              padding: EdgeInsets.symmetric(horizontal: S.of(10)),
               child: Row(children: [
                 SizedBox(
                   width: 16,
@@ -882,7 +882,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
                     ),
                   ]),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 Expanded(
                   child: Text(
                       _active == null
@@ -898,7 +898,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             ),
           ),
         ),
-        const SizedBox(width: 6),
+        SizedBox(width: S.s6),
         if (_client != null) ...[
           ListenableBuilder(
             listenable: AmbientController.instance,
@@ -909,7 +909,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
               ),
             ),
           ),
-          const SizedBox(width: 6),
+          SizedBox(width: S.s6),
         ],
         if (_client != null) ...[
           Builder(
@@ -918,7 +918,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
                 tooltip: 'Usage',
                 onTap: () => showUsagePopover(ctx, _client!)),
           ),
-          const SizedBox(width: 2),
+          SizedBox(width: S.s2),
         ],
         _TbBtn(
             icon: 'settings',
@@ -1007,7 +1007,7 @@ class _TbBtnState extends State<_TbBtn> {
             height: 28,
             decoration: BoxDecoration(
               color: _hover ? AppColors.surface2 : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(R.md),
             ),
             child: Center(
               child: AppIcon(widget.icon,
@@ -1033,7 +1033,7 @@ class _ListeningPill extends StatelessWidget {
         width: 2,
         height: h,
         decoration: BoxDecoration(
-            color: AppColors.ok, borderRadius: BorderRadius.circular(1)));
+            color: AppColors.ok, borderRadius: BorderRadius.circular(R.of(1))));
     return Tooltip(
       message: on ? 'Ambient voice is listening' : 'Ambient listening is off',
       child: HoverSurface(
@@ -1044,10 +1044,10 @@ class _ListeningPill extends StatelessWidget {
         onTap: onTap,
         child: Container(
           height: 26,
-          padding: const EdgeInsets.symmetric(horizontal: 9),
+          padding: EdgeInsets.symmetric(horizontal: S.of(9)),
           decoration: BoxDecoration(
             color: on ? AppColors.ok.withValues(alpha: 0.10) : null,
-            borderRadius: BorderRadius.circular(13),
+            borderRadius: BorderRadius.circular(R.of(13)),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             if (on)
@@ -1055,17 +1055,17 @@ class _ListeningPill extends StatelessWidget {
                 height: 12,
                 child: Row(children: [
                   bar(5),
-                  const SizedBox(width: 2),
+                  SizedBox(width: S.s2),
                   bar(11),
-                  const SizedBox(width: 2),
+                  SizedBox(width: S.s2),
                   bar(7),
-                  const SizedBox(width: 2),
+                  SizedBox(width: S.s2),
                   bar(9),
                 ]),
               )
             else
               AppIcon('mic', size: 13, color: AppColors.fg3),
-            const SizedBox(width: 6),
+            SizedBox(width: S.s6),
             Text(on ? 'Listening' : 'Listen',
                 style: sans(12, color: on ? AppColors.ok : AppColors.fg3)),
           ]),

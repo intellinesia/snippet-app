@@ -12,7 +12,7 @@ OverlayEntry? _activeToast;
 Timer? _toastTimer;
 
 ShapeBorder get appMenuShape => RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(R.card),
       side: BorderSide(color: AppColors.glassBorder),
     );
 
@@ -50,11 +50,11 @@ PopupMenuItem<T> appMenuItem<T>({
     value: value,
     enabled: enabled,
     height: height,
-    padding: const EdgeInsets.symmetric(horizontal: 10),
+    padding: EdgeInsets.symmetric(horizontal: S.of(10)),
     child: Row(children: [
       if (icon != null) ...[
         AppIcon(icon, size: 14, color: danger ? AppColors.danger : AppColors.fg3),
-        const SizedBox(width: 9),
+        SizedBox(width: S.of(9)),
       ],
       Expanded(
         child: Text(label,
@@ -62,7 +62,7 @@ PopupMenuItem<T> appMenuItem<T>({
       ),
       if (detail != null) Text(detail, style: TS.meta()),
       if (selected) ...[
-        const SizedBox(width: S.s8),
+        SizedBox(width: S.s8),
         AppIcon('check', size: 14, color: AppColors.accent),
       ],
     ]),
@@ -105,9 +105,9 @@ PopupMenuItem<T> appMenuRow<T>({
     value: value,
     enabled: enabled,
     height: height ?? (description != null ? 44 : 34),
-    padding: const EdgeInsets.symmetric(horizontal: 2),
+    padding: EdgeInsets.symmetric(horizontal: S.s2),
     child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.of(5)),
       decoration: BoxDecoration(
         color: selected ? AppColors.surface2 : Colors.transparent,
         borderRadius: BorderRadius.circular(R.sm),
@@ -116,7 +116,7 @@ PopupMenuItem<T> appMenuRow<T>({
         leading ??
             AppIcon(icon,
                 size: 15, color: selected ? AppColors.accent : AppColors.fg3),
-        const SizedBox(width: 10),
+        SizedBox(width: S.of(10)),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -127,7 +127,7 @@ PopupMenuItem<T> appMenuRow<T>({
                   overflow: TextOverflow.ellipsis,
                   style: TS.ui(AppColors.fg1)),
               if (description != null) ...[
-                const SizedBox(height: 1),
+                SizedBox(height: S.of(1)),
                 Text(description,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -137,15 +137,15 @@ PopupMenuItem<T> appMenuRow<T>({
           ),
         ),
         if (trailingWidget != null) ...[
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           trailingWidget,
         ],
         if (trailing != null) ...[
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           Text(trailing, style: TS.caption()),
         ],
         if (selected) ...[
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           AppIcon('check', size: 14, color: AppColors.accent),
         ],
       ]),
@@ -161,7 +161,7 @@ PopupMenuItem<T> appMenuHeading<T>(String label) => PopupMenuItem<T>(
       // Desktop inset matches the item content edge (10px item padding).
       padding: kMobile
           ? EdgeInsets.zero
-          : const EdgeInsets.fromLTRB(10, 8, 10, 2),
+          : EdgeInsets.fromLTRB(S.of(10), S.s8, S.of(10), S.s2),
       child: _MenuHeading(label),
     );
 
@@ -213,11 +213,11 @@ class _SheetRowBody extends StatelessWidget {
                         ? AppColors.danger
                         : AppColors.fg3));
     return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: M.minTarget + 8),
+      constraints: BoxConstraints(minHeight: M.minTarget + 8),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 11),
+        padding: EdgeInsets.symmetric(vertical: S.of(11)),
         child: Row(children: [
-          if (lead != null) ...[lead, const SizedBox(width: 14)],
+          if (lead != null) ...[lead, SizedBox(width: S.of(14))],
           Expanded(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -232,7 +232,7 @@ class _SheetRowBody extends StatelessWidget {
                             ? AppColors.danger
                             : null)),
                 if (detail != null) ...[
-                  const SizedBox(height: 2),
+                  SizedBox(height: S.s2),
                   Text(detail!,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -242,11 +242,11 @@ class _SheetRowBody extends StatelessWidget {
             ),
           ),
           if (trailingWidget != null) ...[
-            const SizedBox(width: 8),
+            SizedBox(width: S.s8),
             trailingWidget!,
           ],
           if (trailing != null) ...[
-            const SizedBox(width: 8),
+            SizedBox(width: S.s8),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 140),
               child: Text(trailing!,
@@ -257,7 +257,7 @@ class _SheetRowBody extends StatelessWidget {
             ),
           ],
           if (selected) ...[
-            const SizedBox(width: 10),
+            SizedBox(width: S.of(10)),
             AppIcon('check', size: 18, color: AppColors.accent),
           ],
         ]),
@@ -276,8 +276,8 @@ class SheetGrabHandle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: compact
-            ? const EdgeInsets.only(top: S.s4)
-            : const EdgeInsets.only(top: S.s8, bottom: S.s8),
+            ? EdgeInsets.only(top: S.s4)
+            : EdgeInsets.only(top: S.s8, bottom: S.s8),
         child: Center(
           child: Container(
             width: 36,
@@ -301,7 +301,7 @@ class AppSheetSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fill = color ?? AppColors.raised;
-    final glass = kMobile && Glass.enabled;
+    final glass = kMobile && Glass.effectiveEnabled;
     final body = DecoratedBox(
       decoration: BoxDecoration(
         color: glass ? fill.withValues(alpha: 0.72) : fill,
@@ -446,7 +446,7 @@ Future<T?> showAppMenu<T>(
     elevation: 0,
     surfaceTintColor: Colors.transparent,
     shape: appMenuShape,
-    menuPadding: const EdgeInsets.symmetric(vertical: 4),
+    menuPadding: EdgeInsets.symmetric(vertical: S.s4),
     constraints: BoxConstraints(minWidth: effMin, maxWidth: effMax),
     popUpAnimationStyle: AnimationStyle(
         duration: Motion.fast,
@@ -466,7 +466,7 @@ List<Widget> _appMenuSheetEntries<T>(
   for (var i = 0; i < items.length; i++) {
     final entry = items[i];
     if (entry is PopupMenuDivider) {
-      out.add(const SizedBox(height: S.s8));
+      out.add(SizedBox(height: S.s8));
       prevRow = false;
       continue;
     }
@@ -483,7 +483,7 @@ List<Widget> _appMenuSheetEntries<T>(
       out.add(Padding(
         padding: heading
             ? EdgeInsets.only(top: out.isEmpty ? S.s4 : S.s16, bottom: S.s4)
-            : const EdgeInsets.symmetric(vertical: S.s4),
+            : EdgeInsets.symmetric(vertical: S.s4),
         child: child,
       ));
       prevRow = false;
@@ -584,7 +584,7 @@ class _ToastCardState extends State<_ToastCard>
             child: Container(
               constraints: BoxConstraints(maxWidth: kMobile ? 300 : 420),
               padding: EdgeInsets.symmetric(
-                  horizontal: kMobile ? 18 : 14, vertical: kMobile ? 12 : 10),
+                  horizontal: kMobile ? S.of(18) : S.of(14), vertical: kMobile ? S.s12 : S.of(10)),
               decoration: BoxDecoration(
                 color: AppColors.surface2,
                 border: Border.all(color: AppColors.lineStrong),
@@ -597,7 +597,7 @@ class _ToastCardState extends State<_ToastCard>
                   height: 8,
                   decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: S.of(10)),
                 Flexible(
                   child: Text(widget.message,
                       maxLines: 4,

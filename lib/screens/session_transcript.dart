@@ -356,7 +356,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
             addEvent(
                 key,
                 Padding(
-                    padding: const EdgeInsets.only(top: 4, bottom: 20),
+                    padding: EdgeInsets.only(top: S.s4, bottom: S.s20),
                     child: AmbientTurnCard(turn: ambient)));
             break;
           }
@@ -369,7 +369,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
               key,
               KeyedSubtree(
                 child: Padding(
-                    padding: const EdgeInsets.only(top: 4, bottom: 20),
+                    padding: EdgeInsets.only(top: S.s4, bottom: S.s20),
                     child:
                         Bubble(mine: true, text: text, client: widget.client)),
               ));
@@ -404,7 +404,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           addEvent(
               key,
               Padding(
-                  padding: const EdgeInsets.only(top: 4, bottom: 4),
+                  padding: EdgeInsets.only(top: S.s4, bottom: S.s4),
                   child: e['quiet'] == true
                       ? QuietAside(text: reply)
                       : Bubble(mine: false, text: reply)));
@@ -554,7 +554,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           addEvent(
               key,
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
+                padding: EdgeInsets.symmetric(vertical: S.s6),
                 child: PresentedFiles(
                   client: widget.client,
                   files: files,
@@ -571,7 +571,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           addEvent(
               key,
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
+                padding: EdgeInsets.symmetric(vertical: S.s6),
                 child: artifactVersion == newestArtifact[artifactId] &&
                       artifactShowsInline(artifactKind, display)
                   ? ArtifactInline(
@@ -861,16 +861,16 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
     final content = Column(children: [
       if (cps.isEmpty)
         Padding(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.all(S.s20),
             child: Text('No checkpoints yet.', style: TS.meta())),
       ...cps.map((c) => Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.only(bottom: S.s8),
             child: AppCard(
-              padding: const EdgeInsets.all(13),
+              padding: EdgeInsets.all(S.of(13)),
               onTap: () => _confirmRewind(c),
               child: Row(children: [
                 const IconTile('history', size: 36),
-                const SizedBox(width: 12),
+                SizedBox(width: S.s12),
                 Expanded(
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -879,7 +879,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TS.rowTitle()),
-                        const SizedBox(height: 3),
+                        SizedBox(height: S.of(3)),
                         Text(formatCheckpointDate(c.createdAt),
                             style: TS.meta()),
                       ]),
@@ -946,7 +946,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
         title: 'Fork conversation',
         child: Column(children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+            padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s12),
             child: Text(
               'Creates a new session with history up to the point you pick. '
               'This chat is left unchanged. Workspace files are shared.',
@@ -955,14 +955,14 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           ),
           if (cps.isEmpty)
             Padding(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(S.s12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
                       'No checkpoints yet — you can still fork the full history.',
                       style: TS.meta()),
-                  const SizedBox(height: 12),
+                  SizedBox(height: S.s12),
                   Btn('Fork full history',
                       onTap: () => _confirmFork(null, sheet: true)),
                 ],
@@ -970,9 +970,9 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
             )
           else ...[
             Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: EdgeInsets.only(bottom: S.s8),
               child: AppCard(
-                padding: const EdgeInsets.all(13),
+                padding: EdgeInsets.all(S.of(13)),
                 onTap: () => _confirmFork(null, sheet: true),
                 child: Row(children: [
                   Container(
@@ -985,13 +985,13 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                     child: AppIcon('git-branch',
                         size: 17, color: AppColors.accent),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: S.s12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Full history', style: TS.rowTitle()),
-                        const SizedBox(height: 3),
+                        SizedBox(height: S.of(3)),
                         Text('Branch everything so far', style: TS.meta()),
                       ],
                     ),
@@ -1001,9 +1001,9 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
               ),
             ),
             ...cps.map((c) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
+                  padding: EdgeInsets.only(bottom: S.s8),
                   child: AppCard(
-                    padding: const EdgeInsets.all(13),
+                    padding: EdgeInsets.all(S.of(13)),
                     onTap: () => _confirmFork(c, sheet: true),
                     child: Row(children: [
                       Container(
@@ -1016,7 +1016,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                         child: AppIcon('git-branch',
                             size: 17, color: AppColors.fg3),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: S.s12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1025,7 +1025,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TS.rowTitle()),
-                            const SizedBox(height: 3),
+                            SizedBox(height: S.of(3)),
                             Text(formatCheckpointDate(c.createdAt),
                                 style: TS.meta()),
                           ],
@@ -1147,7 +1147,7 @@ class _CollapsedActivityState extends State<CollapsedActivity> {
                               size: 14, color: AppColors.fg3),
                         ),
                 ),
-                const SizedBox(width: S.s8),
+                SizedBox(width: S.s8),
                 Flexible(
                   child: Text.rich(
                     TextSpan(children: [
@@ -1172,20 +1172,20 @@ class _CollapsedActivityState extends State<CollapsedActivity> {
           alignment: Alignment.topCenter,
           child: open
               ? Padding(
-                  padding: const EdgeInsets.only(top: S.s4, bottom: S.s6),
+                  padding: EdgeInsets.only(top: S.s4, bottom: S.s6),
                   child: Padding(
-                    padding: const EdgeInsets.only(left: 7),
+                    padding: EdgeInsets.only(left: S.of(7)),
                     child: Container(
                       decoration: BoxDecoration(
                         border: Border(
                             left: BorderSide(color: AppColors.border)),
                       ),
-                      padding: const EdgeInsets.only(left: S.s12),
+                      padding: EdgeInsets.only(left: S.s12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           for (var i = 0; i < widget.rows.length; i++) ...[
-                            if (i > 0) const SizedBox(height: S.s2),
+                            if (i > 0) SizedBox(height: S.s2),
                             widget.rows[i],
                           ],
                         ],

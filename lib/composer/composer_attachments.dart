@@ -96,13 +96,13 @@ class ComposerAttachmentController extends ChangeNotifier {
       context,
       title: 'Attach',
       child: Padding(
-        padding: const EdgeInsets.only(bottom: 8),
+        padding: EdgeInsets.only(bottom: S.s8),
         child: Row(
           children: [
             _attachOption(context, 'camera', 'Camera', 'camera'),
-            const SizedBox(width: 10),
+            SizedBox(width: S.of(10)),
             _attachOption(context, 'image', 'Photos', 'photos'),
-            const SizedBox(width: 10),
+            SizedBox(width: S.of(10)),
             _attachOption(context, 'file', 'Files', 'files'),
           ],
         ),
@@ -130,12 +130,12 @@ class ComposerAttachmentController extends ChangeNotifier {
             Navigator.pop(context, value);
           },
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            padding: EdgeInsets.symmetric(vertical: S.s16),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 AppIcon(icon, size: 22, color: AppColors.fg2),
-                const SizedBox(height: 8),
+                SizedBox(height: S.s8),
                 Text(label, style: sans(12, color: AppColors.fg1)),
               ],
             ),

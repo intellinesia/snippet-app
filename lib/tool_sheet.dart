@@ -131,9 +131,9 @@ class _SheetHeader extends StatelessWidget {
     return Column(mainAxisSize: MainAxisSize.min, children: [
       if (kMobile) const SheetGrabHandle(compact: true),
       Padding(
-        padding: EdgeInsets.symmetric(horizontal: 8, vertical: kMobile ? 0 : 8),
+        padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: kMobile ? 0 : S.s8),
         child: Row(children: [
-          leading ?? const SizedBox(width: 8),
+          leading ?? SizedBox(width: S.s8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,7 +198,7 @@ class _StepDetail extends StatelessWidget {
         )
       else
         Padding(
-          padding: const EdgeInsets.fromLTRB(10, 10, 16, 0),
+          padding: EdgeInsets.fromLTRB(S.of(10), S.of(10), S.s16, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -207,13 +207,13 @@ class _StepDetail extends StatelessWidget {
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.fg3,
                   minimumSize: const Size(0, 28),
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  padding: EdgeInsets.symmetric(horizontal: S.s6),
                 ),
                 icon: AppIcon('chevron-left', size: 14, color: AppColors.fg3),
                 label: Text('All steps', style: sans(13, color: AppColors.fg3)),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(6, 6, 0, 0),
+                padding: EdgeInsets.fromLTRB(S.s6, S.s6, 0, 0),
                 child: Text(title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -225,13 +225,13 @@ class _StepDetail extends StatelessWidget {
       Expanded(
         child: SingleChildScrollView(
           controller: scroll,
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          padding: EdgeInsets.fromLTRB(S.s16, S.s12, S.s16, S.s24),
           // A running step shows what it already carries (a diff, a long
           // command); only an empty one says it is running.
           child: step.running && !toolHasDetail(step)
               ? Row(children: [
                   Spinner(size: 14, color: AppColors.run),
-                  const SizedBox(width: 8),
+                  SizedBox(width: S.s8),
                   Text('Running…', style: sans(13, color: AppColors.fg3)),
                 ])
               : DefaultTextStyle(
@@ -309,7 +309,7 @@ class _TimelineState extends State<_Timeline> {
       if (!widget.docked) ...[
         Center(
           child: Container(
-            margin: const EdgeInsets.only(top: 8, bottom: 6),
+            margin: EdgeInsets.only(top: S.s8, bottom: S.s6),
             width: 36,
             height: 4,
             decoration: BoxDecoration(
@@ -319,7 +319,7 @@ class _TimelineState extends State<_Timeline> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 4, 12, 0),
+          padding: EdgeInsets.fromLTRB(S.s20, S.s4, S.s12, 0),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Expanded(
               child: Column(
@@ -327,7 +327,7 @@ class _TimelineState extends State<_Timeline> {
                 children: [
                   Text('Activity', style: TS.sectionTitle()),
                   if (running) ...[
-                    const SizedBox(height: 3),
+                    SizedBox(height: S.of(3)),
                     Row(children: [
                       Container(
                         width: 6,
@@ -335,7 +335,7 @@ class _TimelineState extends State<_Timeline> {
                         decoration: BoxDecoration(
                             color: AppColors.run, shape: BoxShape.circle),
                       ),
-                      const SizedBox(width: 6),
+                      SizedBox(width: S.s6),
                       Flexible(
                           child: Text('Running', style: TS.meta())),
                     ]),
@@ -354,14 +354,14 @@ class _TimelineState extends State<_Timeline> {
       ],
       if (chips.isNotEmpty)
         Padding(
-          padding: EdgeInsets.fromLTRB(pad, widget.docked ? 14 : 12, pad, 0),
+          padding: EdgeInsets.fromLTRB(pad, widget.docked ? S.of(14) : S.s12, pad, 0),
           child: Wrap(spacing: 8, runSpacing: 8, children: chips),
         ),
       SizedBox(height: widget.docked ? 12 : 14),
       Expanded(
         child: ListView.builder(
           controller: widget.scroll,
-          padding: EdgeInsets.fromLTRB(pad, 0, pad, 28),
+          padding: EdgeInsets.fromLTRB(pad, 0, pad, S.of(28)),
           itemCount: steps.length,
           itemBuilder: (_, i) => _TimelineStep(
             step: steps[i],
@@ -378,7 +378,7 @@ class _TimelineState extends State<_Timeline> {
 
   Widget _chip(Widget child) => Container(
         height: 26,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        padding: EdgeInsets.symmetric(horizontal: S.of(10)),
         decoration: BoxDecoration(
           color: AppColors.surface2,
           borderRadius: BorderRadius.circular(R.pill),
@@ -516,7 +516,7 @@ class _TimelineStep extends StatelessWidget {
         bottom: 0,
         width: 12,
         child: Column(children: [
-          const SizedBox(height: 7),
+          SizedBox(height: S.of(7)),
           Container(
             width: 8,
             height: 8,
@@ -536,16 +536,16 @@ class _TimelineStep extends StatelessWidget {
             Expanded(
               child: Container(
                 width: 1,
-                margin: const EdgeInsets.only(top: 4),
+                margin: EdgeInsets.only(top: S.s4),
                 color: AppColors.border2,
               ),
             ),
         ]),
       ),
       Padding(
-        padding: const EdgeInsets.only(left: 26),
+        padding: EdgeInsets.only(left: S.of(26)),
         child: Padding(
-          padding: EdgeInsets.only(bottom: last ? 0 : 16),
+          padding: EdgeInsets.only(bottom: last ? 0 : S.s16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -569,14 +569,14 @@ class _TimelineStep extends StatelessWidget {
                                         : AppColors.fg1)),
                           ),
                           if (meta != null) ...[
-                            const SizedBox(width: 10),
+                            SizedBox(width: S.of(10)),
                             Padding(
-                                padding: const EdgeInsets.only(top: 2),
+                                padding: EdgeInsets.only(top: S.s2),
                                 child: meta),
                           ],
                         ]),
                     if (sub.isNotEmpty && sub != title) ...[
-                      const SizedBox(height: 3),
+                      SizedBox(height: S.of(3)),
                       Text(sub,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -588,10 +588,10 @@ class _TimelineStep extends StatelessWidget {
                 ),
               ),
               if (open && openable) ...[
-                const SizedBox(height: 10),
+                SizedBox(height: S.of(10)),
                 _StepBody(step: step, onShowAll: onShowAll),
               ] else if (_imagePath(context) case final path?) ...[
-                const SizedBox(height: 8),
+                SizedBox(height: S.s8),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: ClipRRect(
@@ -628,7 +628,7 @@ class _StepBody extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
+            padding: EdgeInsets.symmetric(vertical: S.s4),
             child: Text(label,
                 style:
                     sans(13, color: muted ? AppColors.fg3 : AppColors.accent)),
@@ -643,16 +643,16 @@ class _StepBody extends StatelessWidget {
             child: safeToolDetailView(context,
                 tool: step.tool, args: step.args, result: step.result),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: S.s4),
           link('Show all', onShowAll),
         ],
       );
     }
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+      padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.s8),
       decoration: BoxDecoration(
         color: AppColors.canvas,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(R.lg),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -675,11 +675,11 @@ class _StepBody extends StatelessWidget {
               child: safeToolDetailView(context,
                   tool: step.tool, args: step.args, result: step.result),
             ),
-          const SizedBox(height: 6),
+          SizedBox(height: S.s6),
           Row(children: [
             link('Show all', onShowAll),
             if (tail) ...[
-              const SizedBox(width: 18),
+              SizedBox(width: S.of(18)),
               link('Copy', () {
                 Clipboard.setData(ClipboardData(text: output));
                 toast(context, 'Copied');

@@ -33,8 +33,8 @@ class _UsagePopoverState extends State<_UsagePopover> {
         builder: (context, snap) {
           final Widget body;
           if (snap.connectionState != ConnectionState.done) {
-            body = const Padding(
-              padding: EdgeInsets.symmetric(vertical: 22),
+            body = Padding(
+              padding: EdgeInsets.symmetric(vertical: S.of(22)),
               child: Center(child: Spinner(size: 14)),
             );
           } else if (snap.hasError) {
@@ -54,13 +54,13 @@ class _UsagePopoverState extends State<_UsagePopover> {
                     children: rows);
           }
           return Padding(
-            padding: const EdgeInsets.fromLTRB(6, 4, 6, 6),
+            padding: EdgeInsets.fromLTRB(S.s6, S.s4, S.s6, S.s6),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 2, 0, 8),
+                  padding: EdgeInsets.fromLTRB(0, S.s2, 0, S.s8),
                   child: Text('Usage',
                       style: sans(12, color: AppColors.fg4, spacing: 0.4)),
                 ),
@@ -72,18 +72,18 @@ class _UsagePopoverState extends State<_UsagePopover> {
       );
 
   Widget _note(String text) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: EdgeInsets.symmetric(vertical: S.of(10)),
         child: Text(text, style: sans(13, color: AppColors.fg4)),
       );
 
   Widget _provider(String id, List<RateWindow> windows) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
+        padding: EdgeInsets.only(bottom: S.s12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(usageProviderTitle(id),
                 style: sans(13, color: AppColors.fg1, weight: W.label)),
-            const SizedBox(height: 6),
+            SizedBox(height: S.s6),
             for (final r in windows) _window(r),
           ],
         ),
@@ -94,7 +94,7 @@ class _UsagePopoverState extends State<_UsagePopover> {
     final color = r.leftPercent < 20 ? AppColors.danger : AppColors.accent;
     final reset = rateResetLabel(r.resetsAt);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.only(bottom: S.s8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -108,9 +108,9 @@ class _UsagePopoverState extends State<_UsagePopover> {
             Text('${r.usedPercent.round()}% used',
                 style: sans(11, color: AppColors.fg3)),
           ]),
-          const SizedBox(height: 5),
+          SizedBox(height: S.of(5)),
           ClipRRect(
-            borderRadius: BorderRadius.circular(2),
+            borderRadius: BorderRadius.circular(R.of(2)),
             child: SizedBox(
               height: 4,
               child: Stack(children: [
@@ -124,7 +124,7 @@ class _UsagePopoverState extends State<_UsagePopover> {
             ),
           ),
           if (reset != null) ...[
-            const SizedBox(height: 4),
+            SizedBox(height: S.s4),
             Text(reset, style: sans(11, color: AppColors.fg4)),
           ],
         ],

@@ -8,6 +8,23 @@ import 'theme.dart';
 
 final Highlight _hl = Highlight()..registerLanguages(builtinAllLanguages);
 
+/// Effective syntax-highlighting style map, overriding `atomOneDarkTheme` with
+/// any entries present in the active theme's `syntax` map.
+Map<String, TextStyle> resolveHighlightTheme() {
+  final overrides = ThemeManager.instance.resolved.syntax;
+  if (overrides.isEmpty) return atomOneDarkTheme;
+  final merged = <String, TextStyle>{};
+  for (final e in atomOneDarkTheme.entries) {
+    final override = overrides[e.key];
+    merged[e.key] =
+        override != null ? e.value.copyWith(color: override) : e.value;
+  }
+  for (final e in overrides.entries) {
+    merged.putIfAbsent(e.key, () => TextStyle(color: e.value));
+  }
+  return merged;
+}
+
 /// Highlight a fenced markdown block. [language] is the ``` tag (or empty).
 TextSpan highlightedCodeSpan(String code,
     {String language = '', double fontSize = 13, double height = 1.55}) {
@@ -24,7 +41,7 @@ TextSpan highlightedCodeSpan(String code,
   if (mode == null) return TextSpan(text: code, style: base);
   try {
     final result = _hl.highlight(code: code, language: mapped);
-    final renderer = TextSpanRenderer(base, atomOneDarkTheme);
+    final renderer = TextSpanRenderer(base, resolveHighlightTheme());
     result.render(renderer);
     return renderer.span ?? TextSpan(text: code, style: base);
   } catch (_) {
@@ -57,7 +74,7 @@ CodeHighlightTheme? highlightThemeFor(String filename) {
   if (mode == null) return null;
   return CodeHighlightTheme(
     languages: {lang!: CodeHighlightThemeMode(mode: mode)},
-    theme: atomOneDarkTheme,
+    theme: resolveHighlightTheme(),
   );
 }
 

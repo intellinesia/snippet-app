@@ -67,7 +67,7 @@ class TerminalsSidebarPanel extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: kNavPadH),
               child: Row(children: [
                 AppIcon('folder-open', size: 14, color: AppColors.fg3),
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 Expanded(
                   child: Text(displayPath,
                       maxLines: 1,
@@ -81,7 +81,7 @@ class TerminalsSidebarPanel extends StatelessWidget {
     if (terminals.isEmpty) {
       return Container(
         color: kMobile ? AppColors.pageBg : Colors.transparent,
-        padding: EdgeInsets.only(top: kMobile ? 8 : 0),
+        padding: EdgeInsets.only(top: kMobile ? S.s8 : 0),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           ...head,
           Expanded(
@@ -100,10 +100,10 @@ class TerminalsSidebarPanel extends StatelessWidget {
     return Container(
       color: kMobile ? AppColors.pageBg : Colors.transparent,
       child: ListView(
-        padding: EdgeInsets.only(top: kMobile ? 8 : 0, bottom: 16),
+        padding: EdgeInsets.only(top: kMobile ? S.s8 : 0, bottom: S.s16),
         children: [
           ...head,
-          const SizedBox(height: 6),
+          SizedBox(height: S.s6),
           for (var i = 0; i < terminals.length; i++) _row(i),
         ],
       ),
@@ -125,14 +125,14 @@ class TerminalsSidebarPanel extends StatelessWidget {
       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
         if (t.alive) ...[
           const StatusDot(status: 'online', size: 7),
-          const SizedBox(width: 6),
+          SizedBox(width: S.s6),
         ],
         // Destroying lives here, not in the pane: the pane can only minimize.
         GestureDetector(
           onTap: () => onCloseTerminal(t.id),
           behavior: HitTestBehavior.opaque,
           child: Padding(
-            padding: const EdgeInsets.all(3),
+            padding: EdgeInsets.all(S.of(3)),
             child: AppIcon('x', size: 12, color: AppColors.fg4),
           ),
         ),

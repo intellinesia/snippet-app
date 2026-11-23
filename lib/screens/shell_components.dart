@@ -36,7 +36,7 @@ class _GoalPopoverState extends State<GoalPopover> {
       children: [
         Text('Set goal',
             style: sans(12, weight: W.label, color: AppColors.fg1)),
-        const SizedBox(height: 8),
+        SizedBox(height: S.s8),
         AppField(
           controller: _ctl,
           hint: 'What should the agent work toward?',
@@ -45,7 +45,7 @@ class _GoalPopoverState extends State<GoalPopover> {
           maxLines: 4,
           onSubmitted: (_) => _submit(),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: S.s8),
         Row(children: [
           const Spacer(),
           if (!kMobile) ...[
@@ -53,7 +53,7 @@ class _GoalPopoverState extends State<GoalPopover> {
                 variant: BtnVariant.ghost,
                 small: true,
                 onTap: () => Navigator.pop(context)),
-            const SizedBox(width: 6),
+            SizedBox(width: S.s6),
           ],
           Btn('Set goal', small: true, onTap: _submit),
         ]),
