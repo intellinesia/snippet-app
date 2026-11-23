@@ -250,13 +250,15 @@ class GroupedTiles extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final n = children.length;
-    if (!kMobile) {
-      final radius = BorderRadius.circular(Grouped.radiusEnd);
+    {
+      // Quiet: one raised surface per group with hairlines between rows; on
+      // the phone no border, the tone alone separates it.
+      final radius = BorderRadius.circular(kMobile ? R.of(14) : Grouped.radiusEnd);
       return Container(
         decoration: BoxDecoration(
-          color: color ?? Grouped.card,
+          color: color ?? (kMobile ? AppColors.surface1 : Grouped.card),
           borderRadius: radius,
-          border: Border.all(color: Grouped.cardBorder),
+          border: kMobile ? null : Border.all(color: Grouped.cardBorder),
         ),
         child: ClipRRect(
           borderRadius: radius,
@@ -276,19 +278,6 @@ class GroupedTiles extends StatelessWidget {
         ),
       );
     }
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (var i = 0; i < n; i++) ...[
-          if (i > 0) const SizedBox(height: Grouped.gap),
-          GroupedTile(
-              radius: Grouped.tileRadius(i, n),
-              color: color,
-              child: children[i]),
-        ],
-      ],
-    );
   }
 }
 

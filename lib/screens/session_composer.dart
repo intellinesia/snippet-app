@@ -1131,11 +1131,27 @@ extension _SessionScreenComposerExt on _SessionScreenState {
         ]),
       ComposerGroup(children: [
         ComposerTrayRow(
+            icon: 'image',
+            label: 'Photo or file',
+            onTap: () => run(_pickFiles)),
+        ComposerTrayRow(
             icon: 'camera', label: 'Camera', onTap: () => run(_pickCamera)),
         ComposerTrayRow(
-            icon: 'image', label: 'Photos', onTap: () => run(_pickPhotos)),
+            icon: 'users',
+            label: 'Mention an agent',
+            onTap: () => run(() {
+                  final t = _input.text;
+                  _input.value = TextEditingValue(
+                      text: '$t${t.isEmpty || t.endsWith(' ') ? '' : ' '}@',
+                      selection: TextSelection.collapsed(
+                          offset: t.length +
+                              (t.isEmpty || t.endsWith(' ') ? 0 : 1) +
+                              1));
+                })),
         ComposerTrayRow(
-            icon: 'paperclip', label: 'Files', onTap: () => run(_pickFiles)),
+            icon: 'mic',
+            label: 'Talk instead',
+            onTap: () => run(() => _voice.start())),
       ]),
       ComposerGroup(children: [
         ComposerTrayRow(

@@ -452,10 +452,6 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   double _mobileHeaderTopPad(HarnessState? s) {
     if (widget.mobileTopBar != null) return GlassTopFrame.inset + S.s12;
     if (_isLead) return StageBar.phoneHeight + S.s8;
-    if (_connError == null && _me != null) {
-      final hasLanes = lanePillLabel(s?.lanes ?? const <LaneInfo>[]) != null;
-      return StageBar.phoneHeight + (hasLanes ? S.s32 : S.s8);
-    }
     return GlassTopFrame.inset + S.s12;
   }
 
@@ -468,7 +464,50 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     }
     // Stays the same with the keyboard up: swapping headers made it jump.
     if (!offline && _me != null) {
-      return _stageHeader(s, back);
+      final agent = (_meAgentName ?? '').trim().isEmpty
+          ? (_me!.displayAgentId ?? 'Snippet')
+          : _meAgentName!;
+      final needsYou =
+          s?.pendingQuestion != null || s?.status == 'waiting_for_input';
+      final plan = _me!.plan;
+      final step = plan != null && plan.total > 0 && plan.done < plan.total
+          ? 'plan ${(plan.done + 1).clamp(1, plan.total)} of ${plan.total}'
+          : '';
+      final word = needsYou
+          ? 'waiting on you'
+          : s?.status == 'in_review'
+              ? 'in review'
+              : step;
+      final lanesPill = lanePillLabel(s?.lanes ?? const <LaneInfo>[]);
+      return MobileBackBar(
+        title: _title.isEmpty ? 'Session' : _title,
+        subtitle: word.isEmpty ? agent : '$agent · $word',
+        onBack: back,
+        keepBack: true,
+        onTitleTap: () => _openActionsDrawer(s),
+        onTitleTapHint: 'Session actions',
+        trailing: [
+          if (lanesPill != null)
+            GestureDetector(
+              onTap: _showLanes,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: S.s8),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const RunSpinner(),
+                  SizedBox(width: S.s6),
+                  Text(lanesPill,
+                      style: TextStyle(
+                          fontSize: 12, color: AppColors.fg2)),
+                ]),
+              ),
+            ),
+          RoundBtn(
+            icon: 'more-horizontal',
+            tooltip: 'Session actions',
+            onTap: () => _openActionsDrawer(s),
+          ),
+        ],
+      );
     }
     final ws = s?.workspace.trim() ?? '';
     final folder = ws.isEmpty ? '' : lastPathSegment(ws, ifEmpty: ws);
@@ -548,64 +587,6 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         size: 40,
         iconSize: 18,
         onTap: () => startMobileVoice(context, widget.client),
-      ),
-    );
-  }
-
-  /// The phone header: the session's agent on stage, title chip over its feet.
-  Widget _stageHeader(HarnessState? s, VoidCallback back) {
-    final me = _me!;
-    final agentId = me.displayAgentId ?? 'snippet';
-    final agent = (_meAgentName ?? '').trim().isEmpty ? agentId : _meAgentName!;
-    final needsYou =
-        s?.pendingQuestion != null || s?.status == 'waiting_for_input';
-    // Lanes still running keep the session working while its own turn idles.
-    final working = s?.status == 'running' ||
-        (s?.lanes ?? const <LaneInfo>[]).any((l) => l.running);
-    final plan = me.plan;
-    final step = plan != null && plan.total > 0 && plan.done < plan.total
-        ? 'plan ${(plan.done + 1).clamp(1, plan.total)} of ${plan.total}'
-        : '';
-    final state = needsYou
-        ? 'waiting on you'
-        : s?.status == 'in_review'
-            ? 'in review'
-            : step;
-    final subtitle = [
-      agent,
-      if (state.isNotEmpty) state,
-    ].join(' · ');
-    final lanesPill = lanePillLabel(s?.lanes ?? const <LaneInfo>[]);
-    return StageBar(
-      framed: false,
-      members: [
-        StageMember(
-          agentId,
-          state: needsYou
-              ? AgentCharacterState.needs
-              : working
-                  ? AgentCharacterState.working
-                  : AgentCharacterState.idle,
-          badge: needsYou ? '?' : null,
-        ),
-      ],
-      title: _title.isEmpty ? 'Session' : _title,
-      subtitle: subtitle,
-      onTap: () => _openActionsDrawer(s),
-      below: lanesPill != null
-          ? StagePill(
-              label: lanesPill,
-              leading: const RunSpinner(),
-              onTap: _showLanes,
-            )
-          : null,
-      onBack: back,
-      trailing: RoundBtn(
-        icon: 'terminal',
-        tooltip: 'Shell',
-        size: 40,
-        iconSize: 18,
-        onTap: _openTerm,
       ),
     );
   }

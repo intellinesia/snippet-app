@@ -108,7 +108,7 @@ void main() {
 
     await tester.tap(_plus);
     await _settle(tester);
-    expect(find.text('Files'), findsOneWidget);
+    expect(find.text('Photo or file'), findsOneWidget);
     expect(find.text('Hand off'), findsOneWidget);
     expect(find.text('To another agent, after this turn'), findsOneWidget);
     expect(find.text('Fork from here'), findsOneWidget);
@@ -121,7 +121,7 @@ void main() {
     await tester.tap(_plus);
     await _settle(tester);
     expect(find.text('Hand off'), findsNothing);
-    expect(find.text('Files'), findsNothing);
+    expect(find.text('Photo or file'), findsNothing);
     await _done(tester);
   });
 
@@ -172,7 +172,7 @@ void main() {
     await _settle(tester);
     // Interrupt sits at the top of the list.
     expect(tester.getTopLeft(find.text('Interrupt')).dy,
-        lessThan(tester.getTopLeft(find.text('Files')).dy));
+        lessThan(tester.getTopLeft(find.text('Photo or file')).dy));
     await _done(tester);
   });
 
@@ -184,7 +184,7 @@ void main() {
     await tester.tap(find.text('Hand off'));
     await _settle(tester);
     expect(find.text('Hand off to'), findsOneWidget);
-    expect(find.text('Files'), findsNothing);
+    expect(find.text('Photo or file'), findsNothing);
     // No sheet: the picker lives in the tray, not a new route.
     expect(find.byType(BottomSheet), findsNothing);
     expect(find.text('Moss'), findsOneWidget);
@@ -198,7 +198,7 @@ void main() {
         matching: find.byType(InkWell)));
     await _settle(tester);
     expect(find.text('Hand off to'), findsNothing);
-    expect(find.text('Files'), findsOneWidget);
+    expect(find.text('Photo or file'), findsOneWidget);
     await _done(tester);
   });
 

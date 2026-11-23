@@ -14,6 +14,7 @@ import 'api.dart';
 import 'gesture_physics.dart';
 import 'platform.dart';
 import 'screens/file_viewer.dart';
+import 'menu_widgets.dart';
 import 'theme.dart';
 import 'tool_sheet.dart';
 import 'widgets.dart';
@@ -1062,21 +1063,6 @@ class _ImageViewerState extends State<_ImageViewer>
     );
   }
 
-  Widget _action(String icon, String label, VoidCallback onTap) => Expanded(
-        child: InkWell(
-          onTap: _busy ? null : onTap,
-          borderRadius: BorderRadius.circular(R.of(14)),
-          child: Padding(
-            padding: EdgeInsets.symmetric(vertical: S.of(10)),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              AppIcon(icon, size: 20, color: Colors.white),
-              SizedBox(height: S.s6),
-              Text(label, style: sans(12, color: Colors.white70)),
-            ]),
-          ),
-        ),
-      );
-
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
@@ -1146,109 +1132,133 @@ class _ImageViewerState extends State<_ImageViewer>
             child: AnimatedOpacity(
               opacity: showChrome ? 1 : 0,
               duration: Motion.quick,
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0x99000000), Color(0x00000000)],
-                  ),
-                ),
-                child: SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s8, S.s16),
-                    child: Row(children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(baseName(_path),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: sans(14,
-                                    weight: W.label, color: Colors.white)),
-                            if (many)
-                              Text('${_index + 1} of ${widget.paths.length}',
-                                  style: sans(12,
-                                      tabular: true, color: Colors.white60)),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: 'Close',
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const AppIcon('x', size: 20, color: Colors.white),
-                      ),
-                    ]),
-                  ),
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(S.s4, S.s4, S.s4, S.s8),
+                  child: Row(children: [
+                    _bar('x', 'Close', () => Navigator.of(context).pop()),
+                    Expanded(
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Text(
+                            many
+                                ? 'Image ${_index + 1} of ${widget.paths.length}'
+                                : 'Image',
+                            style: sans(15,
+                                height: 20 / 15,
+                                weight: W.label,
+                                color: Colors.white)),
+                        Text(baseName(_path),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(12,
+                                height: 16 / 12, color: Colors.white60)),
+                      ]),
+                    ),
+                    _bar('share', 'Share', _share),
+                    Builder(
+                        builder: (a) => _bar('more-horizontal', 'More', () async {
+                              final pick = await showAppMenu<String>(
+                                context,
+                                anchor: a,
+                                below: true,
+                                alignEnd: true,
+                                items: [
+                                  appMenuItem(
+                                      value: 'save',
+                                      icon: 'download',
+                                      label: 'Save to device'),
+                                  appMenuItem(
+                                      value: 'copy',
+                                      icon: 'copy',
+                                      label: 'Copy path'),
+                                ],
+                              );
+                              if (pick == 'save') _save();
+                              if (pick == 'copy') _copyPath();
+                            })),
+                  ]),
                 ),
               ),
             ),
           ),
         ),
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: IgnorePointer(
-            ignoring: !showChrome,
-            child: AnimatedOpacity(
-              opacity: showChrome ? 1 : 0,
-              duration: Motion.quick,
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: [Color(0xB3000000), Color(0x00000000)],
-                  ),
-                ),
+        if (many)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: IgnorePointer(
+              ignoring: !showChrome,
+              child: AnimatedOpacity(
+                opacity: showChrome ? 1 : 0,
+                duration: Motion.quick,
                 child: SafeArea(
                   top: false,
                   child: Padding(
-                    padding: EdgeInsets.fromLTRB(S.s16, S.s24, S.s16, S.s8),
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      if (many)
-                        Padding(
-                          padding: EdgeInsets.only(bottom: S.s12),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              for (var i = 0; i < widget.paths.length; i++)
-                                AnimatedContainer(
-                                  duration: Motion.quick,
-                                  margin:
-                                      EdgeInsets.symmetric(horizontal: S.of(3)),
-                                  width: i == _index ? 16 : 6,
-                                  height: 6,
-                                  decoration: BoxDecoration(
-                                    color: i == _index
-                                        ? Colors.white
-                                        : Colors.white38,
-                                    borderRadius:
-                                        BorderRadius.circular(R.of(3)),
+                    padding: EdgeInsets.only(bottom: S.s12),
+                    child: SizedBox(
+                      height: 48,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          for (var i = 0; i < widget.paths.length; i++)
+                            GestureDetector(
+                              onTap: () => _pages.animateToPage(i,
+                                  duration: Motion.quick, curve: Curves.easeOut),
+                              child: Container(
+                                width: 44,
+                                height: 44,
+                                margin:
+                                    EdgeInsets.symmetric(horizontal: S.s4),
+                                decoration: BoxDecoration(
+                                  borderRadius:
+                                      BorderRadius.circular(R.of(8)),
+                                  border: Border.all(
+                                      color: i == _index
+                                          ? Colors.white
+                                          : Colors.transparent,
+                                      width: 2),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius:
+                                      BorderRadius.circular(R.of(6)),
+                                  child: Image(
+                                    image: ResizeImage.resizeIfNeeded(
+                                        120,
+                                        null,
+                                        widget.client
+                                            .imageProvider(widget.paths[i])),
+                                    fit: BoxFit.cover,
                                   ),
                                 ),
-                            ],
-                          ),
-                        ),
-                      Row(children: [
-                        _action('share', 'Share', _share),
-                        _action('download', 'Save', _save),
-                        _action('copy', 'Copy path', _copyPath),
-                      ]),
-                    ]),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
       ]),
     );
   }
+
+  Widget _bar(String icon, String label, VoidCallback onTap) => Semantics(
+        button: true,
+        label: label,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _busy ? null : onTap,
+          child: SizedBox(
+              width: 48,
+              height: 48,
+              child:
+                  Center(child: AppIcon(icon, size: 22, color: Colors.white))),
+        ),
+      );
 }
 
 /// Pasted text as it travels in a message: inline, so the agent reads it

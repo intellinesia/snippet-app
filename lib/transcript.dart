@@ -126,6 +126,12 @@ class _SpinnerPainter extends CustomPainter {
 
 /// The phrase for a failing step: "3 tests failed" for a test run, else its chip.
 String? _failureNote(List<ToolStep> steps) {
+  // Quiet rule: only a run that ends on a failure reports it.
+  final finished = steps.where((s) => !s.running).toList();
+  if (finished.isNotEmpty &&
+      !(finished.last.failed || verifyOutputFailed(finished.last))) {
+    return null;
+  }
   for (final s in steps) {
     if (!(s.failed || verifyOutputFailed(s))) continue;
     final text = stepChip(s)?.text ?? 'failed';

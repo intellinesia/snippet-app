@@ -16,7 +16,6 @@ import 'agents_sidebar_panel.dart';
 import 'lead.dart';
 import 'lead/coordination_agent_detail.dart';
 import 'settings_panel.dart';
-import 'group_messaging.dart' show createAndOpenGroup;
 import 'shell_models.dart';
 import 'shell_nav.dart';
 import 'session_list_row.dart';

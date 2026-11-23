@@ -33,7 +33,7 @@ class RoundBtn extends StatelessWidget {
     this.iconSize = 18,
     this.badge = false,
     this.badgeCount = 0,
-    this.bare = false,
+    this.bare = true,
   });
 
   final bool bare;
@@ -106,8 +106,8 @@ class RoundBtn extends StatelessWidget {
       );
 
   Widget _face() => Container(
-        width: size,
-        height: size,
+        width: size < 48 ? 48 : size,
+        height: size < 48 ? 48 : size,
         alignment: Alignment.center,
         child: child ?? AppIcon(icon!, size: iconSize, color: AppColors.fg2),
       );
@@ -379,7 +379,7 @@ class MobileBackBar extends StatelessWidget {
                 : null);
     final text = Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Row(mainAxisSize: MainAxisSize.min, children: [
           Flexible(
@@ -429,11 +429,12 @@ class MobileBackBar extends StatelessWidget {
                 size: 40,
                 iconSize: menu ? 18 : 20,
                 onTap: back),
-          if (back != null) SizedBox(width: S.s4),
+          if (back == null && trailing.isNotEmpty)
+            SizedBox(width: 48.0 * trailing.length),
           Expanded(
             child: pill
                 ? Align(
-                    alignment: Alignment.centerLeft,
+                    alignment: Alignment.center,
                     child: Semantics(
                       button: onTitleTap != null,
                       onTapHint: onTitleTapHint,
@@ -443,18 +444,19 @@ class MobileBackBar extends StatelessWidget {
                         child: Container(
                           height: 44,
                           padding: EdgeInsets.only(right: S.s8),
-                          alignment: Alignment.centerLeft,
+                          alignment: Alignment.center,
                           child: IntrinsicWidth(child: label),
                         ),
                       ),
                     ),
                   )
-                : Align(alignment: Alignment.centerLeft, child: label),
+                : Align(alignment: Alignment.center, child: label),
           ),
           if (trailing.isNotEmpty) ...[
-            SizedBox(width: S.of(10)),
+            SizedBox(width: S.s4),
             ...trailing,
-          ],
+          ] else if (back != null)
+            const SizedBox(width: 48),
         ]),
       ),
     );

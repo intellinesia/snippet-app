@@ -1090,7 +1090,11 @@ bool _stepFailed(ToolStep s) => s.failed || verifyOutputFailed(s);
 WorkSummary describeWork(List<ToolStep> steps) {
   if (steps.isEmpty) return const WorkSummary('');
   final done = steps.where((s) => !s.running).toList();
-  final failures = done.where(_stepFailed).length;
+  // Quiet rule: a failure the run got past is not worth a red word; only a
+  // run that ends on a failed step reports it.
+  final rawFailures = done.where(_stepFailed).length;
+  final failures =
+      done.isNotEmpty && !_stepFailed(done.last) ? 0 : rawFailures;
   var outcome =
       failures == 0 ? null : (failures == 1 ? 'failed' : '$failures failed');
   final emphasis = <String>[];

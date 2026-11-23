@@ -1,6 +1,7 @@
 // Phone tool calls: a live capsule above the composer while a run works, and
 // one pill in the transcript once it is done. Both open the activity sheet.
 
+import '../quiet.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -23,7 +24,13 @@ class DockRun {
 bool stepFailedOut(ToolStep s) =>
     !s.running && (s.failed || verifyOutputFailed(s));
 
-int runFailures(Iterable<ToolStep> steps) => steps.where(stepFailedOut).length;
+/// Quiet rule: failures count only when the run ends on one; a failure a
+/// later step got past is already behind us.
+int runFailures(Iterable<ToolStep> steps) {
+  final done = steps.where((s) => !s.running).toList();
+  if (done.isNotEmpty && !stepFailedOut(done.last)) return 0;
+  return steps.where(stepFailedOut).length;
+}
 
 /// Index of the first failed step, so a tap on "1 failed" lands on it.
 int? firstFailure(List<ToolStep> steps) {
@@ -100,13 +107,17 @@ class FailedPill extends StatelessWidget {
           height: compact ? 24 : 28,
           padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 12),
           decoration: BoxDecoration(
-              color: AppColors.dangerBg,
+              color: quietAmber.withValues(alpha: 0.13),
               borderRadius: BorderRadius.circular(compact ? 12 : 14)),
           child: Center(
             widthFactor: 1,
-            child: Text('$count failed',
-                style: sans(compact ? 13 : 14,
-                    weight: W.label, color: AppColors.danger)),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const QuietHand(size: 14),
+              const SizedBox(width: 6),
+              Text('$count failed',
+                  style: sans(compact ? 13 : 14,
+                      weight: W.label, color: quietAmber)),
+            ]),
           ),
         ),
       );
