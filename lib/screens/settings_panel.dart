@@ -2547,38 +2547,28 @@ class AppearanceScreen extends StatelessWidget {
       builder: (context, _) {
         final tm = ThemeManager.instance;
         final effectiveClient = client;
-        final base = tm.baseTheme;
-        final custom = tm.customAccent;
 
+        // Five choices, no palette gallery: System, then the four palettes.
+        final themeRows = <(String, String, String?)>[
+          ('System', 'Quiet light or dark, following this device', null),
+          ('Quiet Light', 'Paper and graphite', 'quiet-light'),
+          ('Quiet Dark', 'Warm graphite, grey, amber only for needs you', 'quiet'),
+          ('High contrast dark', 'Black, white text, a strong line', 'hc-dark'),
+          ('High contrast light', 'White, black text, a strong line', 'hc-light'),
+        ];
         final paletteChildren = <Widget>[
-          Padding(
-            padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.of(14)),
-            child: _ThemeCardCarousel(client: effectiveClient),
-          ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.of(14)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Text('Accent colour',
-                        style: sans(kMobile ? 15 : 13,
-                            weight: W.label, color: AppColors.fg1)),
-                    SizedBox(width: S.s8),
-                    Text(
-                      custom == null
-                          ? 'Theme default (${base.label})'
-                          : custom.label,
-                      style: sans(12, color: AppColors.fg3),
-                    ),
-                  ],
-                ),
-                SizedBox(height: S.of(10)),
-                _AccentSwatchStrip(client: effectiveClient),
-              ],
+          for (final (label, sub, id) in themeRows)
+            SettingsRow(
+              label: label,
+              sub: sub,
+              trailing: (id == null ? tm.followsSystem : (!tm.followsSystem && tm.activeId == id))
+                  ? AppIcon('check', size: 18, color: AppColors.fg1)
+                  : null,
+              onTap: () => unawaited(_runThemeUpdate(
+                context,
+                () => id == null ? tm.useSystem() : tm.applyTheme(id),
+              )),
             ),
-          ),
         ];
         final typographyChildren = <Widget>[
           Padding(
@@ -3415,83 +3405,6 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
                 },
               ),
             ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _AccentSwatchStrip extends StatelessWidget {
-  const _AccentSwatchStrip({this.client});
-  final DaemonClient? client;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: ThemeManager.instance,
-      builder: (context, _) {
-        final tm = ThemeManager.instance;
-        final custom = tm.customAccent;
-        return Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            TapDetector(
-              onTap: () => unawaited(_runThemeUpdate(
-                context,
-                () => tm.setAccentName(null),
-              )),
-              behavior: HitTestBehavior.opaque,
-              child: Container(
-                padding:
-                    EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.s6),
-                decoration: BoxDecoration(
-                  color: custom == null ? AppColors.accentBg : AppColors.tint2,
-                  borderRadius: BorderRadius.circular(R.pill),
-                  border: Border.all(
-                    color: custom == null
-                        ? AppColors.accentLine
-                        : AppColors.border,
-                  ),
-                ),
-                child: Text(
-                  'Default',
-                  style: sans(12,
-                      weight: custom == null ? W.label : W.body,
-                      color: custom == null ? AppColors.accent : AppColors.fg2),
-                ),
-              ),
-            ),
-            for (final a in allAccents)
-              TapDetector(
-                onTap: () => unawaited(_runThemeUpdate(
-                  context,
-                  () => tm.setAccentName(a.name),
-                )),
-                behavior: HitTestBehavior.opaque,
-                child: Tooltip(
-                  message: a.label,
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: a.accent,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: custom?.name == a.name
-                            ? AppColors.fg1
-                            : AppColors.border2,
-                        width: custom?.name == a.name ? 2.2 : 1.2,
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: custom?.name == a.name
-                        ? Icon(PhIcons.check, size: 14, color: a.accentFg)
-                        : null,
-                  ),
-                ),
-              ),
           ],
         );
       },

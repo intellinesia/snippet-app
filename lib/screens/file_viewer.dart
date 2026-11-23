@@ -1260,36 +1260,18 @@ class _FileHeaderBar extends StatefulWidget {
 }
 
 class _FileHeaderBarState extends State<_FileHeaderBar> {
-  bool _expanded = false;
-
   String get path => widget.path;
   bool get modified => widget.modified;
   List<Widget> get leading => widget.leading;
   List<Widget> get actions => widget.actions;
 
-  Widget _crumb(String label, {required bool last}) {
-    final text = Text(label,
-        maxLines: 1,
-        style: sans(12.5, color: last ? AppColors.fg1 : AppColors.fg4));
-    if (label != '…') return text;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => setState(() => _expanded = true),
-        child: text,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final crumbs = fileCrumbs(path, expanded: _expanded);
+    // Header line: the file name only; the full path sits in the tooltip.
+    final name = path.split('/').where((p) => p.isNotEmpty).lastOrNull ?? path;
     return Container(
-      height: 44,
+      height: 40,
       padding: const EdgeInsets.fromLTRB(20, 0, 12, 0),
-      decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.border))),
       child: Row(children: [
         Expanded(
           child: Row(children: [
@@ -1297,34 +1279,22 @@ class _FileHeaderBarState extends State<_FileHeaderBar> {
               child: Tooltip(
                 message: path,
                 waitDuration: const Duration(milliseconds: 500),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  reverse: true,
-                  child: Row(children: [
-                    for (var i = 0; i < crumbs.length; i++) ...[
-                      if (i > 0)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: AppIcon('chevron-right',
-                              size: 12, color: AppColors.fg4),
-                        ),
-                      _crumb(crumbs[i], last: i == crumbs.length - 1),
-                    ],
-                  ]),
-                ),
+                child: Text(name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13, weight: FontWeight.w500, color: AppColors.fg1)),
               ),
             ),
             if (modified) ...[
               const SizedBox(width: 8),
               Container(
                 height: 20,
-                padding: const EdgeInsets.symmetric(horizontal: 7),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                    color: AppColors.runBg,
-                    borderRadius: BorderRadius.circular(R.of(5))),
-                child:
-                    Text('Modified', style: sans(11.5, color: AppColors.run)),
+                    color: AppColors.surface3,
+                    borderRadius: BorderRadius.circular(10)),
+                child: Text('Modified', style: sans(11, color: AppColors.fg2)),
               ),
             ],
           ]),

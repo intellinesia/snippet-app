@@ -103,7 +103,7 @@ class ThemePreset {
     Map<String, dynamic> json, {
     ThemePreset? fallback,
   }) {
-    final fb = fallback ?? _black;
+    final fb = fallback ?? _quiet;
     final rawId = json['id'] as String?;
     final rawName = json['name'] as String?;
     final rawLabel = json['label'] as String?;
@@ -216,6 +216,10 @@ ThemePreset _palette({
   Color ok = const Color(0xFF34D399),
   Color run = const Color(0xFFF59E0B),
   Color danger = const Color(0xFFFF5C5C),
+  Color? diffAddFg,
+  Color? diffDelFg,
+  Color? diffAddBg,
+  Color? diffDelBg,
 }) {
   final hover = _lighten(accent, 0.06);
   return ThemePreset(
@@ -247,10 +251,10 @@ ThemePreset _palette({
     runBg: run.withValues(alpha: 0.13),
     danger: danger,
     dangerBg: danger.withValues(alpha: 0.13),
-    diffAddBg: ok.withValues(alpha: 0.10),
-    diffDelBg: danger.withValues(alpha: 0.10),
-    diffAddFg: const Color(0xFF6EE7B7),
-    diffDelFg: const Color(0xFFFF8A8A),
+    diffAddBg: diffAddBg ?? ok.withValues(alpha: 0.10),
+    diffDelBg: diffDelBg ?? danger.withValues(alpha: 0.10),
+    diffAddFg: diffAddFg ?? const Color(0xFF6EE7B7),
+    diffDelFg: diffDelFg ?? const Color(0xFFFF8A8A),
     diffGutter: border2,
   );
 }
@@ -272,9 +276,13 @@ final _quiet = _palette(
   fg2: const Color(0xFFB5B5B0),
   fg3: const Color(0xFF93938D),
   fg4: const Color(0xFF6A6A65),
-  ok: const Color(0xFF5FC28E),
+  ok: const Color(0xFFB5B5B0),
   run: const Color(0xFFE9B44C),
-  danger: const Color(0xFFF07167),
+  danger: const Color(0xFFE8928A),
+  diffAddFg: const Color(0xFF9CC7AA),
+  diffDelFg: const Color(0xFFE8A39C),
+  diffAddBg: const Color(0xFF1C2620),
+  diffDelBg: const Color(0xFF2A1D1C),
 );
 
 final _quietLight = _palette(
@@ -292,643 +300,71 @@ final _quietLight = _palette(
   fg2: const Color(0xFF55554F),
   fg3: const Color(0xFF6B6B65),
   fg4: const Color(0xFFA3A39C),
-  ok: const Color(0xFF1F7A4D),
+  ok: const Color(0xFF55554F),
   run: const Color(0xFF8A5A00),
-  danger: const Color(0xFFB3261E),
+  danger: const Color(0xFFA33A31),
+  diffAddFg: const Color(0xFF2E6A45),
+  diffDelFg: const Color(0xFF9A3B33),
+  diffAddBg: const Color(0xFFE8F1EA),
+  diffDelBg: const Color(0xFFF7E7E5),
 );
 
-// Modelled on Vercel's Geist dark scale: true black, neutral greys, colour only for status.
-final _black = _palette(
-  name: 'black',
-  label: 'Pure Black',
+// High contrast: pure black or white, a 6E6E6A or 5C5C57 line, same layout.
+final _hcDark = _palette(
+  name: 'hc-dark',
+  label: 'High contrast dark',
   bg: const Color(0xFF000000),
-  surface1: const Color(0xFF0F0F0F),
-  surface2: const Color(0xFF171717),
-  surface3: const Color(0xFF212121),
-  border: const Color(0xFF1F1F1F),
-  border2: const Color(0xFF2E2E2E),
-  accent: const Color(0xFFFAFAFA),
-  accentFg: const Color(0xFF0A0A0A),
-  fg1: const Color(0xFFFAFAFA),
-  fg2: const Color(0xFFC7C7C7),
-  fg3: const Color(0xFFA0A0A0),
-  fg4: const Color(0xFF737373),
+  surface1: const Color(0xFF121212),
+  surface2: const Color(0xFF1E1E1E),
+  surface3: const Color(0xFF2E2E2E),
+  border: const Color(0xFF6E6E6A),
+  border2: const Color(0xFF8A8A86),
+  accent: const Color(0xFFFFFFFF),
+  accentFg: const Color(0xFF000000),
+  fg1: const Color(0xFFFFFFFF),
+  fg2: const Color(0xFFE6E6E2),
+  fg3: const Color(0xFFCFCFCA),
+  fg4: const Color(0xFFA3A39E),
+  ok: const Color(0xFFFFFFFF),
+  run: const Color(0xFFFFC24D),
+  danger: const Color(0xFFFFA49C),
+  diffAddFg: const Color(0xFFA6E3B8),
+  diffDelFg: const Color(0xFFFFA49C),
+  diffAddBg: const Color(0xFF0E1F14),
+  diffDelBg: const Color(0xFF24100E),
 );
 
-final _ember = _palette(
-  name: 'ember',
-  label: 'Charcoal Violet',
-  bg: const Color(0xFF0B0B0B),
-  surface1: const Color(0xFF151515),
-  surface2: const Color(0xFF1F1F1F),
-  surface3: const Color(0xFF2B2B2B),
-  border: const Color(0xFF222222),
-  border2: const Color(0xFF303030),
-  accent: const Color(0xFFA78BFA),
-  accentFg: const Color(0xFF140E2E),
-);
-
-final _stone = _palette(
-  name: 'stone',
-  label: 'Warm Stone',
-  bg: const Color(0xFF121110),
-  surface1: const Color(0xFF1B1917),
-  surface2: const Color(0xFF221F1B),
-  surface3: const Color(0xFF2A2621),
-  border: const Color(0xFF262320),
-  border2: const Color(0xFF332F2A),
-  accent: const Color(0xFF9DB0FF),
-  accentFg: const Color(0xFF10142A),
-  fg1: const Color(0xFFEDE7DD),
-  fg2: const Color(0xFFCFC8BC),
-  fg3: const Color(0xFFA39C90),
-  fg4: const Color(0xFF7A7368),
-);
-
-final _amber = _palette(
-  name: 'amber',
-  label: 'Obsidian Amber',
-  bg: const Color(0xFF0D0B09),
-  surface1: const Color(0xFF171411),
-  surface2: const Color(0xFF211D18),
-  surface3: const Color(0xFF2D2720),
-  border: const Color(0xFF26211B),
-  border2: const Color(0xFF362F26),
-  accent: const Color(0xFFF59E0B),
-  accentFg: const Color(0xFF1F1200),
-);
-
-final _midnight = _palette(
-  name: 'midnight',
-  label: 'Midnight Cyan',
-  bg: const Color(0xFF080C10),
-  surface1: const Color(0xFF10161E),
-  surface2: const Color(0xFF17202B),
-  surface3: const Color(0xFF202C3B),
-  border: const Color(0xFF1D2733),
-  border2: const Color(0xFF2A3848),
-  accent: const Color(0xFF38BDF8),
-  accentFg: const Color(0xFF041A26),
-);
-
-final _emerald = _palette(
-  name: 'emerald',
-  label: 'Forest Emerald',
-  bg: const Color(0xFF080D0B),
-  surface1: const Color(0xFF101915),
-  surface2: const Color(0xFF17241E),
-  surface3: const Color(0xFF203129),
-  border: const Color(0xFF1C2B24),
-  border2: const Color(0xFF293E34),
-  accent: const Color(0xFF34D399),
-  accentFg: const Color(0xFF032015),
-);
-
-final _rose = _palette(
-  name: 'rose',
-  label: 'Carbon Rose',
-  bg: const Color(0xFF0E0A0C),
-  surface1: const Color(0xFF181215),
-  surface2: const Color(0xFF231A1F),
-  surface3: const Color(0xFF30232A),
-  border: const Color(0xFF281D23),
-  border2: const Color(0xFF382931),
-  accent: const Color(0xFFFB7185),
-  accentFg: const Color(0xFF28060C),
-);
-
-final _tokyo = _palette(
-  name: 'tokyo',
-  label: 'Tokyo Night',
-  bg: const Color(0xFF0F111A),
-  surface1: const Color(0xFF161926),
-  surface2: const Color(0xFF1E2233),
-  surface3: const Color(0xFF282E44),
-  border: const Color(0xFF23283B),
-  border2: const Color(0xFF323952),
-  accent: const Color(0xFF7AA2F7),
-  accentFg: const Color(0xFF08132B),
-  fg1: const Color(0xFFE6EDF8),
-  fg2: const Color(0xFFC0CAF5),
-  fg3: const Color(0xFF9AA5CE),
-  fg4: const Color(0xFF6B7499),
-);
-
-final _mocha = _palette(
-  name: 'mocha',
-  label: 'Catppuccin Mocha',
-  bg: const Color(0xFF11111B),
-  surface1: const Color(0xFF181825),
-  surface2: const Color(0xFF1E1E2E),
-  surface3: const Color(0xFF313244),
-  border: const Color(0xFF292A3C),
-  border2: const Color(0xFF3B3D54),
-  accent: const Color(0xFFCBA6F7),
-  accentFg: const Color(0xFF1E1030),
-  fg1: const Color(0xFFCDD6F4),
-  fg2: const Color(0xFFBAC2DE),
-  fg3: const Color(0xFFA6ADC8),
-  fg4: const Color(0xFF6C7086),
-);
-
-final _nord = _palette(
-  name: 'nord',
-  label: 'Nordic Frost',
-  bg: const Color(0xFF11151C),
-  surface1: const Color(0xFF191F28),
-  surface2: const Color(0xFF222A36),
-  surface3: const Color(0xFF2E3846),
-  border: const Color(0xFF27303D),
-  border2: const Color(0xFF374354),
-  accent: const Color(0xFF88C0D0),
-  accentFg: const Color(0xFF081C24),
-  fg1: const Color(0xFFECEFF4),
-  fg2: const Color(0xFFD8DEE9),
-  fg3: const Color(0xFF9AA5B8),
-  fg4: const Color(0xFF6C788C),
-);
-
-final _gruvbox = _palette(
-  name: 'gruvbox',
-  label: 'Gruvbox Warm',
-  bg: const Color(0xFF141311),
-  surface1: const Color(0xFF1D1B18),
-  surface2: const Color(0xFF282521),
-  surface3: const Color(0xFF36312C),
-  border: const Color(0xFF2E2A25),
-  border2: const Color(0xFF403A33),
-  accent: const Color(0xFFFABD2F),
-  accentFg: const Color(0xFF221600),
-  fg1: const Color(0xFFEBDBB2),
-  fg2: const Color(0xFFD5C4A1),
-  fg3: const Color(0xFFA89984),
-  fg4: const Color(0xFF7C6F64),
-);
-
-final _crimsonNoir = _palette(
-  name: 'crimson-noir',
-  label: 'Crimson Noir',
-  bg: const Color(0xFF0A0A0A),
-  surface1: const Color(0xFF141414),
-  surface2: const Color(0xFF1A1A1A),
-  surface3: const Color(0xFF2B2B2B),
-  border: const Color(0xFF222222),
-  border2: const Color(0xFF333333),
-  accent: const Color(0xFFFF1914),
+final _hcLight = _palette(
+  name: 'hc-light',
+  label: 'High contrast light',
+  bg: const Color(0xFFFFFFFF),
+  surface1: const Color(0xFFFFFFFF),
+  surface2: const Color(0xFFEBEBE6),
+  surface3: const Color(0xFFD9D9D3),
+  border: const Color(0xFF5C5C57),
+  border2: const Color(0xFF3B3B38),
+  accent: const Color(0xFF000000),
   accentFg: const Color(0xFFFFFFFF),
-  fg1: const Color(0xFFEEEDEE),
-  fg2: const Color(0xFFC9C9C9),
-  fg3: const Color(0xFF969696),
-  fg4: const Color(0xFF686868),
+  fg1: const Color(0xFF000000),
+  fg2: const Color(0xFF1F1F1D),
+  fg3: const Color(0xFF383835),
+  fg4: const Color(0xFF5C5C57),
+  ok: const Color(0xFF000000),
+  run: const Color(0xFF6B4300),
+  danger: const Color(0xFF8A1C14),
+  diffAddFg: const Color(0xFF1F5A35),
+  diffDelFg: const Color(0xFF8A1C14),
+  diffAddBg: const Color(0xFFE3F2E7),
+  diffDelBg: const Color(0xFFFBE3E0),
 );
 
-final _desertAdobe = _palette(
-  name: 'desert-adobe',
-  label: 'Desert Adobe',
-  bg: const Color(0xFF161412),
-  surface1: const Color(0xFF1E1A17),
-  surface2: const Color(0xFF25201C),
-  surface3: const Color(0xFF362E26),
-  border: const Color(0xFF2B241F),
-  border2: const Color(0xFF413629),
-  accent: const Color(0xFFE2A962),
-  accentFg: const Color(0xFF1A1208),
-  fg1: const Color(0xFFDCD1C0),
-  fg2: const Color(0xFFC0B5A4),
-  fg3: const Color(0xFF968C7D),
-  fg4: const Color(0xFF6E665A),
-);
-
-final _graphiteSilver = _palette(
-  name: 'graphite-silver',
-  label: 'Graphite Silver',
-  bg: const Color(0xFF131313),
-  surface1: const Color(0xFF1A1A1A),
-  surface2: const Color(0xFF232323),
-  surface3: const Color(0xFF303030),
-  border: const Color(0xFF262626),
-  border2: const Color(0xFF383838),
-  accent: const Color(0xFFF4F4F4),
-  accentFg: const Color(0xFF111111),
-  fg1: const Color(0xFFE8E8E8),
-  fg2: const Color(0xFFB4B4B4),
-  fg3: const Color(0xFF888888),
-  fg4: const Color(0xFF606060),
-);
-
-final _sageMist = _palette(
-  name: 'sage-mist',
-  label: 'Sage Mist',
-  bg: const Color(0xFF181B18),
-  surface1: const Color(0xFF1E221E),
-  surface2: const Color(0xFF242823),
-  surface3: const Color(0xFF313A33),
-  border: const Color(0xFF282D27),
-  border2: const Color(0xFF384039),
-  accent: const Color(0xFFADC7AD),
-  accentFg: const Color(0xFF111811),
-  fg1: const Color(0xFFCED5CE),
-  fg2: const Color(0xFFB6BFB6),
-  fg3: const Color(0xFF8C968C),
-  fg4: const Color(0xFF656E65),
-);
-
-final _terracottaStudio = _palette(
-  name: 'terracotta-studio',
-  label: 'Terracotta Studio',
-  bg: const Color(0xFF161616),
-  surface1: const Color(0xFF1C1C1C),
-  surface2: const Color(0xFF222222),
-  surface3: const Color(0xFF32302E),
-  border: const Color(0xFF292826),
-  border2: const Color(0xFF3A3835),
-  accent: const Color(0xFFD65F3B),
-  accentFg: const Color(0xFF1A0904),
-  fg1: const Color(0xFFD5D2CD),
-  fg2: const Color(0xFFB4B1AC),
-  fg3: const Color(0xFF8C8984),
-  fg4: const Color(0xFF66635F),
-);
-
-final _volcanicCinder = _palette(
-  name: 'volcanic-cinder',
-  label: 'Volcanic Cinder',
-  bg: const Color(0xFF141111),
-  surface1: const Color(0xFF1B1616),
-  surface2: const Color(0xFF221B1B),
-  surface3: const Color(0xFF352325),
-  border: const Color(0xFF2B2021),
-  border2: const Color(0xFF42272A),
-  accent: const Color(0xFFFF6138),
-  accentFg: const Color(0xFF1E0700),
-  fg1: const Color(0xFFDCCCC7),
-  fg2: const Color(0xFFBEB1AB),
-  fg3: const Color(0xFF948782),
-  fg4: const Color(0xFF6B605C),
-);
-
-final _steelCobalt = _palette(
-  name: 'steel-cobalt',
-  label: 'Steel Cobalt',
-  bg: const Color(0xFF10151B),
-  surface1: const Color(0xFF161B23),
-  surface2: const Color(0xFF1B2029),
-  surface3: const Color(0xFF243144),
-  border: const Color(0xFF212936),
-  border2: const Color(0xFF2E3C52),
-  accent: const Color(0xFF60A5FE),
-  accentFg: const Color(0xFF061529),
-  fg1: const Color(0xFFC5CEDA),
-  fg2: const Color(0xFFA5B0BD),
-  fg3: const Color(0xFF7D8896),
-  fg4: const Color(0xFF586270),
-);
-
-final _copperHearth = _palette(
-  name: 'copper-hearth',
-  label: 'Copper Hearth',
-  bg: const Color(0xFF161210),
-  surface1: const Color(0xFF1C1614),
-  surface2: const Color(0xFF221A17),
-  surface3: const Color(0xFF362822),
-  border: const Color(0xFF2C211D),
-  border2: const Color(0xFF44312A),
-  accent: const Color(0xFFED9353),
-  accentFg: const Color(0xFF1F0E03),
-  fg1: const Color(0xFFDED0C4),
-  fg2: const Color(0xFFBFB4A7),
-  fg3: const Color(0xFF948A7E),
-  fg4: const Color(0xFF6B6359),
-);
-
-final _orchidNebula = _palette(
-  name: 'orchid-nebula',
-  label: 'Orchid Nebula',
-  bg: const Color(0xFF13101E),
-  surface1: const Color(0xFF191528),
-  surface2: const Color(0xFF1F1A31),
-  surface3: const Color(0xFF30264B),
-  border: const Color(0xFF28213F),
-  border2: const Color(0xFF382B59),
-  accent: const Color(0xFFFE6FE1),
-  accentFg: const Color(0xFF260520),
-  fg1: const Color(0xFFDBD3EE),
-  fg2: const Color(0xFFB4ABCD),
-  fg3: const Color(0xFF8A80A6),
-  fg4: const Color(0xFF62597D),
-);
-
-final _deepIndigo = _palette(
-  name: 'deep-indigo',
-  label: 'Deep Indigo',
-  bg: const Color(0xFF111622),
-  surface1: const Color(0xFF161C2A),
-  surface2: const Color(0xFF1C2232),
-  surface3: const Color(0xFF27314A),
-  border: const Color(0xFF232B3F),
-  border2: const Color(0xFF313E5B),
-  accent: const Color(0xFF88A7F1),
-  accentFg: const Color(0xFF0A1329),
-  fg1: const Color(0xFFCED6E9),
-  fg2: const Color(0xFFADB8CF),
-  fg3: const Color(0xFF828FA8),
-  fg4: const Color(0xFF5B677E),
-);
-
-final _arcticSlate = _palette(
-  name: 'arctic-slate',
-  label: 'Arctic Slate',
-  bg: const Color(0xFF0F141B),
-  surface1: const Color(0xFF141A22),
-  surface2: const Color(0xFF18202A),
-  surface3: const Color(0xFF233040),
-  border: const Color(0xFF1F2936),
-  border2: const Color(0xFF2C3B4E),
-  accent: const Color(0xFF96B7D7),
-  accentFg: const Color(0xFF091520),
-  fg1: const Color(0xFFCBD4DD),
-  fg2: const Color(0xFFB1BCC9),
-  fg3: const Color(0xFF8592A1),
-  fg4: const Color(0xFF5E6A78),
-);
-
-final _pineCanopy = _palette(
-  name: 'pine-canopy',
-  label: 'Pine Canopy',
-  bg: const Color(0xFF141A16),
-  surface1: const Color(0xFF19201B),
-  surface2: const Color(0xFF1D2620),
-  surface3: const Color(0xFF2A372E),
-  border: const Color(0xFF243028),
-  border2: const Color(0xFF334438),
-  accent: const Color(0xFFA2C2A0),
-  accentFg: const Color(0xFF0E1A0E),
-  fg1: const Color(0xFFC7D2C6),
-  fg2: const Color(0xFFB0BBB0),
-  fg3: const Color(0xFF869186),
-  fg4: const Color(0xFF5F695F),
-);
-
-final _fernCloister = _palette(
-  name: 'fern-cloister',
-  label: 'Fern Cloister',
-  bg: const Color(0xFF101710),
-  surface1: const Color(0xFF161F16),
-  surface2: const Color(0xFF1C261B),
-  surface3: const Color(0xFF273726),
-  border: const Color(0xFF223021),
-  border2: const Color(0xFF30452F),
-  accent: const Color(0xFF99D58F),
-  accentFg: const Color(0xFF0A1C08),
-  fg1: const Color(0xFFC9D5C3),
-  fg2: const Color(0xFFADBBA8),
-  fg3: const Color(0xFF83917E),
-  fg4: const Color(0xFF5B6757),
-);
-
-final _cyberSynth = _palette(
-  name: 'cyber-synth',
-  label: 'Cyber Synth',
-  bg: const Color(0xFF0C0D15),
-  surface1: const Color(0xFF131420),
-  surface2: const Color(0xFF1A1A27),
-  surface3: const Color(0xFF282940),
-  border: const Color(0xFF222336),
-  border2: const Color(0xFF323352),
-  accent: const Color(0xFFFF26E0),
-  accentFg: const Color(0xFF24001E),
-  fg1: const Color(0xFFDADCF0),
-  fg2: const Color(0xFFB8BCD6),
-  fg3: const Color(0xFF8B90AD),
-  fg4: const Color(0xFF626682),
-);
-
-final _velvetRose = _palette(
-  name: 'velvet-rose',
-  label: 'Velvet Rose',
-  bg: const Color(0xFF181216),
-  surface1: const Color(0xFF1F171C),
-  surface2: const Color(0xFF251C21),
-  surface3: const Color(0xFF382831),
-  border: const Color(0xFF2E2229),
-  border2: const Color(0xFF402C38),
-  accent: const Color(0xFFEF7AA3),
-  accentFg: const Color(0xFF260813),
-  fg1: const Color(0xFFE0CED6),
-  fg2: const Color(0xFFC0AFB8),
-  fg3: const Color(0xFF96858E),
-  fg4: const Color(0xFF6E5E66),
-);
-
-final _burgundyStudy = _palette(
-  name: 'burgundy-study',
-  label: 'Burgundy Study',
-  bg: const Color(0xFF181012),
-  surface1: const Color(0xFF1F1518),
-  surface2: const Color(0xFF261B1D),
-  surface3: const Color(0xFF382428),
-  border: const Color(0xFF302124),
-  border2: const Color(0xFF42282C),
-  accent: const Color(0xFFD26457),
-  accentFg: const Color(0xFF210805),
-  fg1: const Color(0xFFDDCCC2),
-  fg2: const Color(0xFFBEADA4),
-  fg3: const Color(0xFF94847B),
-  fg4: const Color(0xFF6B5D55),
-);
-
-final _tealEstuary = _palette(
-  name: 'teal-estuary',
-  label: 'Teal Estuary',
-  bg: const Color(0xFF0E1618),
-  surface1: const Color(0xFF131D1F),
-  surface2: const Color(0xFF182425),
-  surface3: const Color(0xFF1F3336),
-  border: const Color(0xFF1E2E30),
-  border2: const Color(0xFF284044),
-  accent: const Color(0xFF3CD3C3),
-  accentFg: const Color(0xFF03211D),
-  fg1: const Color(0xFFC6D8D9),
-  fg2: const Color(0xFFA4B8B7),
-  fg3: const Color(0xFF7B8F8E),
-  fg4: const Color(0xFF556766),
-);
-
-final _crtTerminal = _palette(
-  name: 'crt-terminal',
-  label: 'CRT Terminal',
-  bg: const Color(0xFF0B120C),
-  surface1: const Color(0xFF101B10),
-  surface2: const Color(0xFF162414),
-  surface3: const Color(0xFF1F361C),
-  border: const Color(0xFF1C3019),
-  border2: const Color(0xFF284624),
-  accent: const Color(0xFF73F255),
-  accentFg: const Color(0xFF062102),
-  fg1: const Color(0xFFB3E4AB),
-  fg2: const Color(0xFF97C48F),
-  fg3: const Color(0xFF6E9967),
-  fg4: const Color(0xFF4A6E44),
-);
-
-final _borealGlow = _palette(
-  name: 'boreal-glow',
-  label: 'Boreal Glow',
-  bg: const Color(0xFF0B1016),
-  surface1: const Color(0xFF11161E),
-  surface2: const Color(0xFF161C26),
-  surface3: const Color(0xFF1F2C3D),
-  border: const Color(0xFF1C2532),
-  border2: const Color(0xFF28374A),
-  accent: const Color(0xFF7DF4B7),
-  accentFg: const Color(0xFF052113),
-  fg1: const Color(0xFFD2DAE2),
-  fg2: const Color(0xFFABBAC5),
-  fg3: const Color(0xFF80909C),
-  fg4: const Color(0xFF596873),
-);
-
-final _saffronTwilight = _palette(
-  name: 'saffron-twilight',
-  label: 'Saffron Twilight',
-  bg: const Color(0xFF12131F),
-  surface1: const Color(0xFF181827),
-  surface2: const Color(0xFF1E1D2F),
-  surface3: const Color(0xFF2D2B43),
-  border: const Color(0xFF27263D),
-  border2: const Color(0xFF363452),
-  accent: const Color(0xFFFFC12F),
-  accentFg: const Color(0xFF241800),
-  fg1: const Color(0xFFD9D5C9),
-  fg2: const Color(0xFFB6B3A6),
-  fg3: const Color(0xFF8C897D),
-  fg4: const Color(0xFF646257),
-);
-
-final _amethystGloaming = _palette(
-  name: 'amethyst-gloaming',
-  label: 'Amethyst Gloaming',
-  bg: const Color(0xFF161121),
-  surface1: const Color(0xFF1C152A),
-  surface2: const Color(0xFF221A33),
-  surface3: const Color(0xFF312649),
-  border: const Color(0xFF2B2140),
-  border2: const Color(0xFF3B2E57),
-  accent: const Color(0xFFC4A1EF),
-  accentFg: const Color(0xFF190D29),
-  fg1: const Color(0xFFD4CBE5),
-  fg2: const Color(0xFFB3AAC9),
-  fg3: const Color(0xFF8980A1),
-  fg4: const Color(0xFF625978),
-);
-
-final _harbourMist = _palette(
-  name: 'harbour-mist',
-  label: 'Harbour Mist',
-  bg: const Color(0xFF21222D),
-  surface1: const Color(0xFF272937),
-  surface2: const Color(0xFF2F3242),
-  surface3: const Color(0xFF3D4156),
-  border: const Color(0xFF373B4E),
-  border2: const Color(0xFF484D66),
-  accent: const Color(0xFFF7F7EF),
-  accentFg: const Color(0xFF1B1C26),
-  fg1: const Color(0xFFF7F8F0),
-  fg2: const Color(0xFFE6E6DE),
-  fg3: const Color(0xFFB8BAC7),
-  fg4: const Color(0xFF888B9C),
-);
-
-final _oceanicAbyss = _palette(
-  name: 'oceanic-abyss',
-  label: 'Oceanic Abyss',
-  bg: const Color(0xFF07101A),
-  surface1: const Color(0xFF0B1522),
-  surface2: const Color(0xFF0F1B29),
-  surface3: const Color(0xFF162B40),
-  border: const Color(0xFF142436),
-  border2: const Color(0xFF1D354F),
-  accent: const Color(0xFF56E7C0),
-  accentFg: const Color(0xFF032118),
-  fg1: const Color(0xFFD0DCE8),
-  fg2: const Color(0xFFA1B3C1),
-  fg3: const Color(0xFF748899),
-  fg4: const Color(0xFF4E6170),
-);
-
-final _volcanicBasalt = _palette(
-  name: 'volcanic-basalt',
-  label: 'Volcanic Basalt',
-  bg: const Color(0xFF15181A),
-  surface1: const Color(0xFF1A1E20),
-  surface2: const Color(0xFF202527),
-  surface3: const Color(0xFF283336),
-  border: const Color(0xFF262C2E),
-  border2: const Color(0xFF333C3F),
-  accent: const Color(0xFF87D9C5),
-  accentFg: const Color(0xFF081F1A),
-  fg1: const Color(0xFFD2DADB),
-  fg2: const Color(0xFFACB7B7),
-  fg3: const Color(0xFF828E8E),
-  fg4: const Color(0xFF5B6666),
-);
-
-final _amberPhosphor = _palette(
-  name: 'amber-phosphor',
-  label: 'Amber Phosphor',
-  bg: const Color(0xFF130F09),
-  surface1: const Color(0xFF1B150B),
-  surface2: const Color(0xFF231A0E),
-  surface3: const Color(0xFF362812),
-  border: const Color(0xFF2E2212),
-  border2: const Color(0xFF473313),
-  accent: const Color(0xFFFFB427),
-  accentFg: const Color(0xFF241500),
-  fg1: const Color(0xFFEED8B8),
-  fg2: const Color(0xFFC8B292),
-  fg3: const Color(0xFF998467),
-  fg4: const Color(0xFF6E5D45),
-);
-
+/// Four palettes only: Quiet dark and light, and their high-contrast pair.
+/// System is a mode that picks dark or light, not a palette.
 final List<ThemePreset> allPresets = [
   _quiet,
   _quietLight,
-  _black,
-  _ember,
-  _stone,
-  _crimsonNoir,
-  _desertAdobe,
-  _graphiteSilver,
-  _sageMist,
-  _terracottaStudio,
-  _volcanicCinder,
-  _steelCobalt,
-  _copperHearth,
-  _orchidNebula,
-  _deepIndigo,
-  _arcticSlate,
-  _pineCanopy,
-  _fernCloister,
-  _cyberSynth,
-  _velvetRose,
-  _burgundyStudy,
-  _tealEstuary,
-  _crtTerminal,
-  _borealGlow,
-  _saffronTwilight,
-  _amethystGloaming,
-  _harbourMist,
-  _oceanicAbyss,
-  _volcanicBasalt,
-  _amberPhosphor,
-  _tokyo,
-  _mocha,
-  _nord,
-  _gruvbox,
-  _amber,
-  _midnight,
-  _emerald,
-  _rose,
+  _hcDark,
+  _hcLight,
 ];
 
 class AccentPreset {
@@ -944,74 +380,9 @@ class AccentPreset {
   });
 }
 
-const List<AccentPreset> allAccents = [
-  AccentPreset(
-    name: 'white',
-    label: 'Pure White',
-    accent: Color(0xFFFFFFFF),
-    accentFg: Color(0xFF0A0A0A),
-  ),
-  AccentPreset(
-    name: 'violet',
-    label: 'Violet',
-    accent: Color(0xFFA78BFA),
-    accentFg: Color(0xFF140E2E),
-  ),
-  AccentPreset(
-    name: 'periwinkle',
-    label: 'Periwinkle',
-    accent: Color(0xFF9DB0FF),
-    accentFg: Color(0xFF10142A),
-  ),
-  AccentPreset(
-    name: 'sky',
-    label: 'Electric Sky',
-    accent: Color(0xFF38BDF8),
-    accentFg: Color(0xFF041A26),
-  ),
-  AccentPreset(
-    name: 'cyan',
-    label: 'Frost Cyan',
-    accent: Color(0xFF22D3EE),
-    accentFg: Color(0xFF041E24),
-  ),
-  AccentPreset(
-    name: 'emerald',
-    label: 'Emerald',
-    accent: Color(0xFF34D399),
-    accentFg: Color(0xFF032015),
-  ),
-  AccentPreset(
-    name: 'lime',
-    label: 'Acid Lime',
-    accent: Color(0xFFA3E635),
-    accentFg: Color(0xFF142103),
-  ),
-  AccentPreset(
-    name: 'amber',
-    label: 'Solar Amber',
-    accent: Color(0xFFF59E0B),
-    accentFg: Color(0xFF1F1200),
-  ),
-  AccentPreset(
-    name: 'orange',
-    label: 'Tangerine',
-    accent: Color(0xFFFB923C),
-    accentFg: Color(0xFF241002),
-  ),
-  AccentPreset(
-    name: 'rose',
-    label: 'Coral Rose',
-    accent: Color(0xFFFB7185),
-    accentFg: Color(0xFF28060C),
-  ),
-  AccentPreset(
-    name: 'lavender',
-    label: 'Mauve Lavender',
-    accent: Color(0xFFCBA6F7),
-    accentFg: Color(0xFF1E1030),
-  ),
-];
+/// Accent recolours are gone: colour is status only. Kept empty so saved
+/// accent names resolve to the default.
+const List<AccentPreset> allAccents = [];
 
 ThemePreset _withAccentOverride(ThemePreset base, AccentPreset? override) {
   if (override == null) return base;
@@ -1215,6 +586,7 @@ Color _lighten(Color c, double amount) {
 class ThemeManager extends ChangeNotifier {
   static const _legacyIndexKey = 'theme_index';
   static const _prefsKey = 'theme_name';
+  static const _systemPrefsKey = 'theme_system';
   static const activeJsonPrefsKey = 'theme_active_json';
   static const defaultTheme = 'quiet';
   static const defaultFont = 'Inter';
@@ -1227,6 +599,10 @@ class ThemeManager extends ChangeNotifier {
   ThemeManager._();
 
   ResolvedTheme _resolved = ResolvedTheme.fromPreset(_quiet);
+  bool _system = true;
+
+  /// True until the user picks a palette: dark or light follows the device.
+  bool get followsSystem => _system;
   ResolvedTheme? _signedFor;
   String _signature = '';
 
@@ -1336,9 +712,8 @@ class ThemeManager extends ChangeNotifier {
     final legacy = p.getInt(_legacyIndexKey);
     if (name == null && legacy != null) {
       // Saved before Pure Black was prepended; index into the old order.
-      final old = allPresets.where((t) => t.name != 'black').toList();
-      name = old[legacy.clamp(0, old.length - 1)].name;
-      await p.setString(_prefsKey, name);
+      // Old palette indexes no longer mean anything; follow the system.
+      name = null;
       await p.remove(_legacyIndexKey);
     }
     if (name == 'white') name = defaultTheme;
@@ -1353,6 +728,8 @@ class ThemeManager extends ChangeNotifier {
       }
     }
 
+    _system = p.getBool(_systemPrefsKey) ?? true;
+    if (_system) name = null;
     // First run follows the system; a saved choice always wins.
     final systemLight = PlatformDispatcher.instance.platformBrightness ==
         Brightness.light;
@@ -1375,7 +752,7 @@ class ThemeManager extends ChangeNotifier {
             ? savedMono
             : defaultMonoFont;
 
-    final cachedJson = p.getString(activeJsonPrefsKey);
+    final cachedJson = _system ? null : p.getString(activeJsonPrefsKey);
     if (cachedJson != null && cachedJson.isNotEmpty) {
       try {
         final decoded = jsonDecode(cachedJson);
@@ -1416,9 +793,42 @@ class ThemeManager extends ChangeNotifier {
 
   Future<void> applyTheme(String id) => setName(id);
 
+  /// Follow the device: Quiet dark or light by the system brightness.
+  Future<void> useSystem() async {
+    _system = true;
+    try {
+      final p = await SharedPreferences.getInstance();
+      await p.setBool(_systemPrefsKey, true);
+    } catch (_) {}
+    final light =
+        PlatformDispatcher.instance.platformBrightness == Brightness.light;
+    final preset = allPresets[light ? 1 : 0];
+    await _commit(ResolvedTheme.fromPreset(
+      preset,
+      accentName: null,
+      uiFont: _resolved.type.uiFont,
+      codeFont: _resolved.type.codeFont,
+    ));
+  }
+
+  /// The device switched dark or light; only matters while following it.
+  Future<void> syncSystem() async {
+    if (!_system) return;
+    final light =
+        PlatformDispatcher.instance.platformBrightness == Brightness.light;
+    final want = allPresets[light ? 1 : 0];
+    if (_resolved.id == want.name) return;
+    await useSystem();
+  }
+
   Future<void> setIndex(int i) async {
     if (i < 0 || i >= allPresets.length) return;
     final preset = allPresets[i];
+    _system = false;
+    try {
+      final p = await SharedPreferences.getInstance();
+      await p.setBool(_systemPrefsKey, false);
+    } catch (_) {}
     if (_resolved.id == preset.name) return;
     await _commit(ResolvedTheme.fromPreset(
       preset,
@@ -1518,7 +928,7 @@ class AppColors {
   /// The user's chrome opacity; overrides [solidChrome] when set.
   static double? chromeAlpha;
   // Desktop Pure Black takes the reference's window, card and outline greys.
-  static bool get _deskBlack => !kMobile && currentTheme.name == 'black';
+  static bool get _deskBlack => false;
   static Color get windowBg => kMobile
       ? currentTheme.bg
       : (_deskBlack

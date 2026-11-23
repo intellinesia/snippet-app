@@ -336,8 +336,14 @@ class _MobileShellState extends State<MobileShell>
               child: SafeArea(
                 top: false,
                 child: QuietTabBar(
+                  // Agents is Home on the phone: faces first, then the lists.
+                  places: const [
+                    QuietPlace.agents,
+                    QuietPlace.sessions,
+                    QuietPlace.tasks,
+                  ],
                   selected: switch (mobileHome) {
-                    MobileHome.home => QuietPlace.home,
+                    MobileHome.home => QuietPlace.agents,
                     MobileHome.chats => QuietPlace.sessions,
                     MobileHome.tasks => QuietPlace.tasks,
                     MobileHome.agents => QuietPlace.agents,
@@ -347,7 +353,7 @@ class _MobileShellState extends State<MobileShell>
                     QuietPlace.home => MobileHome.home,
                     QuietPlace.sessions => MobileHome.chats,
                     QuietPlace.tasks => MobileHome.tasks,
-                    QuietPlace.agents => MobileHome.agents,
+                    QuietPlace.agents => MobileHome.home,
                   }),
                   onNew: widget.onNew!,
                 ),

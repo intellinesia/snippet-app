@@ -1168,19 +1168,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       for (final s in _sessions ?? const <SessionInfo>[])
         if (sessionNeedsYou(s)) s
     ].isNotEmpty;
-    final machine = _active?.label ?? '';
+    // Connected shows nothing: the gear alone.
     return Column(mainAxisSize: MainAxisSize.min, children: [
-      if (_client != null && machine.isNotEmpty)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(18, 4, 12, 0),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text('$machine \u00b7 Connected',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sans(11.5, color: AppColors.fg3)),
-          ),
-        ),
       _sidebarFooterRow(needsYou),
     ]);
   }
@@ -1193,6 +1182,30 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       child: Row(children: [
         _FooterBtn(
             icon: 'settings', tooltip: 'Settings', onTap: _openShellSettings),
+        // One status line beside the gear, only while the daemon is down.
+        if (_client != null && _sessionsError != null) ...[
+          const SizedBox(width: 10),
+          AppIcon('refresh', size: 14, color: AppColors.run),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Tooltip(
+              message: 'Showing what you saw earlier',
+              child: Text('Reconnecting\u2026',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(12, color: AppColors.fg1)),
+            ),
+          ),
+          TapDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _loadSessions,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              child: Text('Retry',
+                  style: sans(12, weight: W.label, color: AppColors.fg1)),
+            ),
+          ),
+        ],
       ]),
     );
   }

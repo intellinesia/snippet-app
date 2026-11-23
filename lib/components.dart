@@ -879,22 +879,50 @@ class Skeleton extends StatelessWidget {
       );
 }
 
-class ListSkeleton extends StatelessWidget {
+/// Static placeholder rows that appear only if loading takes over 400 ms, so a
+/// fast load never flashes and nothing sweeps or pulses.
+class ListSkeleton extends StatefulWidget {
   const ListSkeleton({super.key, this.rows = 3, this.subtitle = true});
 
   final int rows;
   final bool subtitle;
 
   @override
-  Widget build(BuildContext context) => Semantics(
+  State<ListSkeleton> createState() => _ListSkeletonState();
+}
+
+class _ListSkeletonState extends State<ListSkeleton> {
+  bool _shown = false;
+  Timer? _t;
+
+  @override
+  void initState() {
+    super.initState();
+    _t = Timer(const Duration(milliseconds: 400), () {
+      if (mounted) setState(() => _shown = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _t?.cancel();
+    super.dispose();
+  }
+
+  int get rows => widget.rows;
+  bool get subtitle => widget.subtitle;
+
+  @override
+  Widget build(BuildContext context) => !_shown
+      ? const SizedBox.expand()
+      : Semantics(
         label: 'Loading',
         child: PageBody(children: [
           Material(
             color: SurfaceScope.groupOf(context),
             borderRadius: BorderRadius.circular(R.md),
             clipBehavior: Clip.antiAlias,
-            child: LoadingSweep(
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
               for (var i = 0; i < rows; i++) ...[
                 if (i > 0)
                   Divider(height: 1, thickness: 1, color: AppColors.line),
@@ -937,7 +965,6 @@ class ListSkeleton extends StatelessWidget {
                 ),
               ],
             ]),
-            ),
           ),
         ]),
       );

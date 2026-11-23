@@ -32,6 +32,7 @@ import '../share_inbound.dart';
 import '../shells.dart';
 import '../store.dart';
 import '../term.dart' show SessionTermView;
+import '../tap_detector.dart';
 import '../theme.dart';
 import '../media_views.dart';
 import '../widgets.dart';

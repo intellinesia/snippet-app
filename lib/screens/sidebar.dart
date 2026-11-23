@@ -581,6 +581,9 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           onSettings: () => widget.onMobileHome(MobileHome.settings),
           onSearch: search,
           onNew: widget.onNewSession,
+          onOpenAgent: widget.onAgent,
+          onOpenLead: widget.onOpenLead,
+          onAllAgents: () => widget.onMobileHome(MobileHome.agents),
           onDecide: _decideHero,
           offline: widget.sessionsError == null
               ? null

@@ -115,6 +115,11 @@ class _SnippetAppState extends State<SnippetApp> with WidgetsBindingObserver {
   }
 
   @override
+  void didChangePlatformBrightness() {
+    ThemeManager.instance.syncSystem();
+  }
+
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final fg = state == AppLifecycleState.resumed;
     Diag.lifecycle(state);

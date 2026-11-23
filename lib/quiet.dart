@@ -304,7 +304,11 @@ class QuietTabBar extends StatelessWidget {
     required this.onSelect,
     required this.onNew,
     this.attention = const {},
+    this.places = QuietPlace.values,
   });
+
+  /// Which places the bar shows, in order. The phone leads with Agents.
+  final List<QuietPlace> places;
   final QuietPlace? selected;
   final ValueChanged<QuietPlace> onSelect;
   final VoidCallback onNew;
@@ -326,7 +330,7 @@ class QuietTabBar extends StatelessWidget {
                 border: Border.all(color: AppColors.border),
               ),
               child: Row(children: [
-                for (final p in QuietPlace.values)
+                for (final p in places)
                   Expanded(
                     child: _Tab(
                       place: p,

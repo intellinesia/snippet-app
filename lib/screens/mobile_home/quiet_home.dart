@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../crew_status.dart';
 import '../../menu_widgets.dart' show relativeTime;
 import '../../mochi.dart';
 import '../../models.dart';
@@ -15,10 +16,19 @@ import 'home_data.dart';
 /// Both read the same sessions; Home shows only what matters now.
 class QuietPlaceHeader extends StatelessWidget {
   const QuietPlaceHeader(
-      {super.key, required this.title, this.onSearch, this.trailing});
+      {super.key,
+      required this.title,
+      this.onSearch,
+      this.onSettings,
+      this.trailing,
+      this.tagline});
   final String title;
   final VoidCallback? onSearch;
+  final VoidCallback? onSettings;
   final Widget? trailing;
+
+  /// One calm sentence under the title.
+  final String? tagline;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -27,11 +37,17 @@ class QuietPlaceHeader extends StatelessWidget {
           Row(mainAxisAlignment: MainAxisAlignment.end, children: [
             if (onSearch != null)
               _IconTap('search', 'Search', onSearch!),
+            if (onSettings != null) _IconTap('settings', 'Settings', onSettings!),
             if (trailing != null) trailing!,
           ]),
           Text(title,
-              style: sans(22,
-                  height: 28 / 22, weight: W.title, color: AppColors.fg1)),
+              style: sans(34,
+                  height: 41 / 34, weight: FontWeight.w500, color: AppColors.fg1)),
+          if (tagline != null)
+            Padding(
+              padding: EdgeInsets.only(top: S.s4),
+              child: Text(tagline!, style: sans(13, color: AppColors.fg3)),
+            ),
         ]),
       );
 }
@@ -89,8 +105,12 @@ class QuietHomeScreen extends StatelessWidget {
     required this.onSettings,
     required this.onSearch,
     this.onNew,
+    this.onOpenAgent,
+    this.onOpenLead,
+    this.onAllAgents,
     this.onDecide,
     this.offline,
+    this.groupCount = 0,
   });
 
   final Widget? offline;
@@ -101,6 +121,10 @@ class QuietHomeScreen extends StatelessWidget {
   final VoidCallback onSettings;
   final VoidCallback onSearch;
   final VoidCallback? onNew;
+  final void Function(CoordinationAgent a)? onOpenAgent;
+  final VoidCallback? onOpenLead;
+  final VoidCallback? onAllAgents;
+  final int groupCount;
   final Future<bool> Function(SessionInfo s, bool approve)? onDecide;
 
   @override
@@ -111,6 +135,17 @@ class QuietHomeScreen extends StatelessWidget {
       for (final s in sessions)
         if (!s.settled && sessionBusy(s) && !sessionNeedsYou(s)) s
     ]..sort((a, b) => b.lastActive.compareTo(a.lastActive));
+    final rows = agentRows(agents, sessions);
+    final lead = agents.where((a) => a.isLead).firstOrNull;
+    // Lead first, then whoever needs you, then who is working, then the rest.
+    final strip = <(CoordinationAgent, CrewState)>[
+      if (lead != null)
+        (lead, working.isNotEmpty ? CrewState.working : CrewState.standingBy),
+      for (final r in rows.needs) (r.agent, r.state),
+      for (final r in rows.working) (r.agent, r.state),
+      for (final r in rows.asleep) (r.agent, r.state),
+    ];
+    final quiet = asks.isEmpty && working.isEmpty;
     final dayStart = DateTime.now()
             .copyWith(hour: 0, minute: 0, second: 0, millisecond: 0)
             .millisecondsSinceEpoch ~/
@@ -119,57 +154,48 @@ class QuietHomeScreen extends StatelessWidget {
         .where((s) =>
             !sessionBusy(s) && !sessionNeedsYou(s) && s.lastActive >= dayStart)
         .length;
+    final total = agents.where((a) => !a.isLead).length + (lead != null ? 1 : 0);
+    final allLabel = groupCount > 0
+        ? 'All $total agents and $groupCount groups'
+        : 'All $total agents';
     return ListView(
       padding: EdgeInsets.only(bottom: S.s24),
       children: [
         QuietPlaceHeader(
-          title: 'Home',
+          title: 'Agents',
           onSearch: onSearch,
-          trailing: TapDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onSettings,
-            child: SizedBox(
-              width: 48,
-              height: 48,
-              child: Center(
-                child: Container(
-                  width: 32,
-                  height: 32,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                      color: AppColors.surface2, shape: BoxShape.circle),
-                  child: Text('B',
-                      style: sans(13, weight: W.label, color: AppColors.fg1)),
-                ),
-              ),
-            ),
-          ),
+          onSettings: onSettings,
+          tagline: quiet && strip.isNotEmpty
+              ? 'Tap an agent to talk to it. Nobody is working.'
+              : null,
         ),
         if (offline != null) offline!,
-        if (asks.isEmpty && working.isEmpty)
-          _EmptyHome(finished: finished, onNew: onNew, onOpenSessions: onOpenSessions)
-        else if (asks.isEmpty)
-          QuietRow(
-            title: 'Nothing needs you',
-            leading: AppIcon('check-circle', size: 20, color: AppColors.fg3),
-          )
-        else ...[
+        if (strip.isNotEmpty)
+          _FaceStrip(
+              items: strip,
+              onOpen: (a) => onOpenAgent?.call(a)),
+        if (asks.isNotEmpty) ...[
           QuietSectionLabel('Needs you', count: asks.length),
-          for (final a in asks) _Ask(item: a, names: names, onOpen: onOpenSession, onDecide: onDecide),
+          for (final a in asks)
+            _Ask(item: a, names: names, onOpen: onOpenSession, onDecide: onDecide),
         ],
         if (working.isNotEmpty) ...[
           QuietSectionLabel('Working', count: working.length),
           for (final s in working)
             QuietRow(
-              title: s.title.isEmpty ? 'Untitled session' : s.title,
-              titleLines: 2,
-              sub: '${_agentName(s, names)} · Working',
+              title: _agentName(s, names),
+              titleLines: 1,
+              sub: s.title.isEmpty ? 'Untitled session' : s.title,
               meta: relativeTime(s.lastActive),
-              leading: AgentMochi(s.displayAgentId ?? 'snippet', size: 24),
+              leading: AgentMochi(s.displayAgentId ?? 'snippet', size: 28),
               onTap: () => onOpenSession(s),
             ),
         ],
-        if (finished > 0 && !(asks.isEmpty && working.isEmpty)) ...[
+        if (quiet) ...[
+          const QuietSectionLabel('Start'),
+          _StartGroup(onOpenLead: onOpenLead, onNew: onNew),
+        ],
+        if (finished > 0) ...[
           SizedBox(height: S.s8),
           QuietRow(
             title: '$finished finished today',
@@ -179,9 +205,114 @@ class QuietHomeScreen extends StatelessWidget {
             onTap: onOpenSessions,
           ),
         ],
+        if (onAllAgents != null)
+          QuietRow(
+            title: allLabel,
+            leading: AppIcon('users', size: 20, color: AppColors.fg3),
+            trailing:
+                AppIcon('chevron-right', size: 16, color: AppColors.fg4),
+            onTap: onAllAgents,
+          ),
       ],
     );
   }
+}
+
+/// Who is here: 56 pt faces with a 16 pt state badge, scrolling sideways.
+class _FaceStrip extends StatelessWidget {
+  const _FaceStrip({required this.items, required this.onOpen});
+  final List<(CoordinationAgent, CrewState)> items;
+  final void Function(CoordinationAgent a) onOpen;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        height: 92,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: EdgeInsets.symmetric(horizontal: S.s16, vertical: S.s4),
+          itemCount: items.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 16),
+          itemBuilder: (_, i) {
+            final (a, state) = items[i];
+            return Semantics(
+              button: true,
+              label: a.displayName,
+              child: TapDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onOpen(a),
+                child: SizedBox(
+                  width: 56,
+                  child: Column(children: [
+                    SizedBox(
+                      width: 56,
+                      height: 56,
+                      child: Stack(clipBehavior: Clip.none, children: [
+                        AgentMochi(a.id, size: 56),
+                        if (state != CrewState.standingBy)
+                          Positioned(
+                            right: -2,
+                            bottom: -2,
+                            child: Container(
+                              width: 16,
+                              height: 16,
+                              decoration: BoxDecoration(
+                                  color: AppColors.bg, shape: BoxShape.circle),
+                              alignment: Alignment.center,
+                              child: state == CrewState.needsYou
+                                  ? const QuietHand(size: 12)
+                                  : AppIcon('circle',
+                                      size: 10, color: AppColors.fg1),
+                            ),
+                          ),
+                      ]),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(a.displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: sans(11, color: AppColors.fg3)),
+                  ]),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+}
+
+/// The Start group: one calm place for the two things you do first.
+class _StartGroup extends StatelessWidget {
+  const _StartGroup({this.onOpenLead, this.onNew});
+  final VoidCallback? onOpenLead;
+  final VoidCallback? onNew;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: EdgeInsets.symmetric(horizontal: S.s16),
+        child: Container(
+          decoration: BoxDecoration(
+              color: AppColors.surface1,
+              borderRadius: BorderRadius.circular(R.md)),
+          clipBehavior: Clip.antiAlias,
+          child: Column(children: [
+            QuietRow(
+              title: 'Ask Lead what is next',
+              sub: 'Lead plans it and hands it out',
+              leading: AgentMochi('lead', size: 28),
+              trailing: AppIcon('chevron-right', size: 16, color: AppColors.fg4),
+              onTap: onOpenLead,
+            ),
+            QuietRow(
+              title: 'New session',
+              sub: 'Pick an agent, then say what to make',
+              leading: AppIcon('edit', size: 22, color: AppColors.fg2),
+              trailing: AppIcon('chevron-right', size: 16, color: AppColors.fg4),
+              onTap: onNew,
+            ),
+          ]),
+        ),
+      );
 }
 
 class _Ask extends StatefulWidget {
@@ -460,64 +591,4 @@ class _Dashed extends CustomPainter {
 
   @override
   bool shouldRepaint(_Dashed old) => old.color != color;
-}
-
-class _EmptyHome extends StatelessWidget {
-  const _EmptyHome(
-      {required this.finished, required this.onNew, required this.onOpenSessions});
-  final int finished;
-  final VoidCallback? onNew;
-  final VoidCallback onOpenSessions;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(S.s32, S.s40 * 2, S.s32, S.s24),
-      child: Column(children: [
-        Container(
-          width: 64,
-          height: 64,
-          alignment: Alignment.center,
-          decoration:
-              BoxDecoration(color: AppColors.surface2, shape: BoxShape.circle),
-          child: AppIcon('check-circle', size: 28, color: AppColors.fg2),
-        ),
-        SizedBox(height: S.s16),
-        Text('Nothing needs you',
-            textAlign: TextAlign.center,
-            style: sans(20, weight: W.label, color: AppColors.fg1)),
-        SizedBox(height: S.s8),
-        Text('No agent is working. Start something, or ask Lead what is next.',
-            textAlign: TextAlign.center,
-            style: sans(14, color: AppColors.fg3, height: 1.4)),
-        if (onNew != null) ...[
-          SizedBox(height: S.s24),
-          TapDetector(
-            onTap: onNew,
-            child: Container(
-              height: 44,
-              padding: EdgeInsets.symmetric(horizontal: S.s20),
-              decoration: BoxDecoration(
-                  color: AppColors.accentFill,
-                  borderRadius: BorderRadius.circular(999)),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                AppIcon('edit', size: 16, color: AppColors.accentFg),
-                SizedBox(width: S.s8),
-                Text('New session',
-                    style: sans(14, weight: W.label, color: AppColors.accentFg)),
-              ]),
-            ),
-          ),
-        ],
-        if (finished > 0) ...[
-          SizedBox(height: S.s24),
-          TapDetector(
-            onTap: onOpenSessions,
-            child: Text('$finished finished today',
-                style: sans(13, color: AppColors.fg3)),
-          ),
-        ],
-      ]),
-    );
-  }
 }

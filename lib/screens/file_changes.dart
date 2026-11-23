@@ -289,10 +289,10 @@ class FileChangeDetail extends StatelessWidget {
 
   Widget _edit(Map c) {
     final action = c['action']?.toString() ?? '';
-    final add = Color.lerp(AppColors.ok, AppColors.fg1, 0.55)!;
-    final del = Color.lerp(AppColors.danger, AppColors.fg1, 0.55)!;
-    final addBg = AppColors.ok.withValues(alpha: 0.10);
-    final delBg = AppColors.danger.withValues(alpha: 0.10);
+    final add = AppColors.diffAddFg;
+    final del = AppColors.diffDelFg;
+    final addBg = AppColors.diffAddBg;
+    final delBg = AppColors.diffDelBg;
     final Widget body = switch (action) {
       'create' => _lines(c['content']?.toString() ?? '', add, addBg, '+'),
       'replace' => Column(
