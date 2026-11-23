@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:snippet/screens/mobile_home/quiet_home.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/chat/stage_header.dart';
@@ -118,7 +119,7 @@ void main() {
     final home = tester.widget<MobileShell>(find.byType(MobileShell));
     expect(home.chatsOpen, isTrue);
     expect(home.canPopRoute, isFalse);
-    expect(find.byType(MobileHomeScreen), findsOneWidget);
+    expect(find.byType(QuietHomeScreen), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
     debugDefaultTargetPlatformOverride = null;

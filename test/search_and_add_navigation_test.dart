@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:snippet/widgets.dart' show AppIcon;
 import 'package:snippet/api.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/models.dart';
@@ -117,45 +118,33 @@ void main() {
         );
       }
 
-      // Render with 15 sessions: resting One thing screen keeps rows tucked in Everyone.
+      // Sessions lists every chat, newest first, grouped by day.
       await tester.pumpWidget(buildWidget(allSessions));
       await tester.pumpAndSettle();
-      expect(find.text('Recent'), findsNothing);
-      expect(find.text('Session Title 0'), findsNothing);
-
-      // Open Everyone sheet to inspect all 15 human-managed sessions in order.
-      await tester.tap(find.byKey(const ValueKey('everyone-handle')));
-      await tester.pumpAndSettle();
-      expect(find.text('Your sessions'), findsOneWidget);
-      expect(find.text('15'), findsOneWidget);
       expect(find.text('Session Title 0'), findsOneWidget);
-      expect(find.text('Session Title 1'), findsOneWidget);
-      expect(find.text('Session Title 2'), findsOneWidget);
+      expect(find.text('Session Title 11'), findsOneWidget);
       final ys = [
-        for (var i = 0; i < 15; i++)
+        for (var i = 0; i < 12; i++)
           tester.getTopLeft(find.text('Session Title $i')).dy
       ];
       for (var i = 1; i < ys.length; i++) {
         expect(ys[i], greaterThan(ys[i - 1]),
             reason: 'row $i after row ${i - 1}');
       }
-      await tester.tap(find.byKey(const ValueKey('everyone-sheet-handle')));
-      await tester.pumpAndSettle();
 
-      // Search reaches past the resting screen to every matching chat.
-      await tester.tap(find.byTooltip('Search'));
+      // Search narrows the list; a miss shows the empty line.
+      await tester.tap(find
+          .byWidgetPredicate((w) => w is AppIcon && w.name == 'search')
+          .first);
       await tester.pumpAndSettle();
-      await tester.enterText(
-          _field('Search agents, groups and sessions'), 'Title 13');
+      await tester.enterText(find.byType(TextField), 'Title 13');
       await tester.pumpAndSettle();
       expect(find.text('Session Title 13'), findsOneWidget);
-
-      // Search for nonexistent chat
-      await tester.enterText(
-          _field('Search agents, groups and sessions'), 'Session Title 99');
+      expect(find.text('Session Title 0'), findsNothing);
+      await tester.enterText(find.byType(TextField), 'Session Title 99');
       await tester.pumpAndSettle();
-      expect(find.text('Nothing matches'), findsOneWidget);
-      await tester.enterText(_field('Search agents, groups and sessions'), '');
+      expect(find.text('No sessions here.'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), '');
       await tester.pumpAndSettle();
 
       // Older sessions still show inside Search/Everyone without a Recent header.
@@ -170,13 +159,12 @@ void main() {
       await tester.pumpWidget(buildWidget(oldSessionsOnly));
       await tester.pumpAndSettle();
 
-      expect(find.text('Recent'), findsNothing);
       expect(find.text('Ancient Chat'), findsOneWidget);
 
       // Empty sessions
       await tester.pumpWidget(buildWidget([]));
       await tester.pumpAndSettle();
-      expect(find.text('No sessions yet'), findsOneWidget);
+      expect(find.text('No sessions here.'), findsOneWidget);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

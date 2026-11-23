@@ -42,7 +42,9 @@ class QuietRow extends StatelessWidget {
     this.meta,
     this.onTap,
     this.onLongPress,
+    this.titleLines = 1,
   });
+  final int titleLines;
   final String title;
   final String? sub;
   final Widget? leading;
@@ -65,7 +67,7 @@ class QuietRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title,
-                    maxLines: 1,
+                    maxLines: titleLines,
                     overflow: TextOverflow.ellipsis,
                     style: sans(kQuietRowSize,
                         height: 20 / kQuietRowSize, color: AppColors.fg1)),
@@ -306,7 +308,13 @@ class _Tab extends StatelessWidget {
       child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Column(
+        child: Container(
+          margin: EdgeInsets.symmetric(vertical: S.s4),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.surface3 : Colors.transparent,
+            borderRadius: BorderRadius.circular(R.of(14)),
+          ),
+          child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Stack(clipBehavior: Clip.none, children: [
@@ -331,6 +339,7 @@ class _Tab extends StatelessWidget {
                     weight: selected ? W.label : W.body,
                     color: color)),
           ],
+        ),
         ),
       ),
     );

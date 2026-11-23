@@ -17,18 +17,18 @@ import 'lead.dart';
 import 'lead/coordination_agent_detail.dart';
 import 'settings_panel.dart';
 import 'group_messaging.dart' show createAndOpenGroup;
-import 'mobile_home/mobile_home_screen.dart';
 import 'shell_models.dart';
 import 'shell_nav.dart';
 import 'session_list_row.dart';
 import 'sidebar_mobile.dart';
 import 'sidebar_tiles.dart';
-import 'tasks/tasks_panel.dart';
 import '../pull_refresh.dart';
 import '../motion.dart';
 import '../page_stack.dart';
 import '../mochi.dart';
 import '../chat_scene.dart' show ChatScene;
+import 'mobile_home/quiet_home.dart';
+import 'mobile_home/quiet_lists.dart';
 import 'mobile_chrome.dart';
 import 'mobile_session_home.dart';
 import 'phone_hero.dart';
@@ -138,8 +138,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   String _filterQuery = '';
   String _agentFilterQuery = '';
 
-  final GlobalKey<TasksPanelState> _tasksPanelKey =
-      GlobalKey<TasksPanelState>();
   final GlobalKey<SettingsPanelState> _mobileSettingsKey =
       GlobalKey<SettingsPanelState>();
   SettingsPage? _pendingSettingsCreate;
@@ -250,34 +248,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     }
     widget.onRefreshSessions();
     return true;
-  }
-
-  /// The home composer's plus: a new session, agent or group.
-  Future<void> _openNewMenu(BuildContext anchor) async {
-    final client = widget.client;
-    if (client == null) return;
-    final host = context;
-    final pick = await showAppSheet<String>(
-      host,
-      title: 'New',
-      child: SheetActions([
-        SheetAction('plus', 'New session', () => Navigator.pop(host, 'session'),
-            detail: 'Start work in a project'),
-        SheetAction('agent', 'New agent', () => Navigator.pop(host, 'agent'),
-            detail: 'Add someone to the team'),
-        SheetAction('users', 'New group', () => Navigator.pop(host, 'group'),
-            detail: 'Put agents in one thread'),
-      ]),
-    );
-    if (!mounted) return;
-    switch (pick) {
-      case 'session':
-        widget.onNewSession();
-      case 'agent':
-        await showCreateAgentDialog(context, client);
-      case 'group':
-        await createAndOpenGroup(context, client);
-    }
   }
 
   Widget _phoneHero(List<SessionInfo> sessions,
@@ -446,7 +416,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
 
   /// Sessions and Agents share one pager layer; everything else is its own.
   static MobileHome _slot(MobileHome h) =>
-      h == MobileHome.agents || h == MobileHome.home ? MobileHome.chats : h;
+      h == MobileHome.agents ? MobileHome.chats : h;
 
   Widget _buildMobileHomeStack(bool hasClient) {
     final prev = _prevHome == null ? null : _slot(_prevHome!);
@@ -564,7 +534,11 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             )
           : !hasClient
               ? _mobileUnavailable('Add a machine to begin.')
-              : _mobileHome(client!),
+              : _mobileHome(
+                  client!,
+                  widget.mobileHome == MobileHome.agents
+                      ? MobileHome.agents
+                      : MobileHome.chats),
       page: inDetail && client != null
           ? KeyedSubtree(
               key: ValueKey('agent-page-${agent.id}'),
@@ -583,24 +557,49 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     );
   }
 
-  Widget _mobileHome(DaemonClient client) => MobileHomeScreen(
-        key: const ValueKey('mobile-home'),
+  Widget _mobileHome(DaemonClient client, [MobileHome? place]) {
+    final list = [
+      for (final s in _sessions ?? const <SessionInfo>[])
+        if (!isDedicatedLeadSession(s.id) && !isInboxSessionRow(s)) s,
+    ];
+    void search() => widget.onMobileHome(MobileHome.chats);
+    switch (place ?? widget.mobileHome) {
+      case MobileHome.home:
+        return QuietHomeScreen(
+          key: const ValueKey('quiet-home'),
+          sessions: list,
+          agents: _heroAgents,
+          onOpenSession: (s) =>
+              widget.onOpenSession(s.id, s.title, s.profile),
+          onOpenSessions: () => widget.onMobileHome(MobileHome.chats),
+          onSettings: () => widget.onMobileHome(MobileHome.settings),
+          onSearch: search,
+          onDecide: _decideHero,
+        );
+      case MobileHome.chats:
+        return QuietSessionsScreen(
+          key: const ValueKey('quiet-sessions'),
+          sessions: list,
+          agents: _heroAgents,
+          onOpenSession: (s) =>
+              widget.onOpenSession(s.id, s.title, s.profile),
+          onSessionActions: _sessionActions,
+        );
+      default:
+        return _agentsHome(client);
+    }
+  }
+
+  Widget _agentsHome(DaemonClient client) => QuietAgentsScreen(
+        key: const ValueKey('quiet-agents'),
         client: client,
+        agents: _heroAgents,
         sessions: [
           for (final s in _sessions ?? const <SessionInfo>[])
             if (!isDedicatedLeadSession(s.id) && !isInboxSessionRow(s)) s,
         ],
-        agents: _heroAgents,
-        loading: _loading,
-        error: widget.sessionsError,
-        onRefresh: widget.onRefreshSessions,
-        onOpenSession: (s) => widget.onOpenSession(s.id, s.title, s.profile),
         onOpenAgent: widget.onAgent,
         onOpenLead: widget.onOpenLead,
-        onSettings: () => widget.onMobileHome(MobileHome.settings),
-        onPlus: _openNewMenu,
-        onDecide: _decideHero,
-        onSessionActions: _sessionActions,
       );
 
   /// The phone home body for the destination the bar currently selects.
@@ -616,40 +615,14 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       case MobileHome.chats:
         return !hasClient
             ? _mobileUnavailable('Add a machine to begin.')
-            : _mobileHome(widget.client!);
+            : _mobileHome(widget.client!, destination);
 
       case MobileHome.tasks:
         final client = widget.client;
         if (client == null) {
           return _mobileUnavailable('Add a machine to see its tasks.');
         }
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            MobileBackBar(
-              title: 'Tasks',
-              menu: widget.onMobileMenu != null,
-              onBack: widget.onMobileMenu ?? () => Navigator.maybePop(context),
-              trailing: [
-                RoundBtn(
-                    icon: 'plus',
-                    tooltip: 'New task',
-                    onTap: () => _tasksPanelKey.currentState?.create()),
-              ],
-            ),
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.only(bottom: _scrollBottomPad),
-                child: TasksPanel(
-                  key: _tasksPanelKey,
-                  client: client,
-                  trailing: const [],
-                  phoneHeader: false,
-                ),
-              ),
-            ),
-          ],
-        );
+        return QuietTasksScreen(key: const ValueKey('quiet-tasks'), client: client);
 
       case MobileHome.agents:
         final client = widget.client;
@@ -664,7 +637,9 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             offstage: agent != null,
             child: TickerMode(
               enabled: agent == null,
-              child: _mobileHomeBody(hasClient, MobileHome.chats),
+              child: hasClient
+                  ? _mobileHome(client, MobileHome.agents)
+                  : _mobileUnavailable('Add a machine to begin.'),
             ),
           ),
           if (agent != null)

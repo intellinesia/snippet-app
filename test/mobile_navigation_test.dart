@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:snippet/screens/mobile_home/quiet_home.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/screens/mobile_home/mobile_home_screen.dart';
 import 'package:snippet/api.dart';
@@ -176,7 +177,7 @@ void main() {
       });
       await _pumpShell(tester);
 
-      expect(find.byType(MobileHomeScreen), findsOneWidget);
+      expect(find.byType(QuietHomeScreen), findsOneWidget);
 
       final sidebar = tester.widget<Sidebar>(find.byType(Sidebar));
       sidebar.onAgent(CoordinationAgent.fromJson(
@@ -194,7 +195,7 @@ void main() {
       shell = tester.widget<MobileShell>(find.byType(MobileShell));
       expect(shell.mobileHome, MobileHome.home);
       expect(find.byType(CoordinationAgentDetail), findsNothing);
-      expect(find.byType(MobileHomeScreen), findsOneWidget);
+      expect(find.byType(QuietHomeScreen), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
