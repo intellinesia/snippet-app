@@ -95,10 +95,12 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
             const SizedBox(height: 4),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               Text(state, style: sans(14, color: AppColors.fg2)),
-              if (profile != null && providerLogoAsset(profile) != null) ...[
+              if (profile != null && profile.trim().isNotEmpty) ...[
                 Text(' · ', style: sans(14, color: AppColors.fg3)),
-                ProviderLogo(profile, size: 14, color: AppColors.fg2),
-                const SizedBox(width: 6),
+                if (providerLogoAsset(profile) != null) ...[
+                  ProviderLogo(profile, size: 14, color: AppColors.fg2),
+                  const SizedBox(width: 6),
+                ],
                 Flexible(
                   child: Text(prettyProfile(profile),
                       maxLines: 1,

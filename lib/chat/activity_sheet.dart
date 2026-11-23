@@ -299,8 +299,8 @@ enum _Tone { neutral, ok, bad, run }
 
 (Color bg, Color fg) _toneColors(_Tone t) => switch (t) {
       _Tone.ok => (AppColors.okBg, AppColors.ok),
-      _Tone.bad => (AppColors.dangerBg, AppColors.danger),
-      _Tone.run => (AppColors.runBg, AppColors.run),
+      _Tone.bad => (AppColors.surface3, AppColors.fg1),
+      _Tone.run => (AppColors.surface3, AppColors.fg2),
       _Tone.neutral => (AppColors.surface3, AppColors.fg2),
     };
 
@@ -348,7 +348,7 @@ class _Tile extends StatelessWidget {
       decoration:
           BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
       child: tone == _Tone.run
-          ? RunSpinner(size: 16, color: AppColors.run)
+          ? RunSpinner(size: 16, color: AppColors.fg2)
           : AppIcon(icon, size: 17, color: fg),
     );
   }
@@ -439,7 +439,7 @@ class _StepRow extends StatelessWidget {
                 text: '+${chip.added}', style: TextStyle(color: AppColors.ok)),
             TextSpan(
                 text: ' −${chip.removed}',
-                style: TextStyle(color: AppColors.danger)),
+                style: TextStyle(color: AppColors.fg1, fontWeight: FontWeight.w500)),
           ]),
           style: sans(12.5, tabular: true));
     } else if (chip != null) {
@@ -447,7 +447,7 @@ class _StepRow extends StatelessWidget {
           style: sans(13.5,
               color: switch (chip.tone) {
                 StepChipTone.ok => AppColors.ok,
-                StepChipTone.danger => AppColors.danger,
+                StepChipTone.danger => AppColors.fg1,
                 StepChipTone.neutral => AppColors.fg3,
               },
               tabular: true));
@@ -491,13 +491,13 @@ class _StepRow extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                    color: AppColors.dangerBg,
+                    color: AppColors.surface3,
                     borderRadius: BorderRadius.circular(14)),
                 child: Text(err.join('\n'),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style:
-                        codeMono(12.5, height: 1.6, color: AppColors.danger)),
+                        codeMono(12.5, height: 1.6, color: AppColors.fg1)),
               ),
           ],
         ),
@@ -541,7 +541,7 @@ class _GroupRow extends StatelessWidget {
               TextSpan(text: '+$added', style: TextStyle(color: AppColors.ok)),
               TextSpan(
                   text: ' −$removed',
-                  style: TextStyle(color: AppColors.danger)),
+                  style: TextStyle(color: AppColors.fg1, fontWeight: FontWeight.w500)),
             ]),
             style: sans(13.5, tabular: true));
       }

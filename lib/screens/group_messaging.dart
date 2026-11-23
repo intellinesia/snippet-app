@@ -1400,7 +1400,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       ],
     );
     return ColoredBox(
-      color: AppColors.bg,
+      color: kMobile ? AppColors.bg : AppColors.panelBg,
       child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0), child: body),
     );

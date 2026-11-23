@@ -66,6 +66,7 @@ class StageBar extends StatelessWidget {
   Widget _phone() {
     final sub = (subtitle ?? '').trim();
     final body = SizedBox(
+      width: double.infinity,
       height: phoneHeight,
       child: Padding(
         padding: EdgeInsets.only(top: S.s8),

@@ -350,7 +350,7 @@ class ChatSenderName extends StatelessWidget {
         child: Text(name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: sans(kMobile ? 12 : 11, color: ChatColors.meta)),
+            style: sans(kMobile ? 12 : 11, color: AppColors.fg3)),
       );
 }
 
@@ -370,7 +370,7 @@ class ChatSystemLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = sans(kMobile ? 12 : 11, color: ChatColors.meta);
+    final style = sans(kMobile ? 12 : 11, color: AppColors.fg3);
     return Align(
       alignment: align,
       child: Padding(
@@ -512,7 +512,7 @@ class ChatHeader extends StatelessWidget {
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       textAlign: TextAlign.center,
-      style: sans(kMobile ? 12 : 11, color: ChatColors.meta));
+      style: sans(kMobile ? 12 : 11, color: AppColors.fg3));
 
   Widget _avatar() {
     const big = 36.0;
@@ -539,7 +539,7 @@ class ChatHeader extends StatelessWidget {
             if (onTitleTap != null) ...[
               SizedBox(width: S.of(3)),
               AppIcon('chevron-right',
-                  size: kMobile ? 11 : 10, color: ChatColors.meta),
+                  size: kMobile ? 11 : 10, color: AppColors.fg3),
             ],
           ]),
         ),

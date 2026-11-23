@@ -1,7 +1,6 @@
 // Phone tool calls: a live capsule above the composer while a run works, and
 // one pill in the transcript once it is done. Both open the activity sheet.
 
-import '../quiet.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -107,16 +106,16 @@ class FailedPill extends StatelessWidget {
           height: compact ? 24 : 28,
           padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 12),
           decoration: BoxDecoration(
-              color: quietAmber.withValues(alpha: 0.13),
+              color: AppColors.surface3,
               borderRadius: BorderRadius.circular(compact ? 12 : 14)),
           child: Center(
             widthFactor: 1,
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const QuietHand(size: 14),
+              AppIcon('alert-triangle', size: 14, color: AppColors.fg1),
               const SizedBox(width: 6),
               Text('$count failed',
                   style: sans(compact ? 13 : 14,
-                      weight: W.label, color: quietAmber)),
+                      weight: W.label, color: AppColors.fg1)),
             ]),
           ),
         ),
@@ -195,7 +194,7 @@ class _ActivityDockState extends State<ActivityDock> {
                   style: sans(15, color: AppColors.fg1)),
             ),
             const SizedBox(width: 10),
-            Text(clock, style: sans(14, color: AppColors.run, tabular: true)),
+            Text(clock, style: sans(14, color: AppColors.fg2, tabular: true)),
             if (failed > 0) ...[
               const SizedBox(width: 8),
               FailedPill(failed,
