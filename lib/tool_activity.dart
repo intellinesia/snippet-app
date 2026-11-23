@@ -298,3 +298,551 @@ String activitySummary(List<ToolStep> steps) {
 
 String _otherPhrase(int n, {required bool hasOthers}) =>
     '$n ${hasOthers ? 'other ' : ''}${_plural(n, 'step', 'steps')}';
+
+const _wrapperCommands = {'env', 'cpu-slot', 'nice', 'nohup', 'time', 'command'};
+const _skipSegments = {'cd', 'export', 'set', 'true', ':'};
+const _singleVerbCommands = {
+  'awk',
+  'basename',
+  'cat',
+  'cd',
+  'chmod',
+  'chown',
+  'cp',
+  'curl',
+  'cut',
+  'date',
+  'diff',
+  'dirname',
+  'echo',
+  'env',
+  'find',
+  'grep',
+  'head',
+  'jq',
+  'kill',
+  'less',
+  'ln',
+  'ls',
+  'mkdir',
+  'mv',
+  'nl',
+  'printf',
+  'ps',
+  'pwd',
+  'readlink',
+  'rg',
+  'rm',
+  'rmdir',
+  'sed',
+  'sleep',
+  'sort',
+  'stat',
+  'tail',
+  'tar',
+  'tee',
+  'touch',
+  'tr',
+  'uname',
+  'uniq',
+  'unzip',
+  'wc',
+  'wget',
+  'which',
+  'whoami',
+  'xargs',
+  'zip',
+};
+
+final _ansiEscape = RegExp(r'\x1B\[[0-9;]*[A-Za-z]');
+final _envAssign = RegExp(r'^[A-Za-z_][A-Za-z0-9_]*=');
+final _subcommandWord = RegExp(r'^[A-Za-z][A-Za-z0-9_-]*$');
+
+String _displayFileName(String path) {
+  final trimmed = path.trim().replaceFirst(RegExp(r'/+$'), '');
+  if (trimmed.isEmpty) return path.trim().isEmpty ? '' : '/';
+  return trimmed.split('/').last;
+}
+
+List<String> _disambiguatedNames(List<String> paths) {
+  final names = [for (final p in paths) _displayFileName(p)];
+  final counts = <String, int>{};
+  for (final n in names) {
+    counts[n] = (counts[n] ?? 0) + 1;
+  }
+  return [
+    for (var i = 0; i < paths.length; i++)
+      if ((counts[names[i]] ?? 0) > 1) _lastTwoSegments(paths[i]) else names[i],
+  ];
+}
+
+String _lastTwoSegments(String path) {
+  final parts = path
+      .trim()
+      .replaceFirst(RegExp(r'/+$'), '')
+      .split('/')
+      .where((p) => p.isNotEmpty)
+      .toList();
+  if (parts.length <= 1) return parts.isEmpty ? '' : parts.single;
+  return '${parts[parts.length - 2]}/${parts.last}';
+}
+
+String _joinNames(List<String> names, {int limit = 4}) {
+  if (names.isEmpty) return '';
+  if (names.length == 1) return names.single;
+  if (names.length == 2) return '${names[0]} and ${names[1]}';
+  if (names.length > limit) {
+    final head = names.take(limit - 1).join(', ');
+    return '$head and ${names.length - (limit - 1)} more';
+  }
+  return '${names.sublist(0, names.length - 1).join(', ')} and ${names.last}';
+}
+
+String _clipQuery(String text, [int max = 28]) {
+  final line = text.trim().split('\n').first.trim();
+  if (line.length <= max) return line;
+  return '${line.substring(0, max - 1)}…';
+}
+
+List<String> _splitShellSegments(String command) {
+  final segments = <String>[];
+  final buf = StringBuffer();
+  String? quote;
+  var escaped = false;
+  for (var i = 0; i < command.length; i++) {
+    final ch = command[i];
+    if (escaped) {
+      buf.write(ch);
+      escaped = false;
+      continue;
+    }
+    if (ch == r'\' && quote != "'") {
+      buf.write(ch);
+      escaped = true;
+      continue;
+    }
+    if (quote != null) {
+      if (ch == quote) quote = null;
+      buf.write(ch);
+      continue;
+    }
+    if (ch == "'" || ch == '"') {
+      quote = ch;
+      buf.write(ch);
+      continue;
+    }
+    if (ch == ';' || ch == '\n') {
+      segments.add(buf.toString());
+      buf.clear();
+      continue;
+    }
+    if ((ch == '&' || ch == '|') &&
+        i + 1 < command.length &&
+        command[i + 1] == ch) {
+      segments.add(buf.toString());
+      buf.clear();
+      i++;
+      continue;
+    }
+    buf.write(ch);
+  }
+  if (buf.isNotEmpty) segments.add(buf.toString());
+  return segments;
+}
+
+List<String> _tokenizeCommandHead(String segment) {
+  final tokens = <String>[];
+  final buf = StringBuffer();
+  String? quote;
+  var escaped = false;
+  var hasContent = false;
+  void flush() {
+    if (hasContent || buf.isNotEmpty) {
+      tokens.add(buf.toString());
+      buf.clear();
+      hasContent = false;
+    }
+  }
+
+  for (var i = 0; i < segment.length; i++) {
+    final ch = segment[i];
+    if (escaped) {
+      buf.write(ch);
+      escaped = false;
+      hasContent = true;
+      continue;
+    }
+    if (ch == r'\' && quote != "'") {
+      escaped = true;
+      hasContent = true;
+      continue;
+    }
+    if (quote != null) {
+      if (ch == quote) {
+        quote = null;
+      } else {
+        buf.write(ch);
+      }
+      hasContent = true;
+      continue;
+    }
+    if (ch == "'" || ch == '"') {
+      quote = ch;
+      hasContent = true;
+      continue;
+    }
+    if (ch == '|' || ch == '>' || ch == '<') {
+      flush();
+      break;
+    }
+    if (ch == ' ' || ch == '\t' || ch == '\r') {
+      flush();
+      continue;
+    }
+    buf.write(ch);
+    hasContent = true;
+  }
+  flush();
+  return tokens;
+}
+
+List<String> _extractCommandNames(String rawCommand) {
+  final segments = _splitShellSegments(rawCommand);
+  final nonSetup = <String>[];
+  final setupOnly = <String>[];
+  for (final raw in segments) {
+    final tokens = _tokenizeCommandHead(raw);
+    var idx = 0;
+    while (idx < tokens.length && _envAssign.hasMatch(tokens[idx])) {
+      idx++;
+    }
+    while (idx < tokens.length) {
+      final base = _displayFileName(tokens[idx]);
+      if (!_wrapperCommands.contains(base) || idx + 1 >= tokens.length) break;
+      idx++;
+      while (idx < tokens.length && _envAssign.hasMatch(tokens[idx])) {
+        idx++;
+      }
+    }
+    if (idx >= tokens.length) continue;
+    final cmd = _displayFileName(tokens[idx]);
+    if (cmd.isEmpty || cmd.startsWith('#')) continue;
+    final second = idx + 1 < tokens.length ? tokens[idx + 1] : '';
+    final label = !_singleVerbCommands.contains(cmd) &&
+            second.isNotEmpty &&
+            _subcommandWord.hasMatch(second)
+        ? '$cmd $second'
+        : cmd;
+    if (_skipSegments.contains(cmd)) {
+      setupOnly.add(label);
+    } else {
+      nonSetup.add(label);
+    }
+  }
+  return nonSetup.isNotEmpty ? nonSetup : setupOnly;
+}
+
+String? _formatPassedFailed(int passed, int failed) =>
+    failed > 0 ? '$passed passed, $failed failed' : '$passed passed';
+
+String? _commandResultExcerpt(ToolStep step) {
+  if (step.running) return null;
+  final d = step.data;
+  final r = step.result;
+  final errMsg = r is Map && r['error'] is Map
+      ? (r['error'] as Map)['message']?.toString() ?? ''
+      : '';
+  final raw = [
+    (d?['stdout'] ?? d?['output_so_far'] ?? d?['output'] ?? '').toString(),
+    (d?['stderr'] ?? '').toString(),
+    (d?['preview'] ?? '').toString(),
+    errMsg,
+  ].where((s) => s.trim().isNotEmpty).join('\n');
+  if (raw.trim().isEmpty) return null;
+  final text = raw.replaceAll(_ansiEscape, '');
+
+  // Sum cargo test result lines so an empty doc-test block does not hide unit results.
+  final cargoMatches = RegExp(
+          r'test result:\s*(?:ok|FAILED)\.\s*(\d+)\s+passed;\s*(\d+)\s+failed\b')
+      .allMatches(text)
+      .toList();
+  if (cargoMatches.isNotEmpty) {
+    var passed = 0;
+    var failed = 0;
+    for (final m in cargoMatches) {
+      passed += int.parse(m.group(1)!);
+      failed += int.parse(m.group(2)!);
+    }
+    return _formatPassedFailed(passed, failed);
+  }
+
+  final passedFailed = RegExp(r'\b(\d+)\s+passed,\s*(\d+)\s+failed\b',
+          caseSensitive: false)
+      .allMatches(text)
+      .toList();
+  if (passedFailed.isNotEmpty) {
+    final m = passedFailed.last;
+    return _formatPassedFailed(
+        int.parse(m.group(1)!), int.parse(m.group(2)!));
+  }
+
+  final failedPassed = RegExp(r'\b(\d+)\s+failed,\s*(\d+)\s+passed\b',
+          caseSensitive: false)
+      .allMatches(text)
+      .toList();
+  if (failedPassed.isNotEmpty) {
+    final m = failedPassed.last;
+    return _formatPassedFailed(
+        int.parse(m.group(2)!), int.parse(m.group(1)!));
+  }
+
+  final flutterFail =
+      RegExp(r'\+(\d+)\s+-(\d+):\s+Some tests failed').allMatches(text).toList();
+  if (flutterFail.isNotEmpty) {
+    final m = flutterFail.last;
+    return _formatPassedFailed(
+        int.parse(m.group(1)!), int.parse(m.group(2)!));
+  }
+
+  if (RegExp(r'All tests passed!').hasMatch(text)) {
+    return 'All tests passed!';
+  }
+
+  final pytestMatch =
+      RegExp(r'=+\s*(?:(\d+)\s+failed,\s*)?(\d+)\s+passed\b')
+          .allMatches(text)
+          .toList();
+  if (pytestMatch.isNotEmpty) {
+    final m = pytestMatch.last;
+    return _formatPassedFailed(
+        int.parse(m.group(2)!), int.parse(m.group(1) ?? '0'));
+  }
+
+  final jestMatch =
+      RegExp(r'\bTests:\s+(?:(\d+)\s+failed,\s*)?(\d+)\s+passed\b')
+          .allMatches(text)
+          .toList();
+  if (jestMatch.isNotEmpty) {
+    final m = jestMatch.last;
+    return _formatPassedFailed(
+        int.parse(m.group(2)!), int.parse(m.group(1) ?? '0'));
+  }
+
+  if (RegExp(r'\bNo issues found!?').hasMatch(text)) {
+    return 'No issues found!';
+  }
+
+  final issuesMatch =
+      RegExp(r'\b(\d+\s+issues?\s+found)\b').allMatches(text).toList();
+  if (issuesMatch.isNotEmpty) {
+    return issuesMatch.last.group(1)!;
+  }
+
+  final rustError = RegExp(r'error\[[A-Z]\d+\]').firstMatch(text);
+  if (rustError != null) return rustError.group(0)!;
+
+  if (RegExp(r'FAILURE:\s+Build failed').hasMatch(text) ||
+      RegExp(r'^error:\s+could not compile\b', multiLine: true).hasMatch(text)) {
+    return 'Build failed';
+  }
+
+  final builtMatch = RegExp(r'(?:✓\s*)?Built\s+([^\s(]+)').allMatches(text).toList();
+  if (builtMatch.isNotEmpty) {
+    return 'Built ${_displayFileName(builtMatch.last.group(1)!)}';
+  }
+
+  final finishedMatch = RegExp(
+          r'^\s*Finished\s+`?([A-Za-z0-9_-]+)`?\s+profile\b',
+          multiLine: true)
+      .allMatches(text)
+      .toList();
+  if (finishedMatch.isNotEmpty) {
+    return 'Finished ${finishedMatch.last.group(1)!} profile';
+  }
+
+  if (RegExp(r'\bNo tests ran\b').hasMatch(text)) {
+    return 'No tests ran';
+  }
+
+  return null;
+}
+
+/// A deterministic, work-centric summary of a consecutive group of tool calls.
+String workSummary(List<ToolStep> steps) {
+  if (steps.isEmpty) return '';
+
+  final readPaths = <String>{};
+  var readUnnamed = 0;
+  final editedPaths = <String>{};
+  final createdPaths = <String>{};
+  final deletedPaths = <String>{};
+  final movedLabels = <String>{};
+  var failedChangeSteps = 0;
+
+  final commands = <String>{};
+  var bashCount = 0;
+  ToolStep? lastBash;
+
+  var searchCount = 0;
+  final searchQueries = <String>[];
+  var pageCount = 0;
+  var otherCount = 0;
+
+  for (final step in steps) {
+    final name = toolBaseName(step.tool);
+    final args = step.args is Map ? step.args as Map : null;
+    switch (name) {
+      case 'read_file':
+      case 'view_image':
+        final p = (args?['path'] ?? '').toString().trim();
+        if (p.isEmpty) {
+          readUnnamed++;
+        } else {
+          readPaths.add(p.replaceFirst(RegExp(r'/+$'), ''));
+        }
+      case 'view_file':
+        final p = (args?['AbsolutePath'] ?? args?['path'] ?? '')
+            .toString()
+            .trim();
+        if (p.isEmpty) {
+          readUnnamed++;
+        } else {
+          readPaths.add(p.replaceFirst(RegExp(r'/+$'), ''));
+        }
+      case 'change_files':
+        if (step.failed) {
+          failedChangeSteps++;
+          break;
+        }
+        final changes = fileChanges([step]);
+        if (changes.isEmpty) {
+          otherCount++;
+          break;
+        }
+        for (final c in changes) {
+          switch (c.kind) {
+            case FileChangeKind.created:
+              editedPaths.remove(c.path);
+              createdPaths.add(c.path);
+            case FileChangeKind.edited:
+              if (!createdPaths.contains(c.path)) {
+                editedPaths.add(c.path);
+              }
+            case FileChangeKind.deleted:
+              createdPaths.remove(c.path);
+              editedPaths.remove(c.path);
+              deletedPaths.add(c.path);
+            case FileChangeKind.moved:
+              final parts = c.path.split(' → ');
+              final label = parts.length == 2
+                  ? '${_displayFileName(parts[0])} → ${_displayFileName(parts[1])}'
+                  : c.name;
+              movedLabels.add(label);
+          }
+        }
+      case 'write_file':
+        if (step.failed) {
+          failedChangeSteps++;
+          break;
+        }
+        final p = (args?['path'] ?? '').toString().trim();
+        if (p.isNotEmpty) createdPaths.add(p);
+      case 'edit_file':
+        if (step.failed) {
+          failedChangeSteps++;
+          break;
+        }
+        final p = (args?['path'] ?? '').toString().trim();
+        if (p.isNotEmpty && !createdPaths.contains(p)) editedPaths.add(p);
+      case 'bash':
+        bashCount++;
+        lastBash = step;
+        final cmd = (args?['command'] ?? '').toString().trim();
+        if (cmd.isNotEmpty) {
+          commands.addAll(_extractCommandNames(cmd));
+        } else {
+          final label = (args?['label'] ?? '').toString().trim();
+          if (label.isNotEmpty) {
+            commands.add(_clipQuery(label, 28));
+          }
+        }
+      case 'search_content':
+      case 'web_search':
+      case 'search_skills':
+        searchCount++;
+        final q = (args?['query'] ?? args?['pattern'] ?? '').toString().trim();
+        if (q.isNotEmpty) searchQueries.add(q);
+      case 'web_read':
+        pageCount++;
+      default:
+        otherCount++;
+    }
+  }
+
+  final workParts = <String>[];
+  final totalRead = readPaths.length + readUnnamed;
+  if (totalRead > 0) {
+    if (totalRead <= 2 && readUnnamed == 0) {
+      final names = _disambiguatedNames(readPaths.toList());
+      workParts.add('read ${_joinNames(names)}');
+    } else {
+      workParts.add('read $totalRead ${_plural(totalRead, 'file', 'files')}');
+    }
+  }
+
+  if (editedPaths.isNotEmpty) {
+    workParts.add('edited ${_joinNames(_disambiguatedNames(editedPaths.toList()))}');
+  }
+  if (createdPaths.isNotEmpty) {
+    workParts
+        .add('created ${_joinNames(_disambiguatedNames(createdPaths.toList()))}');
+  }
+  if (deletedPaths.isNotEmpty) {
+    workParts
+        .add('deleted ${_joinNames(_disambiguatedNames(deletedPaths.toList()))}');
+  }
+  if (movedLabels.isNotEmpty) {
+    workParts.add('moved ${_joinNames(movedLabels.toList())}');
+  }
+
+  if (searchCount == 1 && searchQueries.length == 1) {
+    workParts.add('searched for ${_clipQuery(searchQueries.single)}');
+  } else if (searchCount > 0) {
+    workParts.add('searched $searchCount ${_plural(searchCount, 'time', 'times')}');
+  }
+
+  if (pageCount > 0) {
+    workParts.add('read $pageCount ${_plural(pageCount, 'page', 'pages')}');
+  }
+
+  String? ranPhrase;
+  if (commands.isNotEmpty) {
+    final list = commands.toList();
+    if (list.length > 4) {
+      ranPhrase = 'ran ${list.take(4).join(', ')} and ${list.length - 4} more';
+    } else {
+      ranPhrase = 'ran ${list.join(', ')}';
+    }
+  } else if (bashCount > 0) {
+    ranPhrase = 'ran $bashCount ${_plural(bashCount, 'command', 'commands')}';
+  }
+
+  final hasPrior = workParts.isNotEmpty || ranPhrase != null;
+  final otherPhrase =
+      otherCount > 0 ? _otherPhrase(otherCount, hasOthers: hasPrior) : null;
+  final excerpt = lastBash != null ? _commandResultExcerpt(lastBash) : null;
+
+  final sections = <String>[
+    if (workParts.isNotEmpty) workParts.join(', '),
+    if (ranPhrase != null) ranPhrase,
+    if (otherPhrase != null) otherPhrase,
+    if (excerpt != null) excerpt,
+  ];
+  if (sections.isEmpty && failedChangeSteps > 0) {
+    sections.add(
+        'attempted $failedChangeSteps ${_plural(failedChangeSteps, 'edit', 'edits')}');
+  }
+  final sentence = sections.join(' · ');
+  if (sentence.isEmpty) return '';
+  return '${sentence[0].toUpperCase()}${sentence.substring(1)}';
+}
