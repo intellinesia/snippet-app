@@ -494,6 +494,16 @@ MarkdownStyleSheet thinkingMarkdownStyle(BuildContext context) {
 /// level with the text beside it at 16 to 24 pt.
 const double _iconOptical = 1.08;
 
+/// One step down the size scale for the drawn glyph, so icons read lighter
+/// beside their labels. The layout box and tap area keep the requested size.
+double iconStep(double size) {
+  const steps = <int, double>{
+    30: 26, 28: 24, 26: 22, 24: 20, 22: 19, 20: 18, 19: 17, 18: 16,
+    17: 15, 16: 14, 15: 13, 14: 13, 13: 12, 12: 11, 11: 10, 10: 9,
+  };
+  return steps[size.round()] ?? size * 0.88;
+}
+
 /// One icon set (Phosphor) drawn from the bundled Phosphor fonts, in an explicit
 /// square so glyphs never push their neighbours around.
 class AppIcon extends StatelessWidget {
@@ -525,7 +535,7 @@ class AppIcon extends StatelessWidget {
             (filled ? appIconsFilled[name] : null) ??
                 appIcons[name] ??
                 appIcons['circle']!,
-            size: size * visualScale * _iconOptical,
+            size: iconStep(size) * visualScale * _iconOptical,
             color: color ?? AppColors.fg2),
       ),
     );
