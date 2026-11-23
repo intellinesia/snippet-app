@@ -20,10 +20,9 @@ import 'everyone_sheet.dart';
 import 'groups_group.dart';
 import 'home_composer.dart';
 import 'home_data.dart';
-import 'home_resting.dart';
+import 'horizon_home.dart';
 import 'home_style.dart';
 import 'managed_view.dart';
-import 'one_thing_ask.dart';
 import 'sessions_group.dart';
 
 /// Round 6 "One thing" phone first screen:
@@ -83,6 +82,8 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
   LocalHistoryEntry? _backEntry;
   late final AnimationController _sheet;
   late Swr<List<GroupSummary>> _groups;
+  List<RecurringJob> _jobs = const [];
+  Timer? _tick;
 
   Swr<List<GroupSummary>> _watchGroups(DaemonClient client) =>
       Swr<List<GroupSummary>>(
@@ -107,6 +108,18 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
     _groups = _watchGroups(widget.client);
     mutedGroups.addListener(_onMutedChanged);
     loadMutedGroups().catchError((_) => const <String>{});
+    _loadJobs();
+    // Keeps "free for 1 h 6 min" honest while the screen is open.
+    _tick = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  Future<void> _loadJobs() async {
+    try {
+      final jobs = await widget.client.recurringJobs();
+      if (mounted) setState(() => _jobs = jobs);
+    } catch (_) {}
   }
 
   // Null until the user toggles; each open of the sheet starts from the
@@ -128,6 +141,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
 
   @override
   void dispose() {
+    _tick?.cancel();
     _backEntry = null;
     mutedGroups.removeListener(_onMutedChanged);
     _groups.dispose();
@@ -139,6 +153,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
   }
 
   void _refreshAll() {
+    _loadJobs();
     _groups.refresh();
     widget.onRefresh?.call();
   }
@@ -242,7 +257,8 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
     e?.remove();
   }
 
-  void _settleSheet({required bool open, double velocity = 0, bool fromBack = false}) {
+  void _settleSheet(
+      {required bool open, double velocity = 0, bool fromBack = false}) {
     if (open) {
       _holdBack();
     } else if (!fromBack) {
@@ -257,8 +273,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
     final target = open ? 1.0 : 0.0;
     if (reduceMotion(context)) {
       _sheet.animateTo(target,
-          duration: const Duration(milliseconds: 120),
-          curve: Curves.easeOut);
+          duration: const Duration(milliseconds: 120), curve: Curves.easeOut);
       return;
     }
     final v = velocity / _sheetHeight;
@@ -337,8 +352,8 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
       return (n != null && n.isNotEmpty) ? n : id;
     }
 
-    final rows = agentRows(widget.agents, sessions,
-        presence: widget.client.presence);
+    final rows =
+        agentRows(widget.agents, sessions, presence: widget.client.presence);
     final groups = sortedGroups(_groups.data ?? const <GroupSummary>[]);
     final muted = mutedGroups.value;
     final managed = managedByAgent(sessions);
@@ -359,22 +374,14 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
       // 1. Resting home canvas over Silk: either the single centred ask or pure
       // resting Silk, with vertical drag-up opening the Everyone sheet.
       Positioned.fill(
-        child: GestureDetector(
-          behavior: HitTestBehavior.translucent,
-          onVerticalDragUpdate:
-              _searching || _everyoneOpen ? null : (d) => _dragSheet(d.delta.dy),
-          onVerticalDragEnd: _searching || _everyoneOpen
-              ? null
-              : (d) => _releaseSheet(d.primaryVelocity ?? 0),
-          child: Padding(
-            padding: EdgeInsets.only(
-              top: 96,
-              bottom: composerClearance + 48,
-              left: kHomeMargin,
-              right: kHomeMargin,
-            ),
-            child: _centerStage(asks, names, rows, managed, human),
+        child: Padding(
+          padding: EdgeInsets.only(
+            top: 96,
+            bottom: composerClearance + 48,
+            left: kHomeMargin,
+            right: kHomeMargin,
           ),
+          child: _centerStage(asks, names, rows, groups),
         ),
       ),
 
@@ -402,15 +409,6 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
           ),
         ),
       ),
-
-      // 3. "Everyone" pull-up handle sitting 4 pt above the composer.
-      if (!_searching && !_everyoneOpen)
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: composerClearance + 4,
-          child: Center(child: _everyoneHandle()),
-        ),
 
       // 4. Bare top bar (no glass band; Silk runs to the top).
       if (!_searching)
@@ -528,51 +526,13 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
   Widget _centerStage(
     List<AskItem> asks,
     Map<String, String> names,
-    ({List<AgentRow> working, List<AgentRow> needs, List<AgentRow> asleep})
-        rows,
-    Map<String, List<SessionInfo>> managed,
-    ({List<SessionInfo> main, List<SessionInfo> settled}) human) {
-    if (asks.isNotEmpty) {
-      return LayoutBuilder(
-        builder: (context, box) => SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: box.maxHeight),
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  OneThingAsk(
-                    items: asks,
-                    names: names,
-                    onOpen: (i) => widget.onOpenSession(i.session),
-                    onDecide: widget.onDecide == null
-                        ? null
-                        : (i, ok) => widget.onDecide!(i.session, ok),
-                  ),
-                  // Work in flight stays in view under the ask.
-                  if (rows.working.isNotEmpty) ...[
-                    const SizedBox(height: 22),
-                    HomeLabel('${rows.working.length} working',
-                        trailing: 'Everyone'),
-                    HomeWorkingBlock(
-                      working: rows.working,
-                      sessions: widget.sessions,
-                      managed: managed,
-                      forceList: true,
-                      onOpenAgent: widget.onOpenAgent,
-                      onOpenManaged: _openManaged,
-                      onOpenEveryone: _openEveryone,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+    ({
+      List<AgentRow> working,
+      List<AgentRow> needs,
+      List<AgentRow> asleep
+    }) rows,
+    List<GroupSummary> groups,
+  ) {
     if (widget.loading && widget.sessions.isEmpty && widget.agents.isEmpty) {
       return const Center(child: DelayedSpinner(size: 20));
     }
@@ -587,61 +547,41 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
         ),
       );
     }
-    return HomeResting(
-      working: rows.working,
-      sessions: widget.sessions,
-      managed: managed,
-      asleepCount: rows.asleep.length,
-      settledCount: human.settled.length,
+    String nameOf(String id) {
+      final n = names[id]?.trim();
+      return (n != null && n.isNotEmpty) ? n : id;
+    }
+
+    final agents = rows.working.length + rows.needs.length + rows.asleep.length;
+    final parts = [
+      if (agents > 0) '$agents ${agents == 1 ? 'agent' : 'agents'}',
+      if (groups.isNotEmpty)
+        '${groups.length} ${groups.length == 1 ? 'group' : 'groups'}',
+    ];
+    final now = DateTime.now();
+    return HorizonHome(
+      asks: asks,
+      entries: horizonEntries(
+          sessions: widget.sessions, jobs: _jobs, nameOf: nameOf, now: now),
+      names: names,
+      now: now,
+      earlierLabel:
+          parts.isEmpty ? 'Earlier' : 'Earlier, ${parts.join(' and ')}',
       onOpenSession: widget.onOpenSession,
-      onOpenAgent: widget.onOpenAgent,
-      onOpenManaged: _openManaged,
-      onOpenEveryone: _openEveryone,
+      onOpenAgent: (id) {
+        final a = widget.agents.where((a) => a.id == id).firstOrNull;
+        a == null ? widget.onOpenLead() : widget.onOpenAgent(a);
+      },
+      onEarlier: _openEveryone,
     );
   }
 
-  Widget _everyoneHandle() => Semantics(
-        button: true,
-        label: 'Everyone, open sheet',
-        child: ExcludeSemantics(
-          child: GestureDetector(
-            key: const ValueKey('everyone-handle'),
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              tapHaptic();
-              _openEveryone();
-            },
-            onVerticalDragUpdate: (d) => _dragSheet(d.delta.dy),
-            onVerticalDragEnd: (d) => _releaseSheet(d.primaryVelocity ?? 0),
-            onVerticalDragCancel: () => _releaseSheet(0),
-            child: SizedBox(
-              width: double.infinity,
-              height: 64,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 36,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: AppColors.fg1.withValues(alpha: 0.34),
-                      borderRadius: BorderRadius.circular(2.5),
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  Text('Everyone',
-                      style: sans(13,
-                          weight: FontWeight.w500, color: AppColors.fg3)),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-
   Widget _searchOverlay(
-    ({List<AgentRow> working, List<AgentRow> needs, List<AgentRow> asleep})
-        rows,
+    ({
+      List<AgentRow> working,
+      List<AgentRow> needs,
+      List<AgentRow> asleep
+    }) rows,
     Map<String, List<SessionInfo>> managed,
     List<GroupSummary> groups,
     Map<String, String> names,
@@ -674,8 +614,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
       child: Stack(children: [
         Positioned.fill(
           child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(
-                M.gutter, 70, M.gutter, 32 + bottom),
+            padding: EdgeInsets.fromLTRB(M.gutter, 70, M.gutter, 32 + bottom),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -719,8 +658,8 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
                     settled: settled,
                     settledOpen:
                         settledOpenFor(_settledUser, searching: q.isNotEmpty),
-                    onToggleSettled: () => setState(() =>
-                        _settledUser = !settledOpenFor(_settledUser)),
+                    onToggleSettled: () => setState(
+                        () => _settledUser = !settledOpenFor(_settledUser)),
                     onOpen: (s) {
                       _closeSearch();
                       widget.onOpenSession(s);
@@ -756,8 +695,8 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
   Widget _searchTopBar() => GlassTopFrame(
         key: const ValueKey('home-search-bar'),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-              kHomeMargin, 8, kHomeMargin - 2, 4),
+          padding:
+              const EdgeInsets.fromLTRB(kHomeMargin, 8, kHomeMargin - 2, 4),
           child: Row(children: [
             Expanded(
               child: Container(

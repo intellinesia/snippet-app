@@ -15,7 +15,8 @@ import 'package:snippet/screens/mobile_home/everyone_sheet.dart';
 import 'package:snippet/screens/mobile_home/home_data.dart';
 import 'package:snippet/screens/mobile_home/home_style.dart';
 import 'package:snippet/screens/mobile_home/mobile_home_screen.dart';
-import 'package:snippet/screens/mobile_home/one_thing_ask.dart';
+import 'package:snippet/screens/mobile_home/horizon_home.dart';
+import 'package:snippet/screens/mobile_home/one_thing_ask.dart' show askHeadlineSpans;
 import 'package:snippet/swr.dart';
 import 'package:snippet/theme.dart';
 
@@ -304,6 +305,13 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
     }
 
+    Future<void> openEarlier(WidgetTester tester) async {
+      final f = find.byKey(const ValueKey('horizon-earlier'));
+      await tester.ensureVisible(f);
+      await tester.pump();
+      await tester.tap(f);
+    }
+
     setUp(() {
       decided = [];
       opened = [];
@@ -329,67 +337,51 @@ void main() {
       for (var i = 0; i < 6; i++) _s('h$i'),
     ];
 
-    testWidgets('quiet state rests cleanly with bare top bar and Everyone handle',
+    testWidgets('quiet state is a free timeline with Earlier as the way in',
         (tester) async {
       await pumpHome(tester, [_s('h0')]);
       expect(find.text('Snippet'), findsOneWidget);
       expect(find.text('All quiet'), findsOneWidget);
-      expect(find.byType(OneThingAsk), findsNothing);
+      expect(find.text('Nothing needs you.'), findsOneWidget);
+      expect(find.text('Nothing is scheduled. You are free.'), findsOneWidget);
       expect(find.text('Session h0'), findsNothing);
-      expect(find.byKey(const ValueKey('everyone-handle')), findsOneWidget);
-      expect(find.text('Everyone'), findsOneWidget);
+      expect(find.byKey(const ValueKey('horizon-earlier')), findsOneWidget);
     });
 
-    testWidgets('busy state centres the top ask (even managed), Approve advances and 2 more cycles',
+    testWidgets('needs-you state leads with the top ask; Review opens it, Later moves to the next',
         (tester) async {
       await pumpHome(tester, base);
-      // The header status and the strip under the ask both say it.
-      expect(find.text('2 working'), findsNWidgets(2));
-      expect(find.text('Rust PR Reviewer asks'), findsOneWidget);
       expect(find.text('Push fix/p1 to origin?', findRichText: true),
           findsOneWidget);
-      // No kind pills or command boxes on the resting home.
-      expect(find.text('Approval'), findsNothing);
-      expect(find.byKey(const ValueKey('ask-command')), findsNothing);
-      // Sessions and agents stay tucked in Everyone.
-      expect(find.text('Session h0'), findsNothing);
-      expect(find.text('2 more'), findsOneWidget);
+      expect(find.text('Review'), findsOneWidget);
+      expect(find.text('Later'), findsOneWidget);
+      expect(find.text('Nothing needs you.'), findsNothing);
 
-      // Tapping "2 more" cycles to the next ask (question).
-      await tester.tap(find.text('2 more'));
+      await tester.tap(find.text('Later'));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 250));
       expect(find.text('Which branch?', findRichText: true), findsOneWidget);
-      expect(find.text('Answer'), findsOneWidget);
-
-      // Swipe right returns to the approval ask.
-      await tester.fling(find.byType(OneThingAsk), const Offset(200, 0), 800);
+      await tester.tap(find.text('Review'));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 250));
-      expect(find.text('Approve'), findsOneWidget);
-
-      // Approving removes it and updates the remaining count to "1 more".
-      await tester.tap(find.text('Approve'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.pump(const Duration(milliseconds: 400));
-      expect(decided, ['approve:p1']);
-      expect(find.text('1 more'), findsOneWidget);
-      expect(find.text('Which branch?', findRichText: true), findsOneWidget);
+      expect(opened, ['p2']);
     });
 
-    testWidgets('denying the last ask settles cleanly into Quiet state',
-        (tester) async {
-      await pumpHome(tester, [_approval('p1', 2), _s('h0')]);
-      expect(find.text('1 more'), findsNothing);
-      await tester.tap(find.text('Deny'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.pump(const Duration(milliseconds: 400));
-      expect(decided, ['deny:p1']);
-      expect(find.byType(OneThingAsk), findsOneWidget);
-      expect(find.text('Approve'), findsNothing);
-      expect(find.text('Deny'), findsNothing);
+    test('horizon words: clock, span and gap', () {
+      final now = DateTime(2026, 11, 23, 9, 9);
+      expect(horizonClock(DateTime(2026, 11, 23, 10, 15), now), '10:15');
+      expect(horizonClock(DateTime(2026, 11, 24, 8, 0), now), 'Tomorrow, 8:00');
+      expect(horizonSpan(const Duration(minutes: 66)), '1 h 6 min');
+      expect(horizonSpan(const Duration(minutes: 25)), '25 min');
+      final at = DateTime(2026, 11, 23, 10, 15);
+      expect(horizonGap(now, at, now, first: true, busy: false),
+          'Free for 1 h 6 min.');
+      expect(horizonGap(now, at, now, first: true, busy: true),
+          'Nothing else before 10:15.');
+      expect(horizonGap(at, at.add(const Duration(minutes: 25)), now,
+              first: false, busy: true),
+          '25 min later.');
+      expect(horizonGap(now, DateTime(2026, 11, 24, 8, 0), now,
+              first: true, busy: false),
+          'Free until Tomorrow, 8:00.');
     });
 
     test('folds default: Asleep open, Settled closed, search opens Settled', () {
@@ -405,7 +397,7 @@ void main() {
       await pumpHome(tester, [
         for (var i = 0; i < 6; i++) _s('old$i', extra: {'settled': true}),
       ]);
-      await tester.tap(find.byKey(const ValueKey('everyone-handle')));
+      await openEarlier(tester);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
       expect(find.byKey(const ValueKey('settled-fold')), findsOneWidget);
@@ -424,7 +416,7 @@ void main() {
     testWidgets('Back closes the Everyone sheet before anything else',
         (tester) async {
       await pumpHome(tester, base);
-      await tester.tap(find.byKey(const ValueKey('everyone-handle')));
+      await openEarlier(tester);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
       expect(find.byType(EveryoneSheet), findsOneWidget);
@@ -449,11 +441,9 @@ void main() {
       ], textScale: 1.3);
       tester.view.physicalSize = const Size(360, 740) * 3;
       await tester.pump(const Duration(milliseconds: 400));
-      expect(find.textContaining('is working'), findsOneWidget);
-      expect(find.text('1 of 4 done'), findsOneWidget);
-      expect(find.text('Last result'), findsNothing);
+      expect(find.textContaining('step 2 of 4'), findsOneWidget);
       expect(tester.takeException(), isNull);
-      final top = tester.getTopLeft(find.textContaining('is working')).dy;
+      final top = tester.getTopLeft(find.textContaining('step 2 of 4')).dy;
       final bar = tester.getBottomLeft(find.byKey(const ValueKey('home-stage-bar'))).dy;
       expect(top, greaterThan(bar + 24));
     });
@@ -462,7 +452,7 @@ void main() {
         'Everyone pull-up sheet shows Working with managed pills, Your sessions, Asleep, and opens ManagedView',
         (tester) async {
       await pumpHome(tester, base);
-      await tester.tap(find.byKey(const ValueKey('everyone-handle')));
+      await openEarlier(tester);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 350));
 
@@ -472,7 +462,6 @@ void main() {
       expect(find.text('Session h0'), findsOneWidget);
       // Agent-managed sessions never appear as rows under Your sessions (count = 6 human).
       expect(find.text('6'), findsOneWidget);
-      expect(find.text('Session m1'), findsNothing);
       expect(find.text('4 managed'), findsOneWidget);
       expect(find.text('1 managed'), findsNWidgets(2));
       expect(find.bySemanticsLabel('Snippet, 4 managed sessions'),
@@ -496,7 +485,7 @@ void main() {
     testWidgets('agent with no managed sessions shows no pill in Everyone',
         (tester) async {
       await pumpHome(tester, [_s('h0')]);
-      await tester.tap(find.byKey(const ValueKey('everyone-handle')));
+      await openEarlier(tester);
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('asleep-fold')));
       await tester.pumpAndSettle();
@@ -528,20 +517,16 @@ void main() {
       final boxes = <String, Rect>{
         'search': rectOf(hit('Search')),
         'settings': rectOf(hit('Settings')),
-        'deny': rectOf(find.ancestor(
-            of: find.text('Deny'), matching: find.byType(InkWell))),
-        'approve': rectOf(find.ancestor(
-            of: find.text('Approve'), matching: find.byType(InkWell))),
-        'more': rectOf(find.ancestor(
-            of: find.text('2 more'), matching: find.byType(InkWell))),
-        'everyone': rectOf(find.byKey(const ValueKey('everyone-handle'))),
+        'review': rectOf(find.ancestor(
+            of: find.text('Review'), matching: find.byType(InkWell))),
+        'later': rectOf(find.ancestor(
+            of: find.text('Later'), matching: find.byType(InkWell))),
+        'earlier': rectOf(find.byKey(const ValueKey('horizon-earlier'))),
         'mc': rectOf(find.byKey(const ValueKey('home-open-lead'))),
       };
       for (final e in boxes.entries) {
         expect(e.value.width, greaterThanOrEqualTo(44), reason: e.key);
-        // The Everyone handle is a deliberately taller 64 pt pull zone.
-        expect(e.value.height,
-            inInclusiveRange(44, e.key == 'everyone' ? 64 : 52),
+        expect(e.value.height, inInclusiveRange(44, e.key == 'earlier' ? 64 : 52),
             reason: e.key);
       }
       final keys = boxes.keys.toList();
@@ -553,7 +538,7 @@ void main() {
       }
 
       // Check managed pill hit box inside Everyone sheet too.
-      await tester.tap(find.byKey(const ValueKey('everyone-handle')));
+      await openEarlier(tester);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 350));
       final pill = rectOf(find.descendant(
@@ -572,27 +557,22 @@ void main() {
     testWidgets('at 1.3x text scale ask and Everyone sheet render cleanly',
         (tester) async {
       await pumpHome(tester, base, textScale: 1.3);
-      expect(find.text('Approve'), findsOneWidget);
+      expect(find.text('Review'), findsOneWidget);
       expect(tester.takeException(), isNull);
-      await tester.tap(find.byKey(const ValueKey('everyone-handle')));
+      await openEarlier(tester);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 350));
       expect(find.text('4 managed'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('reduced motion keeps ask removal and Everyone sheet calm',
-        (tester) async {
+    testWidgets('reduced motion keeps the Earlier sheet calm', (tester) async {
       tester.platformDispatcher.accessibilityFeaturesTestValue =
           const FakeAccessibilityFeatures(disableAnimations: true);
       addTearDown(
           tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
       await pumpHome(tester, [_approval('p1', 2), _s('h0')]);
-      await tester.tap(find.text('Approve'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
-      expect(find.text('Approve'), findsNothing);
-      await tester.tap(find.byKey(const ValueKey('everyone-handle')));
+      await openEarlier(tester);
       await tester.pump();
       expect(find.byType(EveryoneSheet), findsOneWidget);
     });
@@ -637,7 +617,7 @@ void main() {
           ),
         ],
       );
-      await tester.tap(find.byKey(const ValueKey('everyone-handle')));
+      await openEarlier(tester);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 350));
       expect(find.text('No sessions yet'), findsNothing);
@@ -679,7 +659,7 @@ void main() {
         ],
         groups: groups,
       );
-      await tester.tap(find.byKey(const ValueKey('everyone-handle')));
+      await openEarlier(tester);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 350));
       expect(find.text('Groups'), findsOneWidget);
