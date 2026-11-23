@@ -4,6 +4,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
 import 'app_popover.dart';
+import 'dialog_widgets.dart' show trackMenuTrigger;
 import 'platform.dart';
 import 'glass.dart';
 import 'theme.dart';
@@ -386,16 +387,19 @@ Future<T?> showAppMenu<T>(
       ? 260.0
       : (maxWidth == 340 ? 360.0 : maxWidth);
   if (effMax < effMin) effMax = effMin;
-  return showAppPopoverMenu<T>(
-    context,
-    items: items,
-    minWidth: effMin,
-    maxWidth: effMax,
-    anchor: AppPopoverAnchor(
-        control: control,
-        vertical: vertical,
-        below: below || point != null,
-        alignEnd: alignEnd),
+  return trackMenuTrigger<T?>(
+    control.expandToInclude(vertical),
+    () => showAppPopoverMenu<T>(
+      context,
+      items: items,
+      minWidth: effMin,
+      maxWidth: effMax,
+      anchor: AppPopoverAnchor(
+          control: control,
+          vertical: vertical,
+          below: below || point != null,
+          alignEnd: alignEnd),
+    ),
   );
 }
 

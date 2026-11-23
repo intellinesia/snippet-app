@@ -56,7 +56,10 @@ PopupMenuItem<VoidCallback> _label(String text, {double height = 26}) =>
       enabled: false,
       height: height,
       padding: EdgeInsets.symmetric(horizontal: S.of(10)),
-      child: Text(text, style: sans(11, color: AppColors.fg4)),
+      child: Text(text,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: sans(11, color: AppColors.fg4)),
     );
 
 /// The "+" menu of a session's pane row: the session title, the views it can

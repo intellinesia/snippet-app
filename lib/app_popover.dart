@@ -384,9 +384,20 @@ class _PopoverMenuState<T> extends State<_PopoverMenu<T>> {
       }
       firstGroup = false;
       final height = e.height < 30 ? 30.0 : e.height;
+      // Items that bring their own inset (pane menus, rail tools) keep it.
+      final pad = e.padding;
+      final bare = e.child is AppPopoverRowBody;
+      final body = pad != null && pad != EdgeInsets.zero
+          ? Padding(padding: pad, child: e.child)
+          : (!e.enabled && !bare
+              ? Padding(
+                  padding: EdgeInsets.symmetric(horizontal: S.s8),
+                  child: e.child)
+              : e.child);
       if (!e.enabled) {
         children.add(ConstrainedBox(
-            constraints: BoxConstraints(minHeight: height), child: e.child));
+            constraints: BoxConstraints(minHeight: height),
+            child: Align(alignment: Alignment.centerLeft, child: body)));
         continue;
       }
       final active = i == _active;
@@ -406,7 +417,7 @@ class _PopoverMenuState<T> extends State<_PopoverMenu<T>> {
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(R.md),
               ),
-              child: e.child,
+              child: body,
             ),
           ),
         ),

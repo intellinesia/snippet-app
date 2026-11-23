@@ -259,14 +259,45 @@ Future<String?> promptText(BuildContext context,
   return showAppSheet<String>(context, title: title, child: field);
 }
 
-Offset? lastPointerDown;
+Offset? _rawPointerDown;
 bool _tracking = false;
+
+// The control (or row) a menu opened from. A confirmation or prompt that a
+// menu item leads to anchors here rather than at the item the pointer hit,
+// which sits in a menu that has already closed.
+Rect? _trigger;
+Offset? _triggerPoint;
+int _menusOpen = 0;
+DateTime _triggerClosedAt = DateTime.fromMillisecondsSinceEpoch(0);
+
+bool get _triggerFresh =>
+    _trigger != null &&
+    (_menusOpen > 0 ||
+        DateTime.now().difference(_triggerClosedAt) <
+            const Duration(milliseconds: 1500));
+
+/// Where a popover that follows a click should open: the control a menu was
+/// opened from while that menu is open or has just closed, else the pointer.
+Offset? get lastPointerDown => _triggerFresh ? _triggerPoint : _rawPointerDown;
+
+/// Wraps a menu so popovers opened from its items anchor to [rect].
+Future<T> trackMenuTrigger<T>(Rect rect, Future<T> Function() open) {
+  _trigger = rect;
+  _triggerPoint = rect.center;
+  _menusOpen++;
+  return open().whenComplete(() {
+    _menusOpen--;
+    _triggerClosedAt = DateTime.now();
+  });
+}
 
 void trackPointer() {
   if (_tracking) return;
   _tracking = true;
   GestureBinding.instance.pointerRouter.addGlobalRoute((e) {
-    if (e is PointerDownEvent) lastPointerDown = e.position;
+    if (e is! PointerDownEvent) return;
+    _rawPointerDown = e.position;
+    if (_menusOpen == 0) _trigger = null;
   });
 }
 
@@ -308,7 +339,12 @@ Future<T?> showPointPopover<T>(BuildContext context,
   final box = context.findRenderObject() as RenderBox?;
   if (overlay == null) return Future.value();
   final screen = overlay.size;
-  final at = point != null
+  final rect = point != null && point == _triggerPoint && _triggerFresh
+      ? _trigger
+      : null;
+  var at = rect != null
+      ? Offset(rect.left + 24, rect.bottom - 4)
+      : point != null
       ? overlay.globalToLocal(point)
       : box != null && box.attached
           ? box.localToGlobal(Offset(0, box.size.height + 6), ancestor: overlay)
@@ -319,6 +355,8 @@ Future<T?> showPointPopover<T>(BuildContext context,
   final below = (screen.height - at.dy - 18).clamp(0.0, screen.height);
   final above = (at.dy - 18).clamp(0.0, screen.height);
   final placeAbove = below < maxHeight && above > below;
+  // Hang off the control's edge, on whichever side has room.
+  if (rect != null && placeAbove) at = Offset(at.dx, rect.top + 4);
   final availH = (placeAbove ? above : below).clamp(80.0, maxHeight);
   final top = placeAbove
       ? null
@@ -651,7 +689,7 @@ Future<T?> showAnchoredPanel<T>(
   final grow = Alignment(
       ((origin.dx + box.size.width / 2 - left) / w * 2 - 1).clamp(-1.0, 1.0),
       above ? 1 : -1);
-  return showGeneralDialog<T>(
+  return trackMenuTrigger<T?>(origin & box.size, () => showGeneralDialog<T>(
     context: anchor,
     barrierDismissible: true,
     barrierLabel: 'Dismiss',
@@ -712,7 +750,7 @@ Future<T?> showAnchoredPanel<T>(
         ),
       );
     },
-  );
+  ));
 }
 
 /// A form beside its trigger on desktop (no dialog), a sheet on phones.
