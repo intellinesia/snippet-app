@@ -1,6 +1,10 @@
+import 'group_rail.dart';
+import '../composer/desktop_composer.dart' show DeskIconButton;
+import 'agent_transcript_head.dart';
+import '../quiet.dart' show QuietHand;
 import 'dart:async';
 
-import '../chat/chat_info.dart' show GroupInfoPanel, showGroupInfo;
+import '../chat/chat_info.dart' show showGroupInfo;
 import '../motion_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -176,14 +180,10 @@ Future<void> openGroupThread(
     maxHeight: 720,
     title: group.title.trim().isEmpty ? 'Group' : group.title.trim(),
     iconAgentIds: group.agentIds,
-    sidePanel: (ctx, closeTab) => GroupInfoPanel(
-      key: ValueKey('group-info-${group.id}'),
+    sidePanel: (ctx, closeTab) => GroupRail(
+      key: ValueKey('group-rail-${group.id}'),
       client: client,
       group: group,
-      docked: true,
-      onOpenTasks: () =>
-          openTasksPage(ctx, client, agentIds: group.agentIds.toSet()),
-      onClose: closeTab,
     ),
     builder: (_, close) => GroupThreadScreen(
       client: client,
@@ -235,10 +235,14 @@ class GroupRow extends StatelessWidget {
       required this.onTap,
       this.onLongPress,
       this.pinned = false,
+      this.needsYou = false,
       this.nameOf});
 
   final GroupSummary group;
   final bool pinned;
+
+  /// Any member is waiting on you: the one amber mark on the row.
+  final bool needsYou;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
 
@@ -368,15 +372,17 @@ class GroupRow extends StatelessWidget {
       pinned: pinned,
       preview: sub,
       needs: unread > 0,
-      trailing: unread > 0
-          ? Container(
-              key: const ValueKey('group-unread'),
-              width: 7,
-              height: 7,
-              decoration: BoxDecoration(
-                  color: AppColors.accent, shape: BoxShape.circle),
-            )
-          : null,
+      trailing: needsYou
+          ? const QuietHand(size: 14)
+          : unread > 0
+              ? Container(
+                  key: const ValueKey('group-unread'),
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                      color: AppColors.fg2, shape: BoxShape.circle),
+                )
+              : null,
     );
   }
 }
@@ -1278,6 +1284,8 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
             bottom: false,
             child: Column(
               children: [
+                // Desktop: the group's identity stays above the conversation.
+                if (!kMobile && !widget.embedded) _deskHead(),
                 Expanded(
                   child: Stack(
                     clipBehavior: Clip.none,
@@ -1347,6 +1355,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         members: _stageMembers(),
         title: _title,
         subtitle: _stageSubtitle(),
+        subtitleHand: _groupNeedsYou,
         onTap: () {
           if (toggleSide != null) {
             toggleSide();
@@ -1364,6 +1373,36 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         onBack: canGoBack ? _closePage : null,
         trailing: trailing,
       ),
+    );
+  }
+
+  /// Desktop: the group's identity pinned over the conversation, like an
+  /// agent page: stacked faces, name, one meta line, a dots menu.
+  Widget _deskHead() {
+    final ids = _group.agentIds;
+    final body = AgentTranscriptHead(
+      agentId: ids.isEmpty ? 'snippet' : ids.first,
+      agentIds: ids,
+      name: _title,
+      meta: _stageSubtitle(),
+      actions: [
+        DeskIconButton('more-horizontal',
+            tooltip: 'Group options',
+            iconSize: 16,
+            onTap: () => unawaited(showGroupInfo(
+                  context,
+                  client: widget.client,
+                  group: _group,
+                  onOpenTasks: () => openTasksPage(context, widget.client,
+                      agentIds: _groupAgentIds),
+                  onChanged: () => unawaited(_reloadGroup()),
+                ))),
+      ],
+    );
+    return ColoredBox(
+      color: AppColors.bg,
+      child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0), child: body),
     );
   }
 
@@ -1408,8 +1447,20 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     if (status != null) return status;
     final typing = _typingStatus();
     if (typing != null) return typing;
-    final n = _group.members.length;
-    return '$n ${n == 1 ? 'member' : 'members'}';
+    // Members by name: "X Scout, Buddy and you".
+    final names = [for (final id in _group.agentIds) _agentName(id)];
+    if (_group.members.any((m) => m.kind == 'human')) names.add('you');
+    if (names.length <= 1) return names.join();
+    return '${names.sublist(0, names.length - 1).join(', ')} and ${names.last}';
+  }
+
+  /// Any agent in the group is waiting on you.
+  bool get _groupNeedsYou {
+    final store = widget.client.presence;
+    return _group.agentIds.any((id) {
+      final p = store.presenceForAgentId(id);
+      return p != null && p.state == 'waiting' && (p.detail == 'user' || p.detail.isEmpty);
+    });
   }
 
   static const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -2119,7 +2170,9 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         input: _input,
         focus: _inputFocus,
         fieldKey: _inputFieldKey,
-        hint: 'Message the group',
+        hint: kMobile
+            ? 'Reply to $_title'
+            : 'Message $_title, @ to address one',
         highlight: dragging,
         shortcuts: _kit.shortcuts(
             canSend: _canSend,
@@ -2138,7 +2191,15 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         onRecordMore: () => unawaited(_voice.recordMore(_attachVoiceBytes)),
         deskHint: () => Padding(
           padding: EdgeInsets.only(right: S.s8),
-          child: Text('@ to mention', style: sans(12, color: AppColors.fg4)),
+          // Everyone by default; typing @ narrows it to one member.
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            SizedBox(
+                width: 28,
+                height: 16,
+                child: AgentCluster(ids: _group.agentIds, size: 16)),
+            const SizedBox(width: 6),
+            Text('Everyone', style: sans(12, color: AppColors.fg2)),
+          ]),
         ),
         sending: _sending,
         hasDraft: () =>

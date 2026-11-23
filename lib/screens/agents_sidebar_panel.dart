@@ -570,6 +570,10 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
           onTap: () => _openGroup(g),
           onLongPress: () => _groupActions(g),
           nameOf: agentName,
+          needsYou: [
+            for (final a in agents)
+              if (g.agentIds.contains(a.id) && a.needsYou > 0) a
+          ].isNotEmpty,
         ),
       );
     }

@@ -280,7 +280,7 @@ void main() {
       }
 
       expect(find.byType(StageBar), findsOneWidget);
-      expect(find.text('3 members'), findsOneWidget);
+      expect(find.textContaining(' and you'), findsOneWidget);
       expect(find.byType(ChatSenderName), findsOneWidget);
       expect(find.byType(ChatBubble), findsNWidgets(3));
       expect(find.textContaining('Read by Argon and Fable'), findsOneWidget);

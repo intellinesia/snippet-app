@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../glass.dart';
+import '../quiet.dart' show QuietHand;
 import '../widgets.dart' show ProviderLogo, providerLogoAsset;
 import '../platform.dart';
 import '../theme.dart';
@@ -27,6 +28,7 @@ class StageBar extends StatelessWidget {
     this.below,
     this.framed = true,
     this.subtitleProvider,
+    this.subtitleHand = false,
   });
 
   final List<StageMember> members;
@@ -35,6 +37,9 @@ class StageBar extends StatelessWidget {
 
   /// Phone: provider mark drawn before the subtitle, in the subtitle's ink.
   final String? subtitleProvider;
+
+  /// Phone: the amber needs-you hand before the subtitle.
+  final bool subtitleHand;
   final Color? subtitleDot;
   final VoidCallback? onTap;
   final VoidCallback? onBack;
@@ -87,6 +92,10 @@ class StageBar extends StatelessWidget {
                         child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              if (subtitleHand) ...[
+                                const QuietHand(size: 14),
+                                const SizedBox(width: 5),
+                              ],
                               if (subtitleProvider != null &&
                                   providerLogoAsset(subtitleProvider) !=
                                       null) ...[
