@@ -281,6 +281,15 @@ extension _RailPages on _SessionRailState {
                           overflow: TextOverflow.ellipsis,
                           style: codeMono(12, color: AppColors.fg2)),
                     ),
+                    if (_lineCounts['${f.path}|${f.staged}|${f.unstaged}']
+                        case (final a, final r)) ...[
+                      const SizedBox(width: 8),
+                      Text('+$a',
+                          style: codeMono(11.5, color: AppColors.ok)),
+                      const SizedBox(width: 6),
+                      Text('\u2212$r',
+                          style: codeMono(11.5, color: AppColors.fg3)),
+                    ],
                   ]),
                 ),
               ),

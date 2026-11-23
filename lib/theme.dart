@@ -1513,7 +1513,13 @@ class AppColors {
       ? currentTheme.bg
       : (_deskBlack
               ? const Color(0xFF09090A)
-              : Color.lerp(currentTheme.bg, currentTheme.surface1, 0.45)!)
+              // Quiet: the sidebar is recessed below the raised panel.
+              : currentTheme.name == 'quiet'
+                  ? Color.lerp(currentTheme.bg, const Color(0xFF000000), 0.22)!
+                  : currentTheme.name == 'quiet-light'
+                      ? currentTheme.surface2
+                      : Color.lerp(
+                          currentTheme.bg, currentTheme.surface1, 0.45)!)
           .withValues(alpha: chromeAlpha ?? (solidChrome ? 1 : 0.92));
   /// Desktop window chrome; see-through while a scene plays behind the window.
   static Color get windowChrome => !kMobile && ChatScene.instance.active

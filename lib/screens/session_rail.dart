@@ -270,6 +270,30 @@ class _SessionRailState extends State<SessionRail> {
   bool _resizing = false;
 
   GitStatus? _git;
+
+  /// +/- per changed file, counted from each file's patch (the status
+  /// endpoint carries none). Only the few the inspector lists.
+  final Map<String, (int, int)> _lineCounts = {};
+
+  Future<void> _countLines() async {
+    final git = _git;
+    if (git == null || !git.ok) return;
+    for (final f in git.files.take(5)) {
+      final key = '${f.path}|${f.staged}|${f.unstaged}';
+      if (_lineCounts.containsKey(key)) continue;
+      try {
+        final patch = await widget.client.gitDiff(widget.sessionId,
+            file: f.path, staged: f.staged && !f.unstaged, untracked: f.untracked);
+        var a = 0, r = 0;
+        for (final l in patch.split('\n')) {
+          if (l.startsWith('+') && !l.startsWith('+++')) a++;
+          if (l.startsWith('-') && !l.startsWith('---')) r++;
+        }
+        if (!mounted) return;
+        setState(() => _lineCounts[key] = (a, r));
+      } catch (_) {}
+    }
+  }
   WakeSchedule? _wake;
   bool _wakeKnown = false;
   bool? _warm;
@@ -404,6 +428,7 @@ class _SessionRailState extends State<SessionRail> {
       _git = git ?? _git;
       _procs = procs ?? _procs;
     });
+    _countLines();
   }
 
   Future<void> _load() async {
@@ -427,6 +452,7 @@ class _SessionRailState extends State<SessionRail> {
     final auto = r[4] as Map<String, dynamic>?;
     setState(() {
       _git = r[0] as GitStatus?;
+      _countLines();
       _wakeKnown = true;
       _wake = r[1] as WakeSchedule?;
       _warm = (r[2] as KeepWarmEntry?)?.enabled ?? false;
