@@ -6,7 +6,10 @@ import '../mochi.dart';
 import '../models.dart';
 import '../quiet.dart';
 import '../theme.dart';
+import '../shell_panel.dart' show openSessionInTab;
 import '../widgets.dart';
+import 'agent_rail.dart';
+import 'sidebar.dart' show SidebarState;
 
 /// The group page's right rail: who is in it, with provider mark and state.
 class GroupRail extends StatefulWidget {
@@ -21,12 +24,16 @@ class GroupRail extends StatefulWidget {
 
 class _GroupRailState extends State<GroupRail> {
   List<CoordinationAgent> _agents = const [];
+  List<SessionInfo> _sessions = const [];
 
   @override
   void initState() {
     super.initState();
     widget.client.coordinationAgents().then((a) {
       if (mounted) setState(() => _agents = a);
+    }).catchError((_) {});
+    widget.client.sessions().then((l) {
+      if (mounted) setState(() => _sessions = l);
     }).catchError((_) {});
   }
 
@@ -57,15 +64,27 @@ class _GroupRailState extends State<GroupRail> {
                 Text('You', style: sans(13, color: AppColors.fg1)),
               ]),
             ),
+          const SizedBox(height: 20),
+          AgentRail(
+            embedded: true,
+            sessions: [
+              for (final s in _sessions)
+                if ({s.agentId, s.ownerAgentId, s.workerAgentId}
+                    .any((a) => a != null && ids.contains(a)))
+                  s
+            ],
+            onOpenSession: (s) =>
+                openSessionInTab?.call(widget.client, s.id, s.title),
+            onAllSessions: SidebarState.showAllSessions,
+          ),
         ],
       ),
     );
   }
 
   Widget _member(String id, CoordinationAgent? a) {
-    final name = a == null || a.displayName.trim().isEmpty
-        ? id
-        : a.displayName.trim();
+    final name =
+        a == null || a.displayName.trim().isEmpty ? id : a.displayName.trim();
     final needs = (a?.needsYou ?? 0) > 0;
     final working = !needs && (a?.presence?.live ?? false);
     final profile = a?.deskProfile ?? a?.profile;

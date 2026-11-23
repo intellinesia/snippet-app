@@ -90,8 +90,6 @@ class _PlanProgressCardState extends State<PlanProgressCard> {
                         style: kMobile
                             ? sans(16, height: 22 / 16, color: AppColors.fg1)
                             : sans(13, height: 18 / 13, color: AppColors.fg1)),
-                  SizedBox(height: S.s8),
-                  _Segments(st),
                   if (next >= 0) ...[
                     SizedBox(height: S.s8),
                     Text('Next: ${_text(steps[next])}',
@@ -199,10 +197,6 @@ extension on _PlanProgressCardState {
                 ]),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-              child: _Segments(st, height: 3, desktop: true),
-            ),
             if (_open) ...[
               if (widget.explanation.isNotEmpty)
                 Padding(
@@ -264,44 +258,6 @@ extension on _PlanProgressCardState {
         ),
       ]),
     );
-  }
-}
-
-/// One short bar per step: done muted, live accent, the rest a track.
-class _Segments extends StatelessWidget {
-  const _Segments(this.st, {this.height = 4, this.desktop = false});
-  final List<_St> st;
-  final double height;
-  final bool desktop;
-
-  @override
-  Widget build(BuildContext context) {
-    final live =
-        st.contains(_St.now) ? st.indexOf(_St.now) : st.indexOf(_St.open);
-    return Row(children: [
-      for (var i = 0; i < st.length; i++) ...[
-        if (i > 0) const SizedBox(width: 3),
-        Expanded(
-          child: Container(
-            height: height,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(2),
-              color: desktop
-                  ? (st[i] == _St.done
-                      ? AppColors.ok
-                      : i == live
-                          ? AppColors.run
-                          : AppColors.fg1.withValues(alpha: 0.11))
-                  : st[i] == _St.done
-                      ? AppColors.fg3
-                      : i == live
-                          ? AppColors.accent
-                          : Grouped.pillBorder,
-            ),
-          ),
-        ),
-      ],
-    ]);
   }
 }
 

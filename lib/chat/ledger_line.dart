@@ -805,33 +805,6 @@ class _LedgerStripState extends State<LedgerStrip> {
     return ms < 0 ? Duration.zero : Duration(milliseconds: ms);
   }
 
-  Widget _bar({int? failAt}) {
-    final w = _weights();
-    final steps = widget.steps;
-    return SizedBox(
-      width: 132,
-      height: 6,
-      child: Row(children: [
-        for (var i = 0; i < steps.length; i++) ...[
-          if (i > 0) const SizedBox(width: 2),
-          Expanded(
-            flex: (w[i] * 10).round().clamp(1, 1 << 20),
-            child: Container(
-              decoration: BoxDecoration(
-                color: _stepFailed(steps[i]) || i == failAt
-                    ? AppColors.danger
-                    : steps[i].running
-                        ? AppColors.accent
-                        : AppColors.fg4.withValues(alpha: 0.55),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-        ],
-      ]),
-    );
-  }
-
   Widget _key(String k) => Container(
         margin: const EdgeInsets.only(left: 6),
         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
@@ -1043,8 +1016,6 @@ class _LedgerStripState extends State<LedgerStrip> {
                     overflow: TextOverflow.ellipsis,
                     style: mono(12, color: AppColors.fg3)),
               ),
-              const SizedBox(width: 10),
-              _bar(failAt: failAt),
               if (fail.startMs != null && fail.endMs != null) ...[
                 const SizedBox(width: 10),
                 Text(

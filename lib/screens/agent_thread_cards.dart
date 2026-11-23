@@ -157,13 +157,13 @@ Widget _audioCard(
     constraints: BoxConstraints(maxWidth: kMobile ? 272 : 340),
     padding: EdgeInsets.fromLTRB(S.s8, S.s8, S.s12, S.of(10)),
     decoration: BoxDecoration(
-      color: kMobile ? ChatColors.received : AppColors.surface2,
+      color: AppColors.surface2,
       borderRadius:
           BorderRadius.circular(kMobile ? ChatColors.radius : R.of(8)),
     ),
     child: VoiceNote(
       client: client,
-      ink: ChatColors.receivedText,
+      ink: AppColors.fg1,
       path: fallbackPath,
       url: resolvedUrl,
       duration: duration,
@@ -315,7 +315,7 @@ Widget _chatCardShell({
   return Container(
     padding: EdgeInsets.all(S.of(14)),
     decoration: BoxDecoration(
-      color: kMobile ? ChatColors.card : AppColors.surface2,
+      color: AppColors.surface2,
       borderRadius:
           BorderRadius.circular(kMobile ? ChatColors.radius : R.of(8)),
     ),
@@ -344,7 +344,7 @@ Widget _chatCardShell({
             style: sans(
               kMobile ? 15 : 13,
               weight: W.title,
-              color: ChatColors.receivedText,
+              color: AppColors.fg1,
             ),
           ),
         ],
@@ -375,8 +375,8 @@ Widget _chatPill({
   bool disabled = false,
   String? badge,
 }) {
-  final bg = primary ? ChatColors.action : ChatColors.cardButton;
-  final fg = primary ? ChatColors.onAction : ChatColors.receivedText;
+  final bg = primary ? AppColors.fg1 : AppColors.surface3;
+  final fg = primary ? AppColors.bg : AppColors.fg1;
   final pill = Opacity(
     opacity: disabled ? 0.5 : 1,
     child: Container(

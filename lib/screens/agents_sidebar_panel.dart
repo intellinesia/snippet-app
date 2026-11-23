@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart' show ValueListenable;
+import '../quiet.dart' show QuietHand;
 
 import 'package:flutter/material.dart';
 
@@ -8,7 +10,7 @@ import '../crew_status.dart';
 import '../models.dart';
 import '../pins.dart';
 import '../platform.dart';
-import 'agent_view_mode.dart' show openAgentTab;
+import 'agent_view_mode.dart' show openAgentTab, openGroupTab;
 import '../theme.dart';
 import '../widgets.dart';
 import 'agent_card.dart';
@@ -60,8 +62,12 @@ class AgentsSidebarPanel extends StatefulWidget {
     this.groupsKey,
     this.heroBuilder,
     this.sessions,
+    this.onOpenSession,
     this.embedded = false,
   });
+
+  /// Desktop: opens a nested live session under the selected agent or group.
+  final void Function(SessionInfo session)? onOpenSession;
 
   /// Desktop: non-scrolling rows (Lead, agents, groups) for a list
   /// the sidebar scrolls itself; no hero and no Working/Quiet sections.
@@ -633,7 +639,46 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
               a == null ? b : (b == null || a.isAfter(b) ? a : b);
           // Sorted by the time each row shows: last message, or the live
           // session's activity while it works. Lead sorts too.
-          final ranked = <({Widget row, DateTime? at, int? pinnedAt, int i})>[];
+          Widget nested(List<SessionInfo> list) => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(height: S.s2),
+                  for (final s in list)
+                    _NestedSession(
+                        key: ValueKey('nested-${s.id}'),
+                        session: s,
+                        onTap: () => widget.onOpenSession?.call(s)),
+                  SizedBox(height: S.s4),
+                ],
+              );
+          List<SessionInfo> liveOf(Iterable<String> ids) {
+            final seenIds = <String>{};
+            final out = <SessionInfo>[];
+            for (final id in ids) {
+              for (final s in crew[id]?.sessions ?? const <SessionInfo>[]) {
+                if (!s.settled && seenIds.add(s.id)) out.add(s);
+              }
+            }
+            return out;
+          }
+
+          Widget nestFor(ValueListenable<String?> sel, String id,
+                  List<SessionInfo> Function() list) =>
+              ValueListenableBuilder<String?>(
+                valueListenable: sel,
+                builder: (_, open, __) {
+                  if (open != id) return const SizedBox.shrink();
+                  final l = list();
+                  return l.isEmpty ? const SizedBox.shrink() : nested(l);
+                },
+              );
+          final ranked = <({
+            Widget row,
+            DateTime? at,
+            int? pinnedAt,
+            int i,
+            Widget? nest
+          })>[];
           for (final e in entries) {
             final item = e.item;
             if (item is CoordinationAgent) {
@@ -646,6 +691,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                 at: latest(e.at, live),
                 pinnedAt: e.pinnedAt,
                 i: ranked.length,
+                nest: nestFor(openAgentTab, item.id, () => liveOf([item.id])),
               ));
             } else {
               // Groups sit in the same list, ranked by their last event.
@@ -654,6 +700,8 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                 at: e.at,
                 pinnedAt: e.pinnedAt,
                 i: ranked.length,
+                nest: nestFor(openGroupTab, item.id,
+                    () => liveOf(item.agentIds)),
               ));
             }
           }
@@ -663,6 +711,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
               at: latest(_mcLast?.at, seen(mc?.lastActive)),
               pinnedAt: null,
               i: -1,
+              nest: null,
             ));
           }
           ranked.sort((a, b) {
@@ -677,7 +726,12 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
             if (b.at == null) return -1;
             return b.at!.compareTo(a.at!);
           });
-          final agentRows = [for (final r in ranked) r.row];
+          final agentRows = [
+            for (final r in ranked) ...[
+              r.row,
+              if (r.nest != null) r.nest!,
+            ]
+          ];
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
@@ -881,7 +935,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                     Text(title, style: sans(11, color: AppColors.fg3)),
                     const SizedBox(width: 6),
                     Text('${rows.length}',
-                        style: sans(11, color: AppColors.fg4, tabular: true)),
+                        style: sans(11, color: AppColors.fg3, tabular: true)),
                   ]),
                 ));
               }
@@ -1233,4 +1287,40 @@ class _DashedCircle extends CustomPainter {
 
   @override
   bool shouldRepaint(_DashedCircle old) => old.color != color;
+}
+
+/// A live session nested under its selected agent or group: 28 tall, indented.
+class _NestedSession extends StatelessWidget {
+  const _NestedSession({super.key, required this.session, required this.onTap});
+  final SessionInfo session;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final asks = session.status == 'waiting_for_input';
+    final title =
+        session.title.trim().isEmpty ? 'Session' : session.title.trim();
+    return HoverSurface(
+      radius: R.of(8),
+      onTap: onTap,
+      child: SizedBox(
+        height: 28,
+        child: Padding(
+          padding: EdgeInsets.only(left: S.of(36), right: S.s8),
+          child: Row(children: [
+            Expanded(
+              child: Text(title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(13, color: AppColors.fg2)),
+            ),
+            if (asks)
+              const QuietHand(size: 14)
+            else if (session.running)
+              Spinner(size: 12, color: AppColors.fg2),
+          ]),
+        ),
+      ),
+    );
+  }
 }

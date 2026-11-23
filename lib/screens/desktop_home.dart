@@ -10,6 +10,8 @@ import '../session_quick_send.dart';
 import '../tap_detector.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../chat/agent_cluster.dart';
+import 'group_messaging.dart' show openGroupThread;
 import 'lead/lead_state.dart' show isDedicatedLeadSession;
 
 /// Desktop Home, agent first: who needs you, then what each agent is doing,
@@ -37,12 +39,16 @@ class DesktopHome extends StatefulWidget {
 class _DesktopHomeState extends State<DesktopHome> {
   List<CoordinationAgent> _agents = const [];
   final Set<String> _busy = {};
+  List<GroupSummary> _groups = const [];
 
   @override
   void initState() {
     super.initState();
     widget.client.coordinationAgents().then((a) {
       if (mounted) setState(() => _agents = a);
+    }).catchError((_) {});
+    widget.client.groups().then((g) {
+      if (mounted) setState(() => _groups = g);
     }).catchError((_) {});
   }
 
@@ -66,12 +72,32 @@ class _DesktopHomeState extends State<DesktopHome> {
         if (!isDedicatedLeadSession(s.id)) s
     ];
     final crew = deriveCrew(_agents, sessions);
-    final needs = [for (final e in crew) if (e.state == CrewState.needsYou) e];
-    final working =
-        [for (final e in crew) if (e.state == CrewState.working) e];
-    final rest = [for (final e in crew) if (e.state == CrewState.standingBy) e];
-    final available = [for (final e in rest) if (e.agent.available) e];
-    final asleep = [for (final e in rest) if (!e.agent.available) e];
+    final needs = [
+      for (final e in crew)
+        if (e.state == CrewState.needsYou) e
+    ];
+    final askers = {for (final e in needs) e.agent.id: e.agent.displayName};
+    // A group needs you when any member is waiting on you.
+    final groupAsks = [
+      for (final g in _groups)
+        if (g.agentIds.any(askers.containsKey)) g
+    ];
+    final working = [
+      for (final e in crew)
+        if (e.state == CrewState.working) e
+    ];
+    final rest = [
+      for (final e in crew)
+        if (e.state == CrewState.standingBy) e
+    ];
+    final available = [
+      for (final e in rest)
+        if (e.agent.available) e
+    ];
+    final asleep = [
+      for (final e in rest)
+        if (!e.agent.available) e
+    ];
     return ColoredBox(
       color: AppColors.bg,
       child: Align(
@@ -87,9 +113,21 @@ class _DesktopHomeState extends State<DesktopHome> {
                   child: Text('No agents yet.',
                       style: sans(14, color: AppColors.fg3)),
                 ),
-              if (needs.isNotEmpty) ...[
-                _label('Needs you', needs.length),
+              if (needs.isNotEmpty || groupAsks.isNotEmpty) ...[
+                _label('Needs you', needs.length + groupAsks.length),
                 for (final e in needs) _ask(e),
+                for (final g in groupAsks)
+                  _HomeRow(
+                    onTap: () => openGroupThread(context,
+                        client: widget.client, group: g),
+                    leading: AgentCluster(ids: g.agentIds, size: 28),
+                    title: g.title.trim().isEmpty ? 'Group' : g.title.trim(),
+                    sub: 'Waiting on ${[
+                      for (final id in g.agentIds)
+                        if (askers.containsKey(id)) askers[id]
+                    ].join(', ')}',
+                    trailing: const QuietHand(size: 14),
+                  ),
               ],
               if (working.isNotEmpty) ...[
                 _label('Working', working.length),
@@ -181,7 +219,9 @@ class _HomeRow extends StatefulWidget {
     this.provider,
     this.count,
     this.when = '',
+    this.trailing,
   });
+  final Widget? trailing;
   final VoidCallback onTap;
   final Widget leading;
   final String title;
@@ -219,8 +259,7 @@ class _HomeRowState extends State<_HomeRow> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(widget.title,
-                        style: sans(14,
-                            weight: W.label, color: AppColors.fg1)),
+                        style: sans(14, weight: W.label, color: AppColors.fg1)),
                     Text(widget.sub,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -234,10 +273,10 @@ class _HomeRowState extends State<_HomeRow> {
                 const SizedBox(width: 8),
               ],
               if (widget.count != null) ...[
-                Text(widget.count!,
-                    style: sans(12, color: AppColors.fg2)),
+                Text(widget.count!, style: sans(12, color: AppColors.fg2)),
                 const SizedBox(width: 16),
               ],
+              if (widget.trailing != null) widget.trailing!,
               SizedBox(
                 width: 36,
                 child: Text(widget.when,

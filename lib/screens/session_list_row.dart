@@ -258,7 +258,7 @@ class _SessionGroupHeaderState extends State<SessionGroupHeader> {
 
   @override
   Widget build(BuildContext context) {
-    final labelColor = widget.needsYou ? AppColors.run : AppColors.fg4;
+    final labelColor = widget.needsYou ? AppColors.run : AppColors.fg3;
     final countStyle = TS.caption(labelColor).copyWith(
         fontFamily: monoFamily,
         fontSize: 11,
@@ -278,7 +278,7 @@ class _SessionGroupHeaderState extends State<SessionGroupHeader> {
         child: AppIcon(
           widget.chevronRight ? 'chevron-right' : 'chevron-down',
           size: 11,
-          color: AppColors.fg4,
+          color: AppColors.fg3,
         ),
       ),
     );
@@ -443,7 +443,7 @@ class SessionListRow extends StatelessWidget {
         ? AppColors.accent
         : unread
             ? AppColors.fg1
-            : AppColors.fg4;
+            : AppColors.fg3;
     final lineH = kMobile ? 22.0 : 18.0;
     final diff = sessionDiff(s);
     final branch = s.branch?.trim() ?? '';
@@ -542,7 +542,7 @@ class SessionListRow extends StatelessWidget {
                             if (branch.isNotEmpty) ...[
                               SizedBox(width: S.s8),
                               AppIcon('git-branch',
-                                  size: 11, color: AppColors.fg4),
+                                  size: 11, color: AppColors.fg3),
                               SizedBox(width: S.s4),
                               Flexible(
                                 child: Text(branch,
@@ -556,7 +556,7 @@ class SessionListRow extends StatelessWidget {
                               Expanded(
                                 child: Row(children: [
                                   AppIcon('git-branch',
-                                      size: 11, color: AppColors.fg4),
+                                      size: 11, color: AppColors.fg3),
                                   SizedBox(width: S.s4),
                                   Flexible(
                                     child: Text(branch,
@@ -570,13 +570,13 @@ class SessionListRow extends StatelessWidget {
                               Expanded(
                                 child: Row(children: [
                                   AppIcon('folder-x',
-                                      size: 11, color: AppColors.fg4),
+                                      size: 11, color: AppColors.fg3),
                                   SizedBox(width: S.s4),
                                   Flexible(
                                     child: Text('No git repo',
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: TS.meta(AppColors.fg4)),
+                                        style: TS.meta(AppColors.fg3)),
                                   ),
                                 ]),
                               )
@@ -619,7 +619,7 @@ class SessionListRow extends StatelessWidget {
                   Text(wakeText,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TS.meta(AppColors.fg4)),
+                      style: TS.meta(AppColors.fg3)),
               ],
             ],
           ),
@@ -635,11 +635,11 @@ class SessionListRow extends StatelessWidget {
       // down the list; the bouncing agent already reads as working.
       final folder =
           s.projectFolder.trim().isEmpty ? '' : projectLabel(s);
-      final metaStyle = sans(12, color: AppColors.fg4);
+      final metaStyle = sans(12, color: AppColors.fg3);
       Widget metaField(String icon, String text) => text.isEmpty
           ? const SizedBox.shrink()
           : Row(mainAxisSize: MainAxisSize.min, children: [
-              AppIcon(icon, size: 12, color: AppColors.fg4),
+              AppIcon(icon, size: 12, color: AppColors.fg3),
               const SizedBox(width: 4),
               Flexible(
                 child: Text(text,
@@ -680,7 +680,7 @@ class SessionListRow extends StatelessWidget {
               // The reference's 14px regular title, grey until selected.
               style: sans(14,
                   color: dim
-                      ? AppColors.fg4
+                      ? AppColors.fg3
                       : (selected || hover)
                           ? AppColors.fg1
                           : AppColors.fg3));
@@ -694,11 +694,11 @@ class SessionListRow extends StatelessWidget {
         Expanded(child: titleW),
         if (pinned && renameField == null) ...[
           const SizedBox(width: 6),
-          AppIcon('pin', size: 11, color: AppColors.fg4),
+          AppIcon('pin', size: 11, color: AppColors.fg3),
         ],
         if (s.keepAwake && renameField == null) ...[
           const SizedBox(width: 6),
-          AppIcon('lock', size: 11, color: AppColors.fg4),
+          AppIcon('lock', size: 11, color: AppColors.fg3),
         ],
         // Fixed slot so hovering swaps the time for actions without reflow.
         if (renameField == null && needsYou && !hover) ...[
@@ -946,7 +946,7 @@ class _ProjectChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Flexible(
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        AppIcon('folder', size: 11, color: AppColors.fg4),
+        AppIcon('folder', size: 11, color: AppColors.fg3),
         SizedBox(width: S.s4),
         Flexible(
           child: Text(
@@ -1095,7 +1095,7 @@ class WorkspaceChip extends StatelessWidget {
             maxLines: 1,
             softWrap: false,
             overflow: TextOverflow.ellipsis,
-            style: sans(11, color: AppColors.fg4)),
+            style: sans(11, color: AppColors.fg3)),
       ),
     ]);
   }
@@ -1115,7 +1115,7 @@ class _SelectBox extends StatelessWidget {
           color: checked ? AppColors.accentFill : Colors.transparent,
           borderRadius: BorderRadius.circular(R.of(4)),
           border: Border.all(
-              color: checked ? AppColors.accentFill : AppColors.fg4,
+              color: checked ? AppColors.accentFill : AppColors.fg3,
               width: 1.5),
         ),
         child: checked

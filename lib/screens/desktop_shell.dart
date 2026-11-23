@@ -1886,6 +1886,12 @@ class _DesktopShellState extends State<DesktopShell>
       WidgetsBinding.instance.addPostFrameCallback(
           (_) => openAgentTab.value = _activeTab?.readout?.agent?.id);
     }
+    final reqId = _activeTab?.readout?.request?.id ?? '';
+    final openGroup = reqId.startsWith('group:') ? reqId.substring(6) : null;
+    if (openGroupTab.value != openGroup) {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => openGroupTab.value = openGroup);
+    }
     Theme.of(context); // Rebuild on theme change
     DaemonScope.current = _client;
     if (_loading) {

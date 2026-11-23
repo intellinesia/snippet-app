@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../chat/chat_card.dart';
 import '../chat/decided_card.dart';
-import '../mochi.dart';
 import '../models.dart';
 import '../session_quick_send.dart';
 import '../theme.dart';
@@ -432,11 +431,8 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
 
   @override
   Widget build(BuildContext context) {
-    final e = widget.event;
     return ChatCardAccent(
-      color: e.actorKind == 'agent' && e.actorId.isNotEmpty
-          ? agentTintFor(e.actorId)
-          : null,
+      color: null,
       child: Builder(builder: _build),
     );
   }

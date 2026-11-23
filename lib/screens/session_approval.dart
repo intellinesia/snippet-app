@@ -207,9 +207,11 @@ class ApprovalBarState extends State<ApprovalBar> {
           required Color hover,
           required Color ink,
           bool busy = false,
+          BorderSide? border,
           required VoidCallback? onTap}) =>
       DeskButton(
-        height: 28,
+        height: 32,
+        border: border,
         onTap: busy ? null : onTap,
         fill: fill,
         hoverFill: hover,
@@ -288,19 +290,19 @@ class ApprovalBarState extends State<ApprovalBar> {
       _alwaysKind = ruleLabel != null ? 'approve_rule' : 'approve_all';
       return DeskPinCard(
         icon: 'shield',
-        iconColor: AppColors.run,
+        iconColor: AppColors.fg2,
         eyebrow: 'Needs your approval',
         trailing: Text(
             [
               if (subtitle != null) subtitle,
               if (total > 1) '$index of $total',
             ].join(' \u00b7 '),
-            style: sans(12, color: AppColors.fg4)),
+            style: sans(12, color: AppColors.fg3)),
         children: [
           DeskPinTitle(headline, why: reason.isEmpty ? null : reason),
           if (detail.isNotEmpty)
             Container(
-              margin: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+              margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               constraints: const BoxConstraints(maxHeight: 180),
               decoration: BoxDecoration(
@@ -314,7 +316,7 @@ class ApprovalBarState extends State<ApprovalBar> {
             ),
           if (isVault)
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Wrap(spacing: S.s6, runSpacing: S.s4, children: [
                 for (final name in secrets)
                   Tag(name, tone: Tone.run, icon: 'key', mono: true),
@@ -335,14 +337,15 @@ class ApprovalBarState extends State<ApprovalBar> {
                   ),
             buttons: [
               _deskDecision('Deny',
-                  fill: AppColors.fg1.withValues(alpha: 0.07),
-                  hover: AppColors.fg1.withValues(alpha: 0.11),
+                  fill: Colors.transparent,
+                  hover: AppColors.fg1.withValues(alpha: 0.06),
                   ink: AppColors.fg1,
+                  border: BorderSide(color: AppColors.fg4),
                   onTap: _sent ? null : () => _decide({'kind': 'deny'})),
               _deskDecision('Approve',
-                  fill: AppColors.accentFill,
-                  hover: AppColors.accentFill.withValues(alpha: 0.88),
-                  ink: AppColors.accentFg,
+                  fill: AppColors.fg1,
+                  hover: AppColors.fg1.withValues(alpha: 0.88),
+                  ink: AppColors.bg,
                   busy: _sent,
                   onTap: () =>
                       _decide({'kind': _always ? _alwaysKind : 'approve'})),
@@ -828,7 +831,7 @@ class QuestionBarState extends State<QuestionBar> {
       }
       if (writing) {
         children.add(Padding(
-          padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           child: AppField(
               controller: _controllerFor(id),
               hint: 'Write your answer',
@@ -841,7 +844,7 @@ class QuestionBarState extends State<QuestionBar> {
     final hasKeys = !_review && !writing && opts.isNotEmpty;
     return DeskPinCard(
       icon: 'help-circle',
-      iconColor: AppColors.accent,
+      iconColor: AppColors.fg2,
       eyebrow: _review ? 'Review' : (name.isEmpty ? 'Question' : '$name asks'),
       trailing:
           total > 1 && !_review ? DeskSteps(index: _step, total: total) : null,
@@ -856,16 +859,16 @@ class QuestionBarState extends State<QuestionBar> {
                         hasKeys
                             ? 'Press 1 to ${opts.length > 9 ? 9 : opts.length} to choose'
                             : '',
-                        style: sans(12, color: AppColors.fg4)),
+                        style: sans(12, color: AppColors.fg3)),
                   ),
                   if (hasKeys) const SizedBox(width: 6),
                   if (hasKeys)
-                    Text('\u00b7', style: sans(12, color: AppColors.fg4)),
+                    Text('\u00b7', style: sans(12, color: AppColors.fg3)),
                   if (hasKeys) const SizedBox(width: 6),
                   DeskKbd('\u21b5'),
                   const SizedBox(width: 6),
                   Text(last ? 'to submit' : 'for next',
-                      style: sans(12, color: AppColors.fg4)),
+                      style: sans(12, color: AppColors.fg3)),
                 ]),
           buttons: [
             if (!_review)

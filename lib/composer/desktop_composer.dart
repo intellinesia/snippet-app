@@ -642,18 +642,18 @@ class DeskPinCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-              child: Row(children: [
-                AppIcon(icon, size: 13, color: iconColor),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: SizedBox(height: 20, child: Row(children: [
+                AppIcon(icon, size: 14, color: AppColors.fg2),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(eyebrow,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(12, color: AppColors.fg3)),
+                      style: sans(13, weight: W.label, color: AppColors.fg2)),
                 ),
                 if (trailing != null) trailing!,
-              ]),
+              ])),
             ),
             // The body scrolls inside the bar's height cap; the action bar stays put.
             Flexible(
@@ -681,7 +681,7 @@ class DeskPinTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(14, 6, 14, 0),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -689,9 +689,9 @@ class DeskPinTitle extends StatelessWidget {
                 style: sans(14, weight: FontWeight.w600, color: AppColors.fg1)),
             if (why != null && why!.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(top: 2),
+                padding: const EdgeInsets.only(top: 4),
                 child: Text(why!,
-                    style: sans(13, height: 1.45, color: AppColors.fg3)),
+                    style: sans(13, height: 1.45, color: AppColors.fg2)),
               ),
           ],
         ),
@@ -706,13 +706,17 @@ class DeskPinBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
         child: Row(children: [
-          Expanded(child: left ?? const SizedBox.shrink()),
           for (var i = 0; i < buttons.length; i++) ...[
             if (i > 0) const SizedBox(width: 8),
             buttons[i],
           ],
+          const SizedBox(width: 12),
+          Expanded(
+              child: Align(
+                  alignment: Alignment.centerRight,
+                  child: left ?? const SizedBox.shrink())),
         ]),
       );
 }
@@ -740,16 +744,17 @@ class DeskTextButton extends StatelessWidget {
     final ink = primary
         ? AppColors.bg
         : kind == DeskBtnKind.ghost
-            ? AppColors.fg3
-            : AppColors.fg2;
+            ? AppColors.fg2
+            : AppColors.fg1;
     return DeskButton(
-      height: 28,
+      height: 32,
       onTap: busy ? null : onTap,
       fill: primary ? AppColors.fg1 : Colors.transparent,
-      hoverFill:
-          primary ? AppColors.fg1.withValues(alpha: 0.88) : AppColors.surface3,
+      hoverFill: primary
+          ? AppColors.fg1.withValues(alpha: 0.88)
+          : AppColors.fg1.withValues(alpha: 0.06),
       border: kind == DeskBtnKind.outline
-          ? BorderSide(color: AppColors.lineStrong)
+          ? BorderSide(color: AppColors.fg4)
           : null,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(mainAxisSize: MainAxisSize.min, children: [

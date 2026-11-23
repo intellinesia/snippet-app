@@ -74,8 +74,6 @@ class _TurnChangesCardState extends State<TurnChangesCard> {
                         style:
                             sans(13, weight: W.label, color: AppColors.fg1)),
                   ),
-                  _Bar(_n(e['add']), _n(e['del']), width: 44),
-                  SizedBox(width: S.of(10)),
                   _Delta(_n(e['add']), _n(e['del']), size: 12.5),
                   SizedBox(width: S.s6),
                   AnimatedRotation(
@@ -107,8 +105,6 @@ class _TurnChangesCardState extends State<TurnChangesCard> {
                             FileGlyph(f.path.split('/').last, size: 15),
                             SizedBox(width: S.of(10)),
                             Expanded(child: _Path(f.path)),
-                            SizedBox(width: S.of(10)),
-                            _Bar(f.add, f.del, width: 28),
                             SizedBox(width: S.of(10)),
                             SizedBox(
                                 width: 74,
@@ -171,41 +167,11 @@ class _Delta extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(mainAxisSize: MainAxisSize.min, children: [
       if (add > 0)
-        Text('+$add', style: sans(size, color: AppColors.ok, tabular: true)),
+        Text('+$add', style: sans(size, color: AppColors.fg1, tabular: true)),
       if (add > 0 && del > 0) SizedBox(width: S.s6),
       if (del > 0)
         Text('-$del',
-            style: sans(size, color: AppColors.danger, tabular: true)),
+            style: sans(size, color: AppColors.fg2, tabular: true)),
     ]);
-  }
-}
-
-class _Bar extends StatelessWidget {
-  const _Bar(this.add, this.del, {required this.width});
-
-  final int add;
-  final int del;
-  final double width;
-
-  @override
-  Widget build(BuildContext context) {
-    final total = add + del;
-    if (total == 0) return SizedBox(width: width);
-    final share = (add / total).clamp(0.0, 1.0);
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(R.of(2)),
-      child: SizedBox(
-        width: width,
-        height: 4,
-        child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Expanded(
-              flex: (share * 100).round().clamp(1, 99),
-              child: ColoredBox(color: AppColors.ok)),
-          Expanded(
-              flex: ((1 - share) * 100).round().clamp(1, 99),
-              child: ColoredBox(color: AppColors.danger)),
-        ]),
-      ),
-    );
   }
 }

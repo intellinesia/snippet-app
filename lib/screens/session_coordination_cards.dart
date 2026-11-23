@@ -168,25 +168,18 @@ class _ThreadCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ref = reference?.trim() ?? '';
     final foot = footer?.trim() ?? '';
     final head = title?.trim() ?? '';
     final stat = status?.trim() ?? '';
-    final (fg, bg) = toneColors(tone);
     final agent = agentId?.trim() ?? '';
-    final meta = sans(kMobile ? 13 : 11.5, height: 1.4, color: AppColors.fg3);
+    final meta = sans(12, height: 16 / 12, color: AppColors.fg2);
+    final label = stat.isEmpty ? kind : '$kind · $stat';
     final lead = agent.isNotEmpty
-        ? AgentMochi(agent, size: kMobile ? 22 : 20)
-        : AppIcon(icon, size: kMobile ? 18 : 16, color: fg);
+        ? AgentMochi(agent, size: 16)
+        : AppIcon(icon, size: 16, color: AppColors.fg2);
     return Container(
       width: double.infinity,
-      padding: kMobile
-          ? EdgeInsets.fromLTRB(S.of(16), S.of(14), S.of(16), S.of(14))
-          : EdgeInsets.fromLTRB(S.s12, S.of(8), S.s12, S.of(9)),
-      decoration: BoxDecoration(
-        color: Grouped.row,
-        borderRadius: BorderRadius.circular(R.of(kMobile ? 20 : 10)),
-      ),
+      padding: EdgeInsets.symmetric(vertical: S.s8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -195,32 +188,9 @@ class _ThreadCard extends StatelessWidget {
             lead,
             SizedBox(width: S.s8),
             Expanded(
-              child: Row(children: [
-                Flexible(
-                  child: Text(kind,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: meta),
-                ),
-                if (ref.isNotEmpty) ...[
-                  SizedBox(width: S.s8),
-                  Text(ref,
-                      maxLines: 1,
-                      style: sans(kMobile ? 12 : 11.5, color: AppColors.fg3)),
-                ],
-              ]),
+              child: Text(label,
+                  maxLines: 1, overflow: TextOverflow.ellipsis, style: meta),
             ),
-            if (stat.isNotEmpty)
-              Container(
-                margin: EdgeInsets.only(left: S.s8),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                    color: bg, borderRadius: BorderRadius.circular(999)),
-                child: Text(stat,
-                    maxLines: 1,
-                    style: sans(kMobile ? 12 : 10.5,
-                        height: 1.4, weight: W.label, color: fg)),
-              ),
           ]),
           if (head.isNotEmpty)
             Padding(
@@ -246,7 +216,7 @@ class _ThreadCard extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: sans(kMobile ? 13 : 11.5,
-                      height: 1.35, color: AppColors.fg4)),
+                      height: 1.35, color: AppColors.fg2)),
             ),
         ],
       ),
@@ -272,7 +242,7 @@ class _PreviewBodyState extends State<_PreviewBody> {
     final plain = plainPreview(body);
     final long = body.length > 110 || '\n'.allMatches(body).length > 1;
     final style = sans(kMobile ? 14 : 12.5,
-        height: kMobile ? 20 / 14 : 1.4, color: AppColors.fg2);
+        height: kMobile ? 20 / 14 : 1.4, color: AppColors.fg1);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

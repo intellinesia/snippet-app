@@ -16,7 +16,11 @@ class AgentRail extends StatelessWidget {
     required this.sessions,
     required this.onOpenSession,
     this.onAllSessions,
+    this.embedded = false,
   });
+
+  /// Sections only, for a rail that already owns the frame and scroll.
+  final bool embedded;
 
   final List<SessionInfo> sessions;
   final void Function(SessionInfo s) onOpenSession;
@@ -34,38 +38,43 @@ class AgentRail extends StatelessWidget {
       for (final s in byRecent)
         if (!now.contains(s)) s
     ].take(8).toList();
+    final kids = <Widget>[
+      if (now.isEmpty && earlier.isEmpty)
+        Text('No sessions yet.', style: sans(13, color: AppColors.fg3)),
+      if (now.isNotEmpty) ...[
+        _label('Working on'),
+        for (final s in now) _row(s),
+      ],
+      if (earlier.isNotEmpty) ...[
+        _label('Earlier', top: now.isEmpty ? 0 : 20),
+        for (final s in earlier) _row(s),
+      ],
+      if (onAllSessions != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 16),
+          child: TapDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onAllSessions,
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 24),
+              alignment: Alignment.centerLeft,
+              child:
+                  Text('All sessions', style: sans(13, color: AppColors.fg2)),
+            ),
+          ),
+        ),
+    ];
+    if (embedded) {
+      return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch, children: kids);
+    }
     return Container(
       decoration: BoxDecoration(
           border: Border(
               left: BorderSide(color: AppColors.fg1.withValues(alpha: 0.06)))),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
-        children: [
-          if (now.isEmpty && earlier.isEmpty)
-            Text('No sessions yet.', style: sans(13, color: AppColors.fg3)),
-          if (now.isNotEmpty) ...[
-            _label('Working on'),
-            for (final s in now) _row(s),
-          ],
-          if (earlier.isNotEmpty) ...[
-            _label('Earlier', top: now.isEmpty ? 0 : 20),
-            for (final s in earlier) _row(s),
-          ],
-          if (onAllSessions != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: TapDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onAllSessions,
-                child: Container(
-                  constraints: const BoxConstraints(minHeight: 24),
-                  alignment: Alignment.centerLeft,
-                  child: Text('All sessions',
-                      style: sans(13, color: AppColors.fg2)),
-                ),
-              ),
-            ),
-        ],
+        children: kids,
       ),
     );
   }

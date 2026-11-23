@@ -28,6 +28,9 @@ import '../motion.dart';
 import '../page_stack.dart';
 import '../mochi.dart';
 import '../chat_scene.dart' show ChatScene;
+import 'all_agents_view.dart';
+import '../panel.dart' show presentScreen;
+import '../shell_panel.dart' show ShellPanelPurpose;
 import '../quiet.dart' show QuietOfflineBanner, QuietPlace, QuietHand;
 import 'mobile_home/quiet_home.dart';
 import 'mobile_home/quiet_lists.dart';
@@ -787,6 +790,7 @@ child: PhoneAgentPage(
                 wholeTeam: true)
             : null,
         sessions: widget.sessions,
+        onOpenSession: (s) => widget.onOpenSession(s.id, s.title, s.profile),
         onSearchChanged: (v) => setState(() => _agentFilterQuery = v),
         onOpenAgent: (a) =>
             kMobile ? widget.onAgent(a) : widget.onOpenAgent?.call(a),
@@ -1404,9 +1408,9 @@ child: PhoneAgentPage(
           AppIcon('search', size: 12, color: AppColors.fg4),
           const SizedBox(width: 8),
           Expanded(
-            child: Text('Search', style: sans(13, color: AppColors.fg4)),
+            child: Text('Search', style: sans(13, color: AppColors.fg3)),
           ),
-          Text(kMacOS ? '⌘K' : 'Ctrl K', style: sans(11, color: AppColors.fg4)),
+          Text(kMacOS ? '⌘K' : 'Ctrl K', style: sans(11, color: AppColors.fg3)),
         ]),
       );
     }
@@ -1428,7 +1432,7 @@ child: PhoneAgentPage(
               isCollapsed: true,
               border: InputBorder.none,
               hintText: 'Search',
-              hintStyle: sans(13, color: AppColors.fg4),
+              hintStyle: sans(13, color: AppColors.fg3),
             ),
           ),
         ),
@@ -1485,8 +1489,26 @@ child: PhoneAgentPage(
       case QuietPlace.tasks:
         widget.onOpenTasks?.call();
       case QuietPlace.agents:
-        // The roster is Home on desktop: who needs you, who is working.
-        widget.onOpenHome?.call();
+        final c = widget.client;
+        if (c == null) {
+          widget.onOpenHome?.call();
+        } else {
+          presentScreen<void>(
+            context,
+            purpose: ShellPanelPurpose.agents,
+            panelId: 'all-agents',
+            originClient: c,
+            title: 'All agents and groups',
+            maxWidth: 720,
+            builder: (_, close) => AllAgentsView(
+              client: c,
+              sessions: widget.sessions ?? const <SessionInfo>[],
+              onOpenAgent: (a) => widget.onOpenAgent?.call(a),
+              onOpenSession: (s) =>
+                  widget.onOpenSession(s.id, s.title, s.profile),
+            ),
+          );
+        }
       case QuietPlace.sessions:
         break;
     }

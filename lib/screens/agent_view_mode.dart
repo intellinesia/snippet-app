@@ -9,6 +9,9 @@ final ValueNotifier<Set<String>> agentWorkView = ValueNotifier(<String>{});
 /// selected row.
 final ValueNotifier<String?> openAgentTab = ValueNotifier<String?>(null);
 
+/// The group whose conversation tab is active, for the list's nested sessions.
+final ValueNotifier<String?> openGroupTab = ValueNotifier<String?>(null);
+
 void setAgentWorkView(String agentId, bool work) {
   final next = {...agentWorkView.value};
   work ? next.add(agentId) : next.remove(agentId);

@@ -91,7 +91,7 @@ void main() {
       _ev(3, 'agent', 'again', {'origin_session': 'inbox-growth'}),
       _ev(4, 'agent', 'other', {'origin_session': 'work-9'}),
     ]);
-    expect(find.text('from task task-42'), findsOneWidget);
+    expect(find.text('from a task'), findsOneWidget);
     expect(find.text('from a work session'), findsOneWidget);
     // Direct chat header has one AgentMochi; agent bubbles have no per-message name.
     expect(find.text('Growth'), findsOneWidget);

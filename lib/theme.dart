@@ -731,8 +731,8 @@ class ThemeManager extends ChangeNotifier {
     _system = p.getBool(_systemPrefsKey) ?? true;
     if (_system) name = null;
     // First run follows the system; a saved choice always wins.
-    final systemLight = PlatformDispatcher.instance.platformBrightness ==
-        Brightness.light;
+    final systemLight =
+        PlatformDispatcher.instance.platformBrightness == Brightness.light;
     final fallbackPreset = allPresets[_indexOr(allPresets.map((t) => t.name),
         name ?? (systemLight ? 'quiet-light' : defaultTheme))];
     final savedAccent = p.getString(_accentPrefsKey);
@@ -941,6 +941,7 @@ class AppColors {
                       : Color.lerp(
                           currentTheme.bg, currentTheme.surface1, 0.45)!)
           .withValues(alpha: chromeAlpha ?? (solidChrome ? 1 : 0.92));
+
   /// Desktop window chrome; see-through while a scene plays behind the window.
   static Color get windowChrome => !kMobile && ChatScene.instance.active
       ? windowBg.withValues(alpha: 0.55)
@@ -1019,9 +1020,7 @@ Color get readingBg => AppColors.canvas;
 
 class R {
   static ThemeShapeTokens get _shape => ThemeManager.instance.resolved.shape;
-  // Desktop is squarer than the phone: one scale for every themed radius.
-  static double get _scale =>
-      math.max(0.0, _shape.radiusScale) * (kMobile ? 1.0 : 0.85);
+  static double get _scale => math.max(0.0, _shape.radiusScale);
 
   static double get xs => _shape.radii.xs * _scale;
   static double get sm => _shape.radii.sm * _scale;

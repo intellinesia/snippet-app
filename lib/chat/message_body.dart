@@ -392,7 +392,7 @@ class ChatMessageBody extends StatelessWidget {
             VoiceNote(
               client: client,
               path: audio[i],
-              ink: mine ? ChatColors.sentTextIn(context) : ChatColors.receivedText,
+              ink: mine ? ChatColors.sentTextIn(context) : AppColors.fg1,
               transcript: i < transcripts.length
                   ? AudioTranscriptCard(items: [transcripts[i]])
                   : (transcripts.isEmpty

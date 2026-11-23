@@ -1816,7 +1816,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
           if (showOrigin)
             ChatSystemLine(
               aboutTask is String && aboutTask.isNotEmpty
-                  ? 'from task $aboutTask'
+                  ? 'from a task'
                   : 'from a work session',
               align: Alignment.centerLeft,
             ),
