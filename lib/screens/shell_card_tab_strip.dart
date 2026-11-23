@@ -161,73 +161,82 @@ class CardTabChip extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: S.of(3), vertical: S.s4),
         child: Tactile(
-        radius: BorderRadius.circular(R.sm),
-        enabled: isActive,
-        child: AnimatedContainer(
-        duration: Motion.press,
-        curve: Motion.enter,
-        key: chipKey,
-        width: 220,
-        padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.s4),
-        decoration: BoxDecoration(
-          color: isActive ? AppColors.tint3 : Colors.transparent,
-          borderRadius: BorderRadius.circular(R.sm),
-        ),
-        child: Row(
-          children: [
-            tabGroupAgentIds(tab) != null
-                ? AgentCluster(ids: tabGroupAgentIds(tab)!, size: 16)
-                : AppIcon(
-                    tabIconKind(tab),
-                    size: 14,
-                    color: isActive ? AppColors.accent : AppColors.fg4,
-                  ),
-            SizedBox(width: S.s8),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
+          radius: BorderRadius.circular(R.sm),
+          enabled: isActive,
+          child: SizedBox(
+            width: 220,
+            child: AnimatedContainer(
+              duration: Motion.press,
+              curve: Motion.enter,
+              key: chipKey,
+              padding:
+                  EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.s4),
+              decoration: BoxDecoration(
+                color: isActive ? AppColors.tint3 : Colors.transparent,
+                borderRadius: BorderRadius.circular(R.sm),
+              ),
+              child: Row(
                 children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(
-                      11,
-                      weight: isActive ? W.label : W.body,
-                      color: isActive ? AppColors.fg1 : AppColors.fg3,
+                  tabGroupAgentIds(tab) != null
+                      ? AgentCluster(ids: tabGroupAgentIds(tab)!, size: 16)
+                      : AppIcon(
+                          tabIconKind(tab),
+                          size: 14,
+                          color: isActive ? AppColors.accent : AppColors.fg4,
+                        ),
+                  SizedBox(width: S.s8),
+                  Expanded(
+                    // A short strip (narrow window) drops the second line.
+                    child: LayoutBuilder(
+                        builder: (context, box) => Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: sans(
+                                    11,
+                                    weight: isActive ? W.label : W.body,
+                                    color: isActive
+                                        ? AppColors.fg1
+                                        : AppColors.fg3,
+                                  ),
+                                ),
+                                if (box.maxHeight >= 32)
+                                  Text(
+                                    subtitle,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TS.caption(),
+                                  ),
+                              ],
+                            )),
+                  ),
+                  if (canClose) ...[
+                    SizedBox(width: S.s4),
+                    TapDetector(
+                      onTap: onClose,
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        width: 18,
+                        height: 18,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(R.xs),
+                        ),
+                        child: AppIcon('x',
+                            size: 10,
+                            color: isActive ? AppColors.fg3 : AppColors.fg4),
+                      ),
                     ),
-                  ),
-                  Text(
-                    subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TS.caption(),
-                  ),
+                  ],
                 ],
               ),
             ),
-            if (canClose) ...[
-              SizedBox(width: S.s4),
-              TapDetector(
-                onTap: onClose,
-                behavior: HitTestBehavior.opaque,
-                child: Container(
-                  width: 18,
-                  height: 18,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(R.xs),
-                  ),
-                  child: AppIcon('x',
-                      size: 10, color: isActive ? AppColors.fg3 : AppColors.fg4),
-                ),
-              ),
-            ],
-          ],
+          ),
         ),
-      ),
-      ),
       ),
     );
   }
@@ -327,10 +336,7 @@ class CardTabStrip extends StatelessWidget {
                 onTap: onDownloadFile),
           if (onEditFile != null)
             IconBtn('edit',
-                size: 32,
-                iconSize: 14,
-                tooltip: 'Edit',
-                onTap: onEditFile),
+                size: 32, iconSize: 14, tooltip: 'Edit', onTap: onEditFile),
         ],
       ]),
     );

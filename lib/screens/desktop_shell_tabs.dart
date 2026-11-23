@@ -634,8 +634,13 @@ extension _DesktopShellTabsExt on _DesktopShellState {
   }
 
   /// Desktop: docks a session view beside the session's Chat tab.
+  /// Where images, files, artifacts and session views open: beside the chat
+  /// when the secondary pane is open, so the chat stays in view.
+  _Pane get _canvasPane =>
+      !kMobile && !_rightCollapsed ? _Pane.right : _focusedPane;
+
   void _openInnerTab(_ShellTab probe, int existing) {
-    final pane = _focusedPane;
+    final pane = _canvasPane;
     final group = _activeGroupKeyFor(pane) ?? _activeTab?.key;
     if (group == null) return;
     _setState(() {
@@ -651,7 +656,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
   }
 
   void _openFileTab(DaemonClient client, String url, String path, String name) {
-    final pane = _focusedPane;
+    final pane = _canvasPane;
     final group = _activeGroupKeyFor(pane) ?? _activeTab?.key;
     if (group == null) return;
     final existing = _tabs.indexWhere(

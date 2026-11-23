@@ -191,7 +191,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       onOpenFileTab: (path, name) =>
           _openFileTab(t.client, t.instanceUrl, path, name),
       onOpenToolBatch: null,
-      onOpenSession: _openSession,
+      onOpenSession: _openSessionView,
       onMacStatus: (state, running) =>
           _setMacSessionStatus(t.key, state, running),
       onMacControls: !kMobile
@@ -332,6 +332,39 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         _setState(() => _activeKey[pane] = key);
       }
     }
+  }
+
+  /// A session referenced from a chat opens in the canvas beside it, not as a
+  /// new tab. An already open session just comes forward.
+  void _openSessionView(String id, String title, String? profile) {
+    final tab = _activeTab;
+    final c = _client;
+    final open = _tabs.any((t) => t.sessionId == id);
+    if (kMobile ||
+        c == null ||
+        tab == null ||
+        tab.sessionId == null ||
+        tab.isLead ||
+        open) {
+      _openSession(id, title, profile);
+      return;
+    }
+    _openShellPanel(ShellPanelRequest(
+      purpose: ShellPanelPurpose.generic,
+      id: 'session:$id',
+      client: c,
+      sessionId: tab.sessionId,
+      title: title.trim().isEmpty ? 'Session' : title,
+      builder: (_, close) => SessionScreen(
+        client: c,
+        sessionId: id,
+        title: title,
+        embedded: true,
+        acceptDrops: false,
+        live: true,
+        onMenu: close,
+      ),
+    ));
   }
 
   void _closeTabAt(_ShellTab t, {bool force = false}) {

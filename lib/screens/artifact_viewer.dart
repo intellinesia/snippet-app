@@ -1310,29 +1310,34 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
       child: Row(children: [
         // Expanded, not Flexible + Spacer: that pair splits the row and strands the controls mid-way.
         Expanded(
-          child: Row(children: [
-            Flexible(
-              child: Text(a?.title ?? 'Artifact',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(14, weight: W.strong, color: AppColors.fg1)),
-            ),
-            if (a != null) ...[
-              const SizedBox(width: 8),
-              Container(
-                height: 20,
-                padding: const EdgeInsets.symmetric(horizontal: 7),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                    color: AppColors.surface3,
-                    borderRadius: BorderRadius.circular(R.of(5))),
-                child: Text(_artifactKindLabel(a.kind),
-                    style: sans(11.5, color: AppColors.fg2)),
-              ),
-            ],
-            const SizedBox(width: 8),
-            _versionButton(),
-          ]),
+          // A canvas pane is narrow: below this only the title stays.
+          child: LayoutBuilder(
+              builder: (context, box) => Row(children: [
+                    Flexible(
+                      child: Text(a?.title ?? 'Artifact',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              sans(14, weight: W.strong, color: AppColors.fg1)),
+                    ),
+                    if (a != null && box.maxWidth >= 260) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        height: 20,
+                        padding: const EdgeInsets.symmetric(horizontal: 7),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                            color: AppColors.surface3,
+                            borderRadius: BorderRadius.circular(R.of(5))),
+                        child: Text(_artifactKindLabel(a.kind),
+                            style: sans(11.5, color: AppColors.fg2)),
+                      ),
+                    ],
+                    if (box.maxWidth >= 260) ...[
+                      const SizedBox(width: 8),
+                      _versionButton(),
+                    ],
+                  ])),
         ),
         if (_hasSource) ...[_sourceSeg(), const SizedBox(width: 6)],
         IconBtn('external-link',
