@@ -276,7 +276,7 @@ extension on _DesktopSettingsPageState {
       : Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 920), child: child),
+              constraints: const BoxConstraints(maxWidth: 784), child: child),
         );
 }
 
@@ -401,8 +401,67 @@ class _DesktopSettingsNavState extends State<DesktopSettingsNav> {
     super.dispose();
   }
 
+  /// Narrow window: icons only, the label in a tooltip.
+  Widget _rail() => Column(children: [
+        SizedBox(
+          height: 44,
+          child: Center(
+            child: Tooltip(
+              message: 'Back',
+              child: IconBtn('chevron-left',
+                  size: 32,
+                  iconSize: 16,
+                  tooltip: 'Back',
+                  onTap: widget.onBack),
+            ),
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
+            children: [
+              for (final (_, entries) in _groups)
+                for (final e in entries)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Tooltip(
+                      message: e.label,
+                      child: HoverSurface(
+                        onTap: () => widget.onSelect(e.page),
+                        selected: widget.section == e.page,
+                        radius: R.of(10),
+                        selectedColor: Grouped.row,
+                        hoverColor: AppColors.fg1.withValues(alpha: 0.035),
+                        child: SizedBox(
+                          height: 36,
+                          child: Center(
+                            child: e.iconData != null
+                                ? Icon(e.iconData,
+                                    size: 16,
+                                    color: widget.section == e.page
+                                        ? AppColors.fg1
+                                        : Grouped.iconColor)
+                                : AppIcon(e.icon!,
+                                    size: 16,
+                                    color: widget.section == e.page
+                                        ? AppColors.fg1
+                                        : Grouped.iconColor),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+            ],
+          ),
+        ),
+      ]);
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, c) => c.maxWidth < 100 ? _rail() : _full(context),
+      );
+
+  Widget _full(BuildContext context) {
     final q = _query.text.trim().toLowerCase();
     final groups = [
       for (final (group, entries) in _groups)
@@ -447,32 +506,33 @@ class _DesktopSettingsNavState extends State<DesktopSettingsNav> {
             radius: BorderRadius.circular(R.of(8)),
             kind: TactileKind.inset,
             child: Container(
-            height: 30,
-            decoration: BoxDecoration(
-              color: AppColors.fg1.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(R.of(8)),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Row(children: [
-              AppIcon('search', size: 13, color: AppColors.fg4),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: _query,
-                  style: sans(13, color: AppColors.fg1),
-                  decoration: InputDecoration(
-                    isCollapsed: true,
-                    border: InputBorder.none,
-                    hintText: 'Search settings',
-                    hintStyle: sans(13, color: AppColors.fg4),
-                  ),
-                  onSubmitted: (_) {
-                    if (groups.isNotEmpty) widget.onSelect(groups.first.$2.first.page);
-                  },
-                ),
+              height: 30,
+              decoration: BoxDecoration(
+                color: AppColors.fg1.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(R.of(8)),
               ),
-            ]),
-          ),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Row(children: [
+                AppIcon('search', size: 13, color: AppColors.fg4),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _query,
+                    style: sans(13, color: AppColors.fg1),
+                    decoration: InputDecoration(
+                      isCollapsed: true,
+                      border: InputBorder.none,
+                      hintText: 'Search settings',
+                      hintStyle: sans(13, color: AppColors.fg4),
+                    ),
+                    onSubmitted: (_) {
+                      if (groups.isNotEmpty)
+                        widget.onSelect(groups.first.$2.first.page);
+                    },
+                  ),
+                ),
+              ]),
+            ),
           ),
         ),
         Expanded(
@@ -532,12 +592,12 @@ class DesktopSettingsContent extends StatelessWidget {
   final void Function(Instance)? onAdd;
   final VoidCallback onClose;
 
-  // Pages centre their own 880 column; the wide cap only bounds the rest.
+  // Pages centre one 720 measure inside 32pt gutters.
   @override
   Widget build(BuildContext context) => Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1040),
+          constraints: const BoxConstraints(maxWidth: 784),
           child: SettingsSectionView(
             client: client,
             instances: instances,

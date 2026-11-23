@@ -26,7 +26,7 @@ import '../motion.dart';
 import '../page_stack.dart';
 import '../mochi.dart';
 import '../chat_scene.dart' show ChatScene;
-import '../quiet.dart' show QuietOfflineBanner;
+import '../quiet.dart' show QuietOfflineBanner, QuietPlace, QuietHand;
 import 'mobile_home/quiet_home.dart';
 import 'mobile_home/quiet_lists.dart';
 import 'mobile_chrome.dart';
@@ -54,6 +54,7 @@ class Sidebar extends StatefulWidget {
   final ValueChanged<CoordinationAgent>? onOpenAgent;
   final VoidCallback? onOpenPalette;
   final VoidCallback? onOpenTasks;
+  final VoidCallback? onOpenHome;
   final VoidCallback? onOpenPullRequests;
   final VoidCallback? onOpenArtifacts;
   final VoidCallback? onOpenWakes;
@@ -102,6 +103,7 @@ class Sidebar extends StatefulWidget {
     this.onOpenAgent,
     this.onOpenPalette,
     this.onOpenTasks,
+    this.onOpenHome,
     this.onOpenPullRequests,
     this.onOpenArtifacts,
     this.onOpenWakes,
@@ -575,8 +577,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           key: const ValueKey('quiet-home'),
           sessions: list,
           agents: _heroAgents,
-          onOpenSession: (s) =>
-              widget.onOpenSession(s.id, s.title, s.profile),
+          onOpenSession: (s) => widget.onOpenSession(s.id, s.title, s.profile),
           onOpenSessions: () => widget.onMobileHome(MobileHome.chats),
           onSettings: () => widget.onMobileHome(MobileHome.settings),
           onSearch: search,
@@ -593,8 +594,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           key: const ValueKey('quiet-sessions'),
           sessions: list,
           agents: _heroAgents,
-          onOpenSession: (s) =>
-              widget.onOpenSession(s.id, s.title, s.profile),
+          onOpenSession: (s) => widget.onOpenSession(s.id, s.title, s.profile),
           onSessionActions: _sessionActions,
         );
       default:
@@ -619,8 +619,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   /// Each destination gets the whole surface below the bar. Chats keeps a head
   /// for its title and context controls; Agents and Settings own their own
   /// headers, so they render directly.
-  Widget _mobileHomeBody(bool hasClient,
-      [MobileHome? home]) {
+  Widget _mobileHomeBody(bool hasClient, [MobileHome? home]) {
     final destination = home ?? widget.mobileHome;
     switch (destination) {
       case MobileHome.home:
@@ -634,7 +633,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         if (client == null) {
           return _mobileUnavailable('Add a machine to see its tasks.');
         }
-        return QuietTasksScreen(key: const ValueKey('quiet-tasks'), client: client);
+        return QuietTasksScreen(
+            key: const ValueKey('quiet-tasks'), client: client);
 
       case MobileHome.agents:
         final client = widget.client;
@@ -834,8 +834,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             onTap: () => setState(() => _settledOpen = !_settledOpen),
             child: Container(
               height: kMobile ? M.minTarget : 32,
-              padding: EdgeInsets.fromLTRB(
-                  kMobile ? 0 : 8, 0, kMobile ? 0 : 5, 0),
+              padding:
+                  EdgeInsets.fromLTRB(kMobile ? 0 : 8, 0, kMobile ? 0 : 5, 0),
               // 5, not 8: the thin chevron glyph is inset ~3 px in its box.
               child: Row(children: [
                 Text('Settled',
@@ -1527,6 +1527,38 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   /// Desktop sidebar: one scroll holding the agents (Lead first,
   /// then groups) and the recency-ordered sessions. Workspace is metadata on
   /// each row, never a grouping or sort key.
+  QuietPlace _place = QuietPlace.home;
+
+  void _selectPlace(QuietPlace p) {
+    setState(() => _place = p);
+    switch (p) {
+      case QuietPlace.home:
+        widget.onOpenHome?.call();
+      case QuietPlace.tasks:
+        widget.onOpenTasks?.call();
+      case QuietPlace.sessions:
+      case QuietPlace.agents:
+        break;
+    }
+  }
+
+  /// The four places, above the list they switch.
+  Widget _desktopPlaces(List<SessionInfo> all) {
+    final needs = all.where(sessionNeedsYou).length;
+    return Padding(
+      padding: EdgeInsets.only(top: S.s4, bottom: S.s4),
+      child: Column(children: [
+        for (final p in QuietPlace.values)
+          _PlaceRow(
+            place: p,
+            selected: _place == p,
+            badge: p == QuietPlace.home && needs > 0 ? needs : null,
+            onTap: () => _selectPlace(p),
+          ),
+      ]),
+    );
+  }
+
   Widget _sectionedSidebar() {
     final hasClient = widget.client != null;
     final all = _sessions ?? const <SessionInfo>[];
@@ -1558,7 +1590,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
                   children: [
-                    if (hasClient) ...[
+                    if (hasClient) _desktopPlaces(all),
+                    if (hasClient && _place != QuietPlace.sessions) ...[
                       // New agents and sessions come from the top + menu.
                       const SidebarSectionHeader('Agents'),
                       _agentList(widget.client!,
@@ -1566,18 +1599,21 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                           onOpenLead: widget.onOpenLead,
                           embedded: true),
                     ],
-                    // Desktop selects from a row's right-click menu instead.
-                    SidebarSectionHeader(
-                      'Sessions',
-                      moreTooltip: 'Session options',
-                      moreBuilder: hasClient && kMobile ? _sessionsMenu : null,
-                    ),
-                    if (!hasClient)
-                      const SidebarEmpty('Add a machine to begin.')
-                    else if (list.isEmpty && settledRows.isEmpty)
-                      _emptySessions(searching: searching)
-                    else
-                      ...rows,
+                    if (!hasClient || _place == QuietPlace.sessions) ...[
+                      // Desktop selects from a row's right-click menu instead.
+                      SidebarSectionHeader(
+                        'Sessions',
+                        moreTooltip: 'Session options',
+                        moreBuilder:
+                            hasClient && kMobile ? _sessionsMenu : null,
+                      ),
+                      if (!hasClient)
+                        const SidebarEmpty('Add a machine to begin.')
+                      else if (list.isEmpty && settledRows.isEmpty)
+                        _emptySessions(searching: searching)
+                      else
+                        ...rows,
+                    ],
                   ],
                 ),
               ),
@@ -1956,4 +1992,46 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       if (mounted) toast(context, '$e', danger: true);
     }
   }
+}
+
+class _PlaceRow extends StatelessWidget {
+  const _PlaceRow(
+      {required this.place,
+      required this.selected,
+      required this.onTap,
+      this.badge});
+  final QuietPlace place;
+  final bool selected;
+  final VoidCallback onTap;
+  final int? badge;
+
+  @override
+  Widget build(BuildContext context) => HoverSurface(
+        onTap: onTap,
+        radius: R.of(8),
+        selected: selected,
+        selectedColor: AppColors.surface2,
+        child: SizedBox(
+          height: 30,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(children: [
+              AppIcon(place.icon,
+                  size: 15, color: selected ? AppColors.fg1 : AppColors.fg3),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(place.label,
+                    style: sans(13,
+                        weight: selected ? W.label : W.body,
+                        color: selected ? AppColors.fg1 : AppColors.fg2)),
+              ),
+              if (badge != null) ...[
+                const QuietHand(size: 12),
+                const SizedBox(width: 3),
+                Text('$badge', style: sans(11, color: AppColors.fg3)),
+              ],
+            ]),
+          ),
+        ),
+      );
 }

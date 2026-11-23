@@ -89,6 +89,7 @@ import 'sidebar_mode.dart';
 import 'shell_sidebar_host.dart';
 import 'shell_split_view.dart';
 import 'shell_welcome.dart';
+import 'desktop_home.dart';
 import 'shell_window_bar.dart';
 import '../motion.dart';
 import '../window_background.dart';
@@ -1003,6 +1004,9 @@ class _DesktopShellState extends State<DesktopShell>
       cmd('new-session', 'plus', 'New chat', _newSessionFlow,
           shortcut: kMacOS ? '⌘ N' : 'Ctrl+N',
           keywords: const ['session', 'create', 'new']),
+      cmd('home', 'home', 'Home', _openHomeTab,
+          subtitle: _mcAttentionCount > 0 ? '$_mcAttentionCount need you' : '',
+          keywords: const ['needs you', 'working', 'today']),
       cmd('lead', 'layers', 'Lead',
           _openLeadTab,
           subtitle: _mcAttentionCount > 0 ? '$_mcAttentionCount need you' : '',
@@ -1782,6 +1786,7 @@ class _DesktopShellState extends State<DesktopShell>
         onOpenLead: _openLeadTab,
         onOpenPalette: kMobile ? null : _openCommandPalette,
         onOpenTasks: kMobile ? null : _openTasksTab,
+        onOpenHome: kMobile ? null : _openHomeTab,
         onOpenPullRequests: kMobile ? null : _openPullRequestsTile,
         onOpenArtifacts: kMobile ? null : _openArtifactsTile,
         onOpenWakes: kMobile ? null : _openWakesTile,

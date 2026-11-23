@@ -265,13 +265,30 @@ extension _RailPages on _SessionRailState {
     Widget gap() => const SizedBox(height: 6);
     return [
       if (w.onChanges != null) ...[
-        _overviewRow(
-            'file-diff',
-            'Diffs',
-            changed == 0
-                ? 'No changes yet'
-                : '$changed file${changed == 1 ? '' : 's'} changed',
-            onTap: () => _go('changes')),
+        if (git != null && git.ok && git.files.isNotEmpty)
+          _card2('Changes', [
+            for (final f in git.files.take(5))
+              InkWell(
+                onTap: () => _go('changes'),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(children: [
+                    AppIcon('file', size: 14, color: AppColors.fg3),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(f.path,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: codeMono(12, color: AppColors.fg2)),
+                    ),
+                  ]),
+                ),
+              ),
+          ],
+              meta: '$changed file${changed == 1 ? '' : 's'}')
+        else
+          _overviewRow('file-diff', 'Changes', 'No changes yet',
+              onTap: () => _go('changes')),
         gap(),
       ],
       if (w.onFiles != null) ...[

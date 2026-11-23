@@ -208,7 +208,7 @@ class SettingsColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // One centred column: 680 on phone, wider on desktop where the page has room.
+    // One centred column: 680 on phone, one 720 measure on desktop.
     return SingleChildScrollView(
       padding: kMobile
           ? const EdgeInsets.fromLTRB(24, 24, 24, 40)
@@ -217,7 +217,7 @@ class SettingsColumn extends StatelessWidget {
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: BoxConstraints(
-              maxWidth: kMobile ? Grouped.contentMaxWidth - 48 : 880 - 40),
+              maxWidth: kMobile ? Grouped.contentMaxWidth - 48 : 720),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: children,

@@ -27,6 +27,18 @@ extension _DesktopShellPanesExt on _DesktopShellState {
 
   Widget _originTabBody(_ShellTab t,
       {required bool primary, required bool visible}) {
+    if (t.isHome) {
+      return DesktopHome(
+        key: ValueKey('body-${t.key}'),
+        client: t.client,
+        sessions: _sessions,
+        onOpenSession: (s) => _openSession(s.id, s.title, s.profile),
+        onOpenSessions: () {},
+        onSettings: () => _openSettingsTab(null),
+        onSearch: _openCommandPalette,
+        onRefresh: _loadSessions,
+      );
+    }
     if (t.isSettings) {
       return DesktopSettingsContent(
         key: ValueKey('body-${t.key}'),
@@ -332,7 +344,10 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   Widget _splitView({required bool topInset}) => ShellSplitView(
         key: const ValueKey('shell-split'),
         sidebarHidden: _sidebarHidden,
-        sidebarWidth: _sidebarWidth,
+        sidebarWidth: _activeTab?.isSettings == true &&
+                MediaQuery.sizeOf(context).width < 1000
+            ? 56
+            : _sidebarWidth,
         onSidebarResize: _resizeSidebar,
         onSidebarResizeEnd: _saveSidebarWidth,
         onSidebarReset: _resetSidebarWidth,

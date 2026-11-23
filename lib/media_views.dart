@@ -162,19 +162,15 @@ List<SentAttachment> parseSentAttachments(String text) => [
         ),
     ];
 
-/// Open a file the way the platform wants: on desktop in a tab next to the
-/// session (like any other file), on phones images in the full-screen viewer
+/// Open a file the way the platform wants: on desktop in the canvas pane beside
+/// the session, on phones images in the full-screen viewer
 /// and everything else in the file viewer.
 void openMedia(BuildContext context, DaemonClient client, String path,
     {List<String>? gallery}) {
-  final openTab = DaemonScope.scopeOf(context)?.onOpenFile;
   if (!kMobile) {
-    if (openTab != null) {
-      openTab(path, baseName(path));
-    } else {
-      presentFileOnDesktop(context,
-          client: client, path: path, name: baseName(path));
-    }
+    // The canvas pane beside the chat, not a new tab.
+    presentFileOnDesktop(context,
+        client: client, path: path, name: baseName(path));
     return;
   }
   if (mediaKindOf(path) == MediaKind.image) {

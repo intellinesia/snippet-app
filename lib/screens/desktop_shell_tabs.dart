@@ -40,6 +40,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
               (!t.isPrs &&
                   !t.isDraft &&
                   !t.isSettings &&
+                  !t.isHome &&
                   !t.isReadout &&
                   !t.isTask &&
                   !t.isWorkspace))
@@ -424,6 +425,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
       t.isDraft ||
       t.isReadout ||
       t.isSettings ||
+      t.isHome ||
       t.isBoard;
 
   bool _canCloseTopTab(_ShellTab t) => !t.isLead;
@@ -862,6 +864,16 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     if (i >= 0) _activateTab(i);
   }
 
+  void _openHomeTab() {
+    final client = _client;
+    final url = _active?.url;
+    if (client == null || url == null) return;
+    final existing = _tabs.indexWhere((t) => t.isHome && t.instanceUrl == url);
+    _openMainTab(
+        existing >= 0 ? null : _ShellTab.home(client: client, instanceUrl: url),
+        existing);
+  }
+
   void _openTasksTab() {
     final client = _client;
     final url = _active?.url;
@@ -968,7 +980,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
       ].length;
 
   String? _folderForTab(_ShellTab t) {
-    if (t.isLead || t.isBoard || t.isReadout || t.isSettings) {
+    if (t.isLead || t.isBoard || t.isReadout || t.isSettings || t.isHome) {
       return null;
     }
     if (t.isDraft) {

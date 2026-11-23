@@ -54,6 +54,7 @@ class ShellSidebarHost extends StatelessWidget {
     required this.onOpenLead,
     this.onOpenPalette,
     this.onOpenTasks,
+    this.onOpenHome,
     this.onOpenPullRequests,
     this.onOpenArtifacts,
     this.onOpenWakes,
@@ -113,6 +114,7 @@ class ShellSidebarHost extends StatelessWidget {
   final VoidCallback onOpenLead;
   final VoidCallback? onOpenPalette;
   final VoidCallback? onOpenTasks;
+  final VoidCallback? onOpenHome;
   final VoidCallback? onOpenPullRequests;
   final VoidCallback? onOpenArtifacts;
   final VoidCallback? onOpenWakes;
@@ -228,6 +230,7 @@ class ShellSidebarHost extends StatelessWidget {
       topInset: topInset,
       onOpenPalette: onOpenPalette,
       onOpenTasks: onOpenTasks,
+      onOpenHome: onOpenHome,
       onOpenPullRequests: onOpenPullRequests,
       onOpenArtifacts: onOpenArtifacts,
       onOpenWakes: onOpenWakes,
