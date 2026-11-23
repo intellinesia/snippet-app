@@ -684,8 +684,8 @@ class _AgentRowShellState extends State<AgentRowShell> {
                   // Lit tiles: a 20px slot flush with the header, 10px to the
                   // name, as in the reference; plates keep the 28px slot.
                   SizedBox(
-                    width: tiled ? 20 : 28,
-                    height: tiled ? 20 : 22,
+                    width: tiled ? rowAvatarSize(34) : 28,
+                    height: tiled ? rowAvatarSize(34) : 22,
                     child: Stack(clipBehavior: Clip.none, children: [
                       if (widget.avatarFor != null)
                         Positioned.fill(child: widget.avatarFor!(ring))

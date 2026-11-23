@@ -334,11 +334,15 @@ class GroupRow extends StatelessWidget {
           ? null
           : (backdrop) => Stack(clipBehavior: Clip.none, children: [
                 Positioned(
-                    left: 0, top: 1, child: LitTile.agent(shown[0], size: 18)),
-                Positioned(
-                    left: 8,
+                    left: 0,
                     top: 1,
-                    child: LitTile.agent(shown[1], size: 18, ring: backdrop)),
+                    child: LitTile.agent(shown[0],
+                        size: rowAvatarSize(32) - 1)),
+                Positioned(
+                    left: 9,
+                    top: 1,
+                    child: LitTile.agent(shown[1],
+                        size: rowAvatarSize(32) - 1, ring: backdrop)),
                 if (agents.length > 2)
                   Positioned(
                     right: -8,
