@@ -15,12 +15,11 @@ import '../tap_detector.dart';
 
 enum SignalTone { neutral, ok, run, danger, accent }
 
+/// Line tier: neutral text. No green ticks, no red; amber is kept for the
+/// hand that means "needs you".
 Color signalColor(SignalTone tone) => switch (tone) {
-      SignalTone.ok => AppColors.ok,
-      SignalTone.run => AppColors.run,
-      SignalTone.danger => AppColors.danger,
-      SignalTone.accent => AppColors.accent,
-      SignalTone.neutral => AppColors.fg3,
+      SignalTone.danger => AppColors.fg1,
+      _ => AppColors.fg2,
     };
 
 /// Splits `Some **name** here` into spans: names a step brighter and heavier.
@@ -81,31 +80,23 @@ class SignalRow extends StatelessWidget {
     if (leading != null) {
       return SizedBox.square(dimension: tile, child: Center(child: leading));
     }
-    final c = signalColor(tone);
-    // Only trouble earns a glyph; routine signals get a quiet dot.
-    if (tone == SignalTone.danger) {
-      return SizedBox.square(
-          dimension: tile,
-          child: Center(child: AppIcon(icon ?? 'alert-triangle', size: 14, color: c)));
-    }
-    final quiet = tone == SignalTone.neutral;
+    final trouble = tone == SignalTone.danger;
     return SizedBox.square(
       dimension: tile,
       child: Center(
-        child: Container(
-          width: quiet ? 5 : 6,
-          height: quiet ? 5 : 6,
-          decoration: BoxDecoration(
-              color: quiet ? AppColors.fg4 : c, shape: BoxShape.circle),
-        ),
-      ),
+          child: AppIcon(trouble ? (icon ?? 'alert-triangle') : (icon ?? 'info'),
+              size: kMobile ? 16 : 14, color: AppColors.fg2)),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     Theme.of(context);
-    final base = sans(kMobile ? 14 : 13, height: 1.35, color: AppColors.fg3);
+    final trouble = tone == SignalTone.danger;
+    final base = sans(kMobile ? 14 : 13,
+        height: 1.35,
+        weight: trouble ? FontWeight.w500 : null,
+        color: trouble ? AppColors.fg1 : AppColors.fg2);
     final sentence = Text.rich(
       TextSpan(children: signalSpans(text, base)),
       maxLines: maxLines,
@@ -118,7 +109,7 @@ class SignalRow extends StatelessWidget {
             child: Text(sub!.trim(),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: sans(12, height: 1.35, color: AppColors.fg4)),
+                style: sans(12, height: 1.35, color: AppColors.fg3)),
           );
     final body = Column(
       crossAxisAlignment:
@@ -126,8 +117,6 @@ class SignalRow extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [sentence, if (subLine != null) subLine],
     );
-    final pillTone = actionTone ?? SignalTone.accent;
-    final pillColor = signalColor(pillTone);
     final row = Row(
       mainAxisSize: center ? MainAxisSize.min : MainAxisSize.max,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -137,7 +126,7 @@ class SignalRow extends StatelessWidget {
         center ? Flexible(child: body) : Expanded(child: body),
         if (time != null && time!.isNotEmpty) ...[
           SizedBox(width: S.s8),
-          Text(time!, style: mono(12, color: AppColors.fg4)),
+          Text(time!, style: sans(12, color: AppColors.fg3)),
         ],
         if (action != null) ...[
           SizedBox(width: S.s8),
@@ -147,34 +136,53 @@ class SignalRow extends StatelessWidget {
             child: SizedBox(
               height: kMobile ? 44 : 28,
               child: Center(
-                child: Container(
-                  height: 26,
-                  padding: EdgeInsets.symmetric(horizontal: S.s8),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: pillColor.withValues(alpha: 0.13),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(action!,
-                      style: sans(12, weight: W.label, color: pillColor)),
-                ),
+                child: Text(action!,
+                    style: sans(12, weight: FontWeight.w500, color: AppColors.fg1)),
               ),
             ),
           ),
         ],
       ],
     );
-    final padded = Padding(
-      padding: EdgeInsets.symmetric(vertical: kMobile ? S.s4 : S.s2),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: kMobile ? 28 : 20),
-        child: center ? Center(child: row) : row,
-      ),
+    final padded = ConstrainedBox(
+      constraints: BoxConstraints(minHeight: kMobile ? 48 : 28),
+      child: Align(
+          alignment: center ? Alignment.center : Alignment.centerLeft,
+          child: row),
     );
     if (onTap == null) return padded;
-    return TapDetector(
-        behavior: HitTestBehavior.opaque, onTap: onTap, child: padded);
+    return _LineTarget(onTap: onTap!, child: padded);
   }
+}
+
+/// The line is the target: hover is one surface step, radius 8.
+class _LineTarget extends StatefulWidget {
+  const _LineTarget({required this.onTap, required this.child});
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  State<_LineTarget> createState() => _LineTargetState();
+}
+
+class _LineTargetState extends State<_LineTarget> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: TapDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          child: Container(
+            decoration: BoxDecoration(
+                color: _hover ? AppColors.surface2 : Colors.transparent,
+                borderRadius: BorderRadius.circular(8)),
+            child: widget.child,
+          ),
+        ),
+      );
 }
 
 // ---------------------------------------------------------------------------

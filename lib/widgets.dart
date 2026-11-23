@@ -526,7 +526,7 @@ class AppIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (name.startsWith('provider:')) {
-      return ProviderLogo(name.substring(9), size: size * visualScale);
+      return ProviderLogo(name.substring(9), size: size * visualScale, color: color);
     }
     return SizedBox.square(
       dimension: size,
@@ -2506,6 +2506,11 @@ String? providerLogoAsset(String? provider) {
     'xai' || 'grok' => 'xai',
     'openrouter' => 'openrouter',
     'opencode-zen' || 'opencode-go' || 'opencode' => 'opencode',
+    // Profile names such as claude-opus or gpt-5 read as their provider.
+    _ when p.startsWith('claude') => 'claude',
+    _ when p.startsWith('gpt') || p.startsWith('codex') => 'openai',
+    _ when p.startsWith('gemini') => 'gemini',
+    _ when p.startsWith('grok') => 'xai',
     _ => null,
   };
   if (key == null) return null;
@@ -2530,30 +2535,26 @@ class ProviderLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final asset = providerLogoAsset(provider);
-    final tint = color ?? AppColors.fg1;
+    // Monochrome, in the text token of the line it sits on.
+    final tint = color ?? AppColors.fg2;
     if (asset == null) return AppIcon('cpu', size: size, color: tint);
     final inner = size * 0.86;
-    if (color == null && providerLogoIsColour(provider)) {
-      return SizedBox.square(
+    return Semantics(
+      label: provider,
+      child: SizedBox.square(
         dimension: size,
         child: Center(
           child: asset.endsWith('.png')
               ? Image.asset(asset,
                   width: inner,
                   height: inner,
+                  color: tint,
+                  colorBlendMode: BlendMode.srcIn,
                   filterQuality: FilterQuality.high)
-              : SvgPicture.asset(asset, width: inner, height: inner),
-        ),
-      );
-    }
-    return SizedBox.square(
-      dimension: size,
-      child: Center(
-        child: SvgPicture.asset(
-          asset,
-          width: size * 0.86,
-          height: size * 0.86,
-          colorFilter: ColorFilter.mode(tint, BlendMode.srcIn),
+              : SvgPicture.asset(asset,
+                  width: inner,
+                  height: inner,
+                  colorFilter: ColorFilter.mode(tint, BlendMode.srcIn)),
         ),
       ),
     );

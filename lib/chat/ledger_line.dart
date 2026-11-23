@@ -371,7 +371,6 @@ class _PhraseTargetState extends State<_PhraseTarget> {
     final p = widget.phrase;
     final on = _hover || widget.active;
     final tone = on ? AppColors.accent : AppColors.fg2;
-    final deco = TextDecoration.underline;
     return CompositedTransformTarget(
       link: _link,
       child: OverlayPortal(
@@ -400,9 +399,7 @@ class _PhraseTargetState extends State<_PhraseTarget> {
                 text: p.text,
                 style: widget.style.copyWith(
                   color: tone,
-                  decoration: deco,
-                  decorationStyle: TextDecorationStyle.dotted,
-                  decorationColor: on ? AppColors.accent : AppColors.fg4,
+                  decoration: TextDecoration.none,
                 ),
               ),
               if (p.failNote != null)
@@ -593,18 +590,6 @@ class _LedgerGanttState extends State<LedgerGantt> {
       final e = s.running ? now : (s.endMs ?? s.startMs);
       if (e != null && e > t1) t1 = e;
     }
-    final span = (t1 - (t0 ?? 0)).clamp(1, 1 << 40).toDouble();
-    (double, double) slot(int i) {
-      final s = steps[i];
-      if (t0 == null || s.startMs == null) return (i / n, 1 / n);
-      final end = s.running ? now : (s.endMs ?? s.startMs!);
-      final l = (s.startMs! - t0) / span;
-      return (
-        l.clamp(0.0, 0.98),
-        ((end - s.startMs!) / span).clamp(0.02, 1.0 - l.clamp(0.0, 0.98))
-      );
-    }
-
     String took(ToolStep s) {
       if (s.startMs == null) return '';
       final ms = (s.running ? now : (s.endMs ?? s.startMs!)) - s.startMs!;
@@ -632,16 +617,9 @@ class _LedgerGanttState extends State<LedgerGantt> {
 
     Widget row(int i) {
       final s = steps[i];
-      final bad = !s.running && _stepFailed(s);
-      final tint = bad
-          ? AppColors.danger
-          : s.running
-              ? AppColors.accent
-              : AppColors.fg4.withValues(alpha: 0.7);
       final (verb, obj) = toolSentenceParts(s);
       final target =
           obj.isNotEmpty ? obj : (verb.contains(' ') ? '' : stepTarget(s));
-      final (l, w) = slot(i);
       final raw = widget.rows != null && i < widget.rows!.length
           ? widget.rows![i]
           : null;
@@ -651,7 +629,7 @@ class _LedgerGanttState extends State<LedgerGantt> {
         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
         child: Row(children: [
           AppIcon(_iconFor(_kindOf(s).$1),
-              size: 13, color: s.running ? AppColors.accent : AppColors.fg3),
+              size: 14, color: AppColors.fg2),
           const SizedBox(width: 10),
           Expanded(
             child: Text.rich(
@@ -669,31 +647,11 @@ class _LedgerGanttState extends State<LedgerGantt> {
           ),
           const SizedBox(width: 10),
           SizedBox(
-            width: 110,
-            height: 6,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: AppColors.surface3,
-                borderRadius: BorderRadius.circular(3),
-              ),
-              child: FractionallySizedBox(
-                alignment: Alignment(w >= 1 ? -1 : (l / (1 - w)) * 2 - 1, 0),
-                widthFactor: w,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: tint,
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          SizedBox(
             width: 44,
             child: Text(took(s),
                 textAlign: TextAlign.right,
                 style: mono(11.5,
-                    color: s.running ? AppColors.accent : AppColors.fg4)),
+                    color: AppColors.fg3)),
           ),
         ]),
       );

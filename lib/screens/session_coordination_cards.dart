@@ -204,16 +204,9 @@ class _ThreadCard extends StatelessWidget {
                 ),
                 if (ref.isNotEmpty) ...[
                   SizedBox(width: S.s8),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                    decoration: BoxDecoration(
-                        color: AppColors.hover,
-                        borderRadius: BorderRadius.circular(6)),
-                    child: Text(ref,
-                        maxLines: 1,
-                        style: mono(kMobile ? 12 : 10.5, color: AppColors.fg2)),
-                  ),
+                  Text(ref,
+                      maxLines: 1,
+                      style: sans(kMobile ? 12 : 11.5, color: AppColors.fg3)),
                 ],
               ]),
             ),
@@ -719,11 +712,8 @@ class _QuietWakesRowState extends State<QuietWakesRow> {
           onTap: () => setState(() => _open = !_open),
           borderRadius: BorderRadius.circular(R.md),
           child: Container(
-            constraints: const BoxConstraints(minHeight: 36),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-                color: AppColors.surface2,
-                borderRadius: BorderRadius.circular(R.md)),
+            constraints: BoxConstraints(minHeight: kMobile ? 48 : 28),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             child: Row(children: [
               AnimatedRotation(
                 turns: _open ? 0.25 : 0,
@@ -738,10 +728,10 @@ class _QuietWakesRowState extends State<QuietWakesRow> {
                 child: Text('nothing new, nothing to action',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(meta, color: AppColors.fg4)),
+                    style: sans(meta, color: AppColors.fg3)),
               ),
               const SizedBox(width: 8),
-              Text(_span, style: mono(meta - 1, color: AppColors.fg4)),
+              Text(_span, style: sans(meta - 1, color: AppColors.fg3)),
             ]),
           ),
         ),

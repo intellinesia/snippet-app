@@ -30,9 +30,8 @@ class GroupNotice extends StatelessWidget {
   Widget _badge(String icon, Color fg, Color bg) => Container(
         width: 22,
         height: 22,
-        decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
         alignment: Alignment.center,
-        child: AppIcon(icon, size: 13, color: fg),
+        child: AppIcon(icon, size: 14, color: AppColors.fg2),
       );
 
   @override

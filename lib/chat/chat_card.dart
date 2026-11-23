@@ -47,7 +47,7 @@ class ChatCard extends StatelessWidget {
   /// Resolved cards recede.
   final bool dimmed;
 
-  static double get pad => kMobile ? 16 : 12;
+  static double get pad => 16;
 
   @override
   Widget build(BuildContext context) => Align(
@@ -109,7 +109,7 @@ class ChatCardHeader extends StatelessWidget {
     final p = ChatCard.pad;
     final size = large ? (kMobile ? 17.0 : 14.0) : (kMobile ? 15.0 : 13.0);
     return Padding(
-      padding: EdgeInsets.fromLTRB(p, p - 2, p, padBottom ? p - 2 : 0),
+      padding: EdgeInsets.fromLTRB(p, p, p, padBottom ? S.s8 : 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
@@ -126,11 +126,11 @@ class ChatCardHeader extends StatelessWidget {
                           weight: W.strong, height: 1.3, color: AppColors.fg1)),
                   if (subtitleView != null)
                     Padding(
-                        padding: EdgeInsets.only(top: S.s2),
+                        padding: const EdgeInsets.only(top: 4),
                         child: subtitleView)
                   else if (subtitle != null && subtitle!.isNotEmpty)
                     Padding(
-                      padding: EdgeInsets.only(top: S.s2),
+                      padding: const EdgeInsets.only(top: 4),
                       child: Text(subtitle!,
                           style: sans(13, height: 1.4, color: AppColors.fg3)),
                     ),
@@ -156,7 +156,7 @@ class ChatCardBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = ChatCard.pad;
     return Padding(
-      padding: EdgeInsets.fromLTRB(p, 0, p, bottom ? p - 2 : 0),
+      padding: EdgeInsets.fromLTRB(p, 0, p, bottom ? p : 0),
       child: child,
     );
   }
@@ -213,7 +213,7 @@ class ChatCardActions extends StatelessWidget {
     final ordered = vertical ? buttons.reversed.toList() : buttons;
     final pills = [for (final b in ordered) _ChatCardPill(b)];
     return Padding(
-      padding: EdgeInsets.fromLTRB(p, S.s2, p, link == null ? p : S.s4),
+      padding: EdgeInsets.fromLTRB(p, 0, p, link == null ? p : S.s4),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -253,15 +253,12 @@ class ChatCardActions extends StatelessWidget {
 }
 
 extension on ChatCardActions {
-  // Pointer-sized: buttons sit at their own width so a card never reads as a
-  // pair of big slabs.
+  // Pointer-sized: 32 tall buttons at their own width, left aligned.
   Widget _desktop(double p) {
     final pills = [for (final b in buttons) _ChatCardPill(b)];
-    return Padding(
-      padding: EdgeInsets.fromLTRB(p, 4, p, p),
-      child: Row(children: [
-        if (link != null)
-          ConstrainedBox(
+    final linkView = link == null
+        ? null
+        : ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 260),
             child: Semantics(
               button: true,
@@ -269,7 +266,7 @@ extension on ChatCardActions {
                 behavior: HitTestBehavior.opaque,
                 onTap: onLink,
                 child: Padding(
-                  padding: const EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.only(left: 12),
                   child: Text(link!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -279,15 +276,19 @@ extension on ChatCardActions {
                 ),
               ),
             ),
-          ),
-        Expanded(
+          );
+    return Padding(
+      padding: EdgeInsets.fromLTRB(p, 0, p, p),
+      child: Row(children: [
+        Flexible(
           child: Wrap(
-            alignment: WrapAlignment.end,
+            alignment: WrapAlignment.start,
             spacing: 8,
             runSpacing: 8,
             children: pills,
           ),
         ),
+        if (linkView != null) linkView,
       ]),
     );
   }
@@ -300,7 +301,7 @@ class _ChatCardPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final h = kMobile ? 44.0 : 28.0;
+    final h = kMobile ? 44.0 : 32.0;
     final enabled = b.onTap != null && !b.busy;
     final (bg, fg, border) = switch (b.kind) {
       ChatCardButtonKind.primary => (
@@ -311,7 +312,7 @@ class _ChatCardPill extends StatelessWidget {
       ChatCardButtonKind.secondary => (
           Colors.transparent,
           AppColors.fg1,
-          AppColors.lineStrong
+          AppColors.fg4
         ),
       ChatCardButtonKind.danger => (
           AppColors.danger.withValues(alpha: 0.13),

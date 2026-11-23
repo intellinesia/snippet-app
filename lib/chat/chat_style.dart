@@ -85,8 +85,14 @@ class ChatColors {
   }
 
   static Color get sentText => sentTextFor();
-  static Color sentTextIn(BuildContext context) =>
-      sentTextFor(ChatBubbleFill.of(context) ?? sentIn(context));
+  static Color sentTextIn(BuildContext context) {
+    final fill = ChatBubbleFill.of(context);
+    // A light fill needs dark ink whatever the theme's sent-text token says.
+    if (fill != null && fill.computeLuminance() > 0.179) {
+      return const Color(0xFF0A0A0A);
+    }
+    return sentTextFor(fill ?? sentIn(context));
+  }
 
   static Color get received => _tokens.received;
   static Color get receivedText => _tokens.receivedText;
@@ -113,7 +119,7 @@ TextStyle chatText({required bool mine, BuildContext? context}) =>
             ? (context != null
                 ? ChatColors.sentTextIn(context)
                 : ChatColors.sentText)
-            : ChatColors.receivedText);
+            : AppColors.fg1);
 
 /// Markdown inside a bubble: the base sheet recoloured for the bubble fill.
 MarkdownStyleSheet chatMarkdownStyle(BuildContext context,

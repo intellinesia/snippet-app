@@ -148,7 +148,7 @@ void main() {
       );
       final mention = _findSpan(body.textSpan!, '@fable');
       expect(mention, isNotNull);
-      expect(mention!.style?.color, ChatColors.receivedText);
+      expect(mention!.style?.color, AppColors.fg1);
       expect(mention.style?.fontWeight, FontWeight.w500);
       debugDefaultTargetPlatformOverride = null;
     });

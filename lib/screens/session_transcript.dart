@@ -634,8 +634,8 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           addEvent(
               key,
               SignalRow(
-                icon: 'transfer',
-                tone: SignalTone.run,
+                leading: ProviderLogo(_s(e['to']),
+                    size: kMobile ? 16 : 14, color: AppColors.fg2),
                 text: '**${prettyProfile(_s(e['from']))}** hit its limit'
                     ' \u00b7 now on **${prettyProfile(_s(e['to']))}**',
                 time: formatEventTime(e['at'] ?? e['created_at']),

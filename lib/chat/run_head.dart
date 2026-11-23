@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'chat_style.dart';
 import '../phosphor_icons.dart';
 
 import '../mochi.dart';
@@ -38,15 +39,21 @@ class SoftBubble extends StatelessWidget {
             bottomRight: big,
             topLeft: first ? big : small,
             bottomLeft: last ? big : small);
+    // Agent replies are plain prose on the canvas; only yours sits in a bubble.
+    if (!mine) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+        child: child,
+      );
+    }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
       decoration: BoxDecoration(
-        color: mine
-            ? AppColors.accent.withValues(alpha: 0.16)
-            : AppColors.surface2,
+        color: AppColors.surface2,
         borderRadius: radius,
       ),
-      child: child,
+      // Your text picks its ink against the neutral fill, not the accent.
+      child: ChatBubbleFill(fill: AppColors.surface2, child: child),
     );
   }
 }
