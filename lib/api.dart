@@ -1002,6 +1002,20 @@ class DaemonClient {
     return LaneInfo.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
 
+  Future<void> cancelLane(String session, String lane) async {
+    final r = await _post(_uri('/session/lane/cancel'),
+        headers: _json, body: jsonEncode({'session': session, 'lane': lane}));
+    if (r.statusCode != 200) throw _err('stop lane', r);
+  }
+
+  Future<String> retryLane(String session, String lane) async {
+    final r = await _post(_uri('/session/lane/retry'),
+        headers: _json, body: jsonEncode({'session': session, 'lane': lane}));
+    if (r.statusCode != 200) throw _err('retry lane', r);
+    final j = jsonDecode(r.body) as Map<String, dynamic>;
+    return j['id'] as String? ?? '';
+  }
+
   Future<List<Map<String, dynamic>>> bgList(String session) async {
     final r = await _get(_uri('/bg', {'session': session}));
     if (r.statusCode != 200) throw _err('list processes', r);
