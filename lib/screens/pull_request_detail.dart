@@ -947,7 +947,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
             ),
             if (trailing != null) trailing,
             if (trailing == null && onTap != null && kMobile)
-              AppIcon('chevron-right', size: 14, color: AppColors.fg4),
+              AppIcon('chevron-right', size: 14, color: AppColors.fg3),
           ]),
         ),
       );

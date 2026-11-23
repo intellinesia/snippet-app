@@ -1048,7 +1048,7 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: S.s2),
                   child:
-                      AppIcon('chevron-right', size: 12, color: AppColors.fg4),
+                      AppIcon('chevron-right', size: 12, color: AppColors.fg3),
                 ),
               ),
               itemBuilder: (_, i) {
@@ -1181,7 +1181,7 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
                     overflow: TextOverflow.ellipsis,
                     style: TS.rowTitle()),
               ),
-              AppIcon('chevron-right', size: 14, color: AppColors.fg4),
+              AppIcon('chevron-right', size: 14, color: AppColors.fg3),
             ]),
           ),
         ),

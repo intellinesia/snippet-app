@@ -609,7 +609,7 @@ class PanelRow extends StatelessWidget {
           if (trailing != null) ...[SizedBox(width: S.s8), trailing!],
           if (chevron) ...[
             SizedBox(width: S.s6),
-            AppIcon('chevron-right', size: 14, color: AppColors.fg4),
+            AppIcon('chevron-right', size: 14, color: AppColors.fg3),
           ],
         ]),
       ),

@@ -63,11 +63,16 @@ class StageBar extends StatelessWidget {
   Widget build(BuildContext context) => kMobile ? _phone() : _desk();
 
   // One phone header for sessions, agents and groups: same frame, same buttons.
-  Widget _phone() {
+  Widget _phone() => Builder(builder: _phoneIn);
+
+  Widget _phoneIn(BuildContext context) {
+    // Title and meta grow with text scale; the bar grows with them.
+    final grow = MediaQuery.textScalerOf(context).scale(36) - 36;
+    final h = phoneHeight + (grow > 0 ? grow : 0);
     final sub = (subtitle ?? '').trim();
     final body = SizedBox(
       width: double.infinity,
-      height: phoneHeight,
+      height: h,
       child: Padding(
         padding: EdgeInsets.only(top: S.s8),
         child: Stack(alignment: Alignment.topCenter, children: [

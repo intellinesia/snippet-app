@@ -651,7 +651,7 @@ class _FileExplorerState extends State<FileExplorer> {
             if (i > 0)
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: S.of(3)),
-                child: AppIcon('chevron-right', size: 11, color: AppColors.fg4),
+                child: AppIcon('chevron-right', size: 11, color: AppColors.fg3),
               ),
             TapDetector(
               behavior: HitTestBehavior.opaque,
@@ -832,7 +832,7 @@ class _FileExplorerState extends State<FileExplorer> {
               child: Row(children: [
                 for (var i = 0; i < (showCrumbs ? crumbs.length : 0); i++) ...[
                   if (i > 0)
-                    AppIcon('chevron-right', size: 12, color: AppColors.fg4),
+                    AppIcon('chevron-right', size: 12, color: AppColors.fg3),
                   InkWell(
                     borderRadius: BorderRadius.circular(R.sm),
                     onTap: () => _go(crumbs[i].$2, forward: false),
@@ -1072,7 +1072,7 @@ class _Row extends StatelessWidget {
               ],
               if (chevron) ...[
                 SizedBox(width: S.s8),
-                AppIcon('chevron-right', size: 16, color: AppColors.fg4),
+                AppIcon('chevron-right', size: 16, color: AppColors.fg3),
               ],
             ]),
           ),

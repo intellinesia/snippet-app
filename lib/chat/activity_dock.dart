@@ -103,7 +103,7 @@ class FailedPill extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Container(
-          height: compact ? 24 : 28,
+          constraints: BoxConstraints(minHeight: compact ? 24 : 28),
           padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 12),
           decoration: BoxDecoration(
               color: AppColors.surface3,
@@ -229,17 +229,17 @@ class ActivityPill extends StatelessWidget {
   Widget build(BuildContext context) {
     Theme.of(context);
     final t = took ?? stepsDuration(steps);
-    final failed = runFailures(steps);
+    var failed = runFailures(steps);
+    if (failed == 0 && steps.any((x) => !x.running && x.failed)) failed = 1;
     return TapDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => onOpen(null),
       child: Container(
-        height: 44,
-        padding: const EdgeInsets.fromLTRB(12, 0, 14, 0),
-        decoration: BoxDecoration(
-            color: AppColors.surface2, borderRadius: BorderRadius.circular(22)),
+        constraints: const BoxConstraints(minHeight: 48),
+        padding: const EdgeInsets.fromLTRB(0, 0, 4, 0),
         child: Row(children: [
-          AgentMochi(agentId, size: 26, state: AgentCharacterState.done),
+          AppIcon(failed > 0 ? 'alert-triangle' : 'terminal',
+              size: 16, color: failed > 0 ? AppColors.fg1 : AppColors.fg2),
           const SizedBox(width: 10),
           Expanded(
             child: Text(describeWork(steps).text,
@@ -250,7 +250,7 @@ class ActivityPill extends StatelessWidget {
           if (t != null) ...[
             const SizedBox(width: 10),
             Text(formatWorkDuration(t),
-                style: sans(14, color: AppColors.fg4, tabular: true)),
+                style: sans(14, color: AppColors.fg2, tabular: true)),
           ],
           if (failed > 0) ...[
             const SizedBox(width: 10),
@@ -258,7 +258,7 @@ class ActivityPill extends StatelessWidget {
                 compact: true, onTap: () => onOpen(firstFailure(steps))),
           ],
           const SizedBox(width: 6),
-          AppIcon('chevron-right', size: 16, color: AppColors.fg4),
+          AppIcon('chevron-right', size: 16, color: AppColors.fg3),
         ]),
       ),
     );

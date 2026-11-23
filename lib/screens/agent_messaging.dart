@@ -1137,11 +1137,18 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   /// is doing right now.
   String _stageSubtitle(String subtitle) {
     final p = widget.client.presence.presenceForAgentId(widget.agentId);
-    if (p == null) return subtitle;
-    final status = _typing ? 'typing\u2026' : PresenceStore.chatWord(p);
-    if (status.isEmpty) return subtitle;
+    final prof = _agent?.deskProfile ?? _agent?.profile;
+    final model = (_agent?.deskModel ?? '').trim();
+    // Provider and model, never the raw profile id.
+    final named = prof == null || prof.trim().isEmpty
+        ? ''
+        : (model.isEmpty ? prettyProfile(prof) : '${prettyProfile(prof)} $model');
+    final status = p == null
+        ? ''
+        : (_typing ? 'typing\u2026' : PresenceStore.chatWord(p));
     final cut = subtitle.indexOf(' \u00b7 ');
-    final head = cut < 0 ? '' : subtitle.substring(0, cut);
+    final head = named.isNotEmpty ? named : (cut < 0 ? '' : subtitle.substring(0, cut));
+    if (status.isEmpty) return head.isEmpty ? subtitle : head;
     return head.isEmpty ? status : '$head \u00b7 $status';
   }
 

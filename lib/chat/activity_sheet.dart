@@ -582,7 +582,7 @@ class _GroupRow extends StatelessWidget {
             AnimatedRotation(
               turns: open ? 0.25 : 0,
               duration: Motion.fast,
-              child: AppIcon('chevron-right', size: 16, color: AppColors.fg4),
+              child: AppIcon('chevron-right', size: 16, color: AppColors.fg3),
             ),
           ]),
         ),

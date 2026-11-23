@@ -1816,7 +1816,7 @@ class _AgentBoardViewState extends State<AgentBoardView> {
 
   (String, String, Color, bool) _look(BoardEntry e) => switch (e.kind) {
         'dispatched' => ('send', 'Dispatched', AppColors.fg2, true),
-        'reported' => ('check-circle', 'Reported', AppColors.ok, false),
+        'reported' => ('check-circle', 'Reported', AppColors.fg2, false),
         'progress' => (
             'activity',
             e.summary.startsWith(_automatic)
@@ -1864,7 +1864,7 @@ class _AgentBoardViewState extends State<AgentBoardView> {
         if (report != null) ...[
           SizedBox(height: S.s16),
           Text('Reported back, ${_fullTime(report.createdAt)}',
-              style: sans(_meta, weight: W.label, color: AppColors.ok)),
+              style: sans(_meta, weight: W.label, color: AppColors.fg2)),
           SizedBox(height: S.s4),
           CardMarkdownBody(body: report.summary, collapsible: false),
         ],

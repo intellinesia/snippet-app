@@ -391,7 +391,7 @@ class ComposerTrayRow extends StatelessWidget {
               ],
               if (chevron) ...[
                 const SizedBox(width: 10),
-                AppIcon('chevron-right', size: 16, color: AppColors.fg4),
+                AppIcon('chevron-right', size: 16, color: AppColors.fg3),
               ],
             ]),
           ),

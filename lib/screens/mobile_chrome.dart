@@ -682,7 +682,7 @@ class _MobileMenu extends StatelessWidget {
             AppIcon(icon, size: 19, color: AppColors.fg3),
             SizedBox(width: S.of(14)),
             Expanded(child: Text(label, style: TS.rowTitle())),
-            AppIcon('chevron-right', size: 15, color: AppColors.fg4),
+            AppIcon('chevron-right', size: 15, color: AppColors.fg3),
           ]),
         ),
       );

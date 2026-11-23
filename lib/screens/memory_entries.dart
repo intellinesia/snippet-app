@@ -179,7 +179,7 @@ class MemoryEntryCard extends StatelessWidget {
                     if (when.isNotEmpty)
                       Text(when, style: sans(11, color: AppColors.fg4)),
                     if (e.file != null)
-                      AppIcon('chevron-right', size: 12, color: AppColors.fg4),
+                      AppIcon('chevron-right', size: 12, color: AppColors.fg3),
                   ]),
                 ),
               Text(e.text,

@@ -189,7 +189,7 @@ class _LeadCardState extends State<LeadCard> {
                 ),
               ),
               SizedBox(width: S.s6),
-              AppIcon('chevron-right', size: 16, color: AppColors.fg4),
+              AppIcon('chevron-right', size: 16, color: AppColors.fg3),
             ]),
           ),
         ),

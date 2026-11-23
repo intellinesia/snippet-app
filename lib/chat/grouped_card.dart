@@ -70,7 +70,7 @@ class GroupedCardHeader extends StatelessWidget {
   final VoidCallback? onTap;
 
   static Widget chevron() =>
-      AppIcon('chevron-right', size: Grouped.chevron, color: AppColors.fg4);
+      AppIcon('chevron-right', size: Grouped.chevron, color: AppColors.fg3);
 
   @override
   Widget build(BuildContext context) {

@@ -14,7 +14,12 @@ class AllAgentsView extends StatelessWidget {
     required this.sessions,
     required this.onOpenAgent,
     required this.onOpenSession,
+    this.lead,
+    this.onOpenLead,
   });
+
+  final SessionInfo? lead;
+  final VoidCallback? onOpenLead;
 
   final DaemonClient client;
   final List<SessionInfo> sessions;
@@ -46,6 +51,8 @@ class AllAgentsView extends StatelessWidget {
                 client: client,
                 groupsKey: 'groups-all-agents',
                 sessions: sessions,
+                lead: lead,
+                onOpenLead: onOpenLead,
                 onOpenAgent: onOpenAgent,
                 onOpenSession: onOpenSession,
               ),

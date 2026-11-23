@@ -407,7 +407,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
 Color notificationTone(Map<String, dynamic> p) =>
     switch ('${p['kind'] ?? ''}'.split('.').last) {
       'waiting' => AppColors.run,
-      'done' || 'completed' => AppColors.ok,
+      'done' || 'completed' => AppColors.fg2,
       'error' || 'failed' => AppColors.danger,
       'idle' => AppColors.fg3,
       _ => AppColors.fg4,

@@ -688,7 +688,7 @@ class _QuietWakesRowState extends State<QuietWakesRow> {
               AnimatedRotation(
                 turns: _open ? 0.25 : 0,
                 duration: Motion.fast,
-                child: AppIcon('chevron-right', size: 12, color: AppColors.fg4),
+                child: AppIcon('chevron-right', size: 12, color: AppColors.fg3),
               ),
               const SizedBox(width: 8),
               Text('${wakes.length} quiet wake${wakes.length == 1 ? '' : 's'}',

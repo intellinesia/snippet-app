@@ -734,7 +734,7 @@ class _SectionState extends State<_Section> {
           AnimatedRotation(
             turns: open ? 0.25 : 0,
             duration: Motion.fast,
-            child: AppIcon('chevron-right', size: 12, color: AppColors.fg4),
+            child: AppIcon('chevron-right', size: 12, color: AppColors.fg3),
           ),
           const SizedBox(width: 2),
         ]),
@@ -860,7 +860,7 @@ class _Row extends StatelessWidget {
               ],
               if (chevron) ...[
                 const SizedBox(width: 6),
-                AppIcon('chevron-right', size: 13, color: AppColors.fg4),
+                AppIcon('chevron-right', size: 13, color: AppColors.fg3),
               ],
             ]),
           ),

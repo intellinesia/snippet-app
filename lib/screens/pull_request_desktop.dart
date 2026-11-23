@@ -1207,7 +1207,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
             ),
             if (trailing != null) trailing,
             if (onTap != null && trailing == null)
-              AppIcon('chevron-right', size: 12, color: AppColors.fg4),
+              AppIcon('chevron-right', size: 12, color: AppColors.fg3),
           ]),
         ),
       );

@@ -242,7 +242,7 @@ class _LiveSessionCardState extends State<LiveSessionCard> {
             width: 8,
             height: 8,
             decoration:
-                BoxDecoration(color: AppColors.ok, shape: BoxShape.circle)),
+                BoxDecoration(color: AppColors.fg2, shape: BoxShape.circle)),
         text: plan?.current?.trim().isNotEmpty == true
             ? plan!.current!.trim()
             : 'Working',

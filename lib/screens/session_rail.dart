@@ -783,7 +783,7 @@ class _SessionRailState extends State<SessionRail> {
                           style: sans(11.5, color: AppColors.fg4)),
                     ]),
               ),
-              AppIcon('chevron-right', size: 12, color: AppColors.fg4),
+              AppIcon('chevron-right', size: 12, color: AppColors.fg3),
             ]),
           ),
         ),
@@ -1823,7 +1823,7 @@ class _RailGroupState extends State<_RailGroup> {
           AnimatedRotation(
             turns: open ? 0.25 : 0,
             duration: Motion.fast,
-            child: AppIcon('chevron-right', size: 12, color: AppColors.fg4),
+            child: AppIcon('chevron-right', size: 12, color: AppColors.fg3),
           ),
           const SizedBox(width: 6),
           Text(w.label, style: sans(12, weight: W.label, color: AppColors.fg3)),
@@ -1845,7 +1845,7 @@ class _RailGroupState extends State<_RailGroup> {
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Text(w.link!, style: sans(11.5, color: AppColors.fg4)),
-                  AppIcon('chevron-right', size: 12, color: AppColors.fg4),
+                  AppIcon('chevron-right', size: 12, color: AppColors.fg3),
                 ]),
               ),
             ),
@@ -2086,7 +2086,7 @@ class _RailRow extends StatelessWidget {
           ],
           if (chevron) ...[
             const SizedBox(width: 6),
-            AppIcon('chevron-right', size: 12, color: AppColors.fg4),
+            AppIcon('chevron-right', size: 12, color: AppColors.fg3),
           ],
         ]),
       ),

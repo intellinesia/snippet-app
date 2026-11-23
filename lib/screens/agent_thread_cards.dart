@@ -1448,7 +1448,7 @@ class TaskResultCard extends StatelessWidget {
                     ),
                   ),
                   if (sessionId.isNotEmpty)
-                    AppIcon('chevron-right', size: 14, color: AppColors.fg4),
+                    AppIcon('chevron-right', size: 14, color: AppColors.fg3),
                 ]),
                 if (plain.isNotEmpty) ...[
                   const SizedBox(height: 8),

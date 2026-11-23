@@ -654,7 +654,7 @@ extension _RailPages on _SessionRailState {
                   Text(relativeTime(t.millisecondsSinceEpoch ~/ 1000),
                       style: mono(11.5, color: AppColors.fg4)),
                 const SizedBox(width: 6),
-                AppIcon('chevron-right', size: 12, color: AppColors.fg4),
+                AppIcon('chevron-right', size: 12, color: AppColors.fg3),
               ],
             ]),
           ),

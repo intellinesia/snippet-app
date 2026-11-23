@@ -636,7 +636,7 @@ class ChatCardFooter extends StatelessWidget {
           if (trailing != null)
             trailing!
           else if (onTap != null)
-            AppIcon('chevron-right', size: 16, color: AppColors.fg4),
+            AppIcon('chevron-right', size: 16, color: AppColors.fg3),
         ]),
       ),
     );

@@ -345,12 +345,16 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
     final human = humanSessions(sessions);
     final working = rows.working.length;
     final bottom = MediaQuery.paddingOf(context).bottom;
+    final askers = {for (final r in rows.needs) r.agent.id};
+    final groupAsks =
+        groups.where((g) => g.agentIds.any(askers.contains)).length;
+    final waiting = asks.length + groupAsks;
     final statusDot = working > 0
-        ? AppColors.ok
-        : (asks.isNotEmpty ? askAmber : AppColors.ok);
+        ? AppColors.fg2
+        : (waiting > 0 ? askAmber : AppColors.fg2);
     final statusText = working > 0
         ? '$working working'
-        : (asks.isNotEmpty ? '${asks.length} waiting' : 'All quiet');
+        : (waiting > 0 ? '$waiting waiting' : 'All quiet');
 
     // Composer sits at bottom (52 pill + 18 bottom padding + safe area).
     final composerClearance = 82.0 + bottom;

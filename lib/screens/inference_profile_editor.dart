@@ -1322,7 +1322,7 @@ class _ModelPickerSheetState extends State<_ModelPickerSheet> {
                     ]),
               ),
               SizedBox(width: S.s8),
-              AppIcon('chevron-right', size: 14, color: AppColors.fg4),
+              AppIcon('chevron-right', size: 14, color: AppColors.fg3),
             ]),
           ),
         ),

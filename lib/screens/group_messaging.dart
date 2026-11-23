@@ -310,7 +310,7 @@ class GroupRow extends StatelessWidget {
             ),
           ),
           SizedBox(width: S.s8),
-          AppIcon('chevron-right', size: 16, color: AppColors.fg4),
+          AppIcon('chevron-right', size: 16, color: AppColors.fg3),
         ]),
       );
     }

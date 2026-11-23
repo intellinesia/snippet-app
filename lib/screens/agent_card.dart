@@ -501,7 +501,7 @@ class _AgentCardState extends State<AgentCard> {
               ),
             ),
             SizedBox(width: S.s8),
-            AppIcon('chevron-right', size: 16, color: AppColors.fg4),
+            AppIcon('chevron-right', size: 16, color: AppColors.fg3),
           ]),
         ),
       );
@@ -711,7 +711,7 @@ class _AgentRowShellState extends State<AgentRowShell> {
                     // Lit tiles: a 20px slot flush with the header, 10px to the
                     // name, as in the reference; plates keep the 28px slot.
                     SizedBox(
-                      width: tiled ? rowAvatarSize(34) : 28,
+                      width: tiled || !kMobile ? rowAvatarSize(34) : 28,
                       height: tiled ? rowAvatarSize(34) : 22,
                       child: Stack(clipBehavior: Clip.none, children: [
                         if (widget.avatarFor != null)
@@ -810,7 +810,7 @@ class _AgentRowShellState extends State<AgentRowShell> {
                           ]),
                           maxLines: 1,
                           style: kMobile
-                              ? sans(11, color: AppColors.fg4, tabular: true)
+                              ? sans(11, color: AppColors.fg3, tabular: true)
                               : sans(12.5,
                                   color: AppColors.fg3, tabular: true)),
                     ],

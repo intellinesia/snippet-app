@@ -1504,6 +1504,10 @@ child: PhoneAgentPage(
             builder: (_, close) => AllAgentsView(
               client: c,
               sessions: widget.sessions ?? const <SessionInfo>[],
+              lead: (widget.sessions ?? const <SessionInfo>[])
+                  .where((s) => isDedicatedLeadSession(s.id))
+                  .firstOrNull,
+              onOpenLead: widget.onOpenLead,
               onOpenAgent: (a) => widget.onOpenAgent?.call(a),
               onOpenSession: (s) =>
                   widget.onOpenSession(s.id, s.title, s.profile),

@@ -1226,7 +1226,7 @@ class AgentPageRow extends StatelessWidget {
           ],
           if (showChevron) ...[
             SizedBox(width: S.s6),
-            AppIcon('chevron-right', size: 14, color: AppColors.fg4),
+            AppIcon('chevron-right', size: 14, color: AppColors.fg3),
           ],
         ]),
       ),

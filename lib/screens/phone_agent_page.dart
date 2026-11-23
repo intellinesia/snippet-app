@@ -144,7 +144,7 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
                           size: 20,
                           color: AppColors.fg3),
                   trailing:
-                      AppIcon('chevron-right', size: 16, color: AppColors.fg4),
+                      AppIcon('chevron-right', size: 16, color: AppColors.fg3),
                   onTap: () => widget.onOpenSession(s),
                 ),
               QuietRow(title: 'All sessions', onTap: widget.onAllSessions),

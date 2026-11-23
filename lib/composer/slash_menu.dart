@@ -379,7 +379,7 @@ class SlashMenuView extends StatelessWidget {
           right: it.drill
               ? Row(mainAxisSize: MainAxisSize.min, children: [
                   Text(it.value ?? '', style: sans(11.5, color: AppColors.fg4)),
-                  AppIcon('chevron-right', size: 14, color: AppColors.fg4),
+                  AppIcon('chevron-right', size: 14, color: AppColors.fg3),
                 ])
               : Text(it.command, style: mono(11, color: AppColors.fg4)),
         ));

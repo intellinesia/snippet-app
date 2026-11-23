@@ -524,7 +524,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         final label = joinFolder(mins >= 1 ? 'Working ${mins}m' : 'Working');
         sub = '';
         subView = Row(mainAxisSize: MainAxisSize.min, children: [
-          WorkingDots(size: 3, color: AppColors.accent),
+          WorkingDots(size: 3, color: AppColors.fg2),
           SizedBox(width: S.of(5)),
           Flexible(
             child: Text(
@@ -532,7 +532,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style:
-                  TS.caption(AppColors.fg3).copyWith(fontSize: 12, height: 1.2),
+                  TS.caption(AppColors.fg2).copyWith(fontSize: 12, height: 1.2),
             ),
           ),
         ]);
@@ -544,23 +544,22 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         sub = joinFolder('In review');
       }
     }
-    return MobileBackBar(
+    final working = s?.status == 'running';
+    return StageBar(
+      framed: false,
+      members: const [],
       title: _title.isEmpty ? 'Session' : _title,
-      subtitle: sub,
-      subtitleView: subView,
+      subtitle: working ? null : (sub.isEmpty ? null : sub),
+      below: subView,
       onBack: back,
-      keepBack: true,
-      onTitleTap: stuck ? _retryNow : () => _openActionsDrawer(s),
-      onTitleTapHint: stuck ? 'Retry connection' : 'Session actions',
-      trailing: [
-        RoundBtn(
-          icon: 'terminal',
-          tooltip: 'Shell',
-          size: 40,
-          iconSize: 18,
-          onTap: _openTerm,
-        ),
-      ],
+      onTap: stuck ? _retryNow : () => _openActionsDrawer(s),
+      trailing: RoundBtn(
+        icon: 'terminal',
+        tooltip: 'Shell',
+        size: 40,
+        iconSize: 18,
+        onTap: _openTerm,
+      ),
     );
   }
 

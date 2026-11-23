@@ -639,7 +639,7 @@ class _AgentModelRowsState extends State<AgentModelRows> {
                     style: sans(13, color: AppColors.fg3)),
               ),
               SizedBox(width: S.s4),
-              AppIcon('chevron-right', size: 14, color: AppColors.fg4),
+              AppIcon('chevron-right', size: 14, color: AppColors.fg3),
             ]),
           ),
         ),

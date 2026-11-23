@@ -910,7 +910,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                             shape: BoxShape.circle,
                             color: matches[i].status == 'disabled'
                                 ? AppColors.fg4
-                                : AppColors.ok,
+                                : AppColors.fg2,
                           ),
                         ),
                         SizedBox(width: S.of(10)),

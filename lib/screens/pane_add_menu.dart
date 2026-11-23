@@ -42,7 +42,7 @@ PopupMenuItem<VoidCallback> _row(PaneAddEntry e) => PopupMenuItem<VoidCallback>(
           Text(e.meta!, style: sans(12, color: AppColors.fg4, tabular: true)),
         if (e.chevron) ...[
           SizedBox(width: S.s4),
-          AppIcon('chevron-right', size: 12, color: AppColors.fg4),
+          AppIcon('chevron-right', size: 12, color: AppColors.fg3),
         ],
         if (e.checked) ...[
           SizedBox(width: S.s8),
