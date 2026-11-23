@@ -89,8 +89,10 @@ class QuietHomeScreen extends StatelessWidget {
     required this.onSettings,
     required this.onSearch,
     this.onDecide,
+    this.offline,
   });
 
+  final Widget? offline;
   final List<SessionInfo> sessions;
   final List<CoordinationAgent> agents;
   final void Function(SessionInfo s) onOpenSession;
@@ -141,6 +143,7 @@ class QuietHomeScreen extends StatelessWidget {
             ),
           ),
         ),
+        if (offline != null) offline!,
         if (asks.isEmpty)
           QuietRow(
             title: 'Nothing needs you',

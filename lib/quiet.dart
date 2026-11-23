@@ -211,6 +211,61 @@ class QuietNeedsYou extends StatelessWidget {
       );
 }
 
+/// Cannot reach the machine: what is on screen is the last copy, replies queue.
+/// Amber hand, not red; one Retry.
+class QuietOfflineBanner extends StatelessWidget {
+  const QuietOfflineBanner(
+      {super.key, required this.machine, this.since, this.onRetry});
+  final String machine;
+  final String? since;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s8),
+        padding: EdgeInsets.fromLTRB(S.s12, S.s12, S.s12, S.s12),
+        decoration: BoxDecoration(
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(R.of(14)),
+        ),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Padding(
+              padding: EdgeInsets.only(top: S.s2), child: const QuietHand()),
+          SizedBox(width: S.s12),
+          Expanded(
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Can't reach $machine",
+                      style: sans(15,
+                          height: 20 / 15,
+                          weight: W.label,
+                          color: AppColors.fg1)),
+                  Padding(
+                    padding: EdgeInsets.only(top: S.s2),
+                    child: Text(
+                        '${since == null ? 'Showing what you saw earlier' : 'Showing what you saw at $since'}. Replies send when it is back.',
+                        style: sans(13, height: 18 / 13, color: AppColors.fg3)),
+                  ),
+                ]),
+          ),
+          if (onRetry != null) ...[
+            SizedBox(width: S.s8),
+            TapDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onRetry,
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: S.s2),
+                child: Text('Retry',
+                    style: sans(14,
+                        weight: W.label, color: AppColors.fg1)),
+              ),
+            ),
+          ],
+        ]),
+      );
+}
+
 /// The four places, in order. The same four sit in the desktop sidebar.
 enum QuietPlace {
   home('Home', 'home'),

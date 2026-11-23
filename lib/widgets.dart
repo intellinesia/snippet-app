@@ -2017,7 +2017,8 @@ class NoteLine extends StatelessWidget {
     final limit = text.toLowerCase().contains('session limit') ||
         text.toLowerCase().contains('usage limit') ||
         text.toLowerCase().contains('rate limit');
-    final tone = limit ? AppColors.run : AppColors.danger;
+    // Quiet: a stop that needs the user is amber, never red.
+    final tone = AppColors.run;
     return Padding(
       padding: EdgeInsets.symmetric(vertical: S.s4),
       child: Align(
@@ -2025,8 +2026,8 @@ class NoteLine extends StatelessWidget {
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s8),
           decoration: BoxDecoration(
-            color: Color.lerp(AppColors.surface1, tone, 0.11),
-            borderRadius: BorderRadius.circular(R.md),
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.circular(R.of(14)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -2034,8 +2035,8 @@ class NoteLine extends StatelessWidget {
             children: [
               Padding(
                 padding: EdgeInsets.only(top: S.s2),
-                child: AppIcon(limit ? 'clock' : 'alert-triangle',
-                    size: 13, color: tone),
+                child: AppIcon(limit ? 'clock' : 'hand',
+                    size: 14, color: tone, filled: !limit),
               ),
               SizedBox(width: S.s8),
               Flexible(

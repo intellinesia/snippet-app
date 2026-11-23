@@ -10,6 +10,7 @@ import 'ambient_loop.dart';
 import 'chat/ledger_line.dart';
 import 'chat/signal_row.dart';
 import 'api.dart' show DaemonClient;
+import 'quiet.dart' show quietAmber;
 import 'crew_widgets.dart' show AgentProviderMark;
 import 'mochi.dart';
 import 'models.dart';
@@ -186,7 +187,7 @@ class WorkLine extends StatelessWidget {
       final note = _failureNote(steps);
       if (note != null) {
         spans.add(TextSpan(
-            text: ' · $note', style: style.copyWith(color: AppColors.danger)));
+            text: ' · $note', style: style.copyWith(color: quietAmber)));
       }
     }
     Widget rule() => Expanded(

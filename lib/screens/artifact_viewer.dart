@@ -480,8 +480,7 @@ class _ArtifactInlineState extends State<ArtifactInline>
           if (snap.hasError) {
             return SizedBox(
               height: 72,
-              child: LoadFailed(
-                  onRetry: () => setState(() => _text = null)),
+              child: LoadFailed(onRetry: () => setState(() => _text = null)),
             );
           }
           if (!snap.hasData) return _loading();
@@ -746,8 +745,7 @@ class _ArtifactImageState extends State<ArtifactImage> {
           errorBuilder: (_, __, ___) =>
               widget.fallback ??
               LoadFailed(
-                  message: 'Couldn’t load image',
-                  onRetry: () => _retry(image)),
+                  message: 'Couldn’t load image', onRetry: () => _retry(image)),
         ),
       );
     });
@@ -1165,6 +1163,9 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
             value: 'browser', icon: 'globe', label: 'Open in browser'),
         appMenuRow<String>(
             value: 'latest', icon: 'refresh', label: 'Latest version'),
+        if (kMobile)
+          appMenuRow<String>(
+              value: 'download', icon: 'download', label: 'Download'),
       ],
     );
     if (!mounted) return;
@@ -1173,6 +1174,8 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
         _openInBrowser();
       case 'latest':
         _load(latest: true);
+      case 'download':
+        _download();
     }
   }
 
@@ -1248,9 +1251,14 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
 
   Widget _mobileHeader() {
     final a = _artifact;
+    final v = _version;
+    final sub = [
+      if (a != null) _artifactKindLabel(a.kind),
+      if (v != null) 'v${v.n}',
+    ].join(' \u00b7 ');
     return Container(
-      color: AppColors.surface1,
-      padding: EdgeInsets.fromLTRB(S.s12, S.s6, S.s6, S.s4),
+      color: AppColors.bg,
+      padding: EdgeInsets.fromLTRB(S.s8, S.s6, S.s8, S.s4),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(
           width: 36,
@@ -1263,23 +1271,22 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
         ),
         Row(children: [
           RoundBtn(
-              icon: 'chevron-left',
+              icon: 'x',
               size: M.minTarget,
               iconSize: 20,
               tooltip: 'Close',
               onTap: widget.onClose),
-          SizedBox(width: S.s12),
           Expanded(
-            child: Text(a?.title ?? 'Artifact',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sans(17, weight: W.strong, color: AppColors.fg1)),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text(a?.title ?? 'Artifact',
+                  maxLines: 1,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(15, weight: W.label, color: AppColors.fg1)),
+              if (sub.isNotEmpty)
+                Text(sub, maxLines: 1, style: sans(12, color: AppColors.fg2)),
+            ]),
           ),
-          IconBtn('download',
-              size: M.minTarget,
-              iconSize: 19,
-              tooltip: 'Download',
-              onTap: _download),
           Builder(
             builder: (anchor) => IconBtn('more-horizontal',
                 size: M.minTarget,
@@ -1673,7 +1680,8 @@ class _WebPreviewState extends State<_WebPreview> {
       Positioned.fill(
           child: Listener(
               onPointerSignal: (e) {
-                if (e is PointerScrollEvent) _scrollPage(e.localPosition, e.scrollDelta);
+                if (e is PointerScrollEvent)
+                  _scrollPage(e.localPosition, e.scrollDelta);
               },
               onPointerPanZoomUpdate: (e) =>
                   _scrollPage(e.localPosition, -e.panDelta),
@@ -1951,7 +1959,7 @@ class _SessionDeliverablesState extends State<SessionDeliverables> {
   }
 }
 
-/// Phone sheet header: centred title with a Done pill.
+/// Phone sheet header: close, centred title, like the board's viewer sheets.
 class _SheetHeader extends StatelessWidget {
   const _SheetHeader({this.onDone});
 
@@ -1959,51 +1967,30 @@ class _SheetHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
         child: SizedBox(
-          height: 40,
+          height: 48,
           child: Row(children: [
-            const SizedBox(width: 72),
+            SizedBox(
+              width: 48,
+              child: onDone == null
+                  ? null
+                  : RoundBtn(
+                      key: const ValueKey('deliverables-done'),
+                      icon: 'x',
+                      size: 48,
+                      iconSize: 20,
+                      tooltip: 'Close',
+                      onTap: onDone),
+            ),
             Expanded(
               child: Text('Artifacts and files',
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style:
-                      sans(17, weight: FontWeight.w600, color: AppColors.fg1)),
+                  style: sans(15, weight: W.label, color: AppColors.fg1)),
             ),
-            SizedBox(
-              width: 72,
-              child: onDone == null
-                  ? null
-                  : Align(
-                      alignment: Alignment.centerRight,
-                      child: Semantics(
-                        button: true,
-                        child: TapDetector(
-                          key: const ValueKey('deliverables-done'),
-                          behavior: HitTestBehavior.opaque,
-                          onTap: onDone,
-                          child: Container(
-                            height: 36,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            decoration: BoxDecoration(
-                              color: AppColors.surface3,
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(color: AppColors.lineStrong),
-                            ),
-                            child: Center(
-                              widthFactor: 1,
-                              child: Text('Done',
-                                  style: sans(15,
-                                      weight: FontWeight.w500,
-                                      color: AppColors.fg1)),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-            ),
+            const SizedBox(width: 48),
           ]),
         ),
       );

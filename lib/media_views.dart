@@ -929,7 +929,7 @@ Future<void> showImageViewer(
   final paths = gallery != null && gallery.contains(path) ? gallery : [path];
   return Navigator.of(context, rootNavigator: true).push(PageRouteBuilder<void>(
     opaque: false,
-    barrierColor: Colors.black,
+    barrierColor: kMobile ? null : Colors.black,
     transitionDuration: Motion.fast,
     reverseTransitionDuration: Motion.quick,
     pageBuilder: (_, __, ___) => _ImageViewer(
@@ -961,6 +961,8 @@ class _ImageViewerState extends State<_ImageViewer>
   double get _dragY => _dragC.value;
   bool _chrome = true;
   bool _busy = false;
+  // Phone: opens as a half sheet, a swipe up takes it full screen.
+  bool _full = false;
 
   String get _path => widget.paths[_index];
 
@@ -1070,178 +1072,218 @@ class _ImageViewerState extends State<_ImageViewer>
     final fade = (1 - _dragY.abs() / (size.height * .5)).clamp(0.0, 1.0);
     final many = widget.paths.length > 1;
     final showChrome = _chrome && _dragY == 0;
-    return Scaffold(
-      backgroundColor: Colors.black.withValues(alpha: fade),
-      body: Stack(children: [
-        Positioned.fill(
-          child: Listener(
-            onPointerDown: (_) => _finger(1),
-            onPointerUp: (_) => _finger(-1),
-            onPointerCancel: (_) => _finger(-1),
-            child: GestureDetector(
-              onTap: kMobile
-                  ? () => setState(() => _chrome = !_chrome)
-                  : () => Navigator.of(context).pop(),
-              onVerticalDragStart: _locked ? null : (_) => _dragC.stop(),
-              onVerticalDragUpdate:
-                  _locked ? null : (d) => _dragC.value += d.delta.dy,
-              onVerticalDragEnd: _locked
-                  ? null
-                  : (d) {
-                      final v = d.primaryVelocity ?? 0;
-                      final dir = _dragY == 0 ? v.sign : _dragY.sign;
-                      if (dragDismisses(
-                          distance: _dragY.abs(),
-                          velocity: v * dir,
-                          distanceThreshold: 120,
-                          velocityThreshold: 900)) {
-                        HapticFeedback.lightImpact();
-                        Navigator.of(context).pop();
-                        springTo(_dragC, _dragY + dir * size.height * .5,
-                            v * dir > 0 ? v : 0);
-                      } else {
-                        springTo(_dragC, 0, v);
-                      }
-                    },
-              onVerticalDragCancel:
-                  _locked ? null : () => springTo(_dragC, 0, 0),
-              child: Transform.translate(
-                offset: Offset(0, _dragY),
-                child: PageView.builder(
-                  controller: _pages,
-                  itemCount: widget.paths.length,
-                  physics: _locked
-                      ? const NeverScrollableScrollPhysics()
-                      : const PageScrollPhysics(),
-                  onPageChanged: (i) {
-                    _zooms[_index]?.value = Matrix4.identity();
-                    setState(() => _index = i);
+    final stack = Stack(children: [
+      Positioned.fill(
+        child: Listener(
+          onPointerDown: (_) => _finger(1),
+          onPointerUp: (_) => _finger(-1),
+          onPointerCancel: (_) => _finger(-1),
+          child: GestureDetector(
+            onTap: kMobile
+                ? () => setState(() => _chrome = !_chrome)
+                : () => Navigator.of(context).pop(),
+            onVerticalDragStart: _locked ? null : (_) => _dragC.stop(),
+            onVerticalDragUpdate:
+                _locked ? null : (d) => _dragC.value += d.delta.dy,
+            onVerticalDragEnd: _locked
+                ? null
+                : (d) {
+                    final v = d.primaryVelocity ?? 0;
+                    final dir = _dragY == 0 ? v.sign : _dragY.sign;
+                    if (kMobile && !_full && _dragY <= 0 && v < -300) {
+                      setState(() => _full = true);
+                      springTo(_dragC, 0, 0);
+                    } else if (kMobile &&
+                        _full &&
+                        _dragY >= 0 &&
+                        v > 300 &&
+                        _dragY < 120) {
+                      setState(() => _full = false);
+                      springTo(_dragC, 0, 0);
+                    } else if (dragDismisses(
+                        distance: _dragY.abs(),
+                        velocity: v * dir,
+                        distanceThreshold: 120,
+                        velocityThreshold: 900)) {
+                      HapticFeedback.lightImpact();
+                      Navigator.of(context).pop();
+                      springTo(_dragC, _dragY + dir * size.height * .5,
+                          v * dir > 0 ? v : 0);
+                    } else {
+                      springTo(_dragC, 0, v);
+                    }
                   },
-                  itemBuilder: (_, i) => _page(i, size, dpr),
-                ),
+            onVerticalDragCancel: _locked ? null : () => springTo(_dragC, 0, 0),
+            child: Transform.translate(
+              offset: Offset(0, _dragY),
+              child: PageView.builder(
+                controller: _pages,
+                itemCount: widget.paths.length,
+                physics: _locked
+                    ? const NeverScrollableScrollPhysics()
+                    : const PageScrollPhysics(),
+                onPageChanged: (i) {
+                  _zooms[_index]?.value = Matrix4.identity();
+                  setState(() => _index = i);
+                },
+                itemBuilder: (_, i) => _page(i, size, dpr),
               ),
             ),
           ),
         ),
+      ),
+      Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: IgnorePointer(
+          ignoring: !showChrome,
+          child: AnimatedOpacity(
+            opacity: showChrome ? 1 : 0,
+            duration: Motion.quick,
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(S.s4, S.s4, S.s4, S.s8),
+                child: Row(children: [
+                  _bar('x', 'Close', () => Navigator.of(context).pop()),
+                  Expanded(
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Text(
+                          many
+                              ? 'Image ${_index + 1} of ${widget.paths.length}'
+                              : 'Image',
+                          style: sans(15,
+                              height: 20 / 15,
+                              weight: W.label,
+                              color: Colors.white)),
+                      Text(baseName(_path),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              sans(12, height: 16 / 12, color: Colors.white60)),
+                    ]),
+                  ),
+                  _bar('share', 'Share', _share),
+                  Builder(
+                      builder: (a) => _bar('more-horizontal', 'More', () async {
+                            final pick = await showAppMenu<String>(
+                              context,
+                              anchor: a,
+                              below: true,
+                              alignEnd: true,
+                              items: [
+                                appMenuItem(
+                                    value: 'save',
+                                    icon: 'download',
+                                    label: 'Save to device'),
+                                appMenuItem(
+                                    value: 'copy',
+                                    icon: 'copy',
+                                    label: 'Copy path'),
+                              ],
+                            );
+                            if (pick == 'save') _save();
+                            if (pick == 'copy') _copyPath();
+                          })),
+                ]),
+              ),
+            ),
+          ),
+        ),
+      ),
+      if (many)
         Positioned(
-          top: 0,
           left: 0,
           right: 0,
+          bottom: 0,
           child: IgnorePointer(
             ignoring: !showChrome,
             child: AnimatedOpacity(
               opacity: showChrome ? 1 : 0,
               duration: Motion.quick,
               child: SafeArea(
-                bottom: false,
+                top: false,
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(S.s4, S.s4, S.s4, S.s8),
-                  child: Row(children: [
-                    _bar('x', 'Close', () => Navigator.of(context).pop()),
-                    Expanded(
-                      child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Text(
-                            many
-                                ? 'Image ${_index + 1} of ${widget.paths.length}'
-                                : 'Image',
-                            style: sans(15,
-                                height: 20 / 15,
-                                weight: W.label,
-                                color: Colors.white)),
-                        Text(baseName(_path),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(12,
-                                height: 16 / 12, color: Colors.white60)),
-                      ]),
-                    ),
-                    _bar('share', 'Share', _share),
-                    Builder(
-                        builder: (a) => _bar('more-horizontal', 'More', () async {
-                              final pick = await showAppMenu<String>(
-                                context,
-                                anchor: a,
-                                below: true,
-                                alignEnd: true,
-                                items: [
-                                  appMenuItem(
-                                      value: 'save',
-                                      icon: 'download',
-                                      label: 'Save to device'),
-                                  appMenuItem(
-                                      value: 'copy',
-                                      icon: 'copy',
-                                      label: 'Copy path'),
-                                ],
-                              );
-                              if (pick == 'save') _save();
-                              if (pick == 'copy') _copyPath();
-                            })),
-                  ]),
-                ),
-              ),
-            ),
-          ),
-        ),
-        if (many)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: IgnorePointer(
-              ignoring: !showChrome,
-              child: AnimatedOpacity(
-                opacity: showChrome ? 1 : 0,
-                duration: Motion.quick,
-                child: SafeArea(
-                  top: false,
-                  child: Padding(
-                    padding: EdgeInsets.only(bottom: S.s12),
-                    child: SizedBox(
-                      height: 48,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          for (var i = 0; i < widget.paths.length; i++)
-                            GestureDetector(
-                              onTap: () => _pages.animateToPage(i,
-                                  duration: Motion.quick, curve: Curves.easeOut),
-                              child: Container(
-                                width: 44,
-                                height: 44,
-                                margin:
-                                    EdgeInsets.symmetric(horizontal: S.s4),
-                                decoration: BoxDecoration(
-                                  borderRadius:
-                                      BorderRadius.circular(R.of(8)),
-                                  border: Border.all(
-                                      color: i == _index
-                                          ? Colors.white
-                                          : Colors.transparent,
-                                      width: 2),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius:
-                                      BorderRadius.circular(R.of(6)),
-                                  child: Image(
-                                    image: ResizeImage.resizeIfNeeded(
-                                        120,
-                                        null,
-                                        widget.client
-                                            .imageProvider(widget.paths[i])),
-                                    fit: BoxFit.cover,
-                                  ),
+                  padding: EdgeInsets.only(bottom: S.s12),
+                  child: SizedBox(
+                    height: 48,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        for (var i = 0; i < widget.paths.length; i++)
+                          GestureDetector(
+                            onTap: () => _pages.animateToPage(i,
+                                duration: Motion.quick, curve: Curves.easeOut),
+                            child: Container(
+                              width: 44,
+                              height: 44,
+                              margin: EdgeInsets.symmetric(horizontal: S.s4),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(R.of(8)),
+                                border: Border.all(
+                                    color: i == _index
+                                        ? Colors.white
+                                        : Colors.transparent,
+                                    width: 2),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(R.of(6)),
+                                child: Image(
+                                  image: ResizeImage.resizeIfNeeded(
+                                      120,
+                                      null,
+                                      widget.client
+                                          .imageProvider(widget.paths[i])),
+                                  fit: BoxFit.cover,
                                 ),
                               ),
                             ),
-                        ],
-                      ),
+                          ),
+                      ],
                     ),
                   ),
                 ),
               ),
             ),
           ),
+        ),
+    ]);
+    if (!kMobile) {
+      return Scaffold(
+        backgroundColor: Colors.black.withValues(alpha: fade),
+        body: stack,
+      );
+    }
+    final top = MediaQuery.paddingOf(context).top;
+    return Scaffold(
+      backgroundColor: Colors.black.withValues(alpha: .55 * fade),
+      body: Stack(children: [
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => Navigator.of(context).pop(),
+          ),
+        ),
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: AnimatedContainer(
+            duration: Motion.fast,
+            curve: Curves.easeOutCubic,
+            height: _full ? size.height : size.height * .62 + top * 0,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(_full ? 0 : R.sheetTop)),
+            ),
+            child: MediaQuery.removePadding(
+              context: context,
+              removeTop: !_full,
+              child: stack,
+            ),
+          ),
+        ),
       ]),
     );
   }

@@ -26,6 +26,7 @@ import '../motion.dart';
 import '../page_stack.dart';
 import '../mochi.dart';
 import '../chat_scene.dart' show ChatScene;
+import '../quiet.dart' show QuietOfflineBanner;
 import 'mobile_home/quiet_home.dart';
 import 'mobile_home/quiet_lists.dart';
 import 'mobile_chrome.dart';
@@ -283,6 +284,11 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   @override
   void didUpdateWidget(covariant Sidebar oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.sessionsError == null && widget.sessions != null) {
+      final n = DateTime.now();
+      _lastSeen =
+          '${n.hour.toString().padLeft(2, '0')}:${n.minute.toString().padLeft(2, '0')}';
+    }
     if (kMobile) _loadHeroAgents();
     if (oldWidget.client != widget.client ||
         (widget.sessions ?? const <SessionInfo>[]).any((s) =>
@@ -361,6 +367,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   }
 
   final Set<String> _deleting = {};
+  String? _lastSeen;
 
   List<SessionInfo>? get _sessions => _deleting.isEmpty
       ? widget.sessions
@@ -574,6 +581,12 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           onSettings: () => widget.onMobileHome(MobileHome.settings),
           onSearch: search,
           onDecide: _decideHero,
+          offline: widget.sessionsError == null
+              ? null
+              : QuietOfflineBanner(
+                  machine: widget.active?.name ?? 'this machine',
+                  since: _lastSeen,
+                  onRetry: widget.onRefreshSessions),
         );
       case MobileHome.chats:
         return QuietSessionsScreen(
