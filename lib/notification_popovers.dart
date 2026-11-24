@@ -35,6 +35,10 @@ class _NotificationPopoversState extends State<NotificationPopovers> {
   // Slides over the header strip on phones so the 28px page title stays clear.
   static double get _anchorTop => kMobile ? S.s4 : 44 + S.s8;
 
+  // Phone toasts end left of the header's search and settings targets.
+  static double get _toastRight =>
+      kMobile ? S.s12 + 2 * kPhoneTarget + S.s8 : S.s12;
+
   Duration _life(Map<String, dynamic> p) {
     final base = kMobile ? 4 : 7;
     return Duration(seconds: needsYou(p) ? base * 3 : base);
@@ -239,7 +243,7 @@ class _NotificationPopoversState extends State<NotificationPopovers> {
         Positioned(
             top: _anchorTop,
             left: S.s12,
-            right: S.s12,
+            right: _toastRight,
             child: SafeArea(
                 child: Align(
               alignment: kMobile ? Alignment.topCenter : Alignment.topRight,
