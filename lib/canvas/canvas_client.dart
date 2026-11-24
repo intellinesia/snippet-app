@@ -52,7 +52,22 @@ class DaemonCanvasClient implements CanvasClient, CanvasCardClient {
   @override
   Future<CanvasLinkMeta> resolveLink(CanvasRef ref) async {
     try {
-      final json = await daemon.canvasLink(ref.format());
+      var target = ref;
+      if (target.frameId == null) {
+        final snap = CanvasSnapshot.fromJson(
+          await daemon.getCanvas(canvasId: ref.canvasId),
+        );
+        if (snap.frames.isEmpty) {
+          throw const CanvasUnavailableException('Canvas has no frames');
+        }
+        target = CanvasRef(
+          canvasId: ref.canvasId,
+          frameId: snap.frames.first.id,
+          elId: ref.elId,
+          rev: ref.rev,
+        );
+      }
+      final json = await daemon.canvasLink(target.format());
       final meta = CanvasLinkMeta.fromJson(json);
       if (meta.thumbUrl.isEmpty) {
         throw const CanvasUnavailableException('Missing thumbnail URL');
@@ -258,7 +273,7 @@ class DaemonCanvasClient implements CanvasClient, CanvasCardClient {
       }
       final comments = pins
           .where((p) =>
-              p.frameId == ref.frameId &&
+              (ref.frameId == null || p.frameId == ref.frameId) &&
               (ref.elId == null || p.elId == ref.elId))
           .length;
       return CanvasCardActivity(

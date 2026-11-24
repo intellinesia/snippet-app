@@ -15,17 +15,17 @@ final _standaloneCanvasLinkRe =
 String _unescapeLinkTitle(String raw) =>
     raw.trim().replaceAll(r'\[', '[').replaceAll(r'\]', ']');
 
-/// A parsed `canvas:<canvas_id>/<frame_id>[/<el_id>][@<rev>]` reference.
+/// A parsed `canvas:<canvas_id>[/<frame_id>[/<el_id>]][@<rev>]` reference.
 class CanvasRef {
   const CanvasRef({
     required this.canvasId,
-    required this.frameId,
+    this.frameId,
     this.elId,
     this.rev,
   });
 
   final String canvasId;
-  final String frameId;
+  final String? frameId;
   final String? elId;
   final int? rev;
 
@@ -61,18 +61,20 @@ class CanvasRef {
 /// Formats components into a canonical `canvas:` reference string.
 String formatCanvasRef({
   required String canvasId,
-  required String frameId,
+  String? frameId,
   String? elId,
   int? rev,
 }) {
-  final buf = StringBuffer('canvas:')
-    ..write(Uri.encodeComponent(canvasId))
-    ..write('/')
-    ..write(Uri.encodeComponent(frameId));
-  if (elId != null && elId.isNotEmpty) {
+  final buf = StringBuffer('canvas:')..write(Uri.encodeComponent(canvasId));
+  if (frameId != null && frameId.isNotEmpty) {
     buf
       ..write('/')
-      ..write(Uri.encodeComponent(elId));
+      ..write(Uri.encodeComponent(frameId));
+    if (elId != null && elId.isNotEmpty) {
+      buf
+        ..write('/')
+        ..write(Uri.encodeComponent(elId));
+    }
   }
   if (rev != null) {
     buf
@@ -82,7 +84,7 @@ String formatCanvasRef({
   return buf.toString();
 }
 
-/// Parses a `canvas:<canvas_id>/<frame_id>[/<el_id>][@<rev>]` href.
+/// Parses a `canvas:<canvas_id>[/<frame_id>[/<el_id>]][@<rev>]` href.
 /// Returns null if the href is not a valid `canvas:` reference.
 CanvasRef? parseCanvasRef(String? href) {
   if (href == null) return null;
@@ -103,7 +105,7 @@ CanvasRef? parseCanvasRef(String? href) {
   }
 
   final rawParts = pathPart.split('/');
-  if (rawParts.length < 2 || rawParts.length > 3) return null;
+  if (rawParts.isEmpty || rawParts.length > 3) return null;
 
   final parts = <String>[];
   for (final raw in rawParts) {
@@ -120,7 +122,7 @@ CanvasRef? parseCanvasRef(String? href) {
 
   return CanvasRef(
     canvasId: parts[0],
-    frameId: parts[1],
+    frameId: parts.length >= 2 ? parts[1] : null,
     elId: parts.length == 3 ? parts[2] : null,
     rev: rev,
   );
@@ -220,7 +222,7 @@ CanvasMarkdownSegment? _cardFor(String href, String? title, bool inline) {
   final ref = parseCanvasRef(href);
   if (ref == null) return null;
   return CanvasCardSegment(
-    title: title ?? ref.frameId,
+    title: title ?? ref.frameId ?? ref.canvasId,
     rawHref: href,
     ref: ref,
     inline: inline,

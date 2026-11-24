@@ -65,7 +65,8 @@ class _TestCanvasCardClient implements CanvasCardClient {
     if (unavailable) throw const CanvasUnavailableException();
     final preset = metaByRef[ref.format()];
     if (preset != null) {
-      final liveRev = ref.rev ?? _latestRevs[ref.frameId] ?? preset.rev;
+      final key = ref.frameId ?? preset.frameId;
+      final liveRev = ref.rev ?? _latestRevs[key] ?? preset.rev;
       return CanvasLinkMeta(
         canvasId: preset.canvasId,
         frameId: preset.frameId,
@@ -77,14 +78,15 @@ class _TestCanvasCardClient implements CanvasCardClient {
         height: preset.height ?? 240,
       );
     }
-    final rev = ref.rev ?? _latestRevs[ref.frameId] ?? 1;
+    final resolvedFrame = ref.frameId ?? 'first-frame';
+    final rev = ref.rev ?? _latestRevs[resolvedFrame] ?? 1;
     return CanvasLinkMeta(
       canvasId: ref.canvasId,
-      frameId: ref.frameId,
+      frameId: resolvedFrame,
       elId: ref.elId,
       rev: rev,
-      title: ref.frameId,
-      thumbUrl: '/canvas/frames/${ref.frameId}/thumb.png?rev=$rev',
+      title: ref.frameId ?? ref.canvasId,
+      thumbUrl: '/canvas/frames/$resolvedFrame/thumb.png?rev=$rev',
       width: 390,
       height: 240,
     );
@@ -158,12 +160,35 @@ void main() {
       );
     });
 
+    test('parses and formats canvas-only refs with and without rev', () {
+      final live = parseCanvasRef('canvas:x');
+      expect(live, isNotNull);
+      expect(live!.canvasId, 'x');
+      expect(live.frameId, isNull);
+      expect(live.elId, isNull);
+      expect(live.rev, isNull);
+      expect(live.isLive, isTrue);
+      expect(live.format(), 'canvas:x');
+
+      final pinned = parseCanvasRef('canvas:x@3');
+      expect(pinned, isNotNull);
+      expect(pinned!.canvasId, 'x');
+      expect(pinned.frameId, isNull);
+      expect(pinned.elId, isNull);
+      expect(pinned.rev, 3);
+      expect(pinned.isLive, isFalse);
+      expect(pinned.format(), 'canvas:x@3');
+      expect(formatCanvasRef(canvasId: 'x', rev: 3), 'canvas:x@3');
+    });
+
     test('rejects malformed canvas refs', () {
       expect(parseCanvasRef(null), isNull);
       expect(parseCanvasRef(''), isNull);
       expect(parseCanvasRef('artifact:a/b'), isNull);
       expect(parseCanvasRef('canvas:'), isNull);
-      expect(parseCanvasRef('canvas:only-canvas'), isNull);
+      expect(parseCanvasRef('canvas:@3'), isNull);
+      expect(parseCanvasRef('canvas:x/'), isNull);
+      expect(parseCanvasRef('canvas:/f'), isNull);
       expect(parseCanvasRef('canvas:c/f/'), isNull);
       expect(parseCanvasRef('canvas:c/f/el/extra'), isNull);
       expect(parseCanvasRef('canvas:c/f@'), isNull);
@@ -506,5 +531,56 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(find.text('Frame unavailable'), findsOneWidget);
+  });
+
+  testWidgets('canvas-only links split and render preview cards',
+      (tester) async {
+    final bare = splitCanvasMarkdown('See canvas:x@3 now');
+    final bareCard = bare.whereType<CanvasCardSegment>().single;
+    expect(bareCard.ref.canvasId, 'x');
+    expect(bareCard.ref.frameId, isNull);
+    expect(bareCard.ref.rev, 3);
+
+    final standalone = splitCanvasMarkdown('canvas:x');
+    final standaloneCard = standalone.whereType<CanvasCardSegment>().single;
+    expect(standaloneCard.ref.canvasId, 'x');
+    expect(standaloneCard.ref.frameId, isNull);
+    expect(standaloneCard.title, 'x');
+
+    final client = _TestCanvasCardClient(
+      metaByRef: {
+        'canvas:x': const CanvasLinkMeta(
+          canvasId: 'x',
+          frameId: 'first-frame',
+          rev: 4,
+          title: 'Pricing board',
+          thumbUrl: '/canvas/frames/first-frame/thumb.png',
+          width: 390,
+          height: 240,
+        ),
+      },
+    );
+    addTearDown(client.dispose);
+
+    final daemon = DaemonClient('https://daemon.invalid', 'test');
+    await tester.pumpWidget(MaterialApp(
+      theme: buildAppTheme(),
+      home: Scaffold(
+        body: CanvasCardClientScope(
+          client: client,
+          child: ChatMessageBody(
+            client: daemon,
+            body: '[Pricing board](canvas:x)',
+            mine: false,
+          ),
+        ),
+      ),
+    ));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byType(CanvasLinkCard), findsOneWidget);
+    expect(find.text('Pricing board'), findsOneWidget);
+    expect(find.text('Canvas · rev 4'), findsOneWidget);
   });
 }

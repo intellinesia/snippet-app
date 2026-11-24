@@ -343,11 +343,12 @@ class CanvasRevEvent {
   final String label;
   final String? canvasId;
 
-  bool affectsFrame(String frameId, {String? canvasId}) {
+  bool affectsFrame(String? frameId, {String? canvasId}) {
     final mine = this.canvasId;
     if (mine != null && mine.isNotEmpty && canvasId != null && canvasId.isNotEmpty && mine != canvasId) {
       return false;
     }
+    if (frameId == null || frameId.isEmpty) return true;
     return frameIds.contains(frameId);
   }
 

@@ -193,11 +193,17 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
       final meta = await client.resolveLink(widget.canvasRef);
       if (!mounted || seq != _loadSeq) return;
       final elId = widget.canvasRef.elId ?? meta.elId;
+      final frameId = meta.frameId.isNotEmpty
+          ? meta.frameId
+          : widget.canvasRef.frameId;
       CanvasLayout? layout;
-      if (elId != null && elId.isNotEmpty) {
+      if (elId != null &&
+          elId.isNotEmpty &&
+          frameId != null &&
+          frameId.isNotEmpty) {
         try {
           layout = await client.fetchCardLayout(
-            meta.frameId.isNotEmpty ? meta.frameId : widget.canvasRef.frameId,
+            frameId,
             canvasId: meta.canvasId.isNotEmpty
                 ? meta.canvasId
                 : widget.canvasRef.canvasId,
@@ -237,7 +243,7 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
     if (metaTitle.isNotEmpty) return metaTitle;
     final linkTitle = widget.title.trim();
     if (linkTitle.isNotEmpty) return linkTitle;
-    return widget.canvasRef.frameId;
+    return widget.canvasRef.frameId ?? widget.canvasRef.canvasId;
   }
 
   int? get _effectiveRev => widget.canvasRef.rev ?? _liveRev ?? _meta?.rev;
@@ -263,9 +269,12 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
       canvasId: meta?.canvasId.isNotEmpty == true
           ? meta!.canvasId
           : widget.canvasRef.canvasId,
-      frameId: (meta?.frameId.isNotEmpty ?? false)
-          ? meta!.frameId
-          : widget.canvasRef.frameId,
+      // Canvas-only links open fitted rather than zooming into the preview frame.
+      frameId: widget.canvasRef.frameId == null
+          ? null
+          : ((meta?.frameId.isNotEmpty ?? false)
+              ? meta!.frameId
+              : widget.canvasRef.frameId),
       elId: widget.canvasRef.elId ?? meta?.elId,
       rev: widget.canvasRef.rev ?? meta?.rev,
     );
