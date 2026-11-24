@@ -957,8 +957,6 @@ class _ImageViewerState extends State<_ImageViewer>
   double get _dragY => _dragC.value;
   bool _chrome = true;
   bool _busy = false;
-  // Phone: opens as a half sheet, a swipe up takes it full screen.
-  bool _full = false;
 
   String get _path => widget.paths[_index];
 
@@ -1038,11 +1036,20 @@ class _ImageViewerState extends State<_ImageViewer>
         if (_zoomed != _wasZoomed) setState(() => _wasZoomed = _zoomed);
       },
       onInteractionEnd: (_) => setState(() => _wasZoomed = _zoomed),
-      // At rest the image stays clear of the status and navigation bars.
+      // At rest the image sits between the top bar and the home indicator.
       child: Padding(
-        padding: MediaQuery.viewPaddingOf(context),
+        padding: kMobile
+            ? EdgeInsets.fromLTRB(
+                0,
+                MediaQuery.viewPaddingOf(context).top + 56,
+                0,
+                MediaQuery.viewPaddingOf(context).bottom +
+                    (widget.paths.length > 1 ? 72 : 16))
+            : MediaQuery.viewPaddingOf(context),
         child: Center(
-          child: Image(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(kMobile ? R.of(10) : 0),
+            child: Image(
             image: ResizeImage.resizeIfNeeded(
               (size.width * dpr).round().clamp(720, 2400),
               null,
@@ -1052,13 +1059,25 @@ class _ImageViewerState extends State<_ImageViewer>
             // The client fetch reports no progress, so wait on the first frame.
             frameBuilder: (_, child, frame, sync) => sync || frame != null
                 ? child
-                : const Center(child: Spinner(size: 20, color: Colors.white70)),
+                : Center(
+                    child: Text('Loading image',
+                        style: sans(13, color: _ink.withValues(alpha: 0.7)))),
             errorBuilder: (_, __, ___) => Text("Can't load this image",
-                style: sans(13, color: Colors.white70)),
+                style: sans(13, color: _ink.withValues(alpha: 0.7))),
+            ),
           ),
         ),
       ),
     );
+  }
+
+  /// V1: the viewer keeps the app ground on the phone, so nothing flashes.
+  Color get _ink => kMobile ? AppColors.fg1 : Colors.white;
+
+  void _toggleZoom() {
+    final z = _zoomFor(_index);
+    z.value = _zoomed ? Matrix4.identity() : (Matrix4.identity()..scale(2.0));
+    setState(() => _wasZoomed = _zoomed);
   }
 
   @override
@@ -1078,6 +1097,7 @@ class _ImageViewerState extends State<_ImageViewer>
             onTap: kMobile
                 ? () => setState(() => _chrome = !_chrome)
                 : () => Navigator.of(context).pop(),
+            onDoubleTap: kMobile ? _toggleZoom : null,
             onVerticalDragStart: _locked ? null : (_) => _dragC.stop(),
             onVerticalDragUpdate:
                 _locked ? null : (d) => _dragC.value += d.delta.dy,
@@ -1086,20 +1106,7 @@ class _ImageViewerState extends State<_ImageViewer>
                 : (d) {
                     final v = d.primaryVelocity ?? 0;
                     final dir = _dragY == 0 ? v.sign : _dragY.sign;
-                    if (kMobile &&
-                        !_full &&
-                        _dragY <= 0 &&
-                        (v < -300 || _dragY < -60)) {
-                      setState(() => _full = true);
-                      springTo(_dragC, 0, 0);
-                    } else if (kMobile &&
-                        _full &&
-                        _dragY >= 0 &&
-                        (v > 300 || _dragY > 60) &&
-                        _dragY < 160) {
-                      setState(() => _full = false);
-                      springTo(_dragC, 0, 0);
-                    } else if (dragDismisses(
+                    if (dragDismisses(
                         distance: _dragY.abs(),
                         velocity: v * dir,
                         distanceThreshold: 120,
@@ -1147,21 +1154,17 @@ class _ImageViewerState extends State<_ImageViewer>
                 child: Row(children: [
                   _bar('x', 'Close', () => Navigator.of(context).pop()),
                   Expanded(
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      Text(
-                          many
-                              ? 'Image ${_index + 1} of ${widget.paths.length}'
-                              : 'Image',
+                    child: Semantics(
+                      header: true,
+                      child: Text(baseName(_path),
+                          maxLines: 1,
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
                           style: sans(15,
                               height: 20 / 15,
                               weight: W.label,
-                              color: Colors.white)),
-                      Text(baseName(_path),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style:
-                              sans(12, height: 16 / 12, color: Colors.white60)),
-                    ]),
+                              color: _ink)),
+                    ),
                   ),
                   _bar('share', 'Share', _share),
                   Builder(
@@ -1191,20 +1194,6 @@ class _ImageViewerState extends State<_ImageViewer>
           ),
         ),
       ),
-      if (kMobile && !_full)
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: many ? 80 : 24,
-          child: IgnorePointer(
-            child: Text(
-                many
-                    ? 'Swipe for the next item; drag up for full screen.'
-                    : 'Drag up for full screen.',
-                textAlign: TextAlign.center,
-                style: sans(13, color: Colors.white60)),
-          ),
-        ),
       if (many)
         Positioned(
           left: 0,
@@ -1236,7 +1225,7 @@ class _ImageViewerState extends State<_ImageViewer>
                                 borderRadius: BorderRadius.circular(R.of(8)),
                                 border: Border.all(
                                     color: i == _index
-                                        ? Colors.white
+                                        ? _ink
                                         : Colors.transparent,
                                     width: 2),
                               ),
@@ -1268,36 +1257,14 @@ class _ImageViewerState extends State<_ImageViewer>
         body: stack,
       );
     }
-    final top = MediaQuery.paddingOf(context).top;
+    // Full screen straight away on the app ground (V1); the gesture hint
+    // is spoken, never printed.
     return Scaffold(
-      backgroundColor: Colors.black.withValues(alpha: .55 * fade),
-      body: Stack(children: [
-        Positioned.fill(
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => Navigator.of(context).pop(),
-          ),
-        ),
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: AnimatedContainer(
-            duration: Motion.fast,
-            curve: Curves.easeOutCubic,
-            height: _full ? size.height : size.height * .62 + top * 0,
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              color: Colors.black,
-              borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(_full ? 0 : R.sheetTop)),
-            ),
-            child: MediaQuery.removePadding(
-              context: context,
-              removeTop: !_full,
-              child: stack,
-            ),
-          ),
-        ),
-      ]),
+      backgroundColor: AppColors.bg.withValues(alpha: fade),
+      body: Semantics(
+        hint: 'Pinch or double-tap to zoom, swipe down to close',
+        child: stack,
+      ),
     );
   }
 
@@ -1311,7 +1278,7 @@ class _ImageViewerState extends State<_ImageViewer>
               width: 48,
               height: 48,
               child:
-                  Center(child: AppIcon(icon, size: 22, color: Colors.white))),
+                  Center(child: AppIcon(icon, size: 22, color: _ink))),
         ),
       );
 }
