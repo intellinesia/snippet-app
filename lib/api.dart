@@ -2520,38 +2520,81 @@ class DaemonClient {
   }
 
   /// Canvas endpoints (`/canvas`, thumbnails, layout rects, hit, pins, ops, revert).
-  Future<Map<String, dynamic>> getCanvas() async {
-    final r = await _get(_uri('/canvas'));
+  /// Every call takes an optional [canvasId]; without it the daemon uses the
+  /// workspace canvas.
+  static Map<String, String>? _canvasQuery(String? canvasId,
+      [Map<String, String> extra = const {}]) {
+    final q = <String, String>{
+      if (canvasId != null && canvasId.isNotEmpty) 'canvas_id': canvasId,
+      ...extra,
+    };
+    return q.isEmpty ? null : q;
+  }
+
+  /// GET /canvases: every canvas on this daemon.
+  Future<List<Map<String, dynamic>>> getCanvases() async {
+    final r = await _get(_uri('/canvases'));
+    if (r.statusCode != 200) {
+      throw CanvasHttpException(r.statusCode, _err('list canvases', r));
+    }
+    final d = jsonDecode(r.body);
+    final list = d is Map ? d['canvases'] : d;
+    return [
+      if (list is List)
+        for (final e in list)
+          if (e is Map) e.cast<String, dynamic>(),
+    ];
+  }
+
+  /// POST /canvases {title}: creates a canvas, returns `{canvas_id, title}`.
+  Future<Map<String, dynamic>> postCanvas(String title) async {
+    final r = await _post(
+      _uri('/canvases'),
+      headers: _json,
+      body: jsonEncode({'title': title}),
+    );
+    if (r.statusCode != 200 && r.statusCode != 201) {
+      throw CanvasHttpException(r.statusCode, _err('create canvas', r));
+    }
+    final d = jsonDecode(r.body);
+    return d is Map ? d.cast<String, dynamic>() : const <String, dynamic>{};
+  }
+
+  Future<Map<String, dynamic>> getCanvas({String? canvasId}) async {
+    final r = await _get(_uri('/canvas', _canvasQuery(canvasId)));
     if (r.statusCode != 200) throw _err('load canvas', r);
     final d = jsonDecode(r.body);
     return d is Map ? d.cast<String, dynamic>() : const <String, dynamic>{};
   }
 
-  Uri canvasThumbUri(String frameId, double scale, {int? rev}) => _uri(
+  Uri canvasThumbUri(String frameId, double scale,
+          {int? rev, String? canvasId}) =>
+      _uri(
         '/canvas/frames/${Uri.encodeComponent(frameId)}/thumb.png',
-        {
+        _canvasQuery(canvasId, {
           'scale': scale.toString(),
           if (rev != null) 'rev': '$rev',
-        },
+        }),
       );
 
   Future<Uint8List> getCanvasThumbPng(String frameId, double scale,
-          {int? rev}) =>
-      _imageBytes(canvasThumbUri(frameId, scale, rev: rev));
+          {int? rev, String? canvasId}) =>
+      _imageBytes(canvasThumbUri(frameId, scale, rev: rev, canvasId: canvasId));
 
-  Future<Object?> getCanvasLayout(String frameId, {int? rev}) async {
+  Future<Object?> getCanvasLayout(String frameId,
+      {int? rev, String? canvasId}) async {
     final r = await _get(_uri(
       '/canvas/frames/${Uri.encodeComponent(frameId)}/layout.json',
-      rev != null ? {'rev': '$rev'} : null,
+      _canvasQuery(canvasId, {if (rev != null) 'rev': '$rev'}),
     ));
     if (r.statusCode != 200) throw _err('load canvas layout', r);
     return jsonDecode(r.body);
   }
 
-  Future<Map<String, dynamic>> postCanvasHit(
-      String frameId, double x, double y) async {
+  Future<Map<String, dynamic>> postCanvasHit(String frameId, double x, double y,
+      {String? canvasId}) async {
     final r = await _post(
-      _uri('/canvas/hit'),
+      _uri('/canvas/hit', _canvasQuery(canvasId)),
       headers: _json,
       body: jsonEncode({'frame_id': frameId, 'x': x, 'y': y}),
     );
@@ -2560,15 +2603,16 @@ class DaemonClient {
     return d is Map ? d.cast<String, dynamic>() : const <String, dynamic>{};
   }
 
-  Future<Object?> getCanvasPins() async {
-    final r = await _get(_uri('/canvas/pins'));
+  Future<Object?> getCanvasPins({String? canvasId}) async {
+    final r = await _get(_uri('/canvas/pins', _canvasQuery(canvasId)));
     if (r.statusCode != 200) throw _err('load canvas pins', r);
     return jsonDecode(r.body);
   }
 
-  Future<Map<String, dynamic>> postCanvasPin(Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> postCanvasPin(Map<String, dynamic> body,
+      {String? canvasId}) async {
     final r = await _post(
-      _uri('/canvas/pins'),
+      _uri('/canvas/pins', _canvasQuery(canvasId)),
       headers: _json,
       body: jsonEncode(body),
     );
@@ -2580,9 +2624,10 @@ class DaemonClient {
   }
 
   Future<Map<String, dynamic>> patchCanvasPin(
-      String id, Map<String, dynamic> body) async {
+      String id, Map<String, dynamic> body,
+      {String? canvasId}) async {
     final r = await _patch(
-      _uri('/canvas/pins/${Uri.encodeComponent(id)}'),
+      _uri('/canvas/pins/${Uri.encodeComponent(id)}', _canvasQuery(canvasId)),
       headers: _json,
       body: jsonEncode(body),
     );
@@ -2591,15 +2636,17 @@ class DaemonClient {
     return d is Map ? d.cast<String, dynamic>() : const <String, dynamic>{};
   }
 
-  Future<Object?> getCanvasOps({int since = 0}) async {
-    final r = await _get(_uri('/canvas/ops', {'since': '$since'}));
+  Future<Object?> getCanvasOps({int since = 0, String? canvasId}) async {
+    final r = await _get(
+        _uri('/canvas/ops', _canvasQuery(canvasId, {'since': '$since'})));
     if (r.statusCode != 200) throw _err('load canvas ops', r);
     return jsonDecode(r.body);
   }
 
-  Future<Map<String, dynamic>> postCanvasRevert(String batchId) async {
+  Future<Map<String, dynamic>> postCanvasRevert(String batchId,
+      {String? canvasId}) async {
     final r = await _post(
-      _uri('/canvas/revert'),
+      _uri('/canvas/revert', _canvasQuery(canvasId)),
       headers: _json,
       body: jsonEncode({'batch_id': batchId}),
     );

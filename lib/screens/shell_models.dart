@@ -464,6 +464,7 @@ class RightTab {
   String get icon => request != null
       ? switch (request!.purpose) {
           ShellPanelPurpose.deliverables => 'image',
+          ShellPanelPurpose.canvas => 'grid',
           ShellPanelPurpose.memory => 'book-marked',
           ShellPanelPurpose.pullRequests => 'pull-request',
           ShellPanelPurpose.recurring ||

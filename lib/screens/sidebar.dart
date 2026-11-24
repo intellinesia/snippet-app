@@ -40,7 +40,7 @@ import 'mobile_chrome.dart';
 import 'mobile_session_home.dart';
 import 'phone_hero.dart';
 import '../session_quick_send.dart';
-import '../canvas/canvas_nav.dart' show openCanvas;
+import '../canvas/canvas_nav.dart' show openCanvasList;
 import 'pull_requests.dart' show openPullRequest;
 export 'sidebar_mobile.dart';
 export 'sidebar_tiles.dart' show SidebarBrand;
@@ -609,7 +609,7 @@ child: PhoneAgentPage(
           onOpenLead: widget.onOpenLead,
           onAllAgents: () => widget.onMobileHome(MobileHome.agents),
           onCanvas:
-              widget.client == null ? null : () => openCanvas(context),
+              widget.client == null ? null : () => openCanvasList(context),
           onProfile: (a) => showAgentProfileSettings(context,
               client: client,
               agent: a,
@@ -1579,7 +1579,7 @@ child: PhoneAgentPage(
             label: 'Canvas',
             icon: 'grid',
             selected: false,
-            onTap: () => openCanvas(context),
+            onTap: () => openCanvasList(context),
           ),
         ]),
       );

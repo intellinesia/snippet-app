@@ -100,7 +100,7 @@ extension _DesktopShellMobileExt on _DesktopShellState {
           case MobileMenuPick.tasks:
             _goMobileHome(MobileHome.tasks);
           case MobileMenuPick.canvas:
-            openCanvas(context);
+            openCanvasList(context);
           case MobileMenuPick.usage:
             _goMobileHome(MobileHome.settings, section: SettingsPage.usage);
           case MobileMenuPick.machines:

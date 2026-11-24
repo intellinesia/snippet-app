@@ -36,6 +36,8 @@ class CanvasScreen extends StatefulWidget {
     this.initialFrameId,
     this.initialElId,
     this.initialRev,
+    this.canvasId,
+    this.onClose,
   });
 
   /// Explicit client override (useful in tests).
@@ -47,6 +49,12 @@ class CanvasScreen extends StatefulWidget {
   final String? initialFrameId;
   final String? initialElId;
   final int? initialRev;
+
+  /// Canvas to open; null opens the workspace canvas.
+  final String? canvasId;
+
+  /// Set when hosted as a shell tab: closes the tab instead of popping a route.
+  final VoidCallback? onClose;
 
   @override
   State<CanvasScreen> createState() => _CanvasScreenState();
@@ -137,7 +145,7 @@ class _CanvasScreenState extends State<CanvasScreen>
     if (widget.client != null) {
       _attachClient(widget.client!, owns: false);
     } else if (widget.daemonClient != null) {
-      _attachClient(DaemonCanvasClient(widget.daemonClient!), owns: true);
+      _attachClient(DaemonCanvasClient(widget.daemonClient!, canvasId: widget.canvasId), owns: true);
     } else {
       _loading = false;
       _error = 'Connect to a daemon to view Canvas.';
@@ -168,7 +176,8 @@ class _CanvasScreenState extends State<CanvasScreen>
         DaemonScope.maybeOf(context) ??
         DaemonScope.current;
     if (daemon == null) return false;
-    _attachClient(DaemonCanvasClient(daemon), owns: true);
+    _attachClient(DaemonCanvasClient(daemon, canvasId: widget.canvasId),
+        owns: true);
     return true;
   }
 
@@ -327,6 +336,8 @@ class _CanvasScreenState extends State<CanvasScreen>
   }
 
   void _onRevEvent(CanvasRevEvent event) {
+    final cid = widget.canvasId;
+    if (cid != null && event.canvasId != null && event.canvasId != cid) return;
     if (!(_wasTickerEnabled && _appResumed)) {
       _staleWhileHidden = true;
       _pendingInvalidations.addAll(event.frameIds);
@@ -1518,7 +1529,7 @@ class _CanvasScreenState extends State<CanvasScreen>
               _panelMode = _SidePanelMode.none;
               _pendingPin = null;
             });
-          } else {
+          } else if (widget.onClose == null) {
             Navigator.of(context).maybePop();
           }
         },
@@ -1828,7 +1839,7 @@ class _CanvasScreenState extends State<CanvasScreen>
         mainAxisAlignment:
             isPhone ? MainAxisAlignment.spaceEvenly : MainAxisAlignment.start,
         children: [
-          if (!isPhone) ...[
+          if (!isPhone && widget.onClose == null) ...[
             _ToolbarButton(
               icon: 'arrow-left',
               label: 'Back',

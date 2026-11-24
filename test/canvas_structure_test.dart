@@ -105,4 +105,22 @@ void main() {
       expect(canvasStepsTouching(ops, 'home', 1).map((b) => b.rev), [3]);
     });
   });
+
+  group('canvas list', () {
+    test('parses summaries with list or count frames and falls back to id', () {
+      final a = CanvasSummary.fromJson({
+        'canvas_id': 'c1',
+        'title': 'Home redesign',
+        'frames': 24,
+        'rev': 48,
+        'updated_at': 1795506366,
+      });
+      expect(a.displayTitle, 'Home redesign');
+      expect(a.frames, 24);
+      expect(a.updatedAt, isNotNull);
+      final b = CanvasSummary.fromJson({'canvas_id': 'c2', 'frames': [1, 2]});
+      expect(b.displayTitle, 'c2');
+      expect(b.frames, 2);
+    });
+  });
 }

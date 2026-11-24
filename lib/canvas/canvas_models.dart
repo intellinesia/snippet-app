@@ -488,3 +488,38 @@ String formatCanvasRelativeTime(DateTime ts) {
   if (diff.inHours < 24) return '${diff.inHours}h ago';
   return '${diff.inDays}d ago';
 }
+
+/// One row of `GET /canvases`.
+class CanvasSummary {
+  const CanvasSummary({
+    required this.id,
+    required this.title,
+    this.frames = 0,
+    this.rev = 0,
+    this.updatedAt,
+  });
+
+  final String id;
+  final String title;
+  final int frames;
+  final int rev;
+  final DateTime? updatedAt;
+
+  /// Name shown to people: the title, else a readable form of the id.
+  String get displayTitle => title.trim().isNotEmpty ? title.trim() : id;
+
+  factory CanvasSummary.fromJson(Map<String, dynamic> j) {
+    final rawFrames = j['frames'];
+    return CanvasSummary(
+      id: j['canvas_id']?.toString() ?? j['id']?.toString() ?? '',
+      title: j['title']?.toString() ?? '',
+      frames: rawFrames is num
+          ? rawFrames.toInt()
+          : rawFrames is List
+              ? rawFrames.length
+              : 0,
+      rev: (j['rev'] as num?)?.toInt() ?? 0,
+      updatedAt: _parseTimestamp(j['updated_at'] ?? j['updated_ts']),
+    );
+  }
+}

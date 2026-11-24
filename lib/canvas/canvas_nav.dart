@@ -1,23 +1,77 @@
 import 'package:flutter/material.dart';
 
 import '../media_views.dart' show DaemonScope;
+import '../panel.dart';
+import '../platform.dart';
+import 'canvas_list_screen.dart';
 import 'canvas_screen.dart';
 
-/// Opens the in-app Canvas screen, optionally focusing a frame, element, and revision.
+bool _inShell(BuildContext c) => !kMobile && ShellPanelScope.maybeOf(c) != null;
+
+/// Opens a canvas: a tab in the desktop shell, a full page on phone. Without
+/// [canvasId] it opens the workspace canvas, optionally focusing a frame,
+/// element and revision.
 void openCanvas(
   BuildContext c, {
+  String? canvasId,
+  String? title,
   String? frameId,
   String? elId,
   int? rev,
 }) {
   final daemon = DaemonScope.maybeOf(c) ?? DaemonScope.current;
-  Navigator.of(c).push<void>(
-    MaterialPageRoute<void>(
-      builder: (_) => CanvasScreen(
+  Widget screen(VoidCallback? close) => CanvasScreen(
         daemonClient: daemon,
+        canvasId: canvasId,
         initialFrameId: frameId,
         initialElId: elId,
         initialRev: rev,
+        onClose: close,
+      );
+  if (_inShell(c)) {
+    presentScreen<void>(
+      c,
+      style: PanelStyle.drawer,
+      purpose: ShellPanelPurpose.canvas,
+      panelId: canvasId ?? 'workspace',
+      title: title,
+      builder: (_, close) => screen(close),
+    );
+    return;
+  }
+  Navigator.of(c).push<void>(
+    MaterialPageRoute<void>(builder: (_) => screen(null)),
+  );
+}
+
+/// Opens the list of canvases with a way to create one.
+void openCanvasList(BuildContext c) {
+  final daemon = DaemonScope.maybeOf(c) ?? DaemonScope.current;
+  if (daemon == null) {
+    openCanvas(c);
+    return;
+  }
+  if (_inShell(c)) {
+    presentScreen<void>(
+      c,
+      style: PanelStyle.drawer,
+      purpose: ShellPanelPurpose.canvas,
+      panelId: 'list',
+      title: 'Canvases',
+      builder: (ctx, _) => CanvasListScreen(
+        client: daemon,
+        onOpen: (s) => openCanvas(ctx, canvasId: s.id, title: s.displayTitle),
+        onOpenWorkspace: () => openCanvas(ctx),
+      ),
+    );
+    return;
+  }
+  Navigator.of(c).push<void>(
+    MaterialPageRoute<void>(
+      builder: (ctx) => CanvasListScreen(
+        client: daemon,
+        onOpen: (s) => openCanvas(ctx, canvasId: s.id, title: s.displayTitle),
+        onOpenWorkspace: () => openCanvas(ctx),
       ),
     ),
   );

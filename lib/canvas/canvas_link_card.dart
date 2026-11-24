@@ -259,6 +259,9 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
     final meta = _meta;
     openCanvas(
       context,
+      canvasId: meta?.canvasId.isNotEmpty == true
+          ? meta!.canvasId
+          : widget.canvasRef.canvasId,
       frameId: (meta?.frameId.isNotEmpty ?? false)
           ? meta!.frameId
           : widget.canvasRef.frameId,

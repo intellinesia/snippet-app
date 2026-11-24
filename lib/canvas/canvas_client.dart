@@ -35,9 +35,12 @@ abstract class CanvasClient {
 
 /// Real canvas client backed by [DaemonClient] HTTP endpoints and `/events` WS.
 class DaemonCanvasClient implements CanvasClient, CanvasCardClient {
-  DaemonCanvasClient(this.daemon);
+  DaemonCanvasClient(this.daemon, {this.canvasId});
 
   final DaemonClient daemon;
+
+  /// Canvas this client reads and writes; null means the workspace canvas.
+  final String? canvasId;
 
   static final Expando<DaemonCanvasClient> _cache =
       Expando<DaemonCanvasClient>('DaemonCanvasClient');
@@ -114,19 +117,19 @@ class DaemonCanvasClient implements CanvasClient, CanvasCardClient {
 
   @override
   Future<CanvasSnapshot> fetchCanvas() async {
-    final json = await daemon.getCanvas();
+    final json = await daemon.getCanvas(canvasId: canvasId);
     return CanvasSnapshot.fromJson(json);
   }
 
   @override
   Future<Uint8List> fetchThumbPng(String frameId, double scale,
           {int? rev}) =>
-      daemon.getCanvasThumbPng(frameId, scale, rev: rev);
+      daemon.getCanvasThumbPng(frameId, scale, rev: rev, canvasId: canvasId);
 
   @override
   Future<List<CanvasElementRect>> fetchLayout(String frameId,
       {int? rev}) async {
-    final raw = await daemon.getCanvasLayout(frameId, rev: rev);
+    final raw = await daemon.getCanvasLayout(frameId, rev: rev, canvasId: canvasId);
     return parseLayoutRects(raw);
   }
 
@@ -179,14 +182,14 @@ class DaemonCanvasClient implements CanvasClient, CanvasCardClient {
 
   @override
   Future<String?> hitTestRemote(String frameId, double x, double y) async {
-    final json = await daemon.postCanvasHit(frameId, x, y);
+    final json = await daemon.postCanvasHit(frameId, x, y, canvasId: canvasId);
     final id = json['el_id']?.toString();
     return (id == null || id.isEmpty) ? null : id;
   }
 
   @override
   Future<List<CanvasPin>> fetchPins() async {
-    final raw = await daemon.getCanvasPins();
+    final raw = await daemon.getCanvasPins(canvasId: canvasId);
     final list = _extractList(raw, const ['pins']);
     return [
       for (final item in list)
@@ -208,7 +211,7 @@ class DaemonCanvasClient implements CanvasClient, CanvasCardClient {
       'dx': dx,
       'dy': dy,
       'text': text,
-    });
+    }, canvasId: canvasId);
     final payload = json['pin'] is Map
         ? (json['pin'] as Map).cast<String, dynamic>()
         : json;
@@ -221,7 +224,7 @@ class DaemonCanvasClient implements CanvasClient, CanvasCardClient {
     final json = await daemon.patchCanvasPin(pinId, {
       if (status != null) 'status': status,
       if (reply != null) 'reply': reply,
-    });
+    }, canvasId: canvasId);
     final payload = json['pin'] is Map
         ? (json['pin'] as Map).cast<String, dynamic>()
         : json;
@@ -230,7 +233,7 @@ class DaemonCanvasClient implements CanvasClient, CanvasCardClient {
 
   @override
   Future<List<CanvasOpBatch>> fetchOps({int since = 0}) async {
-    final raw = await daemon.getCanvasOps(since: since);
+    final raw = await daemon.getCanvasOps(since: since, canvasId: canvasId);
     final list = _extractList(raw, const ['batches', 'ops']);
     return [
       for (final item in list)
@@ -242,9 +245,10 @@ class DaemonCanvasClient implements CanvasClient, CanvasCardClient {
   @override
   Future<CanvasCardActivity?> fetchCardActivity(CanvasRef ref, int rev) async {
     try {
+      final scoped = DaemonCanvasClient(daemon, canvasId: ref.canvasId);
       final results = await Future.wait([
-        fetchOps(since: rev > 0 ? rev - 1 : 0),
-        fetchPins(),
+        scoped.fetchOps(since: rev > 0 ? rev - 1 : 0),
+        scoped.fetchPins(),
       ]);
       final ops = results[0] as List<CanvasOpBatch>;
       final pins = results[1] as List<CanvasPin>;
@@ -269,7 +273,7 @@ class DaemonCanvasClient implements CanvasClient, CanvasCardClient {
 
   @override
   Future<int> revertBatch(String batchId) async {
-    final json = await daemon.postCanvasRevert(batchId);
+    final json = await daemon.postCanvasRevert(batchId, canvasId: canvasId);
     return (json['rev'] as num?)?.toInt() ?? 0;
   }
 

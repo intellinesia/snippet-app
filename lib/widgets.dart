@@ -242,7 +242,7 @@ void openMarkdownLink(String? href, [BuildContext? context, String? text]) {
   if (href == null || href.isEmpty) return;
   if (parseCanvasRef(href) case final ref?) {
     if (context == null) return;
-    openCanvas(context, frameId: ref.frameId, elId: ref.elId, rev: ref.rev);
+    openCanvas(context, canvasId: ref.canvasId, frameId: ref.frameId, elId: ref.elId, rev: ref.rev);
     return;
   }
   if (parseChatLink(href) case final link?) {
