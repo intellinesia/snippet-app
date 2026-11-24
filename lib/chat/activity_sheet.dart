@@ -18,6 +18,7 @@ import '../tool_views.dart';
 import '../transcript.dart' show TerminalBlock, isLookupStep, isSearchStep;
 import '../widgets.dart';
 import 'activity_dock.dart';
+import 'phone_ledger.dart';
 import '../tap_detector.dart';
 
 Future<void> showActivitySheet(
@@ -264,7 +265,7 @@ class _ListPage extends StatelessWidget {
             controller: scroll,
             padding: EdgeInsets.only(
                 bottom: 24 + MediaQuery.of(context).padding.bottom),
-            children: rows,
+            children: [PhoneLedgerCard(steps: steps), ...rows],
           ),
         ),
       ],

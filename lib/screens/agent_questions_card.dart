@@ -539,7 +539,7 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
                           ? () => setState(() => _step = step - 1)
                           : null),
                 if (last)
-                  ChatCardButton('Send',
+                  ChatCardButton(_sendLabel(qs, q, step),
                       busy: _sending, onTap: canSend ? _send : null)
                 else
                   ChatCardButton('Next',
@@ -553,6 +553,15 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
           else
             SizedBox(height: S.s2),
         ]);
+  }
+
+  /// Phone: a lone single-choice question reads "Answer Option A".
+  String _sendLabel(List<Map<String, dynamic>> qs, Map<String, dynamic> q, int i) {
+    if (!kMobile || qs.length != 1) return 'Send';
+    final v = _single[_key(q, i)];
+    if (v == null) return 'Send';
+    final c = _choicesFor(q).where((c) => c.value == v).firstOrNull;
+    return c == null ? 'Send' : 'Answer ${c.label}';
   }
 
   Widget _resolved(List<Map<String, dynamic>> qs, Map<String, dynamic>? answers,

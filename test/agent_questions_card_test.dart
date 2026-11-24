@@ -358,11 +358,12 @@ void main() {
 
     await t.tap(find.text('Yes'));
     await t.pump();
-    await t.tap(find.text('Send'));
+    // The phone button names the pick: "Answer Yes".
+    await t.tap(find.text('Answer Yes'));
     await t.pump();
 
     expect(find.text('Could not reach the session.'), findsOneWidget);
-    expect(find.text('Send'), findsOneWidget);
+    expect(find.text('Answer Yes'), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
   });
 
