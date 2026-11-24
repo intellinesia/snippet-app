@@ -767,3 +767,59 @@ class SwitchRow extends StatelessWidget {
         ),
       );
 }
+
+/// Equal-width text tabs: 48 high, 14/500 selected, 2 high fg1 underline 14
+/// in from each edge of the selected tab, hairline under the row.
+class SpecTabs extends StatelessWidget {
+  const SpecTabs(
+      {super.key, required this.labels, required this.index, required this.onTap});
+  final List<String> labels;
+  final int index;
+  final ValueChanged<int> onTap;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppColors.border, width: 1))),
+        child: clampedScale(
+          context,
+          Row(children: [
+            for (var i = 0; i < labels.length; i++)
+              Expanded(
+                child: Semantics(
+                  button: true,
+                  selected: i == index,
+                  label: '${labels[i]} tab, ${i + 1} of ${labels.length}',
+                  excludeSemantics: true,
+                  child: TapDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => onTap(i),
+                    child: Container(
+                      key: ValueKey('tab-$i'),
+                      height: 48,
+                      alignment: Alignment.center,
+                      child: Stack(alignment: Alignment.center, fit: StackFit.expand, children: [
+                        Center(child: Text(labels[i],
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(14,
+                                weight: i == index ? FontWeight.w500 : FontWeight.w400,
+                                color: i == index ? AppColors.fg1 : AppColors.fg3))),
+                        if (i == index)
+                          Positioned(
+                              left: 14,
+                              right: 14,
+                              bottom: 0,
+                              height: 2,
+                              child: ColoredBox(
+                                  key: const ValueKey('tab-underline'),
+                                  color: AppColors.fg1)),
+                      ]),
+                    ),
+                  ),
+                ),
+              ),
+          ]),
+        ),
+      );
+}

@@ -14,6 +14,7 @@ import '../tap_detector.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'agent_profile_panel.dart';
+import 'mobile_home/agent_context_phone.dart';
 import 'mobile_home/wake_reach_phone.dart';
 import 'mobile_home/agents_home.dart';
 import 'agent_profile_sheet.dart';
@@ -148,6 +149,15 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
         onPauseChanged: (p) => setState(() => _paused = p),
         onDeleted: widget.onClose,
       ));
+
+  void _openContext(int tab) => unawaited(Navigator.of(context).push(
+      MaterialPageRoute(
+          builder: (_) => AgentContextPage(
+              client: widget.client,
+              agent: a,
+              sessions: widget.sessions,
+              initialTab: tab,
+              onOpenSession: widget.onOpenSession))));
 
   void _openWake() => unawaited(Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => PhoneWakePage(
@@ -318,8 +328,7 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
                             onTap: () => setState(() => _chat = true))),
                     const SizedBox(width: 8),
                     Expanded(
-                        child: ProfileTile('task', 'Tasks',
-                            onTap: widget.onAllSessions)),
+                        child: ProfileTile('task', 'Tasks', onTap: () => _openContext(2))),
                     const SizedBox(width: 8),
                     Expanded(
                         child: ProfileTile('clock', 'Wake', onTap: _openWake)),
