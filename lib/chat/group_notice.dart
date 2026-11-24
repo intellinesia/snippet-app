@@ -36,7 +36,7 @@ class GroupNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = sans(kMobile ? 13 : 12, color: AppColors.fg3);
+    final style = sans(kMobile ? 13 : 12, color: AppColors.fg2);
     final Widget lead = switch (kind) {
       GroupNoticeKind.approved =>
         _badge('check', AppColors.ok, AppColors.okBg),
@@ -45,7 +45,7 @@ class GroupNotice extends StatelessWidget {
       GroupNoticeKind.turn => Row(mainAxisSize: MainAxisSize.min, children: [
           if (fromAgent != null) AgentMochi(fromAgent!, size: 20),
           SizedBox(width: S.s8),
-          AppIcon('repeat', size: 13, color: AppColors.fg3),
+          AppIcon('repeat', size: 13, color: AppColors.fg2),
           if (toAgent != null) ...[
             SizedBox(width: S.s8),
             AgentMochi(toAgent!, size: 20),
@@ -67,7 +67,7 @@ class GroupNotice extends StatelessWidget {
         ),
         if (time != null) ...[
           SizedBox(width: S.s8),
-          Text(time!, style: sans(12, color: AppColors.fg4)),
+          Text(time!, style: sans(12, color: AppColors.fg3)),
         ],
       ]),
     );

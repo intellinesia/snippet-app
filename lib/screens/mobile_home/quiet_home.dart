@@ -224,7 +224,7 @@ class QuietHomeScreen extends StatelessWidget {
                 if (askers.contains(id))
                   ((names[id] ?? '').trim().isEmpty ? id : names[id]!)
             ].join(', ')}',
-            leading: AgentCluster(ids: g.agentIds, size: 28),
+            leading: GroupGlyph(size: 28),
             trailing: const QuietHand(size: 14),
             onTap: onOpenGroup == null ? null : () => onOpenGroup!(g),
           ),
@@ -250,7 +250,7 @@ class QuietHomeScreen extends StatelessWidget {
             QuietRow(
               title: g.title.isEmpty ? 'Group' : g.title,
               sub: '${g.members.length} members',
-              leading: AgentCluster(ids: g.agentIds, size: 28),
+              leading: GroupGlyph(size: 28),
               onTap: onOpenGroup == null ? null : () => onOpenGroup!(g),
             ),
         ],

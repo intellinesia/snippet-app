@@ -242,7 +242,7 @@ class _QuietAgentsScreenState extends State<QuietAgentsScreen> {
             sub: '${g.members.length} members',
             leading: g.agentIds.isEmpty
                 ? AppIcon('users', size: 22, color: AppColors.fg2)
-                : AgentCluster(ids: g.agentIds, size: 28),
+                : GroupGlyph(size: 28),
             onTap: () => openGroupThread(context, client: widget.client, group: g),
           ),
       ],

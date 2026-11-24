@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
+import '../widgets.dart';
 import 'chat_style.dart';
 
 /// An iMessage-style cluster of agent discs inside a circle of [size].
@@ -66,5 +67,23 @@ class _MoreDisc extends StatelessWidget {
         child: Text('+$count',
             maxLines: 1,
             style: sans(11, weight: W.label, color: AppColors.fg2)),
+      );
+}
+
+/// The quiet group mark: a rounded square with the people glyph in fg2.
+class GroupGlyph extends StatelessWidget {
+  const GroupGlyph({super.key, required this.size});
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(R.of(size * 0.3)),
+        ),
+        child: AppIcon('users', size: size * 0.57, color: AppColors.fg2),
       );
 }

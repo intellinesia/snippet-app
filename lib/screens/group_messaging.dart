@@ -19,6 +19,7 @@ import '../drafts.dart';
 import '../desktop_pick.dart';
 import '../markdown_preview.dart';
 import '../chat/message_body.dart';
+import '../chat/group_post.dart';
 import '../chat/signal_row.dart' show prettyModel, prettyProvider, profileMeta;
 import '../message_reactions.dart';
 import '../models.dart';
@@ -1762,7 +1763,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
             return _wideCap(Padding(
               padding: EdgeInsets.only(
                   top: ChatColors.groupGap,
-                  left: ChatBubbleRow.avatarSize + S.s6),
+                  left: GroupPostHeader.indent),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: GroupTypingBubble(
@@ -1810,17 +1811,6 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
           );
         },
       ),
-    );
-  }
-
-  Widget _senderAvatar(String actorId) {
-    final size = ChatBubbleRow.avatarSize;
-    return Container(
-      width: size,
-      height: size,
-      decoration: avatarDecoration(size, color: ChatColors.cardButton),
-      alignment: Alignment.center,
-      child: AgentMochi(actorId, size: size * 0.6),
     );
   }
 
@@ -2009,13 +1999,24 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       mine: mine,
       markdown: (text) => groupMarkdownWithMentions(text, _mentionIds),
     );
-    // Desktop soft bubbles, as in the agent chat.
+    // Agents speak in prose, no bubble; the human side keeps the agent chat's
+    // bubbles.
+    Widget prose() => CappedProse(
+          body: e.body,
+          builder: (text) => ChatMessageBody(
+            client: widget.client,
+            body: text,
+            mine: false,
+            markdown: (t) => groupMarkdownWithMentions(t, _mentionIds),
+          ),
+        );
     Widget buildContent() =>
         card ??
-        (kMobile
-            ? ChatBubble(mine: mine, tail: run.last, child: body)
-            : mine
-                ? ConstrainedBox(
+        (!mine
+            ? prose()
+            : kMobile
+                ? ChatBubble(mine: mine, tail: run.last, child: body)
+                : ConstrainedBox(
                     constraints: BoxConstraints(
                         maxWidth: MediaQuery.sizeOf(context).width * 0.5),
                     child: SoftBubble(
@@ -2023,8 +2024,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                         first: run.first,
                         last: run.last,
                         child: body),
-                  )
-                : SoftBubble(first: run.first, last: run.last, child: body));
+                  ));
     final at = _eventTime(e);
     Widget lane(Widget child) => SoftLane(
           agentId: e.actorId,
@@ -2045,15 +2045,16 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
             mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           if (stamp != null) ChatSystemLine(stamp.$2, bold: stamp.$1),
-          if (!mine && run.first && kMobile)
-            Row(mainAxisSize: MainAxisSize.min, children: [
-              Flexible(
-                child: ChatSenderName(
-                  _agentName(e.actorId),
-                  indent: ChatBubbleRow.avatarSize + 6,
-                ),
+          if (!mine && run.first)
+            Padding(
+              padding: EdgeInsets.only(top: S.s2),
+              child: GroupPostHeader(
+                agentId: e.actorId,
+                name: _agentName(e.actorId),
+                time: at == null ? null : _dayTimeStamp(at).$2,
+                lead: e.actorId == _group.lead,
               ),
-            ]),
+            ),
           _indented(
               mine: mine,
               child: _sendFlight(
@@ -2067,10 +2068,8 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                       lane: lane,
                       card: card,
                       mine: mine,
-                      avatar: kMobile && !mine && run.last
-                          ? _senderAvatar(e.actorId)
-                          : null,
-                      avatarSlot: kMobile && !mine && !run.last,
+                      avatar: null,
+                      avatarSlot: false,
                       child: !kMobile
                           ? KeyedSubtree(key: bubbleKey, child: buildContent())
                           : _withTapback(
@@ -2102,11 +2101,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                 return Padding(
                   padding: EdgeInsets.only(
                     top: S.s6,
-                    left: mine
-                        ? 0
-                        : kMobile
-                            ? ChatBubbleRow.avatarSize + S.s6 + S.of(5)
-                            : kSoftIndent,
+                    left: mine ? 0 : GroupPostHeader.indent,
                     right: mine ? S.of(5) : 0,
                   ),
                   child: ConstrainedBox(
@@ -2136,13 +2131,10 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     required bool avatarSlot,
     required Widget child,
   }) =>
-      // Desktop: received runs take the whole column, as in the agent chat.
-      !kMobile && !mine
-          ? Align(
-              alignment: Alignment.centerLeft,
-              child: lane(card != null
-                  ? SizedBox(width: double.infinity, child: child)
-                  : child))
+      !mine
+          ? Padding(
+              padding: const EdgeInsets.only(left: GroupPostHeader.indent),
+              child: Align(alignment: Alignment.centerLeft, child: child))
           : ChatBubbleRow(
               mine: mine,
               avatar: avatar,

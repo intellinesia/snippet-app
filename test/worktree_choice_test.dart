@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:snippet/chat/signal_row.dart' show prettyModel;
 import 'package:snippet/api.dart';
 import 'package:snippet/desktop_pick.dart';
 import 'package:snippet/models.dart';
@@ -204,9 +205,10 @@ void main() {
       activeProfile: 'opus',
     );
     final res = await _pump(tester, client, withOnStart: true);
-    expect(find.text('opus'), findsOneWidget);
+    final modelLabel = prettyModel('claude-opus');
+    expect(find.text(modelLabel), findsOneWidget);
 
-    await tester.tap(find.text('opus'));
+    await tester.tap(find.text(modelLabel));
     await tester.pumpAndSettle();
     await tester.tap(find.text('gemini-pro').last);
     await tester.pumpAndSettle();

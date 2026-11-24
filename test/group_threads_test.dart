@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import 'package:snippet/chat/group_post.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/composer/voice_note.dart';
 import 'package:snippet/models.dart';
@@ -137,7 +138,7 @@ void main() {
 
       expect(
         find.descendant(
-          of: find.byType(ChatSenderName),
+          of: find.byType(GroupPostHeader),
           matching: find.text('Argon'),
         ),
         findsOneWidget,
@@ -207,8 +208,8 @@ void main() {
 
       expect(find.text('shipped'), findsOneWidget);
       expect(find.byType(MessageReactionChips), findsOneWidget);
-      expect(find.byType(ChatBubble), findsOneWidget,
-          reason: 'the reaction is a chip on the post, not its own bubble');
+      expect(find.byType(CappedProse), findsOneWidget,
+          reason: 'the reaction is a chip on the post, not its own post');
       debugDefaultTargetPlatformOverride = null;
     });
 
@@ -281,8 +282,9 @@ void main() {
 
       expect(find.byType(StageBar), findsOneWidget);
       expect(find.textContaining(' and you'), findsOneWidget);
-      expect(find.byType(ChatSenderName), findsOneWidget);
-      expect(find.byType(ChatBubble), findsNWidgets(3));
+      expect(find.byType(GroupPostHeader), findsOneWidget);
+      expect(find.byType(CappedProse), findsNWidgets(2));
+      expect(find.byType(ChatBubble), findsOneWidget);
       expect(find.textContaining('Read by Argon and Fable'), findsOneWidget);
 
       client.presence.handle({
@@ -412,7 +414,7 @@ void main() {
       expect(find.byType(ChatBubble), findsNothing);
       expect(
         find.descendant(
-          of: find.byType(ChatSenderName),
+          of: find.byType(GroupPostHeader),
           matching: find.text('Argon'),
         ),
         findsOneWidget,
@@ -514,10 +516,10 @@ void main() {
       }
 
       expect(find.byType(AgentQuestionsCard), findsOneWidget);
-      expect(find.byType(ChatBubble), findsOneWidget);
+      expect(find.byType(CappedProse), findsOneWidget);
       expect(
         find.descendant(
-          of: find.byType(ChatSenderName),
+          of: find.byType(GroupPostHeader),
           matching: find.text('Argon'),
         ),
         findsOneWidget,
@@ -674,7 +676,7 @@ void main() {
       expect(find.byType(ChatBubble), findsNothing);
       expect(
         find.descendant(
-          of: find.byType(ChatSenderName),
+          of: find.byType(GroupPostHeader),
           matching: find.text('Argon'),
         ),
         findsOneWidget,
@@ -745,7 +747,7 @@ void main() {
       expect(find.byType(ChatBubble), findsNothing);
       expect(
         find.descendant(
-          of: find.byType(ChatSenderName),
+          of: find.byType(GroupPostHeader),
           matching: find.text('Argon'),
         ),
         findsOneWidget,
