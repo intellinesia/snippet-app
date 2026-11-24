@@ -218,7 +218,7 @@ class ImageThumb extends StatelessWidget {
           width: width,
           height: height,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(R.of(14)),
+            borderRadius: BorderRadius.circular(kMobile ? 8 : R.of(14)),
           ),
           clipBehavior: Clip.antiAlias,
           child: Image(
@@ -268,6 +268,33 @@ class ImageGallery extends StatelessWidget {
   Widget build(BuildContext context) {
     if (paths.length == 1) {
       return SingleImage(client: client, path: paths.first);
+    }
+    if (kMobile) {
+      // Phone spec CH-16: a label, then tiles 90 high, three to a row, gap 8.
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text('${paths.length} images',
+                style: sans(11, weight: W.label, color: AppColors.fg3)),
+          ),
+          LayoutBuilder(builder: (_, c) {
+            final w = c.maxWidth.isFinite ? c.maxWidth : 361.0;
+            final tile = ((w - 16) / 3).floorToDouble();
+            return Wrap(spacing: 8, runSpacing: 8, children: [
+              for (final path in paths)
+                ImageThumb(
+                    client: client,
+                    path: path,
+                    width: tile,
+                    height: 90,
+                    gallery: paths),
+            ]);
+          }),
+        ],
+      );
     }
     final gap = kMobile ? 4.0 : 6.0;
     final columns = paths.length == 2 || paths.length == 4 ? 2 : 3;
