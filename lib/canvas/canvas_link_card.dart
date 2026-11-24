@@ -259,6 +259,7 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
     final meta = _meta;
     openCanvas(
       context,
+      title: _displayTitle,
       canvasId: meta?.canvasId.isNotEmpty == true
           ? meta!.canvasId
           : widget.canvasRef.canvasId,
@@ -410,7 +411,7 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
           borderRadius: BorderRadius.circular(_kThumbRadius),
         ),
         alignment: Alignment.center,
-        child: AppIcon('image', size: 22, color: AppColors.fg4),
+        child: AppIcon('image', size: 22, color: AppColors.fg3),
       );
     }
 
@@ -620,7 +621,7 @@ class _CanvasThumbImageState extends State<_CanvasThumbImage> {
         return Container(
           color: AppColors.surface1,
           alignment: Alignment.center,
-          child: AppIcon('image', size: 22, color: AppColors.fg4),
+          child: AppIcon('image', size: 22, color: AppColors.fg3),
         );
       },
     );

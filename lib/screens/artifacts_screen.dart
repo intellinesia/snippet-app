@@ -260,7 +260,8 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
                             onTap: () => setState(() => _kind = kind),
                             borderRadius: BorderRadius.circular(R.chip),
                             child: Container(
-                              constraints: const BoxConstraints(minHeight: 44),
+                              constraints: BoxConstraints(
+                                  minHeight: kTapTarget, minWidth: kTapTarget),
                               padding:
                                   EdgeInsets.symmetric(horizontal: S.s12),
                               alignment: Alignment.center,

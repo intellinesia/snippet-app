@@ -372,7 +372,7 @@ class QuietTabBar extends StatelessWidget {
         child: Row(children: [
           Expanded(
             child: Container(
-              height: 58,
+              constraints: const BoxConstraints(minHeight: 58),
               padding: EdgeInsets.symmetric(horizontal: S.s4),
               decoration: BoxDecoration(
                 color: AppColors.surface1,
@@ -462,6 +462,7 @@ class _Tab extends StatelessWidget {
             SizedBox(height: S.s2),
             Text(place.label,
                 maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: sans(11,
                     height: 14 / 11,
                     weight: selected ? W.label : W.body,

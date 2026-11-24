@@ -49,7 +49,7 @@ class _RailButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = tool.onTap != null;
     final fg = !enabled
-        ? AppColors.fg4
+        ? AppColors.fg3
         : tool.active
             ? AppColors.fg1
             : AppColors.fg2;

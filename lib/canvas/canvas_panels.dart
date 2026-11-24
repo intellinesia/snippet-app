@@ -330,7 +330,9 @@ class PinsListView extends StatelessWidget {
                     pin.text,
                     style: sans(
                       13,
-                      color: pin.isResolved ? AppColors.fg3 : AppColors.fg1,
+                      color: pin.isResolved
+                          ? (isSelected ? AppColors.fg2 : AppColors.fg3)
+                          : AppColors.fg1,
                     ),
                   ),
                   if (pin.reply != null && pin.reply!.trim().isNotEmpty) ...[

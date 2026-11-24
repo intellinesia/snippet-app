@@ -250,7 +250,7 @@ class _ArtifactLinkCardState extends State<ArtifactLinkCard> {
               _ => 'file',
             },
             size: 22,
-            color: AppColors.fg4,
+            color: AppColors.fg3,
           ),
         );
     if (url == null || daemon == null) return fallback();

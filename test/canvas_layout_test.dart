@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/canvas/canvas_client.dart';
 import 'package:snippet/canvas/canvas_models.dart';
 import 'package:snippet/canvas/canvas_screen.dart';
+import 'package:snippet/quiet.dart';
 import 'package:snippet/theme.dart';
 
 class _EmptyClient implements CanvasClient {
@@ -57,6 +58,7 @@ class _EmptyClient implements CanvasClient {
 }
 
 void main() {
+  quietTabBarTest();
   late SemanticsHandle semantics;
 
   void done() {
@@ -121,5 +123,26 @@ void main() {
     expect(find.text('Find a frame or element'), findsNothing);
     expect(tester.takeException(), isNull);
     done();
+  });
+}
+
+void quietTabBarTest() {
+  testWidgets('phone tab bar does not overflow at 200% text', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(393, 852);
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      theme: buildAppTheme(),
+      builder: (c, child) => MediaQuery(
+        data: MediaQuery.of(c).copyWith(textScaler: const TextScaler.linear(2)),
+        child: child!,
+      ),
+      home: Scaffold(
+        bottomNavigationBar: QuietTabBar(
+            selected: QuietPlace.agents, onSelect: (_) {}, onNew: () {}),
+      ),
+    ));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
   });
 }

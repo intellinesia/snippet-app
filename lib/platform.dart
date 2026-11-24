@@ -54,3 +54,13 @@ const double kDesktopBreakpoint = 900;
 /// Below this shell width the persistent sidebar collapses into a drawer (the
 /// desktop shell stays native — it never falls back to the phone UI).
 const double kShellCompact = 720;
+
+/// Click target for controls in the desktop shell. One value to change if the
+/// dense shell moves to a smaller row.
+const double kDesktopTarget = 44;
+
+/// Touch target on a phone.
+const double kPhoneTarget = 48;
+
+/// Hit-area size for a control on this platform.
+double get kTapTarget => kMobile ? kPhoneTarget : kDesktopTarget;

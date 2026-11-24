@@ -1226,7 +1226,7 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
               behavior: HitTestBehavior.opaque,
               onTap: () => setState(() => _source = src),
               child: Container(
-                height: kMobile ? 34 : 28,
+                height: kTapTarget - 6,
                 padding: EdgeInsets.symmetric(horizontal: S.s16),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
@@ -1348,26 +1348,48 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
                   ])),
         ),
         if (_hasSource) ...[_sourceSeg(), const SizedBox(width: 6)],
-        IconBtn('external-link',
-            size: 28,
-            iconSize: 15,
-            tooltip: 'Open in browser',
-            onTap: _openInBrowser),
-        IconBtn('download',
-            size: 28, iconSize: 15, tooltip: 'Download', onTap: _download),
+        _hit(
+            IconBtn('external-link',
+                size: 28,
+                iconSize: 15,
+                tooltip: 'Open in browser',
+                onTap: _openInBrowser),
+            _openInBrowser),
+        _hit(
+            IconBtn('download',
+                size: 28, iconSize: 15, tooltip: 'Download', onTap: _download),
+            _download),
         Builder(
-          builder: (anchor) => IconBtn('more-horizontal',
-              size: 28,
-              iconSize: 15,
-              tooltip: 'More',
-              onTap: () => _more(anchor)),
+          builder: (anchor) => _hit(
+              IconBtn('more-horizontal',
+                  size: 28,
+                  iconSize: 15,
+                  tooltip: 'More',
+                  onTap: () => _more(anchor)),
+              () => _more(anchor)),
         ),
         if (widget.onClose != null)
-          IconBtn('x',
-              size: 28, iconSize: 15, tooltip: 'Close', onTap: widget.onClose),
+          _hit(
+              IconBtn('x',
+                  size: 28,
+                  iconSize: 15,
+                  tooltip: 'Close',
+                  onTap: widget.onClose),
+              widget.onClose),
       ]),
     );
   }
+
+  /// Gives a small visual control a [kTapTarget] hit area without growing it.
+  Widget _hit(Widget child, VoidCallback? onTap) => SizedBox(
+        width: kTapTarget,
+        height: kTapTarget,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: Center(child: child),
+        ),
+      );
 
   Widget _versionButton() {
     final v = _version;
@@ -1382,23 +1404,28 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
         child: InkWell(
           borderRadius: BorderRadius.circular(R.of(6)),
           onTap: multi ? () => _pickVersion(anchor) : null,
-          child: Container(
-            height: 28,
-            padding: const EdgeInsets.symmetric(horizontal: 9),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border2),
-              borderRadius: BorderRadius.circular(R.of(6)),
+          child: SizedBox(
+            height: kTapTarget,
+            child: Center(
+              child: Container(
+                height: 28,
+                padding: const EdgeInsets.symmetric(horizontal: 9),
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.border2),
+                  borderRadius: BorderRadius.circular(R.of(6)),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  AppIcon('history', size: 13, color: AppColors.fg2),
+                  const SizedBox(width: 6),
+                  Text('v${v.n}${latest ? ' \u00b7 Latest version' : ''}',
+                      style: sans(12, color: AppColors.fg2)),
+                  if (multi) ...[
+                    const SizedBox(width: 6),
+                    AppIcon('chevron-down', size: 12, color: AppColors.fg2),
+                  ],
+                ]),
+              ),
             ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              AppIcon('history', size: 13, color: AppColors.fg2),
-              const SizedBox(width: 6),
-              Text('v${v.n}${latest ? ' \u00b7 Latest version' : ''}',
-                  style: sans(12, color: AppColors.fg2)),
-              if (multi) ...[
-                const SizedBox(width: 6),
-                AppIcon('chevron-down', size: 12, color: AppColors.fg2),
-              ],
-            ]),
           ),
         ),
       ),
@@ -1539,6 +1566,8 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
           return _centered('This page opens in your browser.',
               action: TextButton(
                   onPressed: _openInBrowser,
+                  style: TextButton.styleFrom(
+                      minimumSize: Size(kTapTarget, kTapTarget)),
                   child: const Text('Open in browser')));
         }
         final page = _WebPreview(key: ValueKey(v.url), uri: uri);
