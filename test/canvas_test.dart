@@ -9,6 +9,16 @@ import 'package:snippet/canvas/spatial_index.dart';
 import 'package:snippet/canvas/thumb_cache.dart';
 
 void main() {
+  group('parseCanvasAuthor', () {
+    test('maps user and agent shapes to readable names', () {
+      expect(parseCanvasAuthor({'id': 'user', 'kind': 'user'}), 'You');
+      expect(parseCanvasAuthor({'id': 'a1', 'kind': 'agent', 'name': 'Lead'}),
+          'Lead');
+      expect(parseCanvasAuthor({'id': 'a1', 'kind': 'agent'}), 'a1');
+      expect(parseCanvasAuthor(null), 'Agent');
+      expect(parseCanvasAuthor('user'), 'You');
+    });
+  });
   group('CanvasSpatialIndex', () {
     test('culls 2000 synthetic frames to only viewport-intersecting frames', () {
       const cols = 50;

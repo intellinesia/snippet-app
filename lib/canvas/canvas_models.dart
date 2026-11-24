@@ -118,6 +118,21 @@ class CanvasElementRect {
       );
 }
 
+/// Readable author name from a string or an `{id, kind, name}` map.
+String parseCanvasAuthor(Object? raw, {String fallback = 'Agent'}) {
+  if (raw is Map) {
+    final name = raw['name']?.toString().trim() ?? '';
+    final kind = raw['kind']?.toString() ?? '';
+    final id = raw['id']?.toString().trim() ?? '';
+    if (kind == 'user' || id == 'user') return 'You';
+    if (name.isNotEmpty) return name;
+    return id.isNotEmpty ? id : fallback;
+  }
+  final text = raw?.toString().trim() ?? '';
+  if (text.isEmpty) return fallback;
+  return text == 'user' ? 'You' : text;
+}
+
 /// A comment pin anchored to an element (or frame) via fractional offsets.
 class CanvasPin {
   const CanvasPin({
@@ -176,7 +191,7 @@ class CanvasPin {
       text: json['text']?.toString() ?? '',
       status: json['status']?.toString() ?? 'open',
       reply: json['reply']?.toString(),
-      author: json['author']?.toString() ?? '',
+      author: parseCanvasAuthor(json['author'], fallback: ''),
       createdAt: _parseTimestamp(rawTs),
     );
   }
@@ -201,7 +216,7 @@ class CanvasOpBatch {
   factory CanvasOpBatch.fromJson(Map<String, dynamic> json) => CanvasOpBatch(
         rev: (json['rev'] as num?)?.toInt() ?? 0,
         batchId: json['batch_id']?.toString() ?? '',
-        author: json['author']?.toString() ?? 'agent',
+        author: parseCanvasAuthor(json['author']),
         label: json['label']?.toString() ?? '',
         ts: _parseTimestamp(json['ts']) ?? DateTime.now(),
       );

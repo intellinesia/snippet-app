@@ -885,7 +885,8 @@ class _CanvasScreenState extends State<CanvasScreen>
       await _loadOps();
       await _loadPins();
       if (!mounted) return;
-      _showToast('Reverted to r${nextRev > 0 ? nextRev : (_snapshot?.rev ?? 0)}');
+      _showToast(
+          'Reverted. Canvas is now at r${nextRev > 0 ? nextRev : (_snapshot?.rev ?? 0)}');
     } catch (e) {
       if (!mounted) return;
       _showToast('Revert failed: $e');
