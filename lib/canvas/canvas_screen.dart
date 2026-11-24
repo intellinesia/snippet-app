@@ -971,11 +971,7 @@ class _CanvasScreenState extends State<CanvasScreen>
                     Text('New pin',
                         style: sans(15, weight: W.label, color: AppColors.fg1)),
                     const Spacer(),
-                    IconButton(
-                      onPressed: () => Navigator.of(sheetCtx).pop(),
-                      tooltip: 'Close',
-                      icon: AppIcon('x', size: 16, color: AppColors.fg2),
-                    ),
+                    CanvasCloseButton(onPressed: () => Navigator.of(sheetCtx).pop()),
                   ],
                 ),
               ),
@@ -1024,11 +1020,7 @@ class _CanvasScreenState extends State<CanvasScreen>
                             style: sans(15,
                                 weight: W.label, color: AppColors.fg1)),
                         const Spacer(),
-                        IconButton(
-                          onPressed: () => Navigator.of(sheetCtx).pop(),
-                          tooltip: 'Close',
-                          icon: AppIcon('x', size: 16, color: AppColors.fg2),
-                        ),
+                        CanvasCloseButton(onPressed: () => Navigator.of(sheetCtx).pop()),
                       ],
                     ),
                   ),
@@ -1082,11 +1074,7 @@ class _CanvasScreenState extends State<CanvasScreen>
                           style:
                               sans(15, weight: W.label, color: AppColors.fg1)),
                       const Spacer(),
-                      IconButton(
-                        onPressed: () => Navigator.of(sheetCtx).pop(),
-                        tooltip: 'Close',
-                        icon: AppIcon('x', size: 16, color: AppColors.fg2),
-                      ),
+                      CanvasCloseButton(onPressed: () => Navigator.of(sheetCtx).pop()),
                     ],
                   ),
                 ),
@@ -1353,7 +1341,7 @@ class _CanvasScreenState extends State<CanvasScreen>
         if (_selectedElement != null) ...[
           _ChromePill(
             onTap: _copyShareLink,
-            minSize: 34,
+            minSize: 44,
             semanticLabel: 'Copy share link for ${_selectedElement!.id}',
             child: Text(
               _selectedElement!.id,
@@ -1364,7 +1352,7 @@ class _CanvasScreenState extends State<CanvasScreen>
         ],
         _ChromePill(
           active: _panelMode == _SidePanelMode.pins,
-          minSize: 34,
+          minSize: 44,
           semanticLabel: 'Pins, ${_pins.length} total, $openPins open',
           onTap: _openPinsPanel,
           child: Row(
@@ -1384,7 +1372,7 @@ class _CanvasScreenState extends State<CanvasScreen>
           SizedBox(width: S.s8),
           _ChromePill(
             onTap: _openStepsPanel,
-            minSize: 34,
+            minSize: 44,
             semanticLabel: 'Steps history, revision ${_snapshot!.rev}',
             child: Text(
               'r${_snapshot!.rev}',
@@ -1438,7 +1426,7 @@ class _CanvasScreenState extends State<CanvasScreen>
   }
 
   Widget _buildToolbar({required bool isPhone}) {
-    final btnSize = isPhone ? 44.0 : 34.0;
+    const btnSize = 44.0;
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: isPhone ? S.s8 : S.s6,

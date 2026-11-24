@@ -65,11 +65,7 @@ class CanvasSidePanel extends StatelessWidget {
                     ],
                   ),
                 ),
-                IconButton(
-                  onPressed: onClose,
-                  tooltip: 'Close',
-                  icon: AppIcon('x', size: 16, color: AppColors.fg2),
-                ),
+                CanvasCloseButton(onPressed: onClose),
               ],
             ),
           ),
@@ -356,8 +352,8 @@ class PinsListView extends StatelessWidget {
                         borderRadius: BorderRadius.circular(R.xs),
                         child: Container(
                           constraints: BoxConstraints(
-                            minHeight: kMobile ? 44 : 36,
-                            minWidth: kMobile ? 44 : 36,
+                            minHeight: 44,
+                            minWidth: 44,
                           ),
                           padding: EdgeInsets.symmetric(
                             horizontal: S.s8,
@@ -518,8 +514,8 @@ class StepsHistoryView extends StatelessWidget {
                     borderRadius: BorderRadius.circular(R.xs),
                     child: Container(
                       constraints: BoxConstraints(
-                        minHeight: kMobile ? 44 : 36,
-                        minWidth: kMobile ? 44 : 36,
+                        minHeight: 44,
+                        minWidth: 44,
                       ),
                       padding:
                           EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s4),
@@ -553,4 +549,23 @@ String _formatRelativeTime(DateTime ts) {
   if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
   if (diff.inHours < 24) return '${diff.inHours}h ago';
   return '${diff.inDays}d ago';
+}
+
+/// Close affordance: 48 on phone, 44 on desktop.
+class CanvasCloseButton extends StatelessWidget {
+  const CanvasCloseButton({super.key, required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = kMobile ? 48.0 : 44.0;
+    return IconButton(
+      onPressed: onPressed,
+      tooltip: 'Close',
+      padding: EdgeInsets.zero,
+      constraints: BoxConstraints.tightFor(width: size, height: size),
+      icon: AppIcon('x', size: 16, color: AppColors.fg2),
+    );
+  }
 }
