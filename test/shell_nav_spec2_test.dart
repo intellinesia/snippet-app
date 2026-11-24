@@ -8,6 +8,8 @@ import 'package:snippet/screens/terminals_sidebar_panel.dart';
 import 'package:snippet/screens/session.dart' show TerminalInfo;
 import 'package:snippet/theme.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
+import 'package:snippet/screens/file_tree_sidebar_panel.dart' show FileTreeRow;
 
 Widget _wrap(double scale, Widget child) => MaterialApp(
       theme: buildAppTheme(),
@@ -20,7 +22,7 @@ Widget _wrap(double scale, Widget child) => MaterialApp(
 
 CoordinationAgent _agent(int i) => CoordinationAgent.fromJson({
       'id': 'a$i',
-      'full_name': 'Agent $i',
+      'display_name': i == 1 ? 'Ada review assistant' : 'Agent $i',
       'handle': 'a$i',
       'kind': 'agent',
       'status': 'active',
@@ -67,6 +69,48 @@ void main() {
         expect(chips[1].left - chips[0].right, 8);
         expect(title.dx, greaterThan(0));
       });
+      testWidgets('file row w=$w s=$scale', (tester) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = Size(w, 852);
+        addTearDown(tester.view.reset);
+        await tester.pumpWidget(_wrap(
+            scale,
+            Column(children: [
+              FileTreeRow(
+                  entry: FsEntry.fromJson({
+                    'name': 'main.dart',
+                    'path': '/p/main.dart',
+                    'is_dir': false,
+                    'git': true,
+                    'git_status': 'modified',
+                  }),
+                  depth: 1,
+                  expanded: false,
+                  loading: false,
+                  hasError: false,
+                  onTap: () {}),
+              FileTreeRow(
+                  entry: FsEntry.fromJson(
+                      {'name': 'lib', 'path': '/p/lib', 'is_dir': true}),
+                  depth: 0,
+                  expanded: false,
+                  loading: false,
+                  hasError: false,
+                  onTap: () {}),
+            ])));
+        expect(tester.takeException(), isNull);
+        final r = tester.getRect(find
+            .ancestor(of: find.text('main.dart'), matching: find.byType(InkWell))
+            .first);
+        // ignore: avoid_print
+        print('w=$w s=$scale fileRow=${r.size} M=${find.text('M').evaluate().length}');
+        expect(r.width, w);
+        expect(r.height, greaterThanOrEqualTo(48));
+        expect(tester.getTopLeft(find.text('main.dart')).dx, 62);
+        expect(find.text('M'), findsOneWidget);
+        debugDefaultTargetPlatformOverride = null;
+      });
       testWidgets('switcher w=$w s=$scale', (tester) async {
         tester.view.devicePixelRatio = 1;
         tester.view.physicalSize = Size(w, 852);
@@ -96,6 +140,18 @@ void main() {
         print('w=$w s=$scale search=${search.size} row=${r.size}');
         expect(r.width, w);
         expect(r.height, greaterThanOrEqualTo(48));
+        if (scale == 2.0) {
+          expect(find.text('Search'), findsOneWidget);
+          final hint = tester.getRect(find.text('Search'));
+          expect(hint.right, lessThanOrEqualTo(search.right));
+        }
+        if (scale < 1.5) {
+          final name = find.descendant(
+              of: find.byKey(const ValueKey('sw-agent-a1')),
+              matching: find.text('Ada review assistant'));
+          final para = tester.renderObject<RenderParagraph>(name.first);
+          expect(para.didExceedMaxLines, isFalse);
+        }
         expect(find.text('Show all 9'), findsOneWidget);
         final fold = tester.getRect(find
             .ancestor(of: find.text('Show all 9'), matching: find.byType(InkWell))

@@ -537,7 +537,7 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
     for (final entry in entries) {
       final expanded = _expandedFolders.contains(entry.path);
       final children = _childrenByPath[entry.path] ?? const <FsEntry>[];
-      rows.add(_FileTreeRow(
+      rows.add(FileTreeRow(
         entry: entry,
         depth: depth,
         expanded: expanded,
@@ -598,8 +598,10 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
       );
 }
 
-class _FileTreeRow extends StatelessWidget {
-  const _FileTreeRow({
+/// One file-tree row; public so the phone layout can be measured in tests.
+class FileTreeRow extends StatelessWidget {
+  const FileTreeRow({
+    super.key,
     required this.entry,
     required this.depth,
     required this.expanded,
@@ -673,7 +675,7 @@ class _FileTreeRow extends StatelessWidget {
   }
 }
 
-extension on _FileTreeRow {
+extension on FileTreeRow {
   Widget _desk() {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: S.s8),

@@ -190,7 +190,9 @@ class _EveryoneSwitcherState extends State<EveryoneSwitcher> {
               decoration: InputDecoration(
                 filled: true,
                 fillColor: AppColors.surface2,
-                hintText: 'Search agents, groups, sessions',
+                hintText: MediaQuery.textScalerOf(context).scale(14) / 14 >= 1.5
+                    ? 'Search'
+                    : 'Search agents, groups, sessions',
                 hintStyle: sans(14, color: AppColors.fg3),
                 prefixIcon: Padding(
                   padding: const EdgeInsets.only(left: 12, right: 10),
@@ -230,23 +232,29 @@ class _EveryoneSwitcherState extends State<EveryoneSwitcher> {
   }
 }
 
-/// Right-aligned quiet line; under the name once text is large.
+/// Name first: it keeps its natural width (up to 70 percent) and the quiet
+/// last line shrinks with an ellipsis; under the name once text is large.
 Widget _line(BuildContext context, Widget name, Widget? trailing,
     {required double leadWidth}) {
-  final big = MediaQuery.textScalerOf(context).scale(15) / 15 >= 1.5;
+  final big = MediaQuery.textScalerOf(context).scale(15) / 15 >= 1.3;
   if (big || trailing == null) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       name,
       if (trailing != null) trailing,
     ]);
   }
-  return Row(children: [
-    Flexible(child: name),
-    const SizedBox(width: 12),
-    ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 223),
-        child: Align(alignment: Alignment.centerRight, child: trailing)),
-  ]);
+  return LayoutBuilder(
+    builder: (context, box) => Row(children: [
+      ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: box.maxWidth * 0.7),
+          child: name),
+      const SizedBox(width: 12),
+      Expanded(
+          child: Align(
+              alignment: Alignment.centerRight,
+              child: trailing)),
+    ]),
+  );
 }
 
 class _AgentLine extends StatelessWidget {
@@ -270,12 +278,14 @@ class _AgentLine extends StatelessWidget {
         style: sans(15,
             weight: idle ? W.body : W.label, color: AppColors.fg1));
     final Widget? tail = needsYou
-        ? Row(mainAxisSize: MainAxisSize.min, children: [
-            const QuietHand(size: 16),
-            const SizedBox(width: 4),
-            Text('Needs you',
-                style: sans(12, weight: W.label, color: quietAmber)),
-          ])
+        ? FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const QuietHand(size: 16),
+              const SizedBox(width: 4),
+              Text('Needs you',
+                  style: sans(12, weight: W.label, color: quietAmber)),
+            ]))
         : last.isEmpty
             ? null
             : Text(last,

@@ -16,7 +16,11 @@ class PhoneBar extends StatelessWidget {
     this.onBack,
     this.trailing = const [],
     this.fill,
+    this.status,
   });
+
+  /// Variant C: a quiet status line under the bar, e.g. "Working, 4m".
+  final String? status;
   final String title;
   final String? subtitle;
   final VoidCallback? onBack;
@@ -29,7 +33,8 @@ class PhoneBar extends StatelessWidget {
           color: fill ?? AppColors.bg,
           border: Border(bottom: BorderSide(color: AppColors.border)),
         ),
-        child: ConstrainedBox(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 52),
           child: Row(children: [
             if (onBack != null)
@@ -75,8 +80,94 @@ class PhoneBar extends StatelessWidget {
             ...trailing,
             const SizedBox(width: 4),
           ]),
-        ),
+          ),
+          if (status != null && status!.isNotEmpty) _StatusLine(status!),
+        ]),
       );
+}
+
+/// 6 neutral dot (fg2, never amber) and a 12/500 fg2 line, aligned to x56.
+class _StatusLine extends StatelessWidget {
+  const _StatusLine(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(56, 0, 16, 8),
+        child: Row(children: [
+          Container(
+              width: 6,
+              height: 6,
+              decoration:
+                  BoxDecoration(color: AppColors.fg2, shape: BoxShape.circle)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(text,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: sans(12, weight: W.label, color: AppColors.fg2)),
+          ),
+        ]),
+      );
+}
+
+/// Variant D: back icon on its own 48 row, then the 28/500 title at x16 with
+/// the status line below.
+class PhoneLargeBar extends StatelessWidget {
+  const PhoneLargeBar(
+      {super.key,
+      required this.title,
+      this.status,
+      this.onBack,
+      this.trailing = const []});
+  final String title;
+  final String? status;
+  final VoidCallback? onBack;
+  final List<Widget> trailing;
+
+  @override
+  Widget build(BuildContext context) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              height: 48,
+              child: Row(children: [
+                Semantics(
+                  button: true,
+                  label: 'Back',
+                  excludeSemantics: true,
+                  child: TapDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onBack,
+                    child: SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: Center(
+                            child: AppIcon('chevron-left',
+                                size: 20, color: AppColors.fg1))),
+                  ),
+                ),
+                const Spacer(),
+                ...trailing,
+                const SizedBox(width: 4),
+              ]),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+              child: Text(title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(28,
+                      height: 37.8 / 28, weight: W.label, color: AppColors.fg1)),
+            ),
+            if (status != null && status!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Text(status!,
+                    style: sans(12, weight: W.label, color: AppColors.fg2)),
+              ),
+          ]);
 }
 
 /// A 48 x 48 target with a 20 icon in fg2.
