@@ -17,6 +17,7 @@ import '../gesture_physics.dart';
 import '../models.dart';
 import '../panel.dart';
 import '../platform.dart';
+import 'artifact_viewer_controls.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'artifact_grid.dart';
@@ -1192,54 +1193,18 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
     if (v == null) return const SizedBox.shrink();
     final when = _when(v.createdAt);
     final multi = (_artifact?.versions.length ?? 0) > 1;
-    final style = sans(13, color: AppColors.fg3);
     return Builder(
-      builder: (anchor) => TapDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: multi ? () => _pickVersion(anchor) : null,
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: S.s8),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Flexible(
-              child: Text('Version ${v.n}${when.isEmpty ? '' : ' · $when'}',
-                  maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
-            ),
-            if (multi) ...[
-              SizedBox(width: S.s4),
-              AppIcon('chevron-down', size: 12, color: AppColors.fg3),
-            ],
-          ]),
-        ),
+      builder: (anchor) => ArtifactVersionLine(
+        text: 'Version ${v.n}${when.isEmpty ? '' : ' · $when'}',
+        multi: multi,
+        onTap: () => _pickVersion(anchor),
       ),
     );
   }
 
-  Widget _sourceSeg() => Container(
-        padding: const EdgeInsets.all(3),
-        decoration: BoxDecoration(
-          color: AppColors.surface2,
-          borderRadius: BorderRadius.circular(R.md),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          for (final (src, label) in [(false, 'Preview'), (true, 'Source')])
-            TapDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => setState(() => _source = src),
-              child: Container(
-                height: kTapTarget - 6,
-                padding: EdgeInsets.symmetric(horizontal: S.s16),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: _source == src ? AppColors.surface3 : null,
-                  borderRadius: BorderRadius.circular(R.sm),
-                ),
-                child: Text(label,
-                    style: sans(13,
-                        weight: _source == src ? W.label : W.body,
-                        color: _source == src ? AppColors.fg1 : AppColors.fg3)),
-              ),
-            ),
-        ]),
+  Widget _sourceSeg() => ArtifactSourceToggle(
+        source: _source,
+        onChanged: (src) => setState(() => _source = src),
       );
 
   Widget _subBar() {
@@ -1564,11 +1529,8 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
       default:
         if (!_canEmbedWeb) {
           return _centered('This page opens in your browser.',
-              action: TextButton(
-                  onPressed: _openInBrowser,
-                  style: TextButton.styleFrom(
-                      minimumSize: Size(kTapTarget, kTapTarget)),
-                  child: const Text('Open in browser')));
+              action: ArtifactActionButton(
+                  label: 'Open in browser', onPressed: _openInBrowser));
         }
         final page = _WebPreview(key: ValueKey(v.url), uri: uri);
         return page;

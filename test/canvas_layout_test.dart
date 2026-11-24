@@ -7,6 +7,7 @@ import 'package:snippet/canvas/canvas_client.dart';
 import 'package:snippet/canvas/canvas_models.dart';
 import 'package:snippet/canvas/canvas_screen.dart';
 import 'package:snippet/quiet.dart';
+import 'package:snippet/screens/artifact_viewer_controls.dart';
 import 'package:snippet/theme.dart';
 
 class _EmptyClient implements CanvasClient {
@@ -59,6 +60,7 @@ class _EmptyClient implements CanvasClient {
 
 void main() {
   quietTabBarTest();
+  viewerControlTests();
   late SemanticsHandle semantics;
 
   void done() {
@@ -127,22 +129,68 @@ void main() {
 }
 
 void quietTabBarTest() {
-  testWidgets('phone tab bar does not overflow at 200% text', (tester) async {
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(393, 852);
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(MaterialApp(
-      theme: buildAppTheme(),
-      builder: (c, child) => MediaQuery(
-        data: MediaQuery.of(c).copyWith(textScaler: const TextScaler.linear(2)),
-        child: child!,
-      ),
-      home: Scaffold(
-        bottomNavigationBar: QuietTabBar(
-            selected: QuietPlace.agents, onSelect: (_) {}, onNew: () {}),
-      ),
-    ));
-    await tester.pump();
-    expect(tester.takeException(), isNull);
-  });
+  for (final scale in [1.0, 2.0]) {
+    testWidgets('phone tab bar stays a bar at ${scale}x text', (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(393, 852);
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(MaterialApp(
+        theme: buildAppTheme(),
+        builder: (c, child) => MediaQuery(
+          data: MediaQuery.of(c).copyWith(textScaler: TextScaler.linear(scale)),
+          child: child!,
+        ),
+        home: Scaffold(
+          body: const SizedBox.expand(),
+          bottomNavigationBar: QuietTabBar(
+              selected: QuietPlace.agents, onSelect: (_) {}, onNew: () {}),
+        ),
+      ));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      final h = tester.getSize(find.byType(QuietTabBar)).height;
+      // ignore: avoid_print
+      print('TABBAR scale=$scale height=$h');
+      expect(h, lessThan(120));
+    });
+  }
+}
+
+void viewerControlTests() {
+  for (final phone in [false, true]) {
+    testWidgets(
+        'viewer controls measure at least the target size '
+        '(${phone ? 'phone 48' : 'desktop 44'})', (tester) async {
+      debugDefaultTargetPlatformOverride =
+          phone ? TargetPlatform.android : TargetPlatform.linux;
+      final want = phone ? 48.0 : 44.0;
+      await tester.pumpWidget(MaterialApp(
+        theme: buildAppTheme().copyWith(visualDensity: VisualDensity.compact),
+        home: Scaffold(
+          body: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            ArtifactSourceToggle(source: false, onChanged: (_) {}),
+            ArtifactVersionLine(text: 'Version 2', multi: true, onTap: () {}),
+            ArtifactActionButton(label: 'Open in browser', onPressed: () {}),
+          ]),
+        ),
+      ));
+      final sizes = {
+        'Preview': tester.getSize(find
+            .ancestor(of: find.text('Preview'), matching: find.byType(SizedBox))
+            .first),
+        'Source': tester.getSize(find
+            .ancestor(of: find.text('Source'), matching: find.byType(SizedBox))
+            .first),
+        'Version': tester.getSize(find.byType(ArtifactVersionLine)),
+        'Open in browser': tester.getSize(find.byType(TextButton)),
+      };
+      // ignore: avoid_print
+      print('VIEWER ${phone ? 'phone' : 'desktop'} $sizes');
+      for (final e in sizes.entries) {
+        expect(e.value.height, greaterThanOrEqualTo(want), reason: e.key);
+      }
+      expect(sizes['Open in browser']!.width, greaterThanOrEqualTo(want));
+      debugDefaultTargetPlatformOverride = null;
+    });
+  }
 }

@@ -366,13 +366,19 @@ class QuietTabBar extends StatelessWidget {
   /// Places with something waiting: a quiet amber dot on the icon.
   final Set<QuietPlace> attention;
 
+  /// 58 at normal text, growing with text size so labels never overflow.
+  static double _barHeight(BuildContext context) {
+    final scale = (MediaQuery.textScalerOf(context).scale(11) / 11).clamp(1.0, 2.0);
+    return 58 + 14 * (scale - 1);
+  }
+
   @override
   Widget build(BuildContext context) => Padding(
         padding: EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s8),
         child: Row(children: [
           Expanded(
             child: Container(
-              constraints: const BoxConstraints(minHeight: 58),
+              height: _barHeight(context),
               padding: EdgeInsets.symmetric(horizontal: S.s4),
               decoration: BoxDecoration(
                 color: AppColors.surface1,
@@ -443,6 +449,7 @@ class _Tab extends StatelessWidget {
             borderRadius: BorderRadius.circular(24),
           ),
           child: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Stack(clipBehavior: Clip.none, children: [
