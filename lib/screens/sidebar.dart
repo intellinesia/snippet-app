@@ -653,6 +653,7 @@ child: PhoneAgentPage(
         ],
         onOpenAgent: widget.onAgent,
         onOpenLead: widget.onOpenLead,
+        onOpenSession: (s) => widget.onOpenSession(s.id, s.title, s.profile),
       );
 
   /// The phone home body for the destination the bar currently selects.
