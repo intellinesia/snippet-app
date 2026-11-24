@@ -242,7 +242,7 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
             else ...[
               if (!kMobile && (widget.sessionId ?? '').isNotEmpty)
                 _commitBox(files.length),
-              if (!kMobile) _changedHeader() else SizedBox(height: S.s6),
+              if (!kMobile) _changedHeader() else _phoneSummary(files.length),
               for (final f in files) _fileRow(f),
             ],
             ],
@@ -621,7 +621,56 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
         ),
       );
 
+  /// SH-04 phone row: name 14/400, directory 13/400 fg3 below, pitch 56. The
+  /// model carries no line counts, so the status letter badge stays trailing.
+  Widget _phoneFileRow(GitFile f) {
+    final name = lastPathSegment(f.path, ifEmpty: f.path);
+    final slash = f.path.lastIndexOf('/');
+    final dir = slash > 0 ? f.path.substring(0, slash) : '';
+    return Semantics(
+      button: true,
+      label: f.path,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: widget.onOpenDiff == null ? null : () => widget.onOpenDiff!(f),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 56),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: Row(children: [
+              Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(14, color: AppColors.fg1)),
+                      if (dir.isNotEmpty)
+                        Text(dir,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(13, color: AppColors.fg3)),
+                    ]),
+              ),
+              const SizedBox(width: 12),
+              _statusLetter(f),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _phoneSummary(int n) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+        child: Text('$n ${n == 1 ? 'file' : 'files'}',
+            style: sans(14, weight: W.label, color: AppColors.fg1)),
+      );
+
   Widget _fileRow(GitFile f) {
+    if (kMobile) return _phoneFileRow(f);
     final name = lastPathSegment(f.path, ifEmpty: f.path);
     final slash = f.path.lastIndexOf('/');
     final dir = slash > 0 ? f.path.substring(0, slash) : '';

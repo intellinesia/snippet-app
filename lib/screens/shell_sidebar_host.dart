@@ -12,6 +12,8 @@ import 'git_diff_sidebar_panel.dart';
 import 'lead/lead_state.dart' show isDedicatedLeadSession;
 import 'session.dart' show TerminalInfo;
 import 'settings_panel.dart' show SettingsPage;
+import '../menu_widgets.dart' show lastPathSegment;
+import 'phone_tool_bar.dart';
 import 'shell_models.dart';
 import 'shell_rail.dart' show ShellSection;
 import 'sidebar.dart';
@@ -76,6 +78,7 @@ class ShellSidebarHost extends StatelessWidget {
     this.topInset = true,
     this.onAfterPick,
     this.onSettingsClose,
+    this.onSection,
   });
 
   final ShellSection effectiveSection;
@@ -135,8 +138,29 @@ class ShellSidebarHost extends StatelessWidget {
   final ValueChanged<CoordinationAgent?> onMobileAgent;
   final VoidCallback? onSettingsClose;
 
+  /// Phone chip row: switch between Files, Git and Terminals.
+  final ValueChanged<ShellSection>? onSection;
+
   @override
   Widget build(BuildContext context) {
+    final panel = _panel(context);
+    final tool = kMobile &&
+        (effectiveSection == ShellSection.terminal ||
+            effectiveSection == ShellSection.git ||
+            effectiveSection == ShellSection.files);
+    if (!tool) return panel;
+    final folder = (activeWorkspaceFolder ?? '').trim();
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      PhoneToolHeader(
+        section: effectiveSection,
+        subtitle: folder.isEmpty ? '' : lastPathSegment(folder, ifEmpty: folder),
+        onSection: onSection,
+      ),
+      Expanded(child: panel),
+    ]);
+  }
+
+  Widget _panel(BuildContext context) {
     if (effectiveSection == ShellSection.terminal) {
       return TerminalsSidebarPanel(
         workspacePath: activeWorkspaceFolder ?? '',
@@ -156,6 +180,7 @@ class ShellSidebarHost extends StatelessWidget {
           onOpenTerminal(idx);
         },
         onCloseTerminal: onCloseTerminal,
+        showHeader: !kMobile,
       );
     }
 
@@ -193,6 +218,7 @@ class ShellSidebarHost extends StatelessWidget {
               tab: gitTab,
               onTab: onGitTab,
               onOpenPullRequest: onOpenPullRequest,
+              showHeader: !kMobile,
             );
     }
 
@@ -205,6 +231,7 @@ class ShellSidebarHost extends StatelessWidget {
               client: c,
               workspacePath: activeWorkspaceFolder ?? '',
               onOpenFile: onOpenFile,
+              showHeader: !kMobile,
             );
     }
 

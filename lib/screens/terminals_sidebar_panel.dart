@@ -22,6 +22,7 @@ class TerminalsSidebarPanel extends StatelessWidget {
     required this.onNewTerminal,
     required this.onOpenTerminal,
     required this.onCloseTerminal,
+    this.showHeader = true,
   });
 
   final String workspacePath;
@@ -40,6 +41,9 @@ class TerminalsSidebarPanel extends StatelessWidget {
   /// created or destroyed; the pane can only minimize it.
   final ValueChanged<String> onCloseTerminal;
 
+  /// False on the phone, where the shared tool header sits above.
+  final bool showHeader;
+
   @override
   Widget build(BuildContext context) {
     Theme.of(context);
@@ -47,7 +51,7 @@ class TerminalsSidebarPanel extends StatelessWidget {
         workspacePath.trim().isEmpty ? '~/workspace' : workspacePath;
 
     final folder = lastPathSegment(displayPath, ifEmpty: displayPath);
-    final head = <Widget>[
+    final head = showHeader ? <Widget>[
           if (kMobile)
             ShellSectionHeader(
               label: 'Terminals',
@@ -98,7 +102,7 @@ class TerminalsSidebarPanel extends StatelessWidget {
               ]),
             ),
           ),
-    ];
+    ] : <Widget>[];
     if (terminals.isEmpty) {
       return Container(
         color: kMobile ? AppColors.pageBg : Colors.transparent,
@@ -125,11 +129,86 @@ class TerminalsSidebarPanel extends StatelessWidget {
         children: [
           ...head,
           SizedBox(height: S.s6),
-          for (var i = 0; i < terminals.length; i++) _row(i),
+          if (kMobile) ...[
+            for (var i = 0; i < terminals.length; i++) _phoneRow(i, folder),
+            _newButton(),
+          ] else
+            for (var i = 0; i < terminals.length; i++) _row(i),
         ],
       ),
     );
   }
+
+  /// SH-04 phone row: 15/400 title, 14/400 fg3 sub with the state word, a 6
+  /// dot (fg1 live, fg4 stopped), pitch 64.
+  Widget _phoneRow(int i, String folder) {
+    final t = terminals[i];
+    return Semantics(
+      button: true,
+      selected: i == focus,
+      label: t.title,
+      hint: '$folder, ${t.alive ? 'running' : 'stopped'}',
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: () => onOpenTerminal(i),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 64),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: Row(children: [
+              Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(t.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(15, color: AppColors.fg1)),
+                      Text('$folder - ${t.alive ? 'running' : 'stopped'}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(14, color: AppColors.fg3)),
+                    ]),
+              ),
+              Container(
+                width: 6,
+                height: 6,
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                    color: t.alive ? AppColors.fg1 : AppColors.fg4,
+                    shape: BoxShape.circle),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _newButton() => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        child: Semantics(
+          button: true,
+          label: 'New terminal',
+          excludeSemantics: true,
+          child: InkWell(
+            onTap: onNewTerminal,
+            borderRadius: BorderRadius.circular(6),
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 48),
+              decoration: BoxDecoration(
+                color: AppColors.surface2,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: AppColors.border),
+              ),
+              alignment: Alignment.center,
+              child: Text('New terminal',
+                  style: sans(14, weight: W.label, color: AppColors.fg1)),
+            ),
+          ),
+        ),
+      );
 
   Widget _row(int i) {
     final t = terminals[i];

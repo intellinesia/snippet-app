@@ -1774,6 +1774,7 @@ class _DesktopShellState extends State<DesktopShell>
         gitTab: _gitTab,
         onGitTab: (t) => setState(() => _gitTab = t),
         onOpenPullRequest: (n) => _dispatchSessionAction('pull_requests', '$n'),
+        onSection: (s) => _setState(() => _section = s),
         topInset: topInset,
         onAfterPick: onAfterPick,
         instances: _instances,

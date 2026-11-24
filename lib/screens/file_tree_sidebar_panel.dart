@@ -620,75 +620,50 @@ class _FileTreeRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!kMobile) return _desk();
-    return Padding(
-      padding: EdgeInsets.only(
-        left: kSidebarContentInset + depth * (kMobile ? kTreeIndentStep : S.of(14)),
-        right: kSidebarContentInset,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(R.md),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(R.md),
-          child: Container(
-            height: kMobile ? kNavRowHeight : 26,
-            padding: const EdgeInsets.symmetric(horizontal: kNavPadH),
+    return _phone();
+  }
+
+  /// SH-04 phone row: 48 tall, 14 indent per level, 20 icon fg2, 13/400 name,
+  /// modified files 13/500 with a trailing M, folders a 16 chevron at the end.
+  Widget _phone() {
+    final modified = entry.gitStatus != null &&
+        fsGitStatusMeta(entry.gitStatus) != null;
+    return Semantics(
+      button: true,
+      label: entry.name,
+      hint: modified ? 'Modified' : null,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Padding(
+            padding: EdgeInsets.only(left: 16 + depth * 14.0, right: 16),
             child: Row(children: [
-              // Fixed chevron column so names align whether or not a row can be
-              // expanded — a file must not shift left against its siblings.
-              //
-              // SQUARE, and the spinner is CENTERED inside it. A width-only
-              // `SizedBox(width: S.s16)` hands its child a TIGHT width of 16, so an
-              // inner `SizedBox(width: S.of(11))` is enforced against minWidth=16 and
-              // the spinner renders 16 wide x 11 tall — a flattened oval.
-              // Center gives the child loose constraints instead, so it stays
-              // circular.
-              SizedBox(
-                width: 16,
-                height: 16,
-                child: entry.isDir
-                    ? (loading
-                        ? const Center(child: Spinner(size: 12))
-                        : AppIcon(
-                            expanded ? 'chevron-down' : 'chevron-right',
-                            size: 12,
-                            color: hasError ? AppColors.danger : AppColors.fg4,
-                          ))
-                    : null,
-              ),
-              SizedBox(width: S.s4),
-              if (kMobile)
-                hasError
-                    ? AppIcon('folder', size: 14, color: AppColors.danger)
-                    : FileGlyph(entry.name,
-                        isDir: entry.isDir, open: expanded, size: 15)
-              else
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: hasError
-                        ? AppColors.danger
-                        : entry.isDir
-                            ? Colors.transparent
-                            : fileTint(entry.name),
-                    borderRadius: BorderRadius.circular(R.of(2)),
-                  ),
-                ),
-              SizedBox(width: kMobile ? 8 : 9),
+              hasError
+                  ? AppIcon('folder', size: 20, color: AppColors.danger)
+                  : FileGlyph(entry.name,
+                      isDir: entry.isDir, open: expanded, size: 20),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(entry.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(kMobile ? 13 : 13,
-                        color: entry.isDir || kMobile
-                            ? AppColors.fg2
-                            : AppColors.fg3)),
+                    style: sans(13,
+                        weight: modified ? W.label : W.body,
+                        color: AppColors.fg1)),
               ),
-              if (entry.gitStatus != null) ...[
-                const SizedBox(width: 6),
-                FsGitStatusLabel(entry.gitStatus),
+              if (modified) ...[
+                const SizedBox(width: 8),
+                Text('M', style: sans(11, color: AppColors.fg3)),
+              ],
+              if (entry.isDir) ...[
+                const SizedBox(width: 8),
+                loading
+                    ? const SizedBox(
+                        width: 16, height: 16, child: Spinner(size: 12))
+                    : AppIcon(expanded ? 'chevron-down' : 'chevron-right',
+                        size: 16, color: AppColors.fg3),
               ],
             ]),
           ),

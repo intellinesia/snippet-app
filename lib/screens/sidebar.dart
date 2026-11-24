@@ -41,6 +41,7 @@ import 'mobile_session_home.dart';
 import 'phone_hero.dart';
 import '../session_quick_send.dart';
 import 'artifacts_screen.dart' show openArtifactsList;
+import 'mobile_home/everyone_switcher.dart' show showEveryoneSwitcher;
 import 'pull_requests.dart' show openPullRequest;
 export 'sidebar_mobile.dart';
 export 'sidebar_tiles.dart' show SidebarBrand;
@@ -590,7 +591,6 @@ child: PhoneAgentPage(
       for (final s in _sessions ?? const <SessionInfo>[])
         if (!isDedicatedLeadSession(s.id) && !isInboxSessionRow(s)) s,
     ];
-    void search() => widget.onMobileHome(MobileHome.chats);
     switch (place ?? widget.mobileHome) {
       case MobileHome.home:
         return QuietHomeScreen(
@@ -603,7 +603,17 @@ child: PhoneAgentPage(
           onOpenSession: (s) => widget.onOpenSession(s.id, s.title, s.profile),
           onOpenSessions: () => widget.onMobileHome(MobileHome.chats),
           onSettings: () => widget.onMobileHome(MobileHome.settings),
-          onSearch: search,
+          onSearch: () => showEveryoneSwitcher(
+            context,
+            agents: _heroAgents,
+            groups: _heroGroups,
+            sessions: list,
+            onOpenAgent: (a) => widget.onAgent?.call(a),
+            onOpenGroup: (g) =>
+                openGroupThread(context, client: client, group: g),
+            onOpenSession: (s) =>
+                widget.onOpenSession(s.id, s.title, s.profile),
+          ),
           onNew: widget.onNewSession,
           onOpenAgent: widget.onAgent,
           onOpenLead: widget.onOpenLead,
