@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../api.dart';
-import '../glass.dart';
 import '../models.dart';
 import '../mochi.dart';
 import '../platform.dart';
@@ -16,7 +15,7 @@ import '../screens/agent_appearance.dart' show showAgentAppearance;
 import '../screens/agent_reach_panel.dart' show showAgentReachSettings;
 import '../screens/agent_wake_panel.dart' show showAgentWakeSettings;
 import '../screens/group_messaging.dart' show confirmDeleteGroup;
-import 'agent_cluster.dart';
+import '../screens/mobile_home/agents_home.dart' show PushedBar, HomeLabel, MarkRow, SwitchRow, agentFace, groupMark;
 import '../screens/group_panel.dart';
 import '../group_mute.dart';
 import '../screens/agent_profile_panel.dart' show showAgentProfileSettings;
@@ -1555,71 +1554,110 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
     );
   }
 
-  /// Phones: language A, the grouped rows of the settings pages.
-  Widget _phoneInfo() {
-    final tasks = widget.onOpenTasks;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (tasks != null)
-          SettingsGroup(children: [
-            SettingsRow(
-                label: 'Tasks', icon: 'task', chevron: true, onTap: tasks),
-          ]),
-        SettingsGroup(
-          header: 'Members',
-          footer: 'Long-press a member to remove them from the group.',
-          children: [
-            for (final m in _group.members)
-              SettingsRow(
-                label: _name(m.id, m.kind),
-                sub: m.isHuman
-                    ? null
-                    : (m.id == _group.lead ? 'Lead' : 'Member'),
-                leading: m.isAgent
-                    // Icon-wide slot so names line up with the icon rows.
-                    ? SizedBox.square(
-                        dimension: Grouped.icon,
-                        child: OverflowBox(
-                            maxWidth: Grouped.icon + 10,
-                            maxHeight: Grouped.icon + 10,
-                            child: AgentMochi(m.id, size: Grouped.icon + 10)))
-                    : null,
-                icon: m.isHuman ? 'user' : null,
-                onLongPress: _busy || m.isHuman
-                    ? null
-                    : () => _update(() => widget.client
-                        .updateGroup(_group.id, removeMembers: [m.id])),
+  String _created() {
+    final d = DateTime.tryParse(_group.createdAt)?.toLocal();
+    if (d == null) return '';
+    const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return ' - created ${d.day} ${m[d.month - 1]}';
+  }
+
+  Future<void> _leave() async {
+    final ok = await confirmAction(context,
+        title: 'Leave this group?',
+        body: 'You will stop seeing its messages. The agents stay.',
+        confirmLabel: 'Leave group');
+    if (!ok || !mounted) return;
+    final me = [for (final m in _group.members) if (m.isHuman) m.id];
+    await _update(
+        () => widget.client.updateGroup(_group.id, removeMembers: me));
+    if (mounted) _close();
+  }
+
+  /// Phone group info (HM-07): bar, 64 mark, member rows, add, mute, leave.
+  Widget _phoneGroupPage(String title) {
+    final n = _group.members.length;
+    Widget action(String icon, String label, VoidCallback? onTap,
+            {Color? color, Widget? trailing}) =>
+        Semantics(
+          button: true,
+          label: label,
+          excludeSemantics: true,
+          child: TapDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(children: [
+                  AppIcon(icon, size: 20, color: color ?? AppColors.fg1),
+                  const SizedBox(width: 14),
+                  Expanded(
+                      child: Text(label,
+                          style: sans(15, color: color ?? AppColors.fg1))),
+                  if (trailing != null) trailing,
+                ]),
               ),
-            SettingsRow(
-              label: 'Lead',
-              icon: 'crown',
-              value: _leadName() ?? 'None',
-              chevron: true,
-              onTap: _busy ? null : _pickLead,
             ),
-            SettingsRow(
-              label: 'Add member',
-              icon: 'user-plus',
-              accent: true,
-              onTap: _busy ? null : _pickAdd,
-            ),
-          ],
-        ),
-        SettingsGroup(
-          footer:
-              'Muted groups still show in the list, without mention notifications.',
-          children: [
-            SettingsRow(
-                label: 'Mute', icon: 'bell-off', trailing: _muteSwitch()),
-            SettingsRow(
-                label: 'Delete group',
-                icon: 'trash',
-                danger: true,
-                onTap: _deleteGroup),
-          ],
-        ),
-      ],
+          ),
+        );
+    return Material(
+      color: AppColors.bg,
+      child: SafeArea(
+        child: Column(children: [
+          PushedBar(title: 'Group info', onBack: _close),
+          Expanded(
+            child: ListView(padding: const EdgeInsets.only(bottom: 32), children: [
+              const SizedBox(height: 16),
+              Center(child: groupMark(64, radius: 17.9)),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Text(title,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(20, weight: FontWeight.w500, color: AppColors.fg1)),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                child: Text('$n ${n == 1 ? 'member' : 'members'}${_created()}',
+                    textAlign: TextAlign.center,
+                    style: sans(13, color: AppColors.fg3)),
+              ),
+              const HomeLabel('Members', top: 24),
+              for (final m in _group.members)
+                MarkRow(
+                  mark: m.isAgent
+                      ? agentFace(m.id, 36)
+                      : Center(child: AppIcon('user', size: 20, color: AppColors.fg3)),
+                  title: _name(m.id, m.kind),
+                  sub: m.isHuman
+                      ? 'You'
+                      : (m.id == _group.lead ? 'Leads the group' : 'Agent'),
+                  trailing: Text(
+                      m.isHuman ? 'Owner' : (m.id == _group.lead ? 'Admin' : 'Member'),
+                      style: sans(12, color: AppColors.fg3)),
+                  onTap: _busy || m.isHuman
+                      ? null
+                      : () => _update(() => widget.client
+                          .updateGroup(_group.id, removeMembers: [m.id])),
+                ),
+              action('user-plus', 'Add member', _busy ? null : _pickAdd),
+              ValueListenableBuilder<Set<String>>(
+                valueListenable: mutedGroups,
+                builder: (_, muted, __) {
+                  final on = muted.contains(_group.id);
+                  return SwitchRow('Mute notifications', on,
+                      (v) => setGroupMuted(_group.id, v),
+                      sub: on ? 'On' : 'Off');
+                },
+              ),
+              action('log-out', 'Leave group', _busy ? null : _leave,
+                  color: AppColors.danger),
+            ]),
+          ),
+        ]),
+      ),
     );
   }
 
@@ -1636,28 +1674,7 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
 
   Widget _frame() {
     final title = _group.title.trim().isEmpty ? 'Group' : _group.title.trim();
-    final count = '${_group.members.length} '
-        '${_group.members.length == 1 ? 'member' : 'members'}';
-    if (kMobile && !widget.docked) {
-      // Same page as an agent's: back circle, plate hero, grouped rows.
-      return _AgentPageFrame(
-        title: '',
-        onBack: _close,
-        actions: [_EditPill(onTap: _busy ? null : _rename)],
-        children: [
-          Padding(
-            padding: EdgeInsets.only(bottom: S.s16),
-            child: SettingsHero(
-              avatar: AgentCluster(
-                  ids: _group.agentIds, size: Grouped.avatarCharacter),
-              name: title,
-              sub: count,
-            ),
-          ),
-          _phoneInfo(),
-        ],
-      );
-    }
+    if (kMobile && !widget.docked) return _phoneGroupPage(title);
     final hide =
         widget.docked ? ShellRequestScope.maybeOf(context)?.toggleSide : _close;
     return _AgentPageFrame(
@@ -1736,26 +1753,6 @@ class _MemberRowState extends State<_MemberRow> {
           trailing: _hover && widget.onRemove != null
               ? PanelBarButton('x', 'Remove from group', widget.onRemove)
               : widget.status,
-        ),
-      );
-}
-
-class _EditPill extends StatelessWidget {
-  const _EditPill({required this.onTap});
-
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) => TapDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Glass(
-          radius: BorderRadius.circular(R.pill),
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s6),
-            child: Text('Edit',
-                style: sans(13, weight: W.label, color: AppColors.fg1)),
-          ),
         ),
       );
 }
