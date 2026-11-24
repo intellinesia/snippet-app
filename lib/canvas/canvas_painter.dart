@@ -16,6 +16,11 @@ const double kCanvasBlockZoom = 0.15;
 /// Pins and frame labels shrink with zoom: full size from 0.5x, 45% at 0.22x.
 double canvasChromeScale(double zoom) => (zoom / 0.5).clamp(0.45, 1.0);
 
+/// Revision whose thumbnail to show for [frame]: its own, or the preview
+/// revision when previewing an older version and the frame has changed since.
+int canvasEffectiveRev(CanvasFrame frame, int? previewRev) =>
+    (previewRev != null && frame.rev > previewRev) ? previewRev : frame.rev;
+
 /// Callback notified with the visible frames and active thumbnail scale bucket on paint.
 typedef CanvasVisibleCallback = void Function(
   List<CanvasFrame> visibleFrames,
@@ -116,6 +121,7 @@ class InfiniteCanvasPainter extends CustomPainter {
     required this.isInteracting,
     this.isPhone = false,
     this.paintVersion = 0,
+    this.previewRev,
     this.selectedFrameId,
     this.selectedElement,
     this.pins = const <CanvasPin>[],
@@ -132,6 +138,7 @@ class InfiniteCanvasPainter extends CustomPainter {
   final bool isInteracting;
   final bool isPhone;
   final int paintVersion;
+  final int? previewRev;
   final String? selectedFrameId;
   final CanvasElementRect? selectedElement;
   final List<CanvasPin> pins;
@@ -184,7 +191,7 @@ class InfiniteCanvasPainter extends CustomPainter {
           ? null
           : cache.bestAvailable(
               frame.id,
-              rev: frame.rev,
+              rev: canvasEffectiveRev(frame, previewRev),
               preferredScale: scaleBucket,
             );
 
@@ -485,6 +492,7 @@ class InfiniteCanvasPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant InfiniteCanvasPainter oldDelegate) =>
       oldDelegate.paintVersion != paintVersion ||
+      oldDelegate.previewRev != previewRev ||
       oldDelegate.viewport != viewport ||
       oldDelegate.index != index ||
       oldDelegate.devicePixelRatio != devicePixelRatio ||

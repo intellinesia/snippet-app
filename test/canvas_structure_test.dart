@@ -57,4 +57,52 @@ void main() {
       expect(500 * 0.5 + c.ty, 300);
     });
   });
+
+  group('steps wording', () {
+    CanvasOpBatch batch(int rev, int tsSec, List<CanvasOpChange> c) =>
+        CanvasOpBatch(
+          rev: rev,
+          batchId: 'b$rev',
+          author: 'You',
+          label: 'Step $rev',
+          ts: DateTime.fromMillisecondsSinceEpoch(tsSec * 1000),
+          changes: c,
+        );
+    const titles = {'home': 'Home', 'dash': 'Dashboard'};
+
+    test('describes frame and element edits', () {
+      final b = batch(1, 10, const [
+        CanvasOpChange(op: 'move_frame', frameId: 'dash'),
+        CanvasOpChange(op: 'set_html', frameId: 'home', elId: 'ti-02'),
+      ]);
+      expect(describeCanvasBatch(b, titles),
+          'Moved Dashboard, edited ti-02 in Home');
+    });
+
+    test('collapses bulk creates and caps the list', () {
+      final many = batch(2, 10, [
+        for (var i = 0; i < 5; i++)
+          CanvasOpChange(op: 'create_frame', frameId: 'f$i'),
+      ]);
+      expect(describeCanvasBatch(many, titles), 'Created 5 frames');
+      final long = batch(3, 10, const [
+        CanvasOpChange(op: 'move_frame', frameId: 'a'),
+        CanvasOpChange(op: 'move_frame', frameId: 'b'),
+        CanvasOpChange(op: 'move_frame', frameId: 'c'),
+        CanvasOpChange(op: 'move_frame', frameId: 'd'),
+      ]);
+      expect(describeCanvasBatch(long, titles), 'Moved a, moved b, moved c, +1 more');
+    });
+
+    test('finds the revision at a time and steps touching a frame', () {
+      final ops = [
+        batch(1, 10, const [CanvasOpChange(op: 'create_frame', frameId: 'home')]),
+        batch(2, 20, const [CanvasOpChange(op: 'move_frame', frameId: 'dash')]),
+        batch(3, 30, const [CanvasOpChange(op: 'set_html', frameId: 'home')]),
+      ];
+      expect(canvasRevAt(ops, DateTime.fromMillisecondsSinceEpoch(25000)), 2);
+      expect(canvasRevAt(ops, DateTime.fromMillisecondsSinceEpoch(5000)), 0);
+      expect(canvasStepsTouching(ops, 'home', 1).map((b) => b.rev), [3]);
+    });
+  });
 }

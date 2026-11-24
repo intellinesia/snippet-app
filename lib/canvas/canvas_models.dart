@@ -183,7 +183,7 @@ class CanvasPin {
       );
 
   factory CanvasPin.fromJson(Map<String, dynamic> json) {
-    final rawTs = json['created_at'] ?? json['ts'];
+    final rawTs = json['created_at'] ?? json['created_ts'] ?? json['ts'];
     final rawEl = json['el_id']?.toString();
     return CanvasPin(
       id: json['id']?.toString() ?? '',
@@ -208,6 +208,8 @@ class CanvasOpBatch {
     required this.author,
     required this.label,
     required this.ts,
+    this.changes = const <CanvasOpChange>[],
+    this.reverts,
   });
 
   final int rev;
@@ -216,13 +218,113 @@ class CanvasOpBatch {
   final String label;
   final DateTime ts;
 
+  /// Targets of the individual ops in this step.
+  final List<CanvasOpChange> changes;
+
+  /// Batch id this step reverted, when it is a revert step.
+  final String? reverts;
+
   factory CanvasOpBatch.fromJson(Map<String, dynamic> json) => CanvasOpBatch(
         rev: (json['rev'] as num?)?.toInt() ?? 0,
         batchId: json['batch_id']?.toString() ?? '',
         author: parseCanvasAuthor(json['author']),
         label: json['label']?.toString() ?? '',
         ts: _parseTimestamp(json['ts']) ?? DateTime.now(),
+        changes: [
+          for (final o in (json['ops'] as List? ?? const []))
+            if (o is Map) CanvasOpChange.fromJson(o.cast<String, dynamic>()),
+        ],
+        reverts: json['reverts']?.toString(),
       );
+}
+
+/// One op inside a history step: what kind, which frame, which element.
+class CanvasOpChange {
+  const CanvasOpChange({required this.op, this.frameId, this.elId});
+
+  final String op;
+  final String? frameId;
+  final String? elId;
+
+  factory CanvasOpChange.fromJson(Map<String, dynamic> j) {
+    String? str(Object? v) {
+      final t = v?.toString() ?? '';
+      return t.isEmpty ? null : t;
+    }
+
+    return CanvasOpChange(
+      op: j['op']?.toString() ?? '',
+      frameId: str(j['frame_id'] ?? j['id']),
+      elId: str(j['el_id']),
+    );
+  }
+}
+
+/// Plain-language summary of a step: "Moved Dashboard, edited h1 in Home".
+String describeCanvasBatch(CanvasOpBatch b, Map<String, String> frameTitles) {
+  String frame(String? id) {
+    if (id == null) return 'a frame';
+    final t = frameTitles[id];
+    return (t != null && t.isNotEmpty) ? t : id;
+  }
+
+  final creates = b.changes.where((c) => c.op == 'create_frame').length;
+  final phrases = <String>[];
+  if (creates > 3) {
+    phrases.add('Created $creates frames');
+  }
+  for (final c in b.changes) {
+    final String text;
+    switch (c.op) {
+      case 'create_frame':
+        if (creates > 3) continue;
+        text = 'Created ${frame(c.frameId)}';
+      case 'delete_frame':
+        text = 'Deleted ${frame(c.frameId)}';
+      case 'move_frame':
+        text = 'Moved ${frame(c.frameId)}';
+      case 'resize_frame':
+        text = 'Resized ${frame(c.frameId)}';
+      case 'rename_frame' || 'set_title':
+        text = 'Renamed ${frame(c.frameId)}';
+      default:
+        text = c.elId != null
+            ? 'Edited ${c.elId} in ${frame(c.frameId)}'
+            : 'Edited ${frame(c.frameId)}';
+    }
+    if (!phrases.contains(text)) phrases.add(text);
+  }
+  if (phrases.isEmpty) return '';
+  const shown = 3;
+  final head = phrases.take(shown).toList();
+  final more = phrases.length - head.length;
+  final joined = [
+    head.first,
+    ...head.skip(1).map((t) => t[0].toLowerCase() + t.substring(1)),
+  ].join(', ');
+  return more > 0 ? '$joined, +$more more' : joined;
+}
+
+/// Latest revision whose step was recorded at or before [t]; 0 when none.
+int canvasRevAt(List<CanvasOpBatch> ops, DateTime t) {
+  var rev = 0;
+  for (final b in ops) {
+    if (!b.ts.isAfter(t) && b.rev > rev) rev = b.rev;
+  }
+  return rev;
+}
+
+/// Steps after [rev] that touched [frameId], newest first.
+List<CanvasOpBatch> canvasStepsTouching(
+  List<CanvasOpBatch> ops,
+  String frameId,
+  int rev,
+) {
+  final out = [
+    for (final b in ops)
+      if (b.rev > rev && b.changes.any((c) => c.frameId == frameId)) b,
+  ]..sort((a, b) => b.rev.compareTo(a.rev));
+  return out;
 }
 
 /// Live canvas revision update from WebSocket `/events`.

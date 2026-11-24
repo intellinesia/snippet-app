@@ -15,6 +15,7 @@ import 'canvas_client.dart';
 import 'canvas_minimap.dart';
 import 'canvas_models.dart';
 import 'canvas_outline.dart';
+import 'canvas_pin_thread.dart';
 import 'canvas_painter.dart';
 import 'canvas_panels.dart';
 import 'canvas_tool_rail.dart';
@@ -24,7 +25,7 @@ import 'thumb_cache.dart';
 
 enum CanvasTool { select, pin }
 
-enum _SidePanelMode { none, pins, pinComposer, steps }
+enum _SidePanelMode { none, pins, pinThread, pinComposer, steps }
 
 /// In-app infinite canvas screen rendered from server PNG thumbnails.
 class CanvasScreen extends StatefulWidget {
@@ -90,6 +91,7 @@ class _CanvasScreenState extends State<CanvasScreen>
   // Steps history state.
   List<CanvasOpBatch> _ops = const <CanvasOpBatch>[];
   String? _revertingBatchId;
+  int? _previewRev;
 
   // Thumbnail fetch queue.
   final Set<ThumbCacheKey> _inFlightThumbs = <ThumbCacheKey>{};
@@ -481,7 +483,7 @@ class _CanvasScreenState extends State<CanvasScreen>
       for (final frame in visible) {
         final key = ThumbCacheKey(
           frameId: frame.id,
-          rev: frame.rev,
+          rev: canvasEffectiveRev(frame, _previewRev),
           scale: scaleBucket,
         );
         final failedAt = _failedThumbs[key];
@@ -535,7 +537,7 @@ class _CanvasScreenState extends State<CanvasScreen>
       final bytes = await client.fetchThumbPng(
         job.frame.id,
         job.key.scale,
-        rev: job.frame.rev,
+        rev: job.key.rev,
       );
       if (!mounted || gen != _cacheGeneration) return;
       final codec = await ui.instantiateImageCodec(bytes);
@@ -663,8 +665,7 @@ class _CanvasScreenState extends State<CanvasScreen>
     final pos = details.localPosition;
     final hitPin = _hitTestPin(pos);
     if (hitPin != null) {
-      setState(() => _selectedPinId = hitPin.id);
-      _openPinsPanel();
+      _openPinThread(hitPin);
       return;
     }
 
@@ -850,6 +851,89 @@ class _CanvasScreenState extends State<CanvasScreen>
     if (frame != null) {
       _fitFrame(frame);
     }
+    _openPinThread(pin);
+  }
+
+  Widget _pinThreadBody(CanvasPin pin, {VoidCallback? onChanged}) {
+    final frame = _index.frameById(pin.frameId);
+    final at = pin.createdAt;
+    final pinRev = at == null ? 0 : canvasRevAt(_ops, at);
+    final touching = pinRev > 0
+        ? canvasStepsTouching(_ops, pin.frameId, pinRev)
+        : const <CanvasOpBatch>[];
+    final changed = touching.isNotEmpty && frame != null;
+    return PinThreadView(
+      pin: pin,
+      frameTitle: frame == null || frame.title.isEmpty
+          ? pin.frameId
+          : frame.title,
+      client: _client,
+      beforeRev: changed ? pinRev : null,
+      afterRev: changed ? frame.rev : null,
+      revertBusy: _revertingBatchId != null,
+      onRevert: changed
+          ? () => _confirmAndRevert(touching.first, onBusyChanged: onChanged)
+          : null,
+      onApprove: () async {
+        await _togglePinResolve(pin);
+        onChanged?.call();
+      },
+    );
+  }
+
+  void _openPinThread(CanvasPin pin) {
+    setState(() {
+      _selectedPinId = pin.id;
+      _pendingPin = null;
+    });
+    if (_isDesktopPanelLayout(context)) {
+      setState(() => _panelMode = _SidePanelMode.pinThread);
+      return;
+    }
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface1,
+      barrierColor: AppColors.scrim,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
+      ),
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          final live = _pins.where((p) => p.id == pin.id).firstOrNull ?? pin;
+          return SizedBox(
+            height: MediaQuery.sizeOf(ctx).height * 0.75,
+            child: SafeArea(
+              top: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(S.s16, S.s12, S.s8, S.s8),
+                    child: Row(
+                      children: [
+                        Text('Pin thread',
+                            style: sans(15,
+                                weight: W.label, color: AppColors.fg1)),
+                        const Spacer(),
+                        CanvasCloseButton(
+                            onPressed: () => Navigator.of(sheetCtx).pop()),
+                      ],
+                    ),
+                  ),
+                  Divider(height: 1, thickness: 1, color: AppColors.border),
+                  Expanded(
+                    child: _pinThreadBody(live, onChanged: () {
+                      if (sheetCtx.mounted) setSheetState(() {});
+                    }),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   void _openPinsPanel() {
@@ -925,15 +1009,7 @@ class _CanvasScreenState extends State<CanvasScreen>
     try {
       final nextRev = await client.revertBatch(batch.batchId);
       if (!mounted) return;
-      _cacheGeneration++;
-      _thumbCache.clear();
-      _layouts.clear();
-      _failedThumbs.clear();
-      _failedLayouts.clear();
-      _paintVersion++;
-      await _loadCanvas();
-      await _loadOps();
-      await _loadPins();
+      await _refreshAfterHistoryChange();
       if (!mounted) return;
       _showToast(
           'Reverted. Canvas is now at r${nextRev > 0 ? nextRev : (_snapshot?.rev ?? 0)}');
@@ -944,6 +1020,142 @@ class _CanvasScreenState extends State<CanvasScreen>
       if (mounted) setState(() => _revertingBatchId = null);
       onBusyChanged?.call();
     }
+  }
+
+  Future<void> _refreshAfterHistoryChange() async {
+    _previewRev = null;
+    _cacheGeneration++;
+    _thumbCache.clear();
+    _layouts.clear();
+    _failedThumbs.clear();
+    _failedLayouts.clear();
+    _lastQueuedCacheGen = -1;
+    _paintVersion++;
+    await _loadCanvas();
+    await _loadOps();
+    await _loadPins();
+  }
+
+  /// Shows the canvas as it was at [batch]; null returns to the latest.
+  void _previewStep(CanvasOpBatch? batch) {
+    final rev = batch?.rev;
+    final latest = _snapshot?.rev ?? 0;
+    setState(() {
+      _previewRev = (rev == null || rev >= latest) ? null : rev;
+      _lastQueuedCacheGen = -1;
+      _paintVersion++;
+    });
+  }
+
+  Future<void> _restorePreview() async {
+    final client = _client;
+    final target = _previewRev;
+    if (client == null || target == null || _revertingBatchId != null) return;
+    final newer = [
+      for (final b in _ops)
+        if (b.rev > target) b,
+    ]..sort((a, b) => b.rev.compareTo(a.rev));
+    if (newer.isEmpty) {
+      _previewStep(null);
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierColor: AppColors.modalScrim,
+      builder: (dlgCtx) => AlertDialog(
+        backgroundColor: AppColors.surface1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(R.md),
+          side: BorderSide(color: AppColors.border),
+        ),
+        title: Text('Restore r$target?',
+            style: sans(16, weight: W.title, color: AppColors.fg1)),
+        content: Text(
+          'This undoes ${newer.length} ${newer.length == 1 ? 'step' : 'steps'} as new steps. Nothing is lost.',
+          style: sans(13, color: AppColors.fg2),
+        ),
+        actions: [
+          SizedBox(
+            height: 44,
+            child: TextButton(
+              onPressed: () => Navigator.of(dlgCtx).pop(false),
+              child: Text('Cancel', style: sans(13, color: AppColors.fg2)),
+            ),
+          ),
+          SizedBox(
+            height: 44,
+            child: TextButton(
+              onPressed: () => Navigator.of(dlgCtx).pop(true),
+              child: Text('Restore',
+                  style: sans(13, weight: W.label, color: AppColors.danger)),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _revertingBatchId = newer.first.batchId);
+    try {
+      for (final b in newer) {
+        await client.revertBatch(b.batchId);
+        if (!mounted) return;
+      }
+      await _refreshAfterHistoryChange();
+      if (!mounted) return;
+      _showToast('Restored r$target. Canvas is now at r${_snapshot?.rev ?? 0}');
+    } catch (e) {
+      if (!mounted) return;
+      await _refreshAfterHistoryChange();
+      if (mounted) _showToast('Restore stopped: $e');
+    } finally {
+      if (mounted) setState(() => _revertingBatchId = null);
+    }
+  }
+
+  Widget _previewBanner() {
+    final rev = _previewRev!;
+    final batch = _ops.where((b) => b.rev == rev).firstOrNull;
+    final label = batch == null
+        ? 'Previewing r$rev'
+        : 'Previewing r$rev · ${batch.author}, ${batch.label.isNotEmpty ? batch.label : batch.batchId}';
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 560),
+      padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s8, S.s8),
+      decoration: BoxDecoration(
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(R.md),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Text(label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: sans(13, color: AppColors.fg1)),
+          ),
+          SizedBox(width: S.s12),
+          SizedBox(
+            height: 44,
+            child: FilledButton(
+              onPressed: _restorePreview,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.accentFg,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(R.sm),
+                ),
+              ),
+              child: Text('Restore this version',
+                  style: sans(13, weight: W.label, color: AppColors.accentFg)),
+            ),
+          ),
+          SizedBox(width: S.s4),
+          CanvasCloseButton(onPressed: () => _previewStep(null)),
+        ],
+      ),
+    );
   }
 
   Future<void> _copyShareLink() async {
@@ -1135,6 +1347,12 @@ class _CanvasScreenState extends State<CanvasScreen>
                     ops: _ops,
                     currentRev: _snapshot?.rev ?? 0,
                     revertingBatchId: _revertingBatchId,
+                    frameTitles: {for (final f in _index.frames) f.id: f.title},
+                    previewRev: _previewRev,
+                    onPreview: (batch) {
+                      Navigator.of(sheetCtx).pop();
+                      _previewStep(batch);
+                    },
                     onRevert: (batch) => _confirmAndRevert(
                       batch,
                       onBusyChanged: () {
@@ -1211,16 +1429,14 @@ class _CanvasScreenState extends State<CanvasScreen>
                         isInteracting: _isInteracting,
                         isPhone: isPhone,
                         paintVersion: _paintVersion,
+                        previewRev: _previewRev,
                         selectedFrameId: _selectedFrameId,
                         selectedElement: _selectedElement,
                         pins: _pins,
                         selectedPinId: _selectedPinId,
                         layouts: _layouts,
                         onVisibleFrames: _onVisibleFrames,
-                        onTapPin: (pin) {
-                          setState(() => _selectedPinId = pin.id);
-                          _openPinsPanel();
-                        },
+                        onTapPin: _openPinThread,
                       ),
                     ),
                   ),
@@ -1251,6 +1467,13 @@ class _CanvasScreenState extends State<CanvasScreen>
                 top: S.s16,
                 right: S.s16,
                 child: _desktopStatusPill(openPins),
+              ),
+            if (_previewRev != null)
+              Positioned(
+                left: S.s12,
+                right: S.s12,
+                bottom: isPhone ? 76 : S.s16,
+                child: Center(child: _previewBanner()),
               ),
             if (isPhone)
               Positioned(
@@ -1397,6 +1620,24 @@ class _CanvasScreenState extends State<CanvasScreen>
       );
     }
 
+    if (_panelMode == _SidePanelMode.pinThread) {
+      final pin = _pins.where((p) => p.id == _selectedPinId).firstOrNull;
+      if (pin != null) {
+        final n = _pins.indexOf(pin) + 1;
+        final frame = _index.frameById(pin.frameId);
+        return CanvasSidePanel(
+          title: 'Pin $n',
+          subtitle: [
+            if (frame != null && frame.title.isNotEmpty) frame.title,
+            if (pin.elId != null) pin.elId!,
+          ].join(' · '),
+          onBack: () => setState(() => _panelMode = _SidePanelMode.pins),
+          onClose: () => setState(() => _panelMode = _SidePanelMode.none),
+          child: _pinThreadBody(pin, onChanged: () => setState(() {})),
+        );
+      }
+    }
+
     if (_panelMode == _SidePanelMode.steps) {
       return CanvasSidePanel(
         title: 'Steps',
@@ -1407,6 +1648,9 @@ class _CanvasScreenState extends State<CanvasScreen>
           currentRev: _snapshot?.rev ?? 0,
           revertingBatchId: _revertingBatchId,
           onRevert: _confirmAndRevert,
+          frameTitles: {for (final f in _index.frames) f.id: f.title},
+          previewRev: _previewRev,
+          onPreview: _previewStep,
         ),
       );
     }

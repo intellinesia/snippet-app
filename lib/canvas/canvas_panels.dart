@@ -28,11 +28,13 @@ class CanvasSidePanel extends StatelessWidget {
     this.subtitle,
     required this.onClose,
     required this.child,
+    this.onBack,
   });
 
   final String title;
   final String? subtitle;
   final VoidCallback onClose;
+  final VoidCallback? onBack;
   final Widget child;
 
   @override
@@ -50,6 +52,15 @@ class CanvasSidePanel extends StatelessWidget {
             padding: EdgeInsets.fromLTRB(S.s16, S.s12, S.s8, S.s12),
             child: Row(
               children: [
+                if (onBack != null)
+                  IconButton(
+                    onPressed: onBack,
+                    tooltip: 'Back to pins',
+                    padding: EdgeInsets.zero,
+                    constraints:
+                        const BoxConstraints.tightFor(width: 44, height: 44),
+                    icon: AppIcon('arrow-left', size: 16, color: AppColors.fg2),
+                  ),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -288,7 +299,7 @@ class PinsListView extends StatelessWidget {
                         height: 22,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: pin.isResolved ? AppColors.fg3 : AppColors.run,
+                          color: pin.isResolved ? AppColors.fg3 : AppColors.fg1,
                           shape: BoxShape.circle,
                         ),
                         child: Text(
@@ -399,7 +410,7 @@ class _StatusPill extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: S.s6, vertical: S.s2),
       decoration: BoxDecoration(
-        color: resolved ? AppColors.okBg : AppColors.runBg,
+        color: resolved ? AppColors.okBg : AppColors.surface3,
         borderRadius: BorderRadius.circular(R.chip),
       ),
       child: Text(
@@ -407,14 +418,15 @@ class _StatusPill extends StatelessWidget {
         style: sans(
           11,
           weight: W.label,
-          color: resolved ? AppColors.ok : AppColors.run,
+          color: resolved ? AppColors.ok : AppColors.fg2,
         ),
       ),
     );
   }
 }
 
-/// Lists ops batches newest first with Revert action and confirmation.
+/// Versions list: every edit is a named step. Tap a step to preview that
+/// version on the canvas; Revert undoes that single step.
 class StepsHistoryView extends StatelessWidget {
   const StepsHistoryView({
     super.key,
@@ -422,12 +434,20 @@ class StepsHistoryView extends StatelessWidget {
     required this.currentRev,
     required this.revertingBatchId,
     required this.onRevert,
+    this.frameTitles = const <String, String>{},
+    this.previewRev,
+    this.onPreview,
   });
 
   final List<CanvasOpBatch> ops;
   final int currentRev;
   final String? revertingBatchId;
   final Future<void> Function(CanvasOpBatch batch) onRevert;
+  final Map<String, String> frameTitles;
+  final int? previewRev;
+
+  /// Called with the tapped step, or null to leave the preview.
+  final ValueChanged<CanvasOpBatch?>? onPreview;
 
   @override
   Widget build(BuildContext context) {
@@ -442,107 +462,112 @@ class StepsHistoryView extends StatelessWidget {
     }
 
     final sorted = [...ops]..sort((a, b) => b.rev.compareTo(a.rev));
-    return ListView.separated(
-      padding: EdgeInsets.all(S.s12),
-      itemCount: sorted.length,
-      separatorBuilder: (_, __) => SizedBox(height: S.s8),
+    final anyBusy = revertingBatchId != null;
+    return ListView.builder(
+      padding: EdgeInsets.fromLTRB(S.s8, S.s4, S.s8, S.s16),
+      itemCount: sorted.length + 1,
       itemBuilder: (context, index) {
+        if (index == sorted.length) {
+          return Padding(
+            padding: EdgeInsets.fromLTRB(S.s8, S.s12, S.s8, 0),
+            child: Text('Reverting adds a step; nothing is lost.',
+                style: sans(12, color: AppColors.fg4)),
+          );
+        }
         final batch = sorted[index];
         final isBusy = revertingBatchId == batch.batchId;
-        final anyBusy = revertingBatchId != null;
         final isCurrent = currentRev > 0 && batch.rev == currentRev;
-        return Container(
-          padding: EdgeInsets.all(S.s12),
-          decoration: BoxDecoration(
-            color: AppColors.surface2,
+        final isPreview = previewRev == batch.rev;
+        final detail = describeCanvasBatch(batch, frameTitles);
+        final title = batch.label.isNotEmpty ? batch.label : batch.batchId;
+        return Semantics(
+          button: true,
+          selected: isPreview,
+          label: 'Preview revision ${batch.rev}: $title',
+          child: Material(
+            color: isPreview ? AppColors.surface3 : Colors.transparent,
             borderRadius: BorderRadius.circular(R.sm),
-            border: Border.all(
-              color: isCurrent ? AppColors.accentLine : AppColors.border,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: S.s6, vertical: S.s2),
-                    decoration: BoxDecoration(
-                      color: isCurrent ? AppColors.accentBg : AppColors.surface3,
-                      borderRadius: BorderRadius.circular(R.xs),
-                    ),
-                    child: Text(
-                      'r${batch.rev}',
-                      style: mono(
-                        11,
-                        weight: W.label,
-                        color: isCurrent ? AppColors.accent : AppColors.fg1,
+            child: InkWell(
+              onTap: onPreview == null
+                  ? null
+                  : () => onPreview!(isCurrent && !isPreview ? null : batch),
+              borderRadius: BorderRadius.circular(R.sm),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 56),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(S.s8, S.s8, S.s4, S.s8),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 28,
+                        height: 28,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: AppColors.surface3,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          batch.author.isNotEmpty
+                              ? batch.author[0].toUpperCase()
+                              : '?',
+                          style: sans(12,
+                              weight: W.label, color: AppColors.fg1),
+                        ),
                       ),
-                    ),
-                  ),
-                  SizedBox(width: S.s8),
-                  Expanded(
-                    child: Text(
-                      batch.author,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(12, color: AppColors.fg3),
-                    ),
-                  ),
-                  Text(
-                    formatCanvasRelativeTime(batch.ts),
-                    style: mono(11, color: AppColors.fg4),
-                  ),
-                ],
-              ),
-              SizedBox(height: S.s6),
-              Text(
-                batch.label.isNotEmpty ? batch.label : batch.batchId,
-                style: sans(13, color: AppColors.fg1),
-              ),
-              SizedBox(height: S.s8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Semantics(
-                  button: true,
-                  enabled: !anyBusy,
-                  label: 'Revert revision ${batch.rev}',
-                  excludeSemantics: true,
-                  child: InkWell(
-                    onTap: anyBusy ? null : () => onRevert(batch),
-                    borderRadius: BorderRadius.circular(R.xs),
-                    child: Container(
-                      constraints: BoxConstraints(
-                        minHeight: 44,
-                        minWidth: 44,
+                      SizedBox(width: S.s12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: sans(13,
+                                    weight: W.label, color: AppColors.fg1)),
+                            if (detail.isNotEmpty)
+                              Text(detail,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: sans(12, color: AppColors.fg2)),
+                            Text(
+                              '${batch.author} · ${formatCanvasRelativeTime(batch.ts)} · r${batch.rev}${isCurrent ? ' · current' : ''}',
+                              style: sans(11, color: AppColors.fg3),
+                            ),
+                          ],
+                        ),
                       ),
-                      padding:
-                          EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s4),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          AppIcon('undo', size: 14, color: AppColors.fg2),
-                          SizedBox(width: S.s6),
-                          Text(
-                            isBusy ? 'Reverting...' : 'Revert',
-                            style: sans(12,
-                                weight: W.label, color: AppColors.fg2),
+                      Semantics(
+                        button: true,
+                        enabled: !anyBusy,
+                        label: 'Revert revision ${batch.rev}',
+                        excludeSemantics: true,
+                        child: InkWell(
+                          onTap: anyBusy ? null : () => onRevert(batch),
+                          borderRadius: BorderRadius.circular(R.xs),
+                          child: Container(
+                            constraints: const BoxConstraints(
+                                minHeight: 44, minWidth: 44),
+                            padding: EdgeInsets.symmetric(horizontal: S.s8),
+                            alignment: Alignment.center,
+                            child: Text(
+                              isBusy ? 'Reverting...' : 'Revert',
+                              style: sans(12,
+                                  weight: W.label, color: AppColors.fg2),
+                            ),
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ),
-            ],
+            ),
           ),
         );
       },
     );
   }
 }
-
 
 /// Close affordance: 48 on phone, 44 on desktop.
 class CanvasCloseButton extends StatelessWidget {
