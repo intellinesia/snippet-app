@@ -608,6 +608,8 @@ child: PhoneAgentPage(
           onOpenAgent: widget.onAgent,
           onOpenLead: widget.onOpenLead,
           onAllAgents: () => widget.onMobileHome(MobileHome.agents),
+          onCanvas:
+              widget.client == null ? null : () => openCanvas(context),
           onProfile: (a) => showAgentProfileSettings(context,
               client: client,
               agent: a,
