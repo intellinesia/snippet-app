@@ -289,7 +289,7 @@ class _QuietAgentsScreenState extends State<QuietAgentsScreen> {
           null,
           latest == null
               ? 'Asleep'
-              : 'Asleep · last active ${relativeTime(latest.lastActive)} ago'
+              : 'Asleep · last active ${relativeTime(latest.lastActive) == 'now' ? 'just now' : '${relativeTime(latest.lastActive)} ago'}'
         ),
     };
     final open = _open == r.agent.id;

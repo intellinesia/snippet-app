@@ -1838,6 +1838,23 @@ class _SessionScreenState extends State<SessionScreen>
                                                                   _latestCompactionDetail(
                                                                       events),
                                                             ),
+                                                                                                                      // The working row is the transcript's last item, never over it.
+                                                            if (kMobile &&
+                                                                _dockRun !=
+                                                                    null &&
+                                                                _state?.status ==
+                                                                    'running')
+                                                              Padding(
+                                                                key: const ValueKey(
+                                                                    'working-row'),
+                                                                padding: EdgeInsets.only(
+                                                                    top: S.s8),
+                                                                child: ActivityDock(
+                                                                    run: _dockRun!,
+                                                                    agentId: _me?.displayAgentId ??
+                                                                        'snippet',
+                                                                    onOpen: _openLiveActivity),
+                                                              ),
                                                           ];
                                                           Key rowKey(int i) =>
                                                               timeline[i].key ??
@@ -2008,34 +2025,55 @@ class _SessionScreenState extends State<SessionScreen>
                                                               _composerH = h);
                                                         }
                                                       },
-                                                      child: DecoratedBox(
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          gradient:
-                                                              LinearGradient(
-                                                            begin: Alignment
-                                                                .topCenter,
-                                                            end: Alignment
-                                                                .bottomCenter,
-                                                            colors: [
-                                                              AppColors.bg
-                                                                  .withValues(
-                                                                      alpha: 0),
-                                                              AppColors.bg
-                                                                  .withValues(
-                                                                      alpha:
-                                                                          0.85),
-                                                            ],
+                                                      // Composer zone: a 24pt fade, then solid ground from 12 above the pill.
+                                                      child: Column(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .stretch,
+                                                        children: [
+                                                          IgnorePointer(
+                                                            child: Container(
+                                                              height: 24,
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                gradient:
+                                                                    LinearGradient(
+                                                                  begin: Alignment
+                                                                      .topCenter,
+                                                                  end: Alignment
+                                                                      .bottomCenter,
+                                                                  colors: [
+                                                                    AppColors.bg
+                                                                        .withValues(
+                                                                            alpha: 0),
+                                                                    AppColors.bg,
+                                                                  ],
+                                                                ),
+                                                              ),
+                                                            ),
                                                           ),
-                                                        ),
-                                                        child: Column(
-                                                          mainAxisSize:
-                                                              MainAxisSize.min,
-                                                          crossAxisAlignment:
-                                                              CrossAxisAlignment
-                                                                  .stretch,
-                                                          children: bottomBars,
-                                                        ),
+                                                          ColoredBox(
+                                                            color: AppColors.bg,
+                                                            child: Padding(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .only(
+                                                                      top: 12),
+                                                              child: Column(
+                                                                mainAxisSize:
+                                                                    MainAxisSize
+                                                                        .min,
+                                                                crossAxisAlignment:
+                                                                    CrossAxisAlignment
+                                                                        .stretch,
+                                                                children:
+                                                                    bottomBars,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
                                                       ),
                                                     ),
                                                   ),

@@ -980,11 +980,6 @@ extension _SessionScreenComposerExt on _SessionScreenState {
             builder: (_, __) => ComposerTray(
                 controller: _tray, bleed: M.gutter, child: _trayPage(running)),
           ),
-        if (kMobile && _dockRun != null && _state?.status == 'running')
-          ActivityDock(
-              run: _dockRun!,
-              agentId: _me?.displayAgentId ?? 'snippet',
-              onOpen: _openLiveActivity),
         if (_heldQueue.isNotEmpty) _queuedCard(),
         if (_mentionQuery != null && !_isLead) _mentionList(),
         if (!kMobile) SlashMenuPopover(controller: _slash),

@@ -1767,14 +1767,41 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
             ));
           }
           if (typing && raw == 0) {
+            // Text first and static: the working row is the last item.
+            final id = _typingAgentId();
+            final who = id == null ? '' : _agentFullName(id);
             return _wideCap(Padding(
-              padding: EdgeInsets.only(
-                  top: ChatColors.groupGap,
-                  left: GroupPostHeader.indent),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: GroupTypingBubble(
-                    dots: WorkingDots(color: ChatColors.meta, size: 6)),
+              padding: const EdgeInsets.only(top: 16),
+              child: Semantics(
+                liveRegion: true,
+                label: who.isEmpty ? 'Working' : '$who is working',
+                excludeSemantics: true,
+                child: SizedBox(
+                  height: 48,
+                  child: Row(children: [
+                    SizedBox.square(
+                      dimension: 16,
+                      child: Center(
+                        child: Container(
+                          width: 7,
+                          height: 7,
+                          decoration: BoxDecoration(
+                              color: AppColors.fg2, shape: BoxShape.circle),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text('Working',
+                        style: sans(14, weight: W.label, color: AppColors.fg1)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(who,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(14, color: AppColors.fg2)),
+                    ),
+                  ]),
+                ),
               ),
             ));
           }

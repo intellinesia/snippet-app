@@ -473,11 +473,18 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       final step = plan != null && plan.total > 0 && plan.done < plan.total
           ? 'plan ${(plan.done + 1).clamp(1, plan.total)} of ${plan.total}'
           : '';
+      // Scrolled away from the working row: the header carries it.
+      final dock = _dockRun;
+      final workingAway = !_stickToBottom &&
+          dock != null &&
+          s?.status == 'running';
       final word = needsYou
           ? 'waiting on you'
           : s?.status == 'in_review'
               ? 'in review'
-              : step;
+              : workingAway
+                  ? 'working · ${formatWorkDuration(DateTime.now().difference(dock.startedAt))}'
+                  : step;
       final lanesPill = lanePillLabel(s?.lanes ?? const <LaneInfo>[]);
       return MobileBackBar(
         title: _title.isEmpty ? 'Session' : _title,
@@ -493,7 +500,11 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: S.s8),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  const RunSpinner(),
+                  Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                          color: AppColors.fg2, shape: BoxShape.circle)),
                   SizedBox(width: S.s6),
                   Text(lanesPill,
                       style: TextStyle(

@@ -10,7 +10,6 @@ import '../tool_activity.dart';
 import '../tool_sheet.dart' show ToolBatch;
 import '../widgets.dart';
 import '../tap_detector.dart';
-import '../transcript.dart' show RunSpinner;
 
 /// A run in flight: its steps so far and when it began.
 class DockRun {
@@ -177,9 +176,13 @@ class _ActivityDockState extends State<ActivityDock> {
     final elapsed = DateTime.now().difference(widget.run.startedAt);
     final clock = formatWorkDuration(
         Duration(seconds: elapsed.inSeconds < 0 ? 0 : elapsed.inSeconds));
-    final title = live.isNotEmpty ? liveStepText(live.last) : 'Working';
-    return Padding(
-      padding: EdgeInsets.only(bottom: S.s8),
+    final step = live.isNotEmpty ? liveStepText(live.last) : '';
+    // Text first and static: a dot, "Working", the step, the clock. The
+    // screen reader hears the state once, not the ticking time.
+    return Semantics(
+      button: true,
+      label: step.isEmpty ? 'Working' : 'Working, $step',
+      excludeSemantics: true,
       child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => widget.onOpen(null),
@@ -187,19 +190,29 @@ class _ActivityDockState extends State<ActivityDock> {
           constraints: const BoxConstraints(minHeight: 48),
           padding: const EdgeInsets.fromLTRB(0, 0, 4, 0),
           child: Row(children: [
-            SizedBox(
-                width: 16,
-                height: 16,
-                child: RunSpinner(size: 14, color: AppColors.fg2)),
-            const SizedBox(width: 10),
+            SizedBox.square(
+              dimension: 16,
+              child: Center(
+                child: Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                      color: AppColors.fg2, shape: BoxShape.circle),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text('Working',
+                style: sans(14, weight: W.label, color: AppColors.fg1)),
+            const SizedBox(width: 6),
             Expanded(
-              child: Text(title,
+              child: Text(step,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(15, color: AppColors.fg1)),
+                  style: sans(14, color: AppColors.fg2)),
             ),
             const SizedBox(width: 10),
-            Text(clock, style: sans(14, color: AppColors.fg2, tabular: true)),
+            Text(clock, style: sans(13, color: AppColors.fg2, tabular: true)),
             if (failed > 0) ...[
               const SizedBox(width: 8),
               FailedPill(failed,
@@ -207,7 +220,7 @@ class _ActivityDockState extends State<ActivityDock> {
                   onTap: () => widget.onOpen(firstFailure(steps))),
             ],
             const SizedBox(width: 6),
-            AppIcon('chevron-up', size: 16, color: AppColors.fg3),
+            AppIcon('chevron-right', size: 16, color: AppColors.fg3),
           ]),
         ),
       ),
