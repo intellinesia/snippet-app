@@ -196,7 +196,9 @@ class QuietHomeScreen extends StatelessWidget {
           onNewMenu: onNewMenu,
           onSearch: onSearch,
           onSettings: onSettings,
-          tagline: quiet && strip.isNotEmpty
+          tagline: quiet &&
+                  strip.isNotEmpty &&
+                  MediaQuery.textScalerOf(context).scale(10) < 15
               ? 'Tap an agent to talk to it. Nobody is working.'
               : null,
         ),
@@ -367,7 +369,10 @@ class _StartGroup extends StatelessWidget {
   final VoidCallback? onNew;
 
   @override
-  Widget build(BuildContext context) => ToastAvoid(child: Padding(
+  Widget build(BuildContext context) {
+    // At large text the one-line explainers go, so the groups below stay on screen.
+    final compact = MediaQuery.textScalerOf(context).scale(10) >= 15;
+    return ToastAvoid(child: Padding(
         padding: EdgeInsets.symmetric(horizontal: S.s16),
         child: Container(
           decoration: BoxDecoration(
@@ -377,7 +382,7 @@ class _StartGroup extends StatelessWidget {
           child: Column(children: [
             QuietRow(
               title: 'Ask Lead what is next',
-              sub: 'Lead plans it and hands it out',
+              sub: compact ? null : 'Lead plans it and hands it out',
               leading: AgentMochi('lead', size: 28),
               trailing:
                   AppIcon('chevron-right', size: 16, color: AppColors.fg3),
@@ -385,7 +390,7 @@ class _StartGroup extends StatelessWidget {
             ),
             QuietRow(
               title: 'New session',
-              sub: 'Pick an agent, then say what to make',
+              sub: compact ? null : 'Pick an agent, then say what to make',
               leading: AppIcon('edit', size: 22, color: AppColors.fg2),
               trailing:
                   AppIcon('chevron-right', size: 16, color: AppColors.fg3),
@@ -394,6 +399,7 @@ class _StartGroup extends StatelessWidget {
           ]),
         ),
       ));
+  }
 }
 
 class _Ask extends StatefulWidget {
