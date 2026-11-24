@@ -163,8 +163,8 @@ class _ProfileSheetState extends State<_ProfileSheet> {
           child: SizedBox(
             height: 48,
             child: Center(
-                child: Text(text,
-                    style: sans(14, weight: W.label, color: color))),
+                child:
+                    Text(text, style: sans(14, weight: W.label, color: color))),
           ),
         ),
       );
@@ -172,8 +172,8 @@ class _ProfileSheetState extends State<_ProfileSheet> {
   @override
   Widget build(BuildContext context) {
     final live = widget.sessions
-        .where((s) =>
-            const {'Working', 'Needs you'}.contains(sessionStateWord(s)))
+        .where(
+            (s) => const {'Working', 'Needs you'}.contains(sessionStateWord(s)))
         .length;
     return Column(
       mainAxisSize: MainAxisSize.min,
