@@ -4,6 +4,7 @@ import 'package:snippet/phosphor_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:snippet/api.dart';
+import 'package:snippet/mochi.dart';
 import 'package:snippet/chat/chat_style.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/presence.dart';
@@ -298,10 +299,11 @@ void main() {
     await t.pump(const Duration(milliseconds: 100));
     expect(find.byKey(const Key('agentTypingRow')), findsOneWidget);
     expect(find.byKey(const Key('agentTypingDots')), findsOneWidget);
+    // Phone typing is an avatar, a 74 x 28 pill and a line, not a bubble.
     expect(
       find.descendant(
         of: find.byKey(const Key('agentTypingRow')),
-        matching: find.byType(ChatBubble),
+        matching: find.byType(AgentMochi),
       ),
       findsOneWidget,
     );

@@ -1143,6 +1143,7 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
     if (outcome.isNotEmpty) {
       final kind = switch (outcome) {
         'outdated' => DecidedKind.outdated,
+        'expired' || 'timeout' || 'timed_out' => DecidedKind.expired,
         'approved' || 'approved_all' || 'approved_rule' => DecidedKind.approved,
         'denied' => DecidedKind.denied,
         _ => DecidedKind.denied,
@@ -1150,7 +1151,7 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
       return _approvalSegments(
         state: switch (kind) {
           DecidedKind.approved => 'approved',
-          DecidedKind.outdated => 'outdated',
+          DecidedKind.outdated || DecidedKind.expired => 'outdated',
           _ => 'declined',
         },
         title: isCommand ? 'Ran a command' : line,

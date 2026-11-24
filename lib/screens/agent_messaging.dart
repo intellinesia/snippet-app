@@ -1591,18 +1591,30 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                     child: const WorkingBars())),
           ),
         )
-      : ChatBubbleRow(
-        key: const Key('agentTypingRow'),
-        mine: false,
-        child: ChatBubble(
-          mine: false,
-          tail: true,
-          child: Padding(
-            padding: EdgeInsets.symmetric(vertical: S.s4, horizontal: S.s2),
-            child: _TypingDots(key: Key('agentTypingDots')),
-          ),
-        ),
-      );
+      : Padding(
+          key: const Key('agentTypingRow'),
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(children: [
+            AgentMochi(widget.agentId, size: 24),
+            const SizedBox(width: 8),
+            Container(
+              width: 74,
+              height: 28,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                  color: AppColors.surface2,
+                  borderRadius: BorderRadius.circular(14)),
+              child: const _TypingDots(key: Key('agentTypingDots')),
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text('${widget.agentName} typing',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(12, color: AppColors.fg3)),
+            ),
+          ]),
+        );
 
   Widget _bubbleBody(CoordinationEvent e, {required bool mine}) =>
       ChatMessageBody(client: widget.client, body: e.body, mine: mine);

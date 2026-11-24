@@ -31,6 +31,7 @@ import '../chat/message_enter.dart';
 import '../chat/chat_card.dart';
 import '../chat/stage_bar.dart';
 import 'mobile_home/lead_phone.dart';
+import '../chat/draft_sink.dart';
 import 'shell_nav.dart' show sessionBusy;
 import '../chat/stage_header.dart';
 import '../chat/signal_row.dart';
@@ -1033,6 +1034,11 @@ class _SessionScreenState extends State<SessionScreen>
   @override
   void initState() {
     super.initState();
+    DraftSink.register(this, (t) {
+      _input.text = t;
+      _input.selection = TextSelection.collapsed(offset: t.length);
+      _inputFocus.requestFocus();
+    });
     Diag.crumb('session open ${widget.sessionId} "${widget.title}"');
     _title = _isLead ? 'Lead' : widget.title;
     if (!kMobile) {
@@ -1455,6 +1461,7 @@ class _SessionScreenState extends State<SessionScreen>
 
   @override
   void dispose() {
+    DraftSink.unregister(this);
     _closed = true;
     Diag.crumb('session close ${widget.sessionId}');
     _dockBatch.dispose();

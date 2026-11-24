@@ -6,7 +6,7 @@ import '../theme.dart';
 import '../widgets.dart';
 
 /// How a desk request ended.
-enum DecidedKind { approved, denied, answered, skipped, outdated }
+enum DecidedKind { approved, denied, answered, skipped, outdated, expired }
 
 extension DecidedKindLook on DecidedKind {
   String get label => switch (this) {
@@ -15,6 +15,7 @@ extension DecidedKindLook on DecidedKind {
         DecidedKind.answered => 'Answered',
         DecidedKind.skipped => 'Skipped',
         DecidedKind.outdated => 'Outdated',
+        DecidedKind.expired => 'Expired',
       };
 
   Tone get tone => Tone.neutral;
@@ -23,13 +24,16 @@ extension DecidedKindLook on DecidedKind {
         DecidedKind.approved || DecidedKind.answered => 'check',
         DecidedKind.denied => 'x',
         DecidedKind.skipped => 'x',
-        DecidedKind.outdated => 'clock',
+        DecidedKind.outdated || DecidedKind.expired => 'clock',
       };
 
   Color get iconColor => switch (this) {
         DecidedKind.approved || DecidedKind.answered => AppColors.fg2,
         DecidedKind.denied => AppColors.fg1,
-        DecidedKind.skipped || DecidedKind.outdated => AppColors.fg3,
+        DecidedKind.skipped ||
+        DecidedKind.outdated ||
+        DecidedKind.expired =>
+          AppColors.fg3,
       };
 }
 
@@ -53,7 +57,9 @@ class DecidedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dim = kind == DecidedKind.outdated || kind == DecidedKind.skipped;
+    final dim = kind == DecidedKind.outdated ||
+        kind == DecidedKind.skipped ||
+        kind == DecidedKind.expired;
     final titleColor = dim ? AppColors.fg3 : AppColors.fg1;
     return Container(
       width: double.infinity,

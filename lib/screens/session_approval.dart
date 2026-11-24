@@ -357,12 +357,13 @@ class ApprovalBarState extends State<ApprovalBar> {
 
     return Padding(
       padding: EdgeInsets.fromLTRB(0, S.s4, 0, S.s6),
-      child: ChatCard(children: [
+      child: ChatCard(fill: kMobile ? approvalTint : null, children: [
         Flexible(
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (kMobile) const NeedsYouRow(),
                 ChatCardHeader(
                   title: headline,
                   subtitle: reason.isEmpty ? subtitle : null,

@@ -38,12 +38,16 @@ class ChatCard extends StatelessWidget {
     this.maxWidth,
     this.dimmed = false,
     this.border,
+    this.fill,
   });
 
   final List<Widget> children;
 
   /// A 1 point outline, used by the amber needs-you card.
   final Color? border;
+
+  /// Overrides the card fill (the amber needs-you tint).
+  final Color? fill;
 
   /// Defaults to 460 on phones and the full transcript width on desktop.
   final double? maxWidth;
@@ -65,7 +69,7 @@ class ChatCard extends StatelessWidget {
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 // A surface step, not an outline, sets the card apart.
-                color: kMobile ? AppColors.surface1 : AppColors.surface2,
+                color: fill ?? (kMobile ? AppColors.surface1 : AppColors.surface2),
                 borderRadius: BorderRadius.circular(kMobile ? 12 : R.of(16)),
                 border: border == null ? null : Border.all(color: border!),
               ),
@@ -718,5 +722,31 @@ class ApprovalDecideButtons extends StatelessWidget {
               ]),
             ),
         ],
+      );
+}
+
+
+/// The amber tint of a pending approval: 342F24 dark, FFF3D6 light.
+Color get approvalTint => AppColors.bg.computeLuminance() > 0.18
+    ? const Color(0xFFFFF3D6)
+    : const Color(0xFF342F24);
+
+/// "Needs you" with the amber hand, the first line of a pending approval.
+class NeedsYouRow extends StatelessWidget {
+  const NeedsYouRow({super.key, this.trailing});
+  final String? trailing;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+        child: Row(children: [
+          AppIcon('hand', size: 16, color: AppColors.run),
+          const SizedBox(width: 8),
+          Text('Needs you',
+              style: sans(12, weight: W.label, color: AppColors.run)),
+          const Spacer(),
+          if (trailing != null)
+            Text(trailing!, style: sans(12, color: AppColors.fg2)),
+        ]),
       );
 }

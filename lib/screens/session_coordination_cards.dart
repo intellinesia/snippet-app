@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../markdown_preview.dart' show plainPreview;
 import '../platform.dart';
@@ -10,6 +11,7 @@ import '../transcript_card.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import '../chat/chat_card.dart';
+import '../chat/draft_sink.dart';
 import '../chat/signal_row.dart';
 import '../chat/system_notice.dart';
 import '../mochi.dart';
@@ -768,7 +770,58 @@ class WorkerQuestionCard extends StatelessWidget {
             style: sans(TranscriptCard.metaSize, color: AppColors.fg3),
           ),
         ),
+        if (kMobile)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+            child: Builder(
+              builder: (context) => Row(children: [
+                Expanded(
+                  child: _workerBtn('Answer for Lead', true, () {
+                    // Opens the composer with the answer started for Lead.
+                    DraftSink.use('Answer for Lead: ');
+                  }),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _workerBtn('Forward to me', false, () {
+                    Clipboard.setData(
+                        ClipboardData(text: question.question.trim()));
+                    toast(context, 'Question copied');
+                  }),
+                ),
+              ]),
+            ),
+          ),
       ]);
+
+  Widget _workerBtn(String label, bool outlined, VoidCallback onTap) =>
+      Semantics(
+        button: true,
+        label: label,
+        excludeSemantics: true,
+        child: Material(
+          color: outlined ? AppColors.surface2 : AppColors.surface1,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: BorderSide(color: AppColors.border),
+          ),
+          child: InkWell(
+            customBorder:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            onTap: onTap,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Center(
+                child: Text(label,
+                    textAlign: TextAlign.center,
+                    style: sans(14,
+                        weight: W.label,
+                        color: outlined ? AppColors.fg1 : AppColors.fg2)),
+              ),
+            ),
+          ),
+        ),
+      );
 }
 
 class AgentMessageCard extends StatelessWidget {
