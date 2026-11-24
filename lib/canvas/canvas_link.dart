@@ -5,8 +5,8 @@ final _revDigitsRe = RegExp(r'^\d+$');
 final _whitespaceRe = RegExp(r'\s');
 final _markdownCanvasLinkRe =
     RegExp(r'(?<!!)\[((?:\\.|[^\]\n])+)\]\((canvas:[^)\s]+)\)');
-final _bareCanvasLinkRe = RegExp(r'(?<![\w\](/:<])canvas:[^\s)>\]]*[^\s)>\].,;:!?]');
-final _standaloneBareCanvasLinkRe = RegExp(r'^<?(canvas:[^\s<>]+)>?$');
+final _bareCanvasLinkRe = RegExp(r'(?<![\w\](/:<])canvas:[^\s)>\]…]*[^\s)>\].,;:!?…]');
+final _standaloneBareCanvasLinkRe = RegExp(r'^<?(canvas:[^\s<>…]+)>?…?$');
 final _standaloneCanvasLinkRe =
     RegExp(r'^\[((?:\\.|[^\]\n])+)\]\((canvas:[^)\s]+)\)$');
 

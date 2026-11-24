@@ -9,7 +9,10 @@ import 'package:snippet/canvas/canvas_card_client.dart';
 import 'package:snippet/canvas/canvas_models.dart' show CanvasRevEvent;
 import 'package:snippet/canvas/canvas_link.dart';
 import 'package:snippet/canvas/canvas_link_card.dart';
+import 'package:snippet/chat/group_post.dart';
 import 'package:snippet/chat/message_body.dart';
+import 'package:snippet/screens/group_messaging.dart'
+    show groupMarkdownWithMentions;
 import 'package:snippet/theme.dart';
 
 final Uint8List _testPngBytes = base64Decode(
@@ -50,8 +53,7 @@ class _TestCanvasCardClient implements CanvasCardClient {
 
   @override
   Future<CanvasCardActivity?> fetchCardActivity(CanvasRef ref, int rev) async =>
-      const CanvasCardActivity(
-          author: 'You', editedAt: null, comments: 2);
+      const CanvasCardActivity(author: 'You', editedAt: null, comments: 2);
 
   @override
   Future<CanvasLinkMeta> resolveLink(CanvasRef ref) async {
@@ -172,7 +174,8 @@ void main() {
     test('standalone line and inline sentence become cards', () {
       final lone = splitCanvasMarkdown('Look:\ncanvas:app/home@3\nthanks');
       expect(lone.whereType<CanvasCardSegment>().single.ref.rev, 3);
-      final inline = splitCanvasMarkdown('See canvas:app/home/cta, then reply.');
+      final inline =
+          splitCanvasMarkdown('See canvas:app/home/cta, then reply.');
       final card = inline.whereType<CanvasCardSegment>().single;
       expect(card.ref.elId, 'cta');
       expect(card.inline, isTrue);
@@ -191,6 +194,84 @@ void main() {
         isEmpty,
       );
     });
+  });
+
+  testWidgets('group thread renders canvas: links in all forms, also capped',
+      (tester) async {
+    final fake = _TestCanvasCardClient(
+      metaByRef: {
+        for (final ref in [
+          'canvas:app/home',
+          'canvas:app/pricing/cta',
+          'canvas:app/phone@2'
+        ])
+          ref: CanvasLinkMeta(
+            canvasId: 'app',
+            frameId: ref.split('/')[1].split('@').first,
+            rev: 2,
+            title: 'Frame ${ref.split('/')[1]}',
+            thumbUrl: '/canvas/frames/x/thumb.png',
+            width: 390,
+            height: 240,
+          ),
+      },
+    );
+    addTearDown(fake.dispose);
+    final daemon = DaemonClient('https://daemon.invalid', 'test');
+    const members = {'sashy', 'buddy'};
+    Widget host(String body) => MaterialApp(
+          theme: buildAppTheme(),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: CanvasCardClientScope(
+                client: fake,
+                child: CappedProse(
+                  key: ValueKey(body),
+                  body: body,
+                  builder: (text) => ChatMessageBody(
+                    client: daemon,
+                    body: text,
+                    mine: false,
+                    markdown: (t) => groupMarkdownWithMentions(t, members),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+    // Bare on its own line, inline in a sentence, and markdown, with a mention.
+    await tester.pumpWidget(host(
+        '@sashy look:\ncanvas:app/home\nAlso canvas:app/pricing/cta, thanks.\n[Phone](canvas:app/phone@2)'));
+    await tester.pump();
+    await tester.pump();
+    // The cap keeps three lines; the fourth appears with Show more.
+    expect(find.byType(CanvasLinkCard), findsNWidgets(2));
+    await tester.tap(find.text('Show more'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.byType(CanvasLinkCard), findsNWidgets(3));
+
+    // A long agent post is cut with an ellipsis; a link at the cut must stay
+    // a card for the right frame, not swallow the ellipsis.
+    final long = '${'x ' * 70}canvas:app/home ${'b' * 30}';
+    final preview = groupPostPreview(long)!;
+    expect(preview.endsWith('…'), isTrue);
+    await tester.pumpWidget(host('${'word ' * 40}\ncanvas:app/home'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Show more'), findsOneWidget);
+    await tester.tap(find.text('Show more'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.byType(CanvasLinkCard), findsOneWidget);
+    expect(
+        splitCanvasMarkdown('see canvas:app/home…')
+            .whereType<CanvasCardSegment>()
+            .single
+            .ref
+            .frameId,
+        'home');
   });
 
   testWidgets('canvas: link in chat transcript renders CanvasLinkCard',
@@ -286,7 +367,8 @@ void main() {
     expect(find.text('live'), findsNothing);
 
     final callsBefore = pinnedClient.resolveCalls;
-    pinnedClient.emitRev(const CanvasRevEvent(rev: 9, frameIds: ['home-screen']));
+    pinnedClient
+        .emitRev(const CanvasRevEvent(rev: 9, frameIds: ['home-screen']));
     await tester.pump();
     expect(pinnedClient.resolveCalls, callsBefore);
 
