@@ -9,6 +9,7 @@ import '../api.dart';
 import '../crew_status.dart';
 import '../models.dart';
 import '../pins.dart';
+import 'mobile_home/create_agent_phone.dart';
 import '../platform.dart';
 import 'agent_view_mode.dart' show openAgentTab, openGroupTab;
 import '../theme.dart';
@@ -40,7 +41,10 @@ Future<bool?> showCreateAgentDialog(
   String? initialPrompt,
   String? initialCharacter,
 }) =>
-    showSidePopover<bool>(context,
+    kMobile
+        ? Navigator.of(context).push<bool>(MaterialPageRoute(
+            builder: (_) => PhoneCreateAgentPage(client: client)))
+        : showSidePopover<bool>(context,
         anchorContext: anchorContext,
         title: 'New agent',
         popoverKey: const ValueKey('create-agent-popover'),

@@ -697,3 +697,73 @@ class BarIcon extends StatelessWidget {
         ),
       );
 }
+
+/// Spec switch: 40 x 20 track, 14 knob, 48 x 48 hit area. On fill fg1, off surface3.
+class SpecSwitch extends StatelessWidget {
+  const SpecSwitch(
+      {super.key, required this.value, required this.onChanged, this.label});
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+  final String? label;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        toggled: value,
+        label: label,
+        onTap: onChanged == null ? null : () => onChanged!(!value),
+        child: TapDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onChanged == null ? null : () => onChanged!(!value),
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: Center(
+              child: Container(
+                width: 40,
+                height: 20,
+                padding: const EdgeInsets.all(3),
+                alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+                decoration: BoxDecoration(
+                    color: value ? AppColors.fg1 : AppColors.surface3,
+                    borderRadius: BorderRadius.circular(10)),
+                child: Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                        color: value ? AppColors.bg : AppColors.fg3,
+                        shape: BoxShape.circle)),
+              ),
+            ),
+          ),
+        ),
+      );
+}
+
+/// A 48 high row: label left, trailing right, optional hairline.
+class SwitchRow extends StatelessWidget {
+  const SwitchRow(this.label, this.value, this.onChanged,
+      {super.key, this.sub});
+  final String label;
+  final String? sub;
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) => ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: Padding(
+          padding: const EdgeInsets.only(left: kGutter, right: 4),
+          child: Row(children: [
+            Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  Text(label, style: sans(15, color: AppColors.fg1)),
+                  if (sub != null)
+                    Text(sub!, style: sans(12, color: AppColors.fg3)),
+                ])),
+            SpecSwitch(value: value, onChanged: onChanged, label: label),
+          ]),
+        ),
+      );
+}
