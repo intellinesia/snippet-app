@@ -135,3 +135,22 @@ class _KeyFocusState extends State<_KeyFocus> {
     );
   }
 }
+
+/// Phone-only 44pt hit area around a smaller visual; desktop is unchanged.
+class HitArea extends StatelessWidget {
+  const HitArea({super.key, required this.child, this.alignment = Alignment.centerLeft});
+  final Widget child;
+  final AlignmentGeometry alignment;
+
+  @override
+  Widget build(BuildContext context) => !kMobile
+      ? child
+      : ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+          child: Align(
+              alignment: alignment,
+              widthFactor: 1,
+              heightFactor: 1,
+              child: child),
+        );
+}

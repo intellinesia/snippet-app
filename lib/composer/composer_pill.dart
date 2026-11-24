@@ -16,7 +16,7 @@ abstract final class C7 {
       Color.alphaBlend(AppColors.fg1.withValues(alpha: 0.07), AppColors.surface3);
   static const double pill = 52;
   static const double pillRadius = 26;
-  static const double btn = 40;
+  static double get btn => kMobile ? 48 : 40;
   static const double ends = 20;
   static const double inner = 4;
   static double get field => kMobile ? 17 : 16;

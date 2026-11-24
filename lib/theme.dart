@@ -1161,8 +1161,10 @@ bool reduceMotion(BuildContext context) =>
 // ---------------------------------------------------------------------------
 
 class M {
-  static ThemeSpaceMetrics get _metrics =>
-      ThemeManager.instance.resolved.space.metrics;
+  // Pinned on phones like S.*: a saved theme must not shrink gutters or targets.
+  static ThemeSpaceMetrics get _metrics => kMobile
+      ? ThemeSpaceMetrics.defaults
+      : ThemeManager.instance.resolved.space.metrics;
   static double get _typeScale => ThemeManager.instance.resolved.type.scale;
 
   /// Phone content follows the desktop pane/composer inset: 16px. Touch targets

@@ -271,7 +271,7 @@ class _MobileVoicePageState extends State<MobileVoicePage>
                     RoundBtn(
                       icon: 'chevron-down',
                       tooltip: 'Close',
-                      size: 40,
+                      size: 44,
                       iconSize: 20,
                       onTap: _pop,
                     ),

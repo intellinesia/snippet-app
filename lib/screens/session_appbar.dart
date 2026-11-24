@@ -556,7 +556,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       trailing: RoundBtn(
         icon: 'terminal',
         tooltip: 'Shell',
-        size: 40,
+        size: 44,
         iconSize: 18,
         onTap: _openTerm,
       ),
@@ -585,7 +585,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       trailing: RoundBtn(
         icon: 'phone',
         tooltip: 'Start voice',
-        size: 40,
+        size: 44,
         iconSize: 18,
         onTap: () => startMobileVoice(context, widget.client),
       ),

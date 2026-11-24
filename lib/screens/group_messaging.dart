@@ -19,6 +19,7 @@ import '../drafts.dart';
 import '../desktop_pick.dart';
 import '../markdown_preview.dart';
 import '../chat/message_body.dart';
+import '../chat/signal_row.dart' show prettyModel, prettyProvider, profileMeta;
 import '../message_reactions.dart';
 import '../models.dart';
 import '../chat/anchored_scroll.dart';
@@ -420,6 +421,7 @@ class _CreateGroupSheet extends StatefulWidget {
 class _CreateGroupSheetState extends State<_CreateGroupSheet> {
   final _title = TextEditingController();
   List<CoordinationAgent> _agents = const [];
+  Map<String, InferenceProfile> _profiles = const {};
   final Set<String> _selected = {};
   String? _lead;
   bool _loading = true;
@@ -430,12 +432,26 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
   void initState() {
     super.initState();
     _load();
+    widget.client.getConfig().then((c) {
+      if (mounted) {
+        setState(() => _profiles = {for (final p in c.profiles) p.name: p});
+      }
+    }).catchError((_) {});
   }
 
   @override
   void dispose() {
     _title.dispose();
     super.dispose();
+  }
+
+  /// Provider and model, never the raw profile id.
+  String _metaLine(CoordinationAgent a) {
+    final m = profileMeta(_profiles, a.deskProfile ?? a.profile);
+    final prov = (m.provider ?? '').isEmpty ? '' : prettyProvider(m.provider!);
+    final model = (_profiles[(a.deskProfile ?? a.profile ?? '').trim()]?.model ?? '').trim();
+    return [if (prov.isNotEmpty) prov, if (model.isNotEmpty) prettyModel(model)]
+        .join(' \u00b7 ');
   }
 
   Future<void> _load() async {
@@ -559,6 +575,7 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
                   if (i > 0) Container(height: 1, color: AppColors.line),
                   _AgentPickRow(
                     agent: _agents[i],
+                    meta: _metaLine(_agents[i]),
                     name: _name(_agents[i]),
                     selected: _selected.contains(_agents[i].id),
                     showLead: n > 1 && _selected.contains(_agents[i].id),
@@ -604,6 +621,7 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
 class _AgentPickRow extends StatelessWidget {
   const _AgentPickRow({
     required this.agent,
+    required this.meta,
     required this.name,
     required this.selected,
     required this.showLead,
@@ -613,6 +631,7 @@ class _AgentPickRow extends StatelessWidget {
   });
 
   final CoordinationAgent agent;
+  final String meta;
   final String name;
   final bool selected;
   final bool showLead;
@@ -622,7 +641,7 @@ class _AgentPickRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final profile = (agent.profile ?? '').trim();
+    final profile = meta;
     return Semantics(
       button: true,
       selected: selected,

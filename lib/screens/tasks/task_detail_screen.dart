@@ -1297,7 +1297,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         trailing: [
           RoundBtn(
             icon: 'more-horizontal',
-            size: 40,
+            size: 44,
             iconSize: 19,
             tooltip: 'Task actions',
             onTap: t == null ? null : _statusMenu,

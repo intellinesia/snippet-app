@@ -84,42 +84,44 @@ class StageBar extends StatelessWidget {
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: onTap,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(height: 4),
-                    Text(title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(17, weight: W.label, color: AppColors.fg1)),
-                    if (sub.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (subtitleHand) ...[
-                                const QuietHand(size: 14),
-                                const SizedBox(width: 5),
-                              ],
-                              if (subtitleProvider != null &&
-                                  providerLogoAsset(subtitleProvider) !=
-                                      null) ...[
-                                ProviderLogo(subtitleProvider,
-                                    size: 12, color: AppColors.fg2),
-                                const SizedBox(width: 5),
-                              ],
-                              Flexible(
-                                child: Text(sub,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style:
-                                        sans(13, color: AppColors.fg2)),
-                              ),
-                            ]),
-                      ),
-                    if (below != null) ...[const SizedBox(height: 6), below!],
-                  ],
+                child: ConstrainedBox(
+                  constraints:
+                      const BoxConstraints(minHeight: 44, minWidth: 44),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(height: 4),
+                      Text(title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              sans(17, weight: W.label, color: AppColors.fg1)),
+                      if (sub.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            if (subtitleHand) ...[
+                              const QuietHand(size: 14),
+                              const SizedBox(width: 5),
+                            ],
+                            if (subtitleProvider != null &&
+                                providerLogoAsset(subtitleProvider) !=
+                                    null) ...[
+                              ProviderLogo(subtitleProvider,
+                                  size: 12, color: AppColors.fg2),
+                              const SizedBox(width: 5),
+                            ],
+                            Flexible(
+                              child: Text(sub,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: sans(13, color: AppColors.fg2)),
+                            ),
+                          ]),
+                        ),
+                      if (below != null) ...[const SizedBox(height: 6), below!],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -164,8 +166,7 @@ class StageBar extends StatelessWidget {
           Align(alignment: Alignment.topCenter, child: header),
           if (leading != null || back != null)
             Positioned(left: 0, top: 0, child: leading ?? back!),
-          if (trailing != null)
-            Positioned(right: 0, top: 0, child: trailing!),
+          if (trailing != null) Positioned(right: 0, top: 0, child: trailing!),
         ]),
       ),
     );

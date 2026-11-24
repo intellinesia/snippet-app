@@ -1135,6 +1135,9 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
 
   /// The chip's second line: the profile (or Paused), then what the agent
   /// is doing right now.
+  static String _cap(String w) =>
+      w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}';
+
   String _stageSubtitle(String subtitle) {
     final p = widget.client.presence.presenceForAgentId(widget.agentId);
     final prof = _agent?.deskProfile ?? _agent?.profile;
@@ -1144,7 +1147,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     final named = prov.isNotEmpty ? prov : meta.label;
     final status = p == null
         ? ''
-        : (_typing ? 'typing\u2026' : PresenceStore.chatWord(p));
+        : (_typing ? 'Typing\u2026' : _cap(PresenceStore.chatWord(p)));
     final cut = subtitle.indexOf(' \u00b7 ');
     final head = named.isNotEmpty ? named : (cut < 0 ? '' : subtitle.substring(0, cut));
     if (status.isEmpty) return head.isEmpty ? subtitle : head;

@@ -10,6 +10,7 @@ import 'chat/message_focus_overlay.dart';
 import 'media_views.dart';
 import 'models.dart';
 import 'platform.dart';
+import 'tap_detector.dart' show HitArea;
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -161,7 +162,7 @@ class QuotedReplyLine extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: row,
+        child: HitArea(child: row),
       ),
     );
   }

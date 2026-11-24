@@ -14,7 +14,7 @@ import '../widgets.dart';
 import 'lead/lead_state.dart' show isDedicatedLeadSession;
 import 'mobile_chrome.dart';
 import '../chat_scene.dart' show SceneBackdrop;
-import '../chat/signal_row.dart' show agentDisplayName;
+import '../chat/signal_row.dart' show agentDisplayName, prettyModel, prettyProfile;
 import '../tap_detector.dart';
 
 /// New-session composer on phones, with folder browsing tucked into a sheet.
@@ -404,7 +404,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
                 child: Row(children: [
                   RoundBtn(
                     icon: 'x',
-                    size: 40,
+                    size: 44,
                     iconSize: 20,
                     tooltip: 'Close',
                     onTap: widget.onClose ?? () => Navigator.maybePop(context),
@@ -498,17 +498,23 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
         ),
       );
 
-  Widget _phoneChip(String icon, String label, {VoidCallback? onTap}) =>
-      Material(
-        color: Color.alphaBlend(
-            AppColors.fg1.withValues(alpha: 0.06), Grouped.row),
-        borderRadius: BorderRadius.circular(kMobile ? 18 : 16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(kMobile ? 18 : 16),
-          onTap: onTap,
+  Widget _phoneChip(String icon, String label, {VoidCallback? onTap}) {
+    final radius = BorderRadius.circular(kMobile ? 18 : 16);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: radius,
+        onTap: onTap,
+        child: HitArea(
+          alignment: Alignment.center,
           child: Container(
             height: kMobile ? 36 : 32,
             padding: EdgeInsets.symmetric(horizontal: S.s12),
+            decoration: BoxDecoration(
+              color: Color.alphaBlend(
+                  AppColors.fg1.withValues(alpha: 0.06), Grouped.row),
+              borderRadius: radius,
+            ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               AppIcon(icon, size: kMobile ? 18 : 16, color: AppColors.fg2),
               SizedBox(width: S.s8),
@@ -522,7 +528,9 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
             ]),
           ),
         ),
-      );
+      ),
+    );
+  }
 
   Widget _phoneComposer() {
     final repo = _repo != null;
@@ -619,7 +627,9 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
           SettingsRow(
             label: 'Model',
             icon: 'cpu',
-            value: current.name,
+            value: current.model.trim().isNotEmpty
+                ? prettyModel(current.model)
+                : prettyProfile(current.name),
             chevron: true,
             onTap: () => _pickProfile(anchor),
           ),

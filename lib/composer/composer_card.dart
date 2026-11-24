@@ -79,7 +79,7 @@ class ComposerCard extends StatelessWidget {
           builder: (context, v, _) {
             final compact = _compact(box.maxWidth, v.text);
             Widget inSlot(Widget w) => ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: C7.btn),
+                constraints: BoxConstraints(minHeight: C7.btn),
                 child: Center(child: w));
             return Column(
               mainAxisSize: MainAxisSize.min,
@@ -96,7 +96,7 @@ class ComposerCard extends StatelessWidget {
                     if (attach != null) inSlot(attach!),
                     Expanded(
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(minHeight: C7.btn),
+                        constraints: BoxConstraints(minHeight: C7.btn),
                         child: Align(
                             alignment: Alignment.centerLeft, child: field),
                       ),

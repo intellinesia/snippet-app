@@ -104,7 +104,7 @@ class _PlanProgressCardState extends State<PlanProgressCard> {
             Padding(
               padding: const EdgeInsets.only(top: 2),
               child: AppIcon(_open ? 'chevron-up' : 'chevron-down',
-                  size: Grouped.chevron, color: AppColors.fg4),
+                  size: Grouped.chevron, color: AppColors.fg3),
             ),
           ],
         ),
@@ -300,5 +300,5 @@ class PlanStepDot extends StatelessWidget {
 // Desktop cards run denser than the phone's.
 double get _dot => kMobile ? 22 : 16;
 TextStyle _meta() => kMobile
-    ? sans(14, height: 20 / 14, color: AppColors.fg3)
+    ? sans(14, height: 20 / 14, color: AppColors.fg2)
     : sans(12, height: 16 / 12, color: AppColors.fg3);

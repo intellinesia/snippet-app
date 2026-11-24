@@ -130,11 +130,13 @@ class _CardMarkdownBodyState extends State<CardMarkdownBody> {
           TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => setState(() => _open = !_open),
-            child: Padding(
-              padding: EdgeInsets.only(top: S.s2),
-              child: Text(_open ? 'Show less' : 'Show more',
-                  style: sans(TranscriptCard.metaSize,
-                      weight: W.label, color: AppColors.fg3)),
+            child: HitArea(
+              child: Padding(
+                padding: EdgeInsets.only(top: S.s2),
+                child: Text(_open ? 'Show less' : 'Show more',
+                    style: sans(TranscriptCard.metaSize,
+                        weight: W.label, color: AppColors.fg3)),
+              ),
             ),
           ),
       ],
@@ -262,11 +264,13 @@ class _PreviewBodyState extends State<_PreviewBody> {
           TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => setState(() => _open = !_open),
-            child: Padding(
-              padding: EdgeInsets.only(top: kMobile ? S.s4 : S.s2),
-              child: Text(_open ? 'Show less' : 'Show more',
-                  style: sans(kMobile ? 13 : 11.5,
-                      weight: W.label, color: AppColors.fg2)),
+            child: HitArea(
+              child: Padding(
+                padding: EdgeInsets.only(top: kMobile ? S.s4 : S.s2),
+                child: Text(_open ? 'Show less' : 'Show more',
+                    style: sans(kMobile ? 13 : 11.5,
+                        weight: W.label, color: AppColors.fg2)),
+              ),
             ),
           ),
       ],

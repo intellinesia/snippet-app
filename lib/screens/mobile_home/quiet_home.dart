@@ -42,16 +42,17 @@ class QuietPlaceHeader extends StatelessWidget {
           Row(mainAxisAlignment: MainAxisAlignment.end, children: [
             if (onNewMenu != null)
               Builder(
-                  builder: (c) =>
-                      _IconTap('plus', 'New', () => onNewMenu!(c))),
-            if (onSearch != null)
-              _IconTap('search', 'Search', onSearch!),
-            if (onSettings != null) _IconTap('settings', 'Settings', onSettings!),
+                  builder: (c) => _IconTap('plus', 'New', () => onNewMenu!(c))),
+            if (onSearch != null) _IconTap('search', 'Search', onSearch!),
+            if (onSettings != null)
+              _IconTap('settings', 'Settings', onSettings!),
             if (trailing != null) trailing!,
           ]),
           Text(title,
               style: sans(34,
-                  height: 41 / 34, weight: FontWeight.w500, color: AppColors.fg1)),
+                  height: 41 / 34,
+                  weight: FontWeight.w500,
+                  color: AppColors.fg1)),
           if (tagline != null)
             Padding(
               padding: EdgeInsets.only(top: S.s4),
@@ -76,8 +77,8 @@ class _IconTap extends StatelessWidget {
           child: SizedBox(
               width: 48,
               height: 48,
-              child: Center(
-                  child: AppIcon(icon, size: 22, color: AppColors.fg1))),
+              child:
+                  Center(child: AppIcon(icon, size: 22, color: AppColors.fg1))),
         ),
       );
 }
@@ -180,7 +181,8 @@ class QuietHomeScreen extends StatelessWidget {
         .where((s) =>
             !sessionBusy(s) && !sessionNeedsYou(s) && s.lastActive >= dayStart)
         .length;
-    final total = agents.where((a) => !a.isLead).length + (lead != null ? 1 : 0);
+    final total =
+        agents.where((a) => !a.isLead).length + (lead != null ? 1 : 0);
     final allLabel = groupCount > 0
         ? 'All $total agents and $groupCount ${groupCount == 1 ? 'group' : 'groups'}'
         : 'All $total agents';
@@ -205,7 +207,11 @@ class QuietHomeScreen extends StatelessWidget {
         if (asks.isNotEmpty) ...[
           QuietSectionLabel('Needs you', count: asks.length + groupAsks.length),
           for (final a in asks)
-            _Ask(item: a, names: names, onOpen: onOpenSession, onDecide: onDecide),
+            _Ask(
+                item: a,
+                names: names,
+                onOpen: onOpenSession,
+                onDecide: onDecide),
         ],
         if (groupAsks.isNotEmpty && asks.isEmpty) ...[
           QuietSectionLabel('Needs you', count: groupAsks.length),
@@ -213,7 +219,11 @@ class QuietHomeScreen extends StatelessWidget {
         for (final g in groupAsks)
           QuietRow(
             title: g.title.isEmpty ? 'Group' : g.title,
-            sub: 'Waiting on ${[for (final id in g.agentIds) if (askers.contains(id)) ((names[id] ?? '').trim().isEmpty ? id : names[id]!)].join(', ')}',
+            sub: 'Waiting on ${[
+              for (final id in g.agentIds)
+                if (askers.contains(id))
+                  ((names[id] ?? '').trim().isEmpty ? id : names[id]!)
+            ].join(', ')}',
             leading: AgentCluster(ids: g.agentIds, size: 28),
             trailing: const QuietHand(size: 14),
             onTap: onOpenGroup == null ? null : () => onOpenGroup!(g),
@@ -249,8 +259,7 @@ class QuietHomeScreen extends StatelessWidget {
           QuietRow(
             title: '$finished finished today',
             leading: AppIcon('check-circle', size: 20, color: AppColors.fg3),
-            trailing:
-                AppIcon('chevron-right', size: 16, color: AppColors.fg3),
+            trailing: AppIcon('chevron-right', size: 16, color: AppColors.fg3),
             onTap: onOpenSessions,
           ),
         ],
@@ -258,8 +267,7 @@ class QuietHomeScreen extends StatelessWidget {
           QuietRow(
             title: allLabel,
             leading: AppIcon('users', size: 20, color: AppColors.fg3),
-            trailing:
-                AppIcon('chevron-right', size: 16, color: AppColors.fg3),
+            trailing: AppIcon('chevron-right', size: 16, color: AppColors.fg3),
             onTap: onAllAgents,
           ),
       ],
@@ -269,8 +277,7 @@ class QuietHomeScreen extends StatelessWidget {
 
 /// Who is here: 56 pt faces with a 16 pt state badge, scrolling sideways.
 class _FaceStrip extends StatelessWidget {
-  const _FaceStrip(
-      {required this.items, required this.onOpen, this.onProfile});
+  const _FaceStrip({required this.items, required this.onOpen, this.onProfile});
   final void Function(CoordinationAgent a)? onProfile;
   final List<(CoordinationAgent, CrewState)> items;
   final void Function(CoordinationAgent a) onOpen;
@@ -361,14 +368,16 @@ class _StartGroup extends StatelessWidget {
               title: 'Ask Lead what is next',
               sub: 'Lead plans it and hands it out',
               leading: AgentMochi('lead', size: 28),
-              trailing: AppIcon('chevron-right', size: 16, color: AppColors.fg3),
+              trailing:
+                  AppIcon('chevron-right', size: 16, color: AppColors.fg3),
               onTap: onOpenLead,
             ),
             QuietRow(
               title: 'New session',
               sub: 'Pick an agent, then say what to make',
               leading: AppIcon('edit', size: 22, color: AppColors.fg2),
-              trailing: AppIcon('chevron-right', size: 16, color: AppColors.fg3),
+              trailing:
+                  AppIcon('chevron-right', size: 16, color: AppColors.fg3),
               onTap: onNew,
             ),
           ]),
@@ -418,8 +427,7 @@ class _AskState extends State<_Ask> {
           onTap: () => widget.onOpen(s),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Padding(
-                padding: EdgeInsets.only(top: S.s2),
-                child: const QuietHand()),
+                padding: EdgeInsets.only(top: S.s2), child: const QuietHand()),
             SizedBox(width: S.s12),
             Expanded(
               child: Column(
@@ -450,8 +458,7 @@ class _AskState extends State<_Ask> {
         Row(children: [
           if (canDecide) ...[
             Btn('Approve',
-                small: true,
-                onTap: _busy ? null : () => _decide(true)),
+                small: true, onTap: _busy ? null : () => _decide(true)),
             SizedBox(width: S.s8),
           ],
           Btn(canDecide ? 'Reply' : 'Open',
@@ -512,7 +519,8 @@ class _QuietSessionsScreenState extends State<QuietSessionsScreen> {
     final all = [...widget.sessions]
       ..sort((a, b) => b.lastActive.compareTo(a.lastActive));
     final needs = all.where(sessionNeedsYou).length;
-    final running = all.where((s) => sessionBusy(s) && !sessionNeedsYou(s)).length;
+    final running =
+        all.where((s) => sessionBusy(s) && !sessionNeedsYou(s)).length;
     final q = _q.text.trim().toLowerCase();
     bool hit(SessionInfo s) =>
         q.isEmpty ||
@@ -523,9 +531,12 @@ class _QuietSessionsScreenState extends State<QuietSessionsScreen> {
       _Filter.needs => all.where(sessionNeedsYou).toList(),
       _Filter.running =>
         all.where((s) => sessionBusy(s) && !sessionNeedsYou(s)).toList(),
-    }.where(hit).toList();
+    }
+        .where(hit)
+        .toList();
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day).millisecondsSinceEpoch ~/ 1000;
+    final today =
+        DateTime(now.year, now.month, now.day).millisecondsSinceEpoch ~/ 1000;
     final yesterday = today - 86400;
     String bucket(SessionInfo s) => s.lastActive >= today
         ? 'Today'
@@ -538,7 +549,10 @@ class _QuietSessionsScreenState extends State<QuietSessionsScreen> {
           padding: EdgeInsets.fromLTRB(S.s4, S.s8, S.s16, S.s4),
           child: Row(children: [
             IconBtn('x',
-                size: 48, iconSize: 20, tooltip: 'Cancel', onTap: widget.onExitSelect),
+                size: 48,
+                iconSize: 20,
+                tooltip: 'Cancel',
+                onTap: widget.onExitSelect),
             Expanded(
               child: Text(
                   widget.selected.isEmpty
@@ -558,12 +572,12 @@ class _QuietSessionsScreenState extends State<QuietSessionsScreen> {
           ]),
         )
       else
-      QuietPlaceHeader(
-          title: 'Sessions',
-          onSearch: () => setState(() {
-                _searching = !_searching;
-                if (!_searching) _q.clear();
-              })),
+        QuietPlaceHeader(
+            title: 'Sessions',
+            onSearch: () => setState(() {
+                  _searching = !_searching;
+                  if (!_searching) _q.clear();
+                })),
       if (_searching)
         Padding(
           padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
@@ -633,7 +647,8 @@ class _QuietSessionsScreenState extends State<QuietSessionsScreen> {
       children.add(Padding(
         padding: EdgeInsets.fromLTRB(S.s16, S.s24, S.s16, S.s8),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(widget.sessions.isEmpty ? 'No sessions yet' : 'No sessions here.',
+          Text(
+              widget.sessions.isEmpty ? 'No sessions yet' : 'No sessions here.',
               style: sans(14, weight: W.label, color: AppColors.fg1)),
           SizedBox(height: S.s4),
           Text(
@@ -644,20 +659,24 @@ class _QuietSessionsScreenState extends State<QuietSessionsScreen> {
           if (widget.sessions.isEmpty && widget.onNew != null) ...[
             SizedBox(height: S.s12),
             TapDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: widget.onNew,
-              child: Container(
-                height: 36,
-                padding: EdgeInsets.symmetric(horizontal: S.s16),
-                decoration: BoxDecoration(
-                    color: AppColors.accentFill,
-                    borderRadius: BorderRadius.circular(999)),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  AppIcon('edit', size: 14, color: AppColors.accentFg),
-                  SizedBox(width: S.s8),
-                  Text('New session',
-                      style: sans(13,
-                          weight: W.label, color: AppColors.accentFg)),
-                ]),
+              child: HitArea(
+                alignment: Alignment.center,
+                child: Container(
+                  height: 36,
+                  padding: EdgeInsets.symmetric(horizontal: S.s16),
+                  decoration: BoxDecoration(
+                      color: AppColors.accentFill,
+                      borderRadius: BorderRadius.circular(999)),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    AppIcon('edit', size: 14, color: AppColors.accentFg),
+                    SizedBox(width: S.s8),
+                    Text('New session',
+                        style: sans(13,
+                            weight: W.label, color: AppColors.accentFg)),
+                  ]),
+                ),
               ),
             ),
           ],
@@ -680,23 +699,26 @@ class _Chip extends StatelessWidget {
   Widget build(BuildContext context) => TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Container(
-          height: 36,
-          padding: EdgeInsets.symmetric(horizontal: S.s12),
-          decoration: BoxDecoration(
-            color: selected ? AppColors.fg1 : AppColors.surface2,
-            borderRadius: BorderRadius.circular(R.of(18)),
+        child: HitArea(
+          alignment: Alignment.center,
+          child: Container(
+            height: 36,
+            padding: EdgeInsets.symmetric(horizontal: S.s12),
+            decoration: BoxDecoration(
+              color: selected ? AppColors.fg1 : AppColors.surface2,
+              borderRadius: BorderRadius.circular(R.of(18)),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Text(label,
+                  style: sans(14,
+                      weight: selected ? W.label : W.body,
+                      color: selected ? AppColors.bg : AppColors.fg1)),
+              SizedBox(width: S.s6),
+              Text('$count',
+                  style:
+                      sans(14, color: selected ? AppColors.bg : AppColors.fg3)),
+            ]),
           ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Text(label,
-                style: sans(14,
-                    weight: selected ? W.label : W.body,
-                    color: selected ? AppColors.bg : AppColors.fg1)),
-            SizedBox(width: S.s6),
-            Text('$count',
-                style: sans(14,
-                    color: selected ? AppColors.bg : AppColors.fg3)),
-          ]),
         ),
       );
 }

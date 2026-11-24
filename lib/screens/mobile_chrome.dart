@@ -215,14 +215,14 @@ class MobileHomeHeader extends StatelessWidget {
                   RoundBtn(
                     icon: 'chevron-left',
                     tooltip: 'Back',
-                    size: 40,
+                    size: 44,
                     iconSize: 20,
                     onTap: onBack,
                   )
                 else
                   RoundBtn(
                     tooltip: 'Lead',
-                    size: 40,
+                    size: 44,
                     badgeCount: mcBadgeCount,
                     onTap: onMc,
                     child: AgentMochi('lead', size: 26),
@@ -310,7 +310,7 @@ class MobileMissionBar extends StatelessWidget {
                 final live = AmbientController.instance.running;
                 return RoundBtn(
                   tooltip: live ? 'Voice call' : 'Start voice',
-                  size: 40,
+                  size: 44,
                   onTap: () => startMobileVoice(context, c),
                   child: AppIcon('phone',
                       size: 18,
@@ -426,7 +426,7 @@ class MobileBackBar extends StatelessWidget {
             RoundBtn(
                 icon: menu ? 'menu' : 'chevron-left',
                 tooltip: menu ? 'Menu' : 'Back',
-                size: 40,
+                size: 44,
                 iconSize: menu ? 18 : 20,
                 onTap: back),
           if (back == null && trailing.isNotEmpty)

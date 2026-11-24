@@ -190,7 +190,7 @@ class _SheetRowBody extends StatelessWidget {
                   Text(detail!,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TS.meta(disabled ? AppColors.fg4 : null)),
+                      style: TS.meta(disabled ? AppColors.fg4 : AppColors.fg2)),
                 ],
               ],
             ),
