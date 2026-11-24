@@ -242,7 +242,11 @@ void openMarkdownLink(String? href, [BuildContext? context, String? text]) {
   if (href == null || href.isEmpty) return;
   if (parseCanvasRef(href) case final ref?) {
     if (context == null) return;
-    openCanvas(context, canvasId: ref.canvasId, frameId: ref.frameId, elId: ref.elId, rev: ref.rev);
+    openCanvas(context,
+        canvasId: ref.canvasId,
+        frameId: ref.frameId,
+        elId: ref.elId,
+        rev: ref.rev);
     return;
   }
   if (parseChatLink(href) case final link?) {
@@ -820,10 +824,10 @@ class Btn extends StatelessWidget {
                   horizontal: small ? S.s12 : S.s16, vertical: 4),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(radius),
-                border: bd != null &&
-                        !(kMobile && variant == BtnVariant.secondary)
-                    ? Border.all(color: bd)
-                    : null,
+                border:
+                    bd != null && !(kMobile && variant == BtnVariant.secondary)
+                        ? Border.all(color: bd)
+                        : null,
               ),
               child: child,
             ),
@@ -1271,7 +1275,8 @@ class _HoverSurfaceState extends State<HoverSurface> {
       onFocusChange: (v) => setState(() => _focus = v &&
           FocusManager.instance.highlightMode ==
               FocusHighlightMode.traditional),
-      child: Stack(fit: StackFit.passthrough, clipBehavior: Clip.none, children: [
+      child:
+          Stack(fit: StackFit.passthrough, clipBehavior: Clip.none, children: [
         MouseRegion(
           onEnter: (_) => setState(() => _hover = true),
           onExit: (_) => setState(() => _hover = false),
@@ -1646,49 +1651,52 @@ class _AudioTranscriptCardState extends State<AudioTranscriptCard> {
       child: InkWell(
         onTap: _canExpand ? () => setState(() => _expanded = !_expanded) : null,
         borderRadius: BorderRadius.circular(R.sm),
-        child: AnimatedSize(
-          duration: Motion.base,
-          curve: Motion.enter,
-          alignment: Alignment.topCenter,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (!_expanded)
-                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Expanded(
-                    child: Text(
-                      _preview.isEmpty ? 'Transcript' : _preview,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: kMobile
-                          ? sans(13, height: 18 / 12.5, color: AppColors.fg2)
-                          : sans(12, height: 1.4, color: AppColors.fg2),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: kMobile ? 48 : 0),
+          child: AnimatedSize(
+            duration: Motion.base,
+            curve: Motion.enter,
+            alignment: Alignment.topCenter,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (!_expanded)
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Expanded(
+                      child: Text(
+                        _preview.isEmpty ? 'Transcript' : _preview,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: kMobile
+                            ? sans(13, height: 18 / 12.5, color: AppColors.fg2)
+                            : sans(12, height: 1.4, color: AppColors.fg2),
+                      ),
                     ),
-                  ),
-                  if (_canExpand) ...[
-                    SizedBox(width: S.s8),
-                    AppIcon('chevron-down', size: 13, color: AppColors.fg4),
+                    if (_canExpand) ...[
+                      SizedBox(width: S.s8),
+                      AppIcon('chevron-down', size: 13, color: AppColors.fg4),
+                    ],
+                  ])
+                else ...[
+                  for (var i = 0; i < widget.items.length; i++) ...[
+                    if (i > 0) SizedBox(height: S.s6),
+                    Text(
+                      _lineFor(widget.items[i]),
+                      style: sans(kMobile ? 13 : 12,
+                          height: kMobile ? 19 / 13 : 1.4,
+                          color: widget.items[i].unavailable
+                              ? AppColors.fg3
+                              : AppColors.fg2),
+                    ),
                   ],
-                ])
-              else ...[
-                for (var i = 0; i < widget.items.length; i++) ...[
-                  if (i > 0) SizedBox(height: S.s6),
-                  Text(
-                    _lineFor(widget.items[i]),
-                    style: sans(kMobile ? 13 : 12,
-                        height: kMobile ? 19 / 13 : 1.4,
-                        color: widget.items[i].unavailable
-                            ? AppColors.fg3
-                            : AppColors.fg2),
-                  ),
+                  SizedBox(height: S.s4),
+                  Row(children: [
+                    const Spacer(),
+                    AppIcon('chevron-up', size: 13, color: AppColors.fg4),
+                  ]),
                 ],
-                SizedBox(height: S.s4),
-                Row(children: [
-                  const Spacer(),
-                  AppIcon('chevron-up', size: 13, color: AppColors.fg4),
-                ]),
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -1805,8 +1813,7 @@ class Bubble extends StatelessWidget {
           extensionSet: extensionSet,
           styleSheet: styleSheet,
           builders: {'pre': PreBlockBuilder()},
-          onTapLink: (txt, href, title) =>
-              openMarkdownLink(href, context, txt),
+          onTapLink: (txt, href, title) => openMarkdownLink(href, context, txt),
         );
       }
       return Column(
@@ -2643,12 +2650,14 @@ String? providerLogoAsset(String? provider) {
     'openrouter' => 'openrouter',
     'opencode-zen' || 'opencode-go' || 'opencode' => 'opencode',
     // Profile names such as claude-opus, opus, sonnet or gpt-5 read as their provider.
-    _ when p.startsWith('claude') ||
+    _
+        when p.startsWith('claude') ||
             p.startsWith('opus') ||
             p.startsWith('sonnet') ||
             p.startsWith('haiku') =>
       'claude',
-    _ when p.startsWith('gpt') ||
+    _
+        when p.startsWith('gpt') ||
             p.startsWith('codex') ||
             p.startsWith('o1') ||
             p.startsWith('o3') ||

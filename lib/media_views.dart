@@ -640,23 +640,28 @@ class _VoiceNoteState extends State<VoiceNote> {
           Semantics(
             button: true,
             label: _playing ? 'Pause voice note' : 'Play voice note',
-            child: Material(
-              color: _error == null ? ink : ink.withValues(alpha: 0.3),
-              shape: const CircleBorder(),
-              child: InkWell(
-                onTap: _error == null ? _toggle : null,
-                customBorder: const CircleBorder(),
-                child: SizedBox(
-                  width: 36,
-                  height: 36,
-                  child: Center(
-                    child: _loading
-                        ? Spinner(size: 14, color: glyph)
-                        : Padding(
-                            padding: EdgeInsets.only(left: _playing ? 0 : S.s2),
-                            child: AppIcon(_playing ? 'pause' : 'play',
-                                size: 15, color: glyph),
-                          ),
+            child: Padding(
+              padding: EdgeInsets.all(kMobile ? 4 : 0),
+              child: Material(
+                color: _error == null ? ink : ink.withValues(alpha: 0.3),
+                shape: const CircleBorder(),
+                child: InkWell(
+                  onTap: _error == null ? _toggle : null,
+                  customBorder: const CircleBorder(),
+                  // A 40 circle inside a 48 target.
+                  child: SizedBox(
+                    width: kMobile ? 40 : 36,
+                    height: kMobile ? 40 : 36,
+                    child: Center(
+                      child: _loading
+                          ? Spinner(size: 14, color: glyph)
+                          : Padding(
+                              padding:
+                                  EdgeInsets.only(left: _playing ? 0 : S.s2),
+                              child: AppIcon(_playing ? 'pause' : 'play',
+                                  size: 15, color: glyph),
+                            ),
+                    ),
                   ),
                 ),
               ),
@@ -1359,7 +1364,8 @@ class _PastedTextCardState extends State<PastedTextCard> {
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 child: Row(children: [
                   Expanded(
-                    child: Text(_open ? 'Show less' : 'Show all $chars characters',
+                    child: Text(
+                        _open ? 'Show less' : 'Show all $chars characters',
                         style: sans(13, weight: W.label, color: AppColors.fg1)),
                   ),
                   AppIcon(_open ? 'chevron-up' : 'chevron-down',
