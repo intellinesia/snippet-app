@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 
 import '../api.dart';
 import '../media_views.dart' show DaemonScope;
+import '../notification_sync.dart' show foregroundNotifications;
 import '../platform.dart';
 import '../theme.dart';
 import '../toast_avoid.dart';
@@ -1238,6 +1239,17 @@ class _CanvasScreenState extends State<CanvasScreen>
   }
 
   void _showToast(String message) {
+    // Phones raise it in the shared top band, never over the canvas surface.
+    if (kMobile) {
+      // "Could not save pin: detail" becomes a title line and a body line.
+      final cut = message.indexOf(': ');
+      foregroundNotifications.add({
+        'title': cut > 0 ? message.substring(0, cut) : message,
+        if (cut > 0) 'body': message.substring(cut + 2),
+        'kind': 'canvas.notice',
+      });
+      return;
+    }
     final messenger = ScaffoldMessenger.maybeOf(context);
     if (messenger == null) return;
     messenger
