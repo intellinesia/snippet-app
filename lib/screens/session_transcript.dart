@@ -425,6 +425,19 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                 ambient.ids.every(superseded.contains)) {
               break;
             }
+            if (kMobile &&
+                isDedicatedLeadSession(widget.sessionId) &&
+                ambient.text.isNotEmpty) {
+              addEvent(
+                  key,
+                  Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Column(children: [
+                        LeadUserBubble(ambient.text),
+                        HeardLine(ambient.text),
+                      ])));
+              break;
+            }
             addEvent(
                 key,
                 Padding(
@@ -445,8 +458,10 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           if (_skipNextUserEnter.remove(_normEchoText(text))) {
             _shownRows.add(ValueKey(key));
           }
-          final userBubble =
-              Bubble(mine: true, text: text, client: widget.client);
+          final leadPhone = kMobile && isDedicatedLeadSession(widget.sessionId);
+          final userBubble = leadPhone
+              ? LeadUserBubble(text)
+              : Bubble(mine: true, text: text, client: widget.client);
           addEvent(
               key,
               KeyedSubtree(
@@ -488,7 +503,26 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                   padding: EdgeInsets.zero,
                   child: e['quiet'] == true
                       ? QuietAside(text: reply)
-                      : Bubble(mine: false, text: reply)));
+                      : kMobile && isDedicatedLeadSession(widget.sessionId)
+                          ? Padding(
+                              padding: EdgeInsets.symmetric(horizontal: M.gutter),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(children: [
+                                    AgentMochi('lead', size: 24),
+                                    const SizedBox(width: 8),
+                                    Text('Lead',
+                                        style: sans(13,
+                                            weight: W.label,
+                                            color: AppColors.fg1)),
+                                  ]),
+                                  const SizedBox(height: 6),
+                                  Bubble(mine: false, text: reply, plain: true),
+                                ],
+                              ),
+                            )
+                          : Bubble(mine: false, text: reply)));
         case 'agent_message':
           endTools(key);
           final voiceNote = e['outbound'] == true
@@ -889,6 +923,22 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           _activityLive.value = activityLive;
         }
       });
+    }
+    if (kMobile && isDedicatedLeadSession(widget.sessionId)) {
+      final delegations = [
+        for (final s in knownSessions.values)
+          if (s.ownerAgentId == 'lead' && s.workerAgentId != null && !s.settled)
+            Delegation(
+                s.workerAgentId!,
+                agentDisplayName(s.workerAgentId!),
+                s.title,
+                sessionBusy(s) ? 'Working' : 'Done'),
+      ];
+      if (delegations.isNotEmpty) {
+        out.add(Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: DelegationsCard(items: delegations)));
+      }
     }
     return out;
   }

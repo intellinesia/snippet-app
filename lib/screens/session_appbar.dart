@@ -331,7 +331,8 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       _ => status,
     };
     final (fg, _) = toneColors(live ? Tone.run : Tone.neutral);
-    return ToastAvoid(child: Container(
+    return ToastAvoid(
+        child: Container(
       height: kMobile ? M.appBarHeight : 44,
       padding: EdgeInsets.symmetric(horizontal: S.s6),
       color: kMobile ? AppColors.pageBg : AppColors.bg,
@@ -475,9 +476,8 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
           : '';
       // Scrolled away from the working row: the header carries it.
       final dock = _dockRun;
-      final workingAway = !_stickToBottom &&
-          dock != null &&
-          s?.status == 'running';
+      final workingAway =
+          !_stickToBottom && dock != null && s?.status == 'running';
       final word = needsYou
           ? 'waiting on you'
           : s?.status == 'in_review'
@@ -507,8 +507,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
                           color: AppColors.fg2, shape: BoxShape.circle)),
                   SizedBox(width: S.s6),
                   Text(lanesPill,
-                      style: TextStyle(
-                          fontSize: 12, color: AppColors.fg2)),
+                      style: TextStyle(fontSize: 12, color: AppColors.fg2)),
                 ]),
               ),
             ),
@@ -558,7 +557,12 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     final working = s?.status == 'running';
     return StageBar(
       framed: false,
-      members: const [],
+      members: [
+        if ((_me?.displayAgentId ?? '').isNotEmpty)
+          StageMember(_me!.displayAgentId!),
+      ],
+      avatarSize: 30,
+      titleSize: 15,
       title: _title.isEmpty ? 'Session' : _title,
       subtitle: working ? null : (sub.isEmpty ? null : sub),
       below: subView,
@@ -578,29 +582,33 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   Widget _mcStageHeader(HarnessState? s, bool stuck) {
     final n = _mcInFlight ?? 0;
     final working = s?.status == 'running';
-    return StageBar(
-      framed: false,
-      members: [
-        StageMember('lead',
-            state: working
-                ? AgentCharacterState.working
-                : AgentCharacterState.idle),
-      ],
-      title: 'Lead',
-      subtitle: working
-          ? 'Coordinator \u00b7 Working'
-          : n > 0
-              ? 'Coordinator \u00b7 $n ${n == 1 ? 'task' : 'tasks'} in flight'
-              : 'Coordinator',
-      onTap: stuck ? _retryNow : () => _openActionsDrawer(s),
-      trailing: RoundBtn(
-        icon: 'phone',
-        tooltip: 'Start voice',
-        size: 44,
-        iconSize: 18,
-        onTap: () => startMobileVoice(context, widget.client),
-      ),
-    );
+    return ListenableBuilder(
+        listenable: AmbientController.instance,
+        builder: (_, __) => StageBar(
+              framed: false,
+              members: [
+                StageMember('lead',
+                    state: working
+                        ? AgentCharacterState.working
+                        : AgentCharacterState.idle),
+              ],
+              title: 'Lead',
+              subtitle: AmbientController.instance.running
+                  ? 'Listening - ambient'
+                  : working
+                      ? 'Coordinator \u00b7 Working'
+                      : n > 0
+                          ? 'Coordinator \u00b7 $n ${n == 1 ? 'task' : 'tasks'} in flight'
+                          : 'Coordinator',
+              onTap: stuck ? _retryNow : () => _openActionsDrawer(s),
+              trailing: RoundBtn(
+                icon: 'phone',
+                tooltip: 'Start voice',
+                size: 44,
+                iconSize: 18,
+                onTap: () => startMobileVoice(context, widget.client),
+              ),
+            ));
   }
 
   bool get _hasTermDock => !kMobile && !_isLead && !widget.readOnly;
@@ -1205,11 +1213,10 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
                   '$changedCount file${changedCount == 1 ? '' : 's'} changed',
               ].join(' \u00b7 '),
       ),
-      onDelete: _isLead ||
-              widget.readOnly ||
-              _inboxAgentId(widget.sessionId) != null
-          ? null
-          : () => _deleteSession(run),
+      onDelete:
+          _isLead || widget.readOnly || _inboxAgentId(widget.sessionId) != null
+              ? null
+              : () => _deleteSession(run),
       onFork: widget.readOnly || _isLead
           ? null
           : () => run(() => _confirmFork(null)),
@@ -1271,11 +1278,10 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
           : null,
       onCompact: () => run(_confirmCompact),
       onCheckpoints: () => navigate!(_showCheckpoints),
-      onHandOff: _isLead ||
-              widget.readOnly ||
-              _inboxAgentId(widget.sessionId) != null
-          ? null
-          : () => run(_showHandOff),
+      onHandOff:
+          _isLead || widget.readOnly || _inboxAgentId(widget.sessionId) != null
+              ? null
+              : () => run(_showHandOff),
       onMemory: () => navigate!(() => presentScreen(context,
           builder: (_, close) => MemoryScreen(
               client: widget.client, embedded: true, onBack: close))),
@@ -1657,10 +1663,8 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       listenable: Listenable.merge([sessionRailCollapsed, sessionRailFloating]),
       builder: (_, __) {
         final docked = rail && !sessionRailCollapsed.value;
-        final floating =
-            !rail && !_isLead && sessionRailFloating.value;
-        return _deskHeaderBarWith(s, running,
-            actions: !docked && !floating);
+        final floating = !rail && !_isLead && sessionRailFloating.value;
+        return _deskHeaderBarWith(s, running, actions: !docked && !floating);
       },
     );
   }

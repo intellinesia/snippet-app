@@ -1760,10 +1760,14 @@ class Bubble extends StatelessWidget {
   /// When given, a sent message's attachments render as real media (image
   /// thumbnails, file cards, playable voice notes) instead of count pills.
   final DaemonClient? client;
+
+  /// Phone: an agent reply read without a bubble, at the full content width.
+  final bool plain;
   const Bubble({
     super.key,
     required this.mine,
     required this.text,
+    this.plain = false,
     this.selectable = true,
     this.onLongPress,
     this.client,
@@ -1875,7 +1879,7 @@ class Bubble extends StatelessWidget {
       );
       final body = selectable && !kMobile ? SelectionArea(child: reply) : reply;
       // Long prose reads without a bubble, at the full content width.
-      final bubble = shown.length > 600
+      final bubble = shown.length > 600 || plain
           ? SizedBox(width: double.infinity, child: body)
           : ChatBubbleRow(
               mine: false, child: ChatBubble(mine: false, child: body));

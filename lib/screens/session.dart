@@ -30,6 +30,8 @@ import '../chat/message_enter.dart';
 
 import '../chat/chat_card.dart';
 import '../chat/stage_bar.dart';
+import 'mobile_home/lead_phone.dart';
+import 'shell_nav.dart' show sessionBusy;
 import '../chat/stage_header.dart';
 import '../chat/signal_row.dart';
 import 'session_list_row.dart' show sessionStepLabel;

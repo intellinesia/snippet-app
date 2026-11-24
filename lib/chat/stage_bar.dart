@@ -30,6 +30,8 @@ class StageBar extends StatelessWidget {
     this.framed = true,
     this.subtitleProvider,
     this.subtitleHand = false,
+    this.avatarSize = 32,
+    this.titleSize = 16,
   });
 
   final List<StageMember> members;
@@ -38,6 +40,10 @@ class StageBar extends StatelessWidget {
 
   /// Phone: provider mark drawn before the subtitle, in the subtitle's ink.
   final String? subtitleProvider;
+
+  /// Phone: avatar and title size (session chats use 30 and 15).
+  final double avatarSize;
+  final double titleSize;
 
   /// Phone: the amber needs-you hand before the subtitle.
   final bool subtitleHand;
@@ -74,8 +80,8 @@ class StageBar extends StatelessWidget {
     final avatar = members.isEmpty
         ? null
         : ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: AgentMochi(members.first.agentId, size: 32));
+            borderRadius: BorderRadius.circular(avatarSize / 2),
+            child: AgentMochi(members.first.agentId, size: avatarSize));
     final body = SizedBox(
       width: double.infinity,
       height: h,
@@ -112,7 +118,7 @@ class StageBar extends StatelessWidget {
                     Text(title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: sans(16, weight: W.label, color: AppColors.fg1)),
+                        style: sans(titleSize, weight: W.label, color: AppColors.fg1)),
                     if (sub.isNotEmpty)
                       Row(mainAxisSize: MainAxisSize.min, children: [
                         if (subtitleHand) ...[
