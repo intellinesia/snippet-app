@@ -14,8 +14,7 @@ import '../tap_detector.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'agent_profile_panel.dart';
-import 'agent_wake_panel.dart' show showAgentWakeSettings;
-import 'agent_reach_panel.dart' show showAgentReachSettings;
+import 'mobile_home/wake_reach_phone.dart';
 import 'mobile_home/agents_home.dart';
 import 'agent_profile_sheet.dart';
 import 'group_messaging.dart' show openGroupThread, groupMemberName;
@@ -150,11 +149,13 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
         onDeleted: widget.onClose,
       ));
 
-  void _openWake() => unawaited(showAgentWakeSettings(context,
-      client: widget.client, owner: a.id, name: _name));
+  void _openWake() => unawaited(Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => PhoneWakePage(
+          client: widget.client, owner: a.id, name: _name))));
 
-  void _openReach() => unawaited(showAgentReachSettings(context,
-      client: widget.client, agentId: a.id, name: _name));
+  void _openReach() => unawaited(Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => PhoneReachPage(
+          client: widget.client, agentId: a.id, name: _name))));
 
   Future<void> _more() async {
     final pick = await showAppMenu<String>(context, items: [
