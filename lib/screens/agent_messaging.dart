@@ -18,6 +18,7 @@ import '../ambient_loop.dart';
 import '../api.dart';
 import '../clock.dart';
 import '../chat/stage_bar.dart';
+import '../chat/draft_sink.dart';
 import '../chat/stage_header.dart';
 import '../chat/chat_style.dart';
 import '../chat/message_body.dart';
@@ -687,6 +688,11 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   @override
   void initState() {
     super.initState();
+    DraftSink.register(this, (t) {
+      _input.text = t;
+      _input.selection = TextSelection.collapsed(offset: t.length);
+      _inputFocus.requestFocus();
+    });
     _kit.start();
     _loadLine();
     _loadUnread();
@@ -739,6 +745,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
 
   @override
   void dispose() {
+    DraftSink.unregister(this);
     _thread.dispose();
     _kit.dispose();
     _attachments.dispose();

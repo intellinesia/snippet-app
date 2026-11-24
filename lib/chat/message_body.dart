@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'draft_sink.dart';
 import 'package:flutter/services.dart';
 import 'package:markdown/markdown.dart' as md;
 
@@ -161,15 +162,61 @@ class DraftBlockBuilder extends MarkdownElementBuilder {
   }
 }
 
-class _DraftCard extends StatelessWidget {
+class _DraftCard extends StatefulWidget {
   const _DraftCard({required this.text, required this.mine});
 
   final String text;
   final bool mine;
 
   @override
+  State<_DraftCard> createState() => _DraftCardState();
+}
+
+class _DraftCardState extends State<_DraftCard> {
+  bool _dismissed = false;
+
+  String get text => widget.text;
+  bool get mine => widget.mine;
+
+  Widget _phone() => Container(
+        width: double.infinity,
+        margin: EdgeInsets.symmetric(vertical: S.s4),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+            color: AppColors.surface1, borderRadius: BorderRadius.circular(10)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(children: [
+              AppIcon('edit', size: 16, color: AppColors.fg2),
+              const SizedBox(width: 8),
+              Text('Draft reply',
+                  style: sans(12, weight: W.label, color: AppColors.fg2)),
+            ]),
+            const SizedBox(height: 8),
+            Text(text,
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
+                style: sans(15, height: 1.4, color: AppColors.fg1)),
+            const SizedBox(height: 12),
+            DraftActions(
+              onUse: () {
+                if (!DraftSink.use(text)) {
+                  Clipboard.setData(ClipboardData(text: text));
+                  toast(context, 'Copied');
+                }
+              },
+              onDismiss: () => setState(() => _dismissed = true),
+            ),
+          ],
+        ),
+      );
+
+  @override
   Widget build(BuildContext context) {
     Theme.of(context);
+    if (kMobile) return _dismissed ? const SizedBox.shrink() : _phone();
     return Padding(
       padding: EdgeInsets.symmetric(vertical: S.s4),
       child: Container(
@@ -243,12 +290,14 @@ class _LinkCard extends StatelessWidget {
   Widget build(BuildContext context) {
     Theme.of(context);
     final info = describeLinkUrl(uri);
-    final radius = BorderRadius.circular(R.lg);
+    final radius = BorderRadius.circular(kMobile ? 10 : R.lg);
     return Container(
+      width: kMobile ? double.infinity : null,
+      constraints: BoxConstraints(minHeight: kMobile ? 76 : 0),
       decoration: BoxDecoration(
         color: AppColors.surface1,
         borderRadius: radius,
-        border: Border.all(color: AppColors.border),
+        border: kMobile ? null : Border.all(color: AppColors.border),
       ),
       child: Material(
         type: MaterialType.transparency,
@@ -256,11 +305,23 @@ class _LinkCard extends StatelessWidget {
           borderRadius: radius,
           onTap: () => openMarkdownLink(url, context),
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.of(10)),
+            padding: EdgeInsets.symmetric(
+                horizontal: kMobile ? 12 : S.s12, vertical: S.of(10)),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisSize: kMobile ? MainAxisSize.max : MainAxisSize.min,
               children: [
-                AppIcon('globe', size: 15, color: AppColors.fg3),
+                if (kMobile)
+                  Container(
+                    width: 52,
+                    height: 52,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                        color: AppColors.surface3,
+                        borderRadius: BorderRadius.circular(8)),
+                    child: AppIcon('globe', size: 20, color: AppColors.fg3),
+                  )
+                else
+                  AppIcon('globe', size: 15, color: AppColors.fg3),
                 SizedBox(width: S.of(10)),
                 Flexible(
                   child: Column(
@@ -283,6 +344,10 @@ class _LinkCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (kMobile) ...[
+                  const SizedBox(width: 8),
+                  AppIcon('external-link', size: 16, color: AppColors.fg3),
+                ],
               ],
             ),
           ),

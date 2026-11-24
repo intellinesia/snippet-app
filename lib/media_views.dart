@@ -1311,8 +1311,71 @@ class PastedTextCard extends StatefulWidget {
 class _PastedTextCardState extends State<PastedTextCard> {
   bool _open = false;
 
+  Widget _phone() {
+    final lines = widget.text.split('\n');
+    final preview = lines.take(3).join('\n');
+    final chars = widget.text.length;
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+          color: AppColors.surface1, borderRadius: BorderRadius.circular(10)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
+            child: Row(children: [
+              AppIcon('file-text', size: 16, color: AppColors.fg2),
+              const SizedBox(width: 8),
+              Text('Pasted text',
+                  style: sans(12, weight: W.label, color: AppColors.fg2)),
+              const Spacer(),
+              Text('$chars chars', style: sans(11.5, color: AppColors.fg3)),
+            ]),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+            child: _open
+                ? ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 360),
+                    child: SingleChildScrollView(
+                      child: SelectableText(widget.text,
+                          style:
+                              codeMono(12, height: 1.45, color: AppColors.fg2)),
+                    ),
+                  )
+                : Text(preview,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: codeMono(12, height: 1.45, color: AppColors.fg2)),
+          ),
+          Container(height: 1, color: AppColors.border),
+          InkWell(
+            onTap: () => setState(() => _open = !_open),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Row(children: [
+                  Expanded(
+                    child: Text(_open ? 'Show less' : 'Show all $chars characters',
+                        style: sans(13, weight: W.label, color: AppColors.fg1)),
+                  ),
+                  AppIcon(_open ? 'chevron-up' : 'chevron-down',
+                      size: 16, color: AppColors.fg3),
+                ]),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (kMobile) return _phone();
     final lines = widget.text.split('\n');
     final preview = lines.take(3).join('\n');
     return Container(

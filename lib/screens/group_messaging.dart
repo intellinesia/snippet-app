@@ -41,6 +41,7 @@ import '../chat/agent_cluster.dart';
 import '../chat/chat_style.dart';
 import '../chat/group_notice.dart';
 import '../chat/stage_bar.dart';
+import '../chat/draft_sink.dart';
 import '../chat/stage_header.dart';
 import '../chat/run_head.dart';
 import '../chat/chat_empty_intro.dart';
@@ -1048,6 +1049,11 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         if (mounted && m != null && m.plan.isNotEmpty) setState(() => _mission = m);
       });
     }
+    DraftSink.register(this, (t) {
+      _input.text = t;
+      _input.selection = TextSelection.collapsed(offset: t.length);
+      _inputFocus.requestFocus();
+    });
     _kit.start();
     _loadAgents();
     _thread = Swr<List<CoordinationEvent>>(
@@ -1068,6 +1074,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
 
   @override
   void dispose() {
+    DraftSink.unregister(this);
     _thread.dispose();
     _kit.dispose();
     _attachments.dispose();

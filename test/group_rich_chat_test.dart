@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:snippet/platform.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:snippet/api.dart';
@@ -348,10 +349,12 @@ void main() {
         ),
       ));
 
-      expect(find.text('Copy'), findsOneWidget);
+      // Phones show Use draft (copies when no chat is open), desktop Copy.
+      final action = find.text(kMobile ? 'Use draft' : 'Copy');
+      expect(action, findsOneWidget);
       expect(find.textContaining('First line of the draft.'), findsOneWidget);
 
-      await tester.tap(find.text('Copy'));
+      await tester.tap(action);
       await tester.pump();
       expect(
         clipboardText,
