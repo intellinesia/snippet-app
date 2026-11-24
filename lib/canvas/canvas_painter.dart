@@ -9,6 +9,12 @@ import 'canvas_viewport.dart';
 import 'spatial_index.dart';
 import 'thumb_cache.dart';
 
+/// Below this zoom frames draw as labelled blocks with no thumbnail text.
+const double kCanvasBlockZoom = 0.15;
+
+/// Pins and frame labels shrink with zoom: full size from 0.5x, 45% at 0.22x.
+double canvasChromeScale(double zoom) => (zoom / 0.5).clamp(0.45, 1.0);
+
 /// Callback notified with the visible frames and active thumbnail scale bucket on paint.
 typedef CanvasVisibleCallback = void Function(
   List<CanvasFrame> visibleFrames,
@@ -62,7 +68,8 @@ class InfiniteCanvasPainter extends CustomPainter {
     final visible = index.query(worldRect);
     final scaleBucket =
         pickThumbScaleBucket(zoom, devicePixelRatio: devicePixelRatio);
-    onVisibleFrames?.call(visible, scaleBucket);
+    final blockMode = zoom < kCanvasBlockZoom;
+    onVisibleFrames?.call(blockMode ? const <CanvasFrame>[] : visible, scaleBucket);
 
     final frameFillPaint = Paint()..color = AppColors.surface1;
     final frameBorderPaint = Paint()
@@ -78,6 +85,8 @@ class InfiniteCanvasPainter extends CustomPainter {
           isInteracting ? FilterQuality.low : FilterQuality.medium;
 
     final visibleIds = <String>{};
+    final labels = <_FrameLabel>[];
+    final chrome = canvasChromeScale(zoom);
 
     for (final frame in visible) {
       visibleIds.add(frame.id);
@@ -87,13 +96,20 @@ class InfiniteCanvasPainter extends CustomPainter {
       final screenRect = Rect.fromLTWH(tl.dx, tl.dy, screenW, screenH);
       final isSelected = frame.id == selectedFrameId;
 
-      final image = cache.bestAvailable(
-        frame.id,
-        rev: frame.rev,
-        preferredScale: scaleBucket,
-      );
+      final image = blockMode
+          ? null
+          : cache.bestAvailable(
+              frame.id,
+              rev: frame.rev,
+              preferredScale: scaleBucket,
+            );
 
-      if (image != null) {
+      if (blockMode) {
+        canvas.drawRect(screenRect, Paint()..color = AppColors.surface2);
+        if (screenW >= 56 && screenH >= 18) {
+          _paintBlockTitle(canvas, frame.title, screenRect);
+        }
+      } else if (image != null) {
         final src = Rect.fromLTWH(
             0, 0, image.width.toDouble(), image.height.toDouble());
         canvas.drawImageRect(image, src, screenRect, imgPaint);
@@ -110,14 +126,19 @@ class InfiniteCanvasPainter extends CustomPainter {
       );
 
       // Frame title label sits cleanly above the frame when legible.
-      if (screenW >= 42) {
-        _paintFrameTitle(canvas, frame.title, screenRect, isSelected);
+      if (screenW >= 42 && !blockMode) {
+        labels.add(_FrameLabel(frame.title, screenRect, isSelected));
       }
 
       // Selected element highlight when zoomed into the frame.
       if (isSelected && selectedElement != null && screenW > 120) {
         _paintSelectedElement(canvas, frame, selectedElement!, zoom);
       }
+    }
+
+    // Labels paint last so a neighbouring frame never covers them.
+    for (final l in labels) {
+      _paintFrameTitle(canvas, l.title, l.rect, l.selected, chrome);
     }
 
     if (pins.isNotEmpty) {
@@ -175,18 +196,33 @@ class InfiniteCanvasPainter extends CustomPainter {
     );
   }
 
+  void _paintBlockTitle(Canvas canvas, String title, Rect rect) {
+    if (title.isEmpty) return;
+    final tp = TextPainter(
+      text: TextSpan(text: title, style: sans(10, color: AppColors.fg2)),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+      ellipsis: '...',
+    )..layout(maxWidth: math.max(1, rect.width - 8));
+    tp.paint(
+      canvas,
+      Offset(rect.center.dx - tp.width / 2, rect.center.dy - tp.height / 2),
+    );
+  }
+
   void _paintFrameTitle(
     Canvas canvas,
     String title,
     Rect screenRect,
     bool isSelected,
+    double chrome,
   ) {
     if (title.isEmpty) return;
     final tp = TextPainter(
       text: TextSpan(
         text: title,
         style: sans(
-          11,
+          11 * chrome,
           weight: isSelected ? W.label : W.body,
           color: isSelected ? AppColors.fg1 : AppColors.fg3,
         ),
@@ -195,7 +231,18 @@ class InfiniteCanvasPainter extends CustomPainter {
       maxLines: 1,
       ellipsis: '...',
     )..layout(maxWidth: math.max(40, screenRect.width));
-    tp.paint(canvas, Offset(screenRect.left, screenRect.top - tp.height - 6));
+    final at = Offset(
+      screenRect.left,
+      screenRect.top - tp.height - 6 * chrome,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(at.dx - 2, at.dy - 1, tp.width + 4, tp.height + 2),
+        const Radius.circular(3),
+      ),
+      Paint()..color = AppColors.bg.withValues(alpha: 0.85),
+    );
+    tp.paint(canvas, at);
   }
 
   void _paintSelectedElement(
@@ -260,13 +307,14 @@ class InfiniteCanvasPainter extends CustomPainter {
       final worldPos = pinWorldAnchor(pin, frame, layouts);
       final screenPos = viewport.worldToScreen(worldPos);
       final isSelected = pin.id == selectedPinId;
-      final radius = isSelected ? 11.5 : 9.5;
+      final chrome = canvasChromeScale(zoom);
+      final radius = (isSelected ? 11.5 : 9.5) * chrome;
       final fillColor = pin.isResolved ? AppColors.fg3 : AppColors.fg1;
 
       if (isSelected) {
         canvas.drawCircle(
           screenPos,
-          radius + 3,
+          radius + 3 * chrome,
           Paint()..color = fillColor.withValues(alpha: 0.28),
         );
       }
@@ -283,7 +331,7 @@ class InfiniteCanvasPainter extends CustomPainter {
       final tp = TextPainter(
         text: TextSpan(
           text: '${i + 1}',
-          style: mono(10, weight: W.strong, color: AppColors.bg),
+          style: mono(10 * chrome, weight: W.strong, color: AppColors.bg),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
@@ -304,7 +352,8 @@ class InfiniteCanvasPainter extends CustomPainter {
     final frameById = <String, CanvasFrame>{
       for (final f in visible) f.id: f,
     };
-    final hitRadius = isPhone ? 22.0 : 18.0;
+    final hitRadius = math.max(
+        12.0, (isPhone ? 22.0 : 18.0) * canvasChromeScale(viewport.scale));
     final canvasBounds = Offset.zero & size;
     final nodes = <CustomPainterSemantics>[];
 
@@ -346,4 +395,11 @@ class InfiniteCanvasPainter extends CustomPainter {
       oldDelegate.selectedElement != selectedElement ||
       oldDelegate.selectedPinId != selectedPinId ||
       oldDelegate.pins != pins;
+}
+
+class _FrameLabel {
+  const _FrameLabel(this.title, this.rect, this.selected);
+  final String title;
+  final Rect rect;
+  final bool selected;
 }

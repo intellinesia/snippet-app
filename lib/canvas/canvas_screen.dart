@@ -591,7 +591,9 @@ class _CanvasScreenState extends State<CanvasScreen>
     final frameById = <String, CanvasFrame>{
       for (final f in _index.frames) f.id: f,
     };
-    final hitRadius = _isPhoneLayout(context) ? 22.0 : 18.0;
+    final baseRadius = _isPhoneLayout(context) ? 22.0 : 18.0;
+    final hitRadius =
+        math.max(12.0, baseRadius * canvasChromeScale(_viewport.scale));
     for (var i = _pins.length - 1; i >= 0; i--) {
       final pin = _pins[i];
       final frame = frameById[pin.frameId];
