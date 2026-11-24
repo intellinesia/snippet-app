@@ -30,6 +30,7 @@ class MobileShell extends StatefulWidget {
 
   /// Shows the floating tab bar on the top-level places when set.
   final VoidCallback? onNew;
+  final VoidCallback? onNewLong;
 
   const MobileShell({
     super.key,
@@ -48,6 +49,7 @@ class MobileShell extends StatefulWidget {
     this.missionPair = false,
     this.onSwipeToSessions,
     this.onNew,
+    this.onNewLong,
   });
 
   @override
@@ -356,6 +358,7 @@ class _MobileShellState extends State<MobileShell>
                     QuietPlace.agents => MobileHome.home,
                   }),
                   onNew: widget.onNew!,
+                  onNewLong: widget.onNewLong,
                 ),
               ),
             )

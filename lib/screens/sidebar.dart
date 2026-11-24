@@ -1,5 +1,4 @@
-import 'group_messaging.dart' show openGroupThread, createAndOpenGroup;
-import 'new_menu.dart' show showNewMenu;
+import 'group_messaging.dart' show openGroupThread;
 import 'phone_agent_page.dart';
 import 'agent_profile_panel.dart' show showAgentProfileSettings;
 import 'dart:async';
@@ -605,7 +604,6 @@ child: PhoneAgentPage(
           onSettings: () => widget.onMobileHome(MobileHome.settings),
           onSearch: search,
           onNew: widget.onNewSession,
-          onNewMenu: _phoneNewMenu,
           onOpenAgent: widget.onAgent,
           onOpenLead: widget.onOpenLead,
           onAllAgents: () => widget.onMobileHome(MobileHome.agents),
@@ -655,20 +653,7 @@ child: PhoneAgentPage(
         ],
         onOpenAgent: widget.onAgent,
         onOpenLead: widget.onOpenLead,
-        onNewMenu: _phoneNewMenu,
       );
-
-  /// The phone "+": the same New flows as desktop, minus shell and task.
-  void _phoneNewMenu(BuildContext anchor) {
-    final c = widget.client;
-    if (c == null) return;
-    showNewMenu(
-      anchor,
-      onNewSession: widget.onNewSession,
-      onNewAgent: () => showCreateAgentDialog(context, c),
-      onNewGroup: () => createAndOpenGroup(context, c),
-    );
-  }
 
   /// The phone home body for the destination the bar currently selects.
   ///

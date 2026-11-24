@@ -111,6 +111,21 @@ extension _DesktopShellMobileExt on _DesktopShellState {
   Widget _mobileMissionBar({VoidCallback? onActions}) =>
       MobileMissionBar(onActions: onActions, client: _client);
 
+  /// The one create button: Session, Agent or Group.
+  void _openNewSheet() {
+    final c = _client;
+    if (c == null) {
+      _newSessionFlow();
+      return;
+    }
+    showNewSheet(
+      context,
+      onNewSession: _newSessionFlow,
+      onNewAgent: () => showCreateAgentDialog(context, c),
+      onNewGroup: () => createAndOpenGroup(context, c),
+    );
+  }
+
   Widget _mobileShell() {
     final tab = _activeTab;
     final visible = _appForeground && !_mobileChatsOpen &&
@@ -146,7 +161,8 @@ extension _DesktopShellMobileExt on _DesktopShellState {
           _mobileHome.isSessionsHome &&
           !_mobileDrilledDown,
       onSwipeToSessions: () => _goMobileHome(homeFirstTab()),
-      onNew: _newSessionFlow,
+      onNew: _openNewSheet,
+      onNewLong: _newSessionFlow,
       canPopRoute: _mobileRouteHistory.length > 1,
       onPopRoute: () {
         _handleMobileBack();

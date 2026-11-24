@@ -93,3 +93,82 @@ String _parentOf(String path) {
   parent = parent.replaceFirst(RegExp(r'^/(home|Users)/[^/]+'), '~');
   return parent.isEmpty ? '~' : parent;
 }
+
+
+/// The phone New sheet behind the one create button: Session, Agent, Group.
+Future<void> showNewSheet(
+  BuildContext context, {
+  required VoidCallback onNewSession,
+  required VoidCallback onNewAgent,
+  required VoidCallback onNewGroup,
+}) async {
+  final picked = await showAppSheet<_NewAction>(
+    context,
+    title: 'New',
+    child: Column(mainAxisSize: MainAxisSize.min, children: [
+      _NewSheetRow(_NewAction.session, 'edit', 'Session',
+          'Start work with an agent'),
+      _NewSheetRow(_NewAction.agent, 'bot', 'Agent',
+          'Add an agent to your roster'),
+      _NewSheetRow(
+          _NewAction.group, 'users', 'Group', 'Bring agents into one thread'),
+    ]),
+  );
+  switch (picked) {
+    case _NewAction.session:
+      onNewSession();
+    case _NewAction.agent:
+      onNewAgent();
+    case _NewAction.group:
+      onNewGroup();
+    default:
+  }
+}
+
+class _NewSheetRow extends StatelessWidget {
+  const _NewSheetRow(this.value, this.icon, this.label, this.detail);
+
+  final _NewAction value;
+  final String icon, label, detail;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: '$label, $detail',
+        excludeSemantics: true,
+        child: InkWell(
+          onTap: () => Navigator.of(context).pop(value),
+          borderRadius: BorderRadius.circular(R.of(12)),
+          child: SizedBox(
+            height: 72,
+            child: Row(children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                    color: AppColors.surface2, shape: BoxShape.circle),
+                alignment: Alignment.center,
+                child: AppIcon(icon, size: 18, color: AppColors.fg2),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(label,
+                          style: sans(15,
+                              weight: W.label, color: AppColors.fg1)),
+                      const SizedBox(height: 2),
+                      Text(detail,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(13, color: AppColors.fg3)),
+                    ]),
+              ),
+            ]),
+          ),
+        ),
+      );
+}
+

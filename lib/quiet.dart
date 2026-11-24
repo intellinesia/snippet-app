@@ -349,6 +349,7 @@ class QuietTabBar extends StatelessWidget {
     required this.selected,
     required this.onSelect,
     required this.onNew,
+    this.onNewLong,
     this.attention = const {},
     this.places = QuietPlace.values,
   });
@@ -358,6 +359,9 @@ class QuietTabBar extends StatelessWidget {
   final QuietPlace? selected;
   final ValueChanged<QuietPlace> onSelect;
   final VoidCallback onNew;
+
+  /// Long-press on New skips the sheet and starts a session.
+  final VoidCallback? onNewLong;
 
   /// Places with something waiting: a quiet amber dot on the icon.
   final Set<QuietPlace> attention;
@@ -391,10 +395,11 @@ class QuietTabBar extends StatelessWidget {
           SizedBox(width: S.s8),
           Semantics(
             button: true,
-            label: 'New',
-            child: TapDetector(
+            label: 'New: session, agent or group',
+            child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: onNew,
+              onLongPress: onNewLong,
               child: Container(
                 width: 58,
                 height: 58,
