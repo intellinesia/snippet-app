@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/canvas/canvas_screen.dart';
+import 'package:snippet/mochi.dart';
+import 'package:snippet/models.dart';
+import 'package:snippet/tap_detector.dart';
 import 'package:snippet/notification_card.dart';
 import 'package:snippet/notification_popovers.dart';
 import 'package:snippet/notification_sync.dart';
@@ -25,6 +28,37 @@ void main() {
     'home': (
       () => QuietPlaceHeader(title: 'Agents', onSearch: () {}, onSettings: () {}),
       () => [find.bySemanticsLabel('Search'), find.bySemanticsLabel('Settings')],
+    ),
+    'home avatars': (
+      () => QuietHomeScreen(
+            sessions: const [],
+            agents: [
+              CoordinationAgent.fromJson({
+                'id': 'lead',
+                'display_name': 'Lead',
+                'handle': 'lead',
+                'status': 'active',
+                'is_lead': true
+              }),
+              CoordinationAgent.fromJson({
+                'id': 'snip',
+                'display_name': 'Snippet',
+                'handle': 'snip',
+                'status': 'active'
+              }),
+            ],
+            onOpenSession: (_) {},
+            onOpenSessions: () {},
+            onSettings: () {},
+            onSearch: () {},
+            onOpenAgent: (_) {},
+          ),
+      () => [
+            find.bySemanticsLabel('Search'),
+            find.bySemanticsLabel('Settings'),
+            find.ancestor(
+                of: find.byType(AgentMochi), matching: find.byType(TapDetector)),
+          ],
     ),
     'artifacts': (
       () => ArtifactsScreen(client: _Daemon()),
@@ -101,9 +135,11 @@ void main() {
         final out = <String>[];
         for (final f in e.value.$2()) {
           if (f.evaluate().isEmpty) continue;
-          final r = tester.getRect(f.first);
-          out.add('$r');
-          expect(toast.overlaps(r), isFalse, reason: '$toast vs $r');
+          for (final el in f.evaluate()) {
+            final r = tester.getRect(find.byElementPredicate((x) => x == el));
+            out.add('$r');
+            expect(toast.overlaps(r), isFalse, reason: '$toast vs $r');
+          }
         }
         expect(out, isNotEmpty);
         // ignore: avoid_print

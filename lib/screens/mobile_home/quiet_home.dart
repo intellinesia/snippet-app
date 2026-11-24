@@ -294,7 +294,7 @@ class _FaceStrip extends StatelessWidget {
   final void Function(CoordinationAgent a) onOpen;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
+  Widget build(BuildContext context) => ToastAvoid(child: SizedBox(
         height: 92 + (MediaQuery.textScalerOf(context).scale(11) - 11) * 2,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
@@ -357,7 +357,7 @@ class _FaceStrip extends StatelessWidget {
             );
           },
         ),
-      );
+      ));
 }
 
 /// The Start group: one calm place for the two things you do first.
