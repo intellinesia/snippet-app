@@ -182,7 +182,7 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
                     label: 'New canvas',
                     excludeSemantics: true,
                     child: SizedBox(
-                      height: 44,
+                      height: kTapTarget,
                       child: FilledButton.icon(
                         onPressed: _creating ? null : _newCanvas,
                         style: FilledButton.styleFrom(
@@ -238,7 +238,7 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
               ),
             ),
             SizedBox(
-              height: 52,
+              height: kTapTarget + S.s8,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s4),

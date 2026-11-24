@@ -10,7 +10,7 @@ import 'package:snippet/quiet.dart';
 import 'package:snippet/screens/artifact_viewer_controls.dart';
 import 'package:snippet/theme.dart';
 
-class _EmptyClient implements CanvasClient {
+class EmptyCanvasClient implements CanvasClient {
   @override
   Future<CanvasSnapshot> fetchCanvas() async => const CanvasSnapshot(
         canvasId: 'c',
@@ -81,7 +81,7 @@ void main() {
         child: SizedBox(
           width: width,
           height: 700,
-          child: CanvasScreen(client: _EmptyClient(), onClose: () {}),
+          child: CanvasScreen(client: EmptyCanvasClient(), onClose: () {}),
         ),
       ),
     ));

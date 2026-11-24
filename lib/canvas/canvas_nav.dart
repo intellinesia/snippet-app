@@ -22,6 +22,7 @@ void openCanvas(
   Widget screen(VoidCallback? close) => CanvasScreen(
         daemonClient: daemon,
         canvasId: canvasId,
+        title: title,
         initialFrameId: frameId,
         initialElId: elId,
         initialRev: rev,

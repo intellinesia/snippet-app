@@ -37,6 +37,7 @@ class CanvasScreen extends StatefulWidget {
     this.initialElId,
     this.initialRev,
     this.canvasId,
+    this.title,
     this.onClose,
   });
 
@@ -52,6 +53,9 @@ class CanvasScreen extends StatefulWidget {
 
   /// Canvas to open; null opens the workspace canvas.
   final String? canvasId;
+
+  /// Display title for the phone top bar; falls back to "Canvas".
+  final String? title;
 
   /// Set when hosted as a shell tab: closes the tab instead of popping a route.
   final VoidCallback? onClose;
@@ -1006,14 +1010,14 @@ class _CanvasScreenState extends State<CanvasScreen>
         ),
         actions: [
           SizedBox(
-            height: 44,
+            height: kTapTarget,
             child: TextButton(
               onPressed: () => Navigator.of(dlgCtx).pop(false),
               child: Text('Cancel', style: sans(13, color: AppColors.fg2)),
             ),
           ),
           SizedBox(
-            height: 44,
+            height: kTapTarget,
             child: TextButton(
               onPressed: () => Navigator.of(dlgCtx).pop(true),
               child: Text('Revert',
@@ -1097,14 +1101,14 @@ class _CanvasScreenState extends State<CanvasScreen>
         ),
         actions: [
           SizedBox(
-            height: 44,
+            height: kTapTarget,
             child: TextButton(
               onPressed: () => Navigator.of(dlgCtx).pop(false),
               child: Text('Cancel', style: sans(13, color: AppColors.fg2)),
             ),
           ),
           SizedBox(
-            height: 44,
+            height: kTapTarget,
             child: TextButton(
               onPressed: () => Navigator.of(dlgCtx).pop(true),
               child: Text('Restore',
@@ -1158,7 +1162,7 @@ class _CanvasScreenState extends State<CanvasScreen>
           ),
           SizedBox(width: S.s12),
           SizedBox(
-            height: 44,
+            height: kTapTarget,
             child: FilledButton(
               onPressed: _restorePreview,
               style: FilledButton.styleFrom(
@@ -1623,8 +1627,8 @@ class _CanvasScreenState extends State<CanvasScreen>
               onTap: () => setState(() => _outlineOpen = true),
               borderRadius: BorderRadius.circular(R.sm),
               child: SizedBox(
-                width: 44,
-                height: 44,
+                width: kTapTarget,
+                height: kTapTarget,
                 child: Center(
                   child: AppIcon('panel-left', size: 18, color: AppColors.fg2),
                 ),
@@ -1788,7 +1792,7 @@ class _CanvasScreenState extends State<CanvasScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   SizedBox(
-                    height: 44,
+                    height: kTapTarget,
                     child: TextButton(
                       onPressed: () {
                         _failedThumbs.clear();
@@ -1818,7 +1822,7 @@ class _CanvasScreenState extends State<CanvasScreen>
         if (_selectedElement != null) ...[
           _ChromePill(
             onTap: _copyShareLink,
-            minSize: 44,
+            minSize: kTapTarget,
             semanticLabel: 'Copy share link for ${_selectedElement!.id}',
             child: Text(
               _selectedElement!.id,
@@ -1829,7 +1833,7 @@ class _CanvasScreenState extends State<CanvasScreen>
         ],
         _ChromePill(
           active: _panelMode == _SidePanelMode.pins,
-          minSize: 44,
+          minSize: kTapTarget,
           semanticLabel: 'Pins, ${_pins.length} total, $openPins open',
           onTap: _openPinsPanel,
           child: Row(
@@ -1850,7 +1854,7 @@ class _CanvasScreenState extends State<CanvasScreen>
           SizedBox(width: S.s8),
           _ChromePill(
             onTap: _openStepsPanel,
-            minSize: 44,
+            minSize: kTapTarget,
             semanticLabel: 'Steps history, revision ${_snapshot!.rev}',
             child: Text(
               'r${_snapshot!.rev}',
@@ -1862,12 +1866,21 @@ class _CanvasScreenState extends State<CanvasScreen>
     );
   }
 
+  String get _topTitle {
+    final t = widget.title?.trim();
+    return (t == null || t.isEmpty) ? 'Canvas' : t;
+  }
+
   Widget _topStatusBar(int openPins) {
     return Row(
       children: [
-        _ChromePill(
+        Expanded(
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: IntrinsicWidth(
+              child: _ChromePill(
           onTap: () => Navigator.of(context).maybePop(),
-          minSize: 44,
+          minSize: kTapTarget,
           semanticLabel: _snapshot == null
               ? 'Back from canvas'
               : 'Back from canvas, revision ${_snapshot!.rev}',
@@ -1876,17 +1889,26 @@ class _CanvasScreenState extends State<CanvasScreen>
             children: [
               AppIcon('arrow-left', size: 16, color: AppColors.fg1),
               SizedBox(width: S.s6),
-              Text(
-                _snapshot == null ? 'Canvas' : 'Canvas  r${_snapshot!.rev}',
-                style: mono(12, weight: W.label, color: AppColors.fg1),
+              Flexible(
+                child: Text(
+                  _topTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(13, weight: W.label, color: AppColors.fg1),
+                ),
               ),
+              if (_snapshot != null) ...[
+                SizedBox(width: S.s8),
+                Text('r${_snapshot!.rev}',
+                    style: mono(11, color: AppColors.fg3)),
+              ],
             ],
           ),
-        ),
-        const Spacer(),
+        )))),
+        SizedBox(width: S.s8),
         _ChromePill(
           onTap: _openPinsPanel,
-          minSize: 44,
+          minSize: kTapTarget,
           semanticLabel: 'Pins, ${_pins.length} total, $openPins open',
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -1946,7 +1968,7 @@ class _ToolbarItem {
   final bool active;
   final bool showLabel;
 
-  double get width => showLabel ? 44 + label.length * 7.0 : 44;
+  double get width => showLabel ? kTapTarget + label.length * 7.0 : kTapTarget;
 }
 
 /// Toolbar buttons that fit; the rest move into a "..." menu instead of
@@ -1968,7 +1990,7 @@ class _OverflowToolbar extends StatelessWidget {
           }
           var shown = items.length;
           if (total > avail) {
-            var used = 44.0;
+            var used = kTapTarget;
             shown = 0;
             for (final i in items) {
               if (used + i.width > avail) break;
@@ -1992,7 +2014,7 @@ class _OverflowToolbar extends StatelessWidget {
                   label: i.label,
                   active: i.active,
                   showLabel: i.showLabel,
-                  minSize: 44,
+                  minSize: kTapTarget,
                   onTap: i.onTap,
                 ),
               if (hidden.isNotEmpty)
@@ -2009,7 +2031,7 @@ class _OverflowToolbar extends StatelessWidget {
                       for (var n = 0; n < hidden.length; n++)
                         PopupMenuItem<int>(
                           value: n,
-                          height: 44,
+                          height: kTapTarget,
                           child: Row(
                             children: [
                               AppIcon(hidden[n].icon,
@@ -2022,8 +2044,8 @@ class _OverflowToolbar extends StatelessWidget {
                         ),
                     ],
                     child: SizedBox(
-                      width: 44,
-                      height: 44,
+                      width: kTapTarget,
+                      height: kTapTarget,
                       child: Center(
                         child: AppIcon('ellipsis',
                             size: 18, color: AppColors.fg2),

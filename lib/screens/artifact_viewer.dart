@@ -1245,7 +1245,7 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
         Row(children: [
           RoundBtn(
               icon: 'x',
-              size: M.minTarget,
+              size: kTapTarget,
               iconSize: 20,
               tooltip: 'Close',
               onTap: widget.onClose),
@@ -1262,7 +1262,7 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
           ),
           Builder(
             builder: (anchor) => IconBtn('more-horizontal',
-                size: M.minTarget,
+                size: kTapTarget,
                 iconSize: 19,
                 tooltip: 'More',
                 onTap: () => _more(anchor)),
