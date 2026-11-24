@@ -8,7 +8,7 @@ import 'macos_notch.dart';
 import 'notification_sync.dart';
 import 'notifications.dart';
 import 'theme.dart';
-import 'toast_avoid.dart';
+
 import 'platform.dart';
 import 'notification_card.dart';
 import 'notification_text.dart';
@@ -213,102 +213,116 @@ class _NotificationPopoversState extends State<NotificationPopovers> {
     );
   }
 
-  // Phone toasts sit below any registered top bar (see toast_avoid.dart).
-  Widget _toastPos({required Widget child}) => ValueListenableBuilder<double>(
-        valueListenable: toastTopInset,
-        child: child,
-        builder: (context, inset, child) {
-          final safe = MediaQuery.paddingOf(context).top;
-          final top = kMobile && inset > 0
-              ? (inset + S.s4 - safe).clamp(_anchorTop, double.infinity)
-              : _anchorTop;
-          return Positioned(
-              top: top, left: S.s12, right: S.s12, child: child!);
-        },
-      );
-
   Widget _buildContent(BuildContext context) {
     _pending.removeWhere(suppressVisibleNotification);
     final items = _ordered;
     final call = callTracker.state.value;
     final reducedMotion = reduceMotion(context);
-    return Stack(children: [
-      widget.child,
-      if (call != null)
-        _toastPos(
-            child: SafeArea(
-                child: Align(
-              alignment: kMobile ? Alignment.topCenter : Alignment.topRight,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: CallPromptCard(
-                    key: ValueKey('${call.callId}|${call.phase.name}'),
-                    status: call,
-                    onAction: (a) => _callAction(call, a)),
+    final banner = call != null
+        ? CallPromptCard(
+            key: ValueKey('${call.callId}|${call.phase.name}'),
+            status: call,
+            onAction: (a) => _callAction(call, a))
+        : AnimatedSwitcher(
+            duration: reducedMotion ? Duration.zero : Motion.open,
+            reverseDuration: reducedMotion ? Duration.zero : Motion.close,
+            switchInCurve: Motion.enter,
+            switchOutCurve: Motion.exit,
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                        begin: kMobile
+                            ? const Offset(0, -.2)
+                            : const Offset(0, -.08),
+                        end: Offset.zero)
+                    .animate(animation),
+                child: kMobile
+                    ? child
+                    : ScaleTransition(
+                        alignment: Alignment.topRight,
+                        scale: Tween(begin: .96, end: 1.0).animate(animation),
+                        child: child,
+                      ),
               ),
-            )))
-      else
-        _toastPos(
-            child: SafeArea(
-                child: Align(
-              alignment: kMobile ? Alignment.topCenter : Alignment.topRight,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: AnimatedSwitcher(
-                  duration: reducedMotion ? Duration.zero : Motion.open,
-                  reverseDuration: reducedMotion ? Duration.zero : Motion.close,
-                  switchInCurve: Motion.enter,
-                  switchOutCurve: Motion.exit,
-                  transitionBuilder: (child, animation) => FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                              begin: kMobile
-                                  ? const Offset(0, -.2)
-                                  : const Offset(0, -.08),
-                              end: Offset.zero)
-                          .animate(animation),
-                      child: kMobile
-                          ? child
-                          : ScaleTransition(
-                              alignment: Alignment.topRight,
-                              scale: Tween(begin: .96, end: 1.0)
-                                  .animate(animation),
-                              child: child,
-                            ),
+            ),
+            child: items.isEmpty
+                ? const SizedBox.shrink()
+                : MouseRegion(
+                    onEnter: (_) => _setHold(pointer: true),
+                    onExit: (_) => _setHold(pointer: false),
+                    child: Listener(
+                      onPointerDown: (_) => _setHold(pointer: true),
+                      onPointerUp: (_) => _setHold(pointer: false),
+                      onPointerCancel: (_) => _setHold(pointer: false),
+                      child: Semantics(
+                        label: items.length > 1
+                            ? '${items.length} notifications'
+                            : null,
+                        child: NotificationStack(
+                          items: items,
+                          expanded: _expanded,
+                          onToggle: () => setState(() {
+                            _expanded = !_expanded;
+                            _setHold();
+                          }),
+                          onClearAll: _clearAll,
+                          cardBuilder: (payload, embedded, lifted) =>
+                              _card(payload, embedded, lifted, reducedMotion),
+                        ),
+                      ),
                     ),
                   ),
-                  child: items.isEmpty
-                      ? const SizedBox.shrink()
-                      : MouseRegion(
-                          onEnter: (_) => _setHold(pointer: true),
-                          onExit: (_) => _setHold(pointer: false),
-                          child: Listener(
-                            onPointerDown: (_) => _setHold(pointer: true),
-                            onPointerUp: (_) => _setHold(pointer: false),
-                            onPointerCancel: (_) => _setHold(pointer: false),
-                            child: Semantics(
-                              label: items.length > 1
-                                  ? '${items.length} notifications'
-                                  : null,
-                              child: NotificationStack(
-                                items: items,
-                                expanded: _expanded,
-                                onToggle: () => setState(() {
-                                  _expanded = !_expanded;
-                                  _setHold();
-                                }),
-                                onClearAll: _clearAll,
-                                cardBuilder: (payload, embedded, lifted) =>
-                                    _card(payload, embedded, lifted,
-                                        reducedMotion),
-                              ),
-                            ),
-                          ),
-                        ),
+          );
+    if (kMobile) {
+      // Dock phone toasts in a dedicated top band above the app so a toast
+      // can never cover any tap target on any screen or route.
+      final hasBanner = call != null || items.isNotEmpty;
+      return ColoredBox(
+        color: AppColors.bg,
+        child: Column(children: [
+          if (hasBanner)
+            SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(S.s12, S.s4, S.s12, S.s4),
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: banner,
+                  ),
                 ),
               ),
-            ))),
+            )
+          else
+            const SizedBox.shrink(),
+          Expanded(
+            child: MediaQuery.removePadding(
+              context: context,
+              removeTop: hasBanner,
+              child: widget.child,
+            ),
+          ),
+        ]),
+      );
+    }
+    return Stack(children: [
+      widget.child,
+      Positioned(
+        top: _anchorTop,
+        left: S.s12,
+        right: S.s12,
+        child: SafeArea(
+          child: Align(
+            alignment: Alignment.topRight,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: banner,
+            ),
+          ),
+        ),
+      ),
     ]);
   }
 }

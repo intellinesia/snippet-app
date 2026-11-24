@@ -21,14 +21,33 @@ import 'canvas_layout_test.dart' show EmptyCanvasClient;
 class _Daemon extends DaemonClient {
   _Daemon() : super('http://127.0.0.1:9', 'tok');
   @override
-  Future<List<Map<String, dynamic>>> getArtifactCards() async => [];
+  Future<List<Map<String, dynamic>>> getArtifactCards() async => [
+        {
+          'id': 'c1',
+          'kind': 'canvas',
+          'title': 'Pricing board',
+          'rev': 3,
+          'updated_at': '2026-11-24T12:00:00Z',
+        },
+        {
+          'id': 's1/a1',
+          'kind': 'document',
+          'title': 'QA doc',
+          'rev': 1,
+          'updated_at': '2026-11-24T11:00:00Z',
+        },
+      ];
 }
 
 void main() {
-  final screens = <String, (Widget Function(), List<Finder> Function())>{
+  final screens =
+      <String, (Widget Function(), Map<String, Finder> Function())>{
     'home': (
       () => QuietPlaceHeader(title: 'Agents', onSearch: () {}, onSettings: () {}),
-      () => [find.bySemanticsLabel('Search'), find.bySemanticsLabel('Settings')],
+      () => {
+            'Search': find.bySemanticsLabel('Search'),
+            'Settings': find.bySemanticsLabel('Settings'),
+          },
     ),
     'home avatars': (
       () => QuietHomeScreen(
@@ -48,53 +67,88 @@ void main() {
                 'status': 'active'
               }),
             ],
+            groups: [
+              GroupSummary.fromJson({
+                'id': 'g1',
+                'title': 'Canvas review',
+                'members': [
+                  {'agent_id': 'lead'},
+                  {'agent_id': 'snip'},
+                ],
+              }),
+            ],
             onOpenSession: (_) {},
             onOpenSessions: () {},
             onSettings: () {},
             onSearch: () {},
             onOpenAgent: (_) {},
+            onOpenGroup: (_) {},
           ),
-      () => [
-            find.bySemanticsLabel('Search'),
-            find.bySemanticsLabel('Settings'),
-            find.ancestor(
+      () => {
+            'Search': find.bySemanticsLabel('Search'),
+            'Settings': find.bySemanticsLabel('Settings'),
+            'Avatar': find.ancestor(
                 of: find.byType(AgentMochi), matching: find.byType(TapDetector)),
-            find.ancestor(
+            'AskLead': find.ancestor(
                 of: find.text('Ask Lead what is next'),
                 matching: find.byType(QuietRow)),
-          ],
+            'CanvasReview': find.ancestor(
+                of: find.text('Canvas review'),
+                matching: find.byType(QuietRow)),
+          },
+    ),
+    'sessions': (
+      () => QuietSessionsScreen(
+            sessions: const [],
+            agents: const [],
+            onOpenSession: (_) {},
+            onNew: () {},
+          ),
+      () => {
+            'NewSessionPill': find.ancestor(
+                of: find.text('New session'),
+                matching: find.byType(TapDetector)),
+          },
     ),
     'artifacts': (
       () => ArtifactsScreen(client: _Daemon()),
-      () => [
-            find.bySemanticsLabel('New canvas'),
-            find.byType(TextField),
-            find.text('All'),
-            find.byTooltip('Back'),
-          ],
+      () => {
+            'NewCanvas': find.bySemanticsLabel('New canvas'),
+            'SearchField': find.byType(TextField),
+            'AllChip': find.text('All'),
+            'Back': find.byTooltip('Back'),
+            'Row1': find.text('Pricing board'),
+            'Row2': find.text('QA doc'),
+          },
     ),
     'canvas': (
       () => CanvasScreen(
           client: EmptyCanvasClient(), title: 'Pricing board', onClose: () {}),
-      () => [
-            find.byWidgetPredicate((w) =>
+      () => {
+            'Pins': find.byWidgetPredicate((w) =>
                 w is Tooltip && (w.message ?? '').startsWith('Pins,')),
-            find.byWidgetPredicate((w) =>
+            'BackFromCanvas': find.byWidgetPredicate((w) =>
                 w is Tooltip &&
                 (w.message ?? '').startsWith('Back from canvas')),
-          ],
+          },
     ),
     'viewer': (
       () => ArtifactViewer(
           client: _Daemon(), session: 's', id: 'a', onClose: () {}),
-      () => [find.byTooltip('More'), find.byTooltip('Close')],
+      () => {
+            'More': find.byTooltip('More'),
+            'Close': find.byTooltip('Close'),
+          },
     ),
     'back bar': (
       () => MobileBackBar(title: 'Tasks', trailing: [
             IconButton(
                 tooltip: 'Add', onPressed: () {}, icon: const Icon(Icons.add))
           ]),
-      () => [find.byTooltip('Add'), find.byTooltip('Back')],
+      () => {
+            'Add': find.byTooltip('Add'),
+            'Back': find.byTooltip('Back'),
+          },
     ),
   };
 
@@ -137,12 +191,22 @@ void main() {
         await tester.pump(const Duration(milliseconds: 600));
         final toast = tester.getRect(find.byType(NotificationMessageCard));
         final out = <String>[];
-        for (final f in e.value.$2()) {
-          if (f.evaluate().isEmpty) continue;
-          for (final el in f.evaluate()) {
+        for (final target in e.value.$2().entries) {
+          final els = target.value.evaluate().toList();
+          if (els.isEmpty) {
+            // Back button only renders when a parent Navigator can pop;
+            // CanvasReview is below the ListView viewport fold at 3x text.
+            if (target.key == 'Back' ||
+                (target.key == 'CanvasReview' && scale > 2)) {
+              continue;
+            }
+            fail('Expected target not found: ${target.key}');
+          }
+          for (final el in els) {
             final r = tester.getRect(find.byElementPredicate((x) => x == el));
-            out.add('$r');
-            expect(toast.overlaps(r), isFalse, reason: '$toast vs $r');
+            out.add('${target.key}=$r');
+            expect(toast.overlaps(r), isFalse,
+                reason: '$toast vs ${target.key} $r');
           }
         }
         expect(out, isNotEmpty);
