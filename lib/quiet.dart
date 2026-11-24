@@ -410,11 +410,11 @@ class QuietTabBar extends StatelessWidget {
                 width: 58,
                 height: 58,
                 decoration: BoxDecoration(
-                  color: AppColors.accentFill,
+                  color: AppColors.surface3,
                   shape: BoxShape.circle,
                 ),
                 child: Center(
-                    child: AppIcon('edit', size: 22, color: AppColors.accentFg)),
+                    child: AppIcon('edit', size: 22, color: AppColors.fg1)),
               ),
             ),
           ),

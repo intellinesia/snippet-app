@@ -9,6 +9,7 @@ import 'package:snippet/canvas/canvas_screen.dart';
 import 'package:snippet/quiet.dart';
 import 'package:snippet/screens/artifact_viewer_controls.dart';
 import 'package:snippet/theme.dart';
+import 'package:snippet/widgets.dart' show AppIcon;
 
 class EmptyCanvasClient implements CanvasClient {
   @override
@@ -129,6 +130,33 @@ void main() {
 }
 
 void quietTabBarTest() {
+  test('compose icon on its tonal fill clears 3:1 in every preset', () {
+    double lum(Color c) => c.computeLuminance();
+    for (final t in allPresets) {
+      final a = lum(t.fg1), b = lum(t.surface3);
+      final r = (a > b ? a + .05 : b + .05) / (a > b ? b + .05 : a + .05);
+      // ignore: avoid_print
+      print('PLUS ${t.name} fg1 on surface3 = ${r.toStringAsFixed(2)}');
+      expect(r, greaterThanOrEqualTo(3.0), reason: t.name);
+    }
+  });
+  testWidgets('compose button stays at least 48 and a circle', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(393, 852);
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      theme: buildAppTheme(),
+      home: Scaffold(
+        bottomNavigationBar: QuietTabBar(
+            selected: QuietPlace.agents, onSelect: (_) {}, onNew: () {}),
+      ),
+    ));
+    final s = tester.getSize(
+        find.ancestor(of: find.byType(AppIcon), matching: find.byType(Container)).last);
+    // ignore: avoid_print
+    print('PLUS size=$s');
+    expect(s.width, greaterThanOrEqualTo(48));
+  });
   for (final scale in [1.0, 2.0]) {
     testWidgets('phone tab bar stays a bar at ${scale}x text', (tester) async {
       tester.view.devicePixelRatio = 1;
