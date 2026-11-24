@@ -8,7 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api.dart';
-import '../canvas/canvas_nav.dart' show openCanvasList;
+import 'artifacts_screen.dart' show openArtifactsList;
 import '../github_models.dart';
 import '../swr.dart';
 import '../session_status_updates.dart';

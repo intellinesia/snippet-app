@@ -4,7 +4,7 @@ import 'package:markdown/markdown.dart' as md;
 
 import '../api.dart';
 import '../canvas/canvas_link.dart';
-import '../canvas/canvas_link_card.dart';
+import '../canvas/artifact_link_card.dart' show linkCardFor;
 import '../media_views.dart';
 import '../message_reactions.dart';
 import '../platform.dart';
@@ -73,7 +73,7 @@ class _LinkSegment extends _BodySegment {
 
 class _CanvasSegment extends _BodySegment {
   _CanvasSegment(this.card);
-  final CanvasCardSegment card;
+  final CanvasMarkdownSegment card;
 }
 
 List<_BodySegment> _splitBodySegments(String shown) {
@@ -83,7 +83,7 @@ List<_BodySegment> _splitBodySegments(String shown) {
 
   for (final seg in canvasSegs) {
     switch (seg) {
-      case CanvasCardSegment():
+      case CanvasCardSegment() || ArtifactCardSegment():
         out.add(_CanvasSegment(seg));
       case CanvasTextSegment(:final text):
         final mdLines = <String>[];
@@ -370,12 +370,7 @@ class ChatMessageBody extends StatelessWidget {
                   ),
                 _LinkSegment(:final url, :final uri) =>
                   _LinkCard(url: url, uri: uri),
-                _CanvasSegment(:final card) => CanvasLinkCard(
-                    title: card.title,
-                    canvasRef: card.ref,
-                    daemonClient: client,
-                    inline: card.inline,
-                  ),
+                _CanvasSegment(:final card) => linkCardFor(card, client),
               },
             ],
           ],

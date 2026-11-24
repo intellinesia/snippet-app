@@ -465,6 +465,7 @@ class RightTab {
       ? switch (request!.purpose) {
           ShellPanelPurpose.deliverables => 'image',
           ShellPanelPurpose.canvas => 'grid',
+          ShellPanelPurpose.artifacts => 'file-stack',
           ShellPanelPurpose.memory => 'book-marked',
           ShellPanelPurpose.pullRequests => 'pull-request',
           ShellPanelPurpose.recurring ||

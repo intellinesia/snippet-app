@@ -5,6 +5,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/api.dart';
+import 'package:snippet/canvas/artifact_cards.dart';
+import 'package:snippet/canvas/artifact_link_card.dart';
 import 'package:snippet/canvas/canvas_card_client.dart';
 import 'package:snippet/canvas/canvas_models.dart' show CanvasRevEvent;
 import 'package:snippet/canvas/canvas_link.dart';
@@ -272,6 +274,67 @@ void main() {
             .ref
             .frameId,
         'home');
+  });
+
+  group('artifact: links', () {
+    test('parses ids with slashes and revisions, rejects malformed', () {
+      expect(parseArtifactRef('artifact:q4-board-1a2b3c'),
+          const ArtifactRef('q4-board-1a2b3c'));
+      expect(parseArtifactRef('artifact:s1/conversations/c9/report@3'),
+          const ArtifactRef('s1/conversations/c9/report', 3));
+      expect(parseArtifactRef('artifact:'), isNull);
+      expect(parseArtifactRef('artifact:../x'), isNull);
+      expect(parseArtifactRef('artifact:a b'), isNull);
+      expect(parseArtifactRef('artifact:a@x'), isNull);
+    });
+
+    test('markdown, bare line and inline forms split into cards', () {
+      final segs = splitCanvasMarkdown(
+          'See [Report](artifact:s1/report)\nartifact:q4-board-1a\nand artifact:s2/x@2, ok\n`artifact:s/no`');
+      final cards = segs.whereType<ArtifactCardSegment>().toList();
+      expect(cards.map((c) => c.ref.id), ['s1/report', 'q4-board-1a', 's2/x']);
+      expect(cards.first.title, 'Report');
+      expect(cards[1].inline, isFalse);
+      expect(cards.last.ref.rev, 2);
+    });
+  });
+
+  testWidgets('artifact card resolves any kind and group chat renders it',
+      (tester) async {
+    final daemon = DaemonClient('https://daemon.invalid', 'test');
+    await tester.pumpWidget(MaterialApp(
+      theme: buildAppTheme(),
+      home: Scaffold(
+        body: Column(children: [
+          ArtifactLinkCard(
+            title: 'x',
+            artifactRef: const ArtifactRef('s1/report'),
+            daemonClient: daemon,
+            resolver: (id) async => ArtifactCard(
+              id: id,
+              kind: 'pdf',
+              title: 'Q4 report',
+              rev: 2,
+              author: 'user',
+              updatedAt: DateTime.now(),
+            ),
+          ),
+          ChatMessageBody(
+            client: daemon,
+            body: '@sashy see [Report](artifact:s1/report)',
+            mine: false,
+            markdown: (t) => groupMarkdownWithMentions(t, const {'sashy'}),
+          ),
+        ]),
+      ),
+    ));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Q4 report'), findsOneWidget);
+    expect(find.text('PDF · rev 2'), findsOneWidget);
+    expect(find.text('By You, just now'), findsOneWidget);
+    expect(find.text('Open'), findsOneWidget);
+    expect(find.byType(ArtifactLinkCard), findsNWidgets(2));
   });
 
   testWidgets('canvas: link in chat transcript renders CanvasLinkCard',

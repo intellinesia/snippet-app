@@ -40,7 +40,7 @@ import 'mobile_chrome.dart';
 import 'mobile_session_home.dart';
 import 'phone_hero.dart';
 import '../session_quick_send.dart';
-import '../canvas/canvas_nav.dart' show openCanvasList;
+import 'artifacts_screen.dart' show openArtifactsList;
 import 'pull_requests.dart' show openPullRequest;
 export 'sidebar_mobile.dart';
 export 'sidebar_tiles.dart' show SidebarBrand;
@@ -608,8 +608,8 @@ child: PhoneAgentPage(
           onOpenAgent: widget.onAgent,
           onOpenLead: widget.onOpenLead,
           onAllAgents: () => widget.onMobileHome(MobileHome.agents),
-          onCanvas:
-              widget.client == null ? null : () => openCanvasList(context),
+          onArtifacts:
+              widget.client == null ? null : () => openArtifactsList(context),
           onProfile: (a) => showAgentProfileSettings(context,
               client: client,
               agent: a,
@@ -1576,10 +1576,10 @@ child: PhoneAgentPage(
             onTap: () => _selectPlace(QuietPlace.tasks),
           ),
           _PlaceRow(
-            label: 'Canvas',
-            icon: 'grid',
+            label: 'Artifacts',
+            icon: 'file-stack',
             selected: false,
-            onTap: () => openCanvasList(context),
+            onTap: () => openArtifactsList(context),
           ),
         ]),
       );

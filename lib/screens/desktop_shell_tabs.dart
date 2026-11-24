@@ -671,7 +671,8 @@ extension _DesktopShellTabsExt on _DesktopShellState {
         !r.isAgent &&
         r.request?.purpose != ShellPanelPurpose.conversation &&
         // The canvas needs the wide main area, never the side pane.
-        r.request?.purpose != ShellPanelPurpose.canvas;
+        r.request?.purpose != ShellPanelPurpose.canvas &&
+        r.request?.purpose != ShellPanelPurpose.artifacts;
     if (inner) {
       _openInnerTab(probe, existing);
     } else {

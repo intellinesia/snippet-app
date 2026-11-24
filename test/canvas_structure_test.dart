@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:snippet/canvas/artifact_cards.dart';
 import 'package:snippet/canvas/canvas_minimap.dart';
 import 'package:snippet/canvas/canvas_models.dart';
 import 'package:snippet/canvas/canvas_outline.dart';
@@ -106,21 +107,41 @@ void main() {
     });
   });
 
-  group('canvas list', () {
-    test('parses summaries with list or count frames and falls back to id', () {
-      final a = CanvasSummary.fromJson({
-        'canvas_id': 'c1',
-        'title': 'Home redesign',
-        'frames': 24,
-        'rev': 48,
+  group('artifact cards', () {
+    test('parses the unified card and splits document refs', () {
+      final doc = ArtifactCard.fromJson({
+        'id': 's1/conversations/c9/report',
+        'kind': 'document',
+        'subkind': 'markdown',
+        'title': 'Q4 report',
+        'session': 's1/conversations/c9',
         'updated_at': 1795506366,
+        'rev': 3,
+        'author': 'agent',
+        'thumb_url': null,
       });
-      expect(a.displayTitle, 'Home redesign');
-      expect(a.frames, 24);
-      expect(a.updatedAt, isNotNull);
-      final b = CanvasSummary.fromJson({'canvas_id': 'c2', 'frames': [1, 2]});
-      expect(b.displayTitle, 'c2');
-      expect(b.frames, 2);
+      expect(doc.kindLabel, 'Document');
+      expect(doc.documentRef?.session, 's1/conversations/c9');
+      expect(doc.documentRef?.id, 'report');
+      final canvas = ArtifactCard.fromJson(
+          {'id': 'q4-board-1a2b3c', 'kind': 'canvas', 'title': ''});
+      expect(canvas.displayTitle, 'q4-board-1a2b3c');
+      expect(canvas.documentRef, isNull);
+      expect(artifactKindLabel('pdf'), 'PDF');
+      expect(artifactKindLabel('weird'), 'File');
+    });
+
+    test('search and kind filter keep order', () {
+      const cards = [
+        ArtifactCard(id: 'a', kind: 'canvas', title: 'Home redesign'),
+        ArtifactCard(id: 's/b', kind: 'document', title: 'Notes', author: 'Sashy'),
+        ArtifactCard(id: 's/c', kind: 'image', title: 'Hero'),
+      ];
+      expect(filterArtifactCards(cards, query: 'home').single.id, 'a');
+      expect(filterArtifactCards(cards, query: 'sashy').single.id, 's/b');
+      expect(filterArtifactCards(cards, query: 'image').single.id, 's/c');
+      expect(filterArtifactCards(cards, kind: 'document'), hasLength(1));
+      expect(filterArtifactCards(cards).map((c) => c.id), ['a', 's/b', 's/c']);
     });
   });
 }

@@ -1322,6 +1322,35 @@ class DaemonClient {
         .toList();
   }
 
+  /// GET /artifacts (no session) — documents and canvases in one list, newest
+  /// first, each as a card.
+  Future<List<Map<String, dynamic>>> getArtifactCards() async {
+    final r = await _get(_uri('/artifacts'));
+    if (r.statusCode != 200) {
+      throw CanvasHttpException(r.statusCode, _err('list artifacts', r));
+    }
+    final d = jsonDecode(r.body);
+    final list = d is Map ? d['artifacts'] : null;
+    return [
+      if (list is List)
+        for (final e in list)
+          if (e is Map) e.cast<String, dynamic>(),
+    ];
+  }
+
+  /// GET /artifacts/resolve?id= — the card for an `artifact:` link; null when
+  /// it no longer exists.
+  Future<Map<String, dynamic>?> resolveArtifactCard(String ref) async {
+    final r = await _get(_uri('/artifacts/resolve', {'id': ref}));
+    if (r.statusCode == 404) return null;
+    if (r.statusCode != 200) {
+      throw CanvasHttpException(r.statusCode, _err('resolve artifact', r));
+    }
+    final d = jsonDecode(r.body);
+    final card = d is Map ? d['card'] : null;
+    return card is Map ? card.cast<String, dynamic>() : null;
+  }
+
   /// POST /artifacts/zip — zip one version of an artifact; returns the zip's
   /// path for [downloadToFile].
   Future<String> zipArtifact(String session, String id, {int? version}) async {
@@ -2529,21 +2558,6 @@ class DaemonClient {
       ...extra,
     };
     return q.isEmpty ? null : q;
-  }
-
-  /// GET /canvases: every canvas on this daemon.
-  Future<List<Map<String, dynamic>>> getCanvases() async {
-    final r = await _get(_uri('/canvases'));
-    if (r.statusCode != 200) {
-      throw CanvasHttpException(r.statusCode, _err('list canvases', r));
-    }
-    final d = jsonDecode(r.body);
-    final list = d is Map ? d['canvases'] : d;
-    return [
-      if (list is List)
-        for (final e in list)
-          if (e is Map) e.cast<String, dynamic>(),
-    ];
   }
 
   /// POST /canvases {title}: creates a canvas, returns `{canvas_id, title}`.

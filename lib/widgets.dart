@@ -17,7 +17,7 @@ import 'package:flutter/gestures.dart'
 import 'gesture_physics.dart';
 import 'api.dart';
 import 'canvas/canvas_link.dart';
-import 'canvas/canvas_link_card.dart';
+import 'canvas/artifact_link_card.dart' show linkCardFor;
 import 'canvas/canvas_nav.dart';
 import 'chat_links.dart';
 import 'media_views.dart';
@@ -1821,13 +1821,9 @@ class Bubble extends StatelessWidget {
                   onTapLink: (txt, href, title) =>
                       openMarkdownLink(href, context, txt),
                 ),
-              CanvasCardSegment(:final title, :final ref, :final inline) =>
-                CanvasLinkCard(
-                  title: title,
-                  canvasRef: ref,
-                  daemonClient: client,
-                  inline: inline,
-                ),
+              CanvasCardSegment() ||
+              ArtifactCardSegment() =>
+                linkCardFor(segments[i], client),
             },
           ],
         ],

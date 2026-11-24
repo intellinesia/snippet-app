@@ -118,7 +118,7 @@ class QuietHomeScreen extends StatelessWidget {
     this.onOpenAgent,
     this.onOpenLead,
     this.onAllAgents,
-    this.onCanvas,
+    this.onArtifacts,
     this.onProfile,
     this.onDecide,
     this.offline,
@@ -138,7 +138,7 @@ class QuietHomeScreen extends StatelessWidget {
   final void Function(CoordinationAgent a)? onOpenAgent;
   final VoidCallback? onOpenLead;
   final VoidCallback? onAllAgents;
-  final VoidCallback? onCanvas;
+  final VoidCallback? onArtifacts;
   final void Function(CoordinationAgent a)? onProfile;
   final List<GroupSummary> groups;
   final void Function(GroupSummary g)? onOpenGroup;
@@ -273,12 +273,12 @@ class QuietHomeScreen extends StatelessWidget {
             trailing: AppIcon('chevron-right', size: 16, color: AppColors.fg3),
             onTap: onAllAgents,
           ),
-        if (onCanvas != null)
+        if (onArtifacts != null)
           QuietRow(
-            title: 'Canvas',
-            leading: AppIcon('grid', size: 20, color: AppColors.fg3),
+            title: 'Artifacts',
+            leading: AppIcon('file-stack', size: 20, color: AppColors.fg3),
             trailing: AppIcon('chevron-right', size: 16, color: AppColors.fg3),
-            onTap: onCanvas,
+            onTap: onArtifacts,
           ),
       ],
     );

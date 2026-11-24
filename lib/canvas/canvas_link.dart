@@ -4,11 +4,13 @@
 final _revDigitsRe = RegExp(r'^\d+$');
 final _whitespaceRe = RegExp(r'\s');
 final _markdownCanvasLinkRe =
-    RegExp(r'(?<!!)\[((?:\\.|[^\]\n])+)\]\((canvas:[^)\s]+)\)');
-final _bareCanvasLinkRe = RegExp(r'(?<![\w\](/:<])canvas:[^\s)>\]…]*[^\s)>\].,;:!?…]');
-final _standaloneBareCanvasLinkRe = RegExp(r'^<?(canvas:[^\s<>…]+)>?…?$');
+    RegExp(r'(?<!!)\[((?:\\.|[^\]\n])+)\]\(((?:canvas|artifact):[^)\s]+)\)');
+final _bareCanvasLinkRe = RegExp(
+    r'(?<![\w\](/:<])(?:canvas|artifact):[^\s)>\]…]*[^\s)>\].,;:!?…]');
+final _standaloneBareCanvasLinkRe =
+    RegExp(r'^<?((?:canvas|artifact):[^\s<>…]+)>?…?$');
 final _standaloneCanvasLinkRe =
-    RegExp(r'^\[((?:\\.|[^\]\n])+)\]\((canvas:[^)\s]+)\)$');
+    RegExp(r'^\[((?:\\.|[^\]\n])+)\]\(((?:canvas|artifact):[^)\s]+)\)$');
 
 String _unescapeLinkTitle(String raw) =>
     raw.trim().replaceAll(r'\[', '[').replaceAll(r'\]', ']');
@@ -124,6 +126,44 @@ CanvasRef? parseCanvasRef(String? href) {
   );
 }
 
+/// A parsed `artifact:<id>[@<rev>]` reference: a canvas id, or
+/// `<session>/<artifact id>` for a document, image, PDF or file.
+class ArtifactRef {
+  const ArtifactRef(this.id, [this.rev]);
+  final String id;
+  final int? rev;
+
+  String format() => rev == null ? 'artifact:$id' : 'artifact:$id@$rev';
+
+  @override
+  bool operator ==(Object other) =>
+      other is ArtifactRef && other.id == id && other.rev == rev;
+
+  @override
+  int get hashCode => Object.hash(id, rev);
+}
+
+/// Parses an `artifact:<id>[@<rev>]` href; null when malformed.
+ArtifactRef? parseArtifactRef(String? href) {
+  if (href == null) return null;
+  final t = href.trim();
+  if (!t.startsWith('artifact:')) return null;
+  var body = t.substring(9);
+  int? rev;
+  final at = body.lastIndexOf('@');
+  if (at >= 0) {
+    final r = body.substring(at + 1);
+    if (!_revDigitsRe.hasMatch(r)) return null;
+    rev = int.tryParse(r);
+    body = body.substring(0, at);
+  }
+  if (body.isEmpty || _whitespaceRe.hasMatch(body)) return null;
+  for (final part in body.split('/')) {
+    if (part.isEmpty || part == '.' || part == '..') return null;
+  }
+  return ArtifactRef(body, rev);
+}
+
 /// A segment of chat markdown split around valid `canvas:` links.
 sealed class CanvasMarkdownSegment {
   const CanvasMarkdownSegment();
@@ -151,10 +191,46 @@ class CanvasCardSegment extends CanvasMarkdownSegment {
   final bool inline;
 }
 
+/// A card for an `artifact:` link (canvas, document, image, PDF or file).
+class ArtifactCardSegment extends CanvasMarkdownSegment {
+  const ArtifactCardSegment({
+    required this.title,
+    required this.rawHref,
+    required this.ref,
+    required this.inline,
+  });
+
+  final String title;
+  final String rawHref;
+  final ArtifactRef ref;
+  final bool inline;
+}
+
+CanvasMarkdownSegment? _cardFor(String href, String? title, bool inline) {
+  if (href.startsWith('artifact:')) {
+    final ref = parseArtifactRef(href);
+    if (ref == null) return null;
+    return ArtifactCardSegment(
+      title: title ?? '',
+      rawHref: href,
+      ref: ref,
+      inline: inline,
+    );
+  }
+  final ref = parseCanvasRef(href);
+  if (ref == null) return null;
+  return CanvasCardSegment(
+    title: title ?? ref.frameId,
+    rawHref: href,
+    ref: ref,
+    inline: inline,
+  );
+}
+
 /// Splits [markdown] into text and `canvas:` card segments while skipping
 /// fenced code blocks and leaving malformed `canvas:` links in plain text.
 List<CanvasMarkdownSegment> splitCanvasMarkdown(String markdown) {
-  if (!markdown.contains('canvas:')) {
+  if (!markdown.contains('canvas:') && !markdown.contains('artifact:')) {
     return markdown.isEmpty ? const [] : [CanvasTextSegment(markdown)];
   }
   final out = <CanvasMarkdownSegment>[];
@@ -188,65 +264,44 @@ List<CanvasMarkdownSegment> splitCanvasMarkdown(String markdown) {
       continue;
     }
 
-    if (!inFence && trimmed.contains('canvas:')) {
+    if (!inFence &&
+        (trimmed.contains('canvas:') || trimmed.contains('artifact:'))) {
       final standalone = _standaloneCanvasLinkRe.firstMatch(trimmed);
       if (standalone != null) {
-        final title = _unescapeLinkTitle(standalone.group(1)!);
-        final href = standalone.group(2)!;
-        final ref = parseCanvasRef(href);
-        if (ref != null) {
+        final card = _cardFor(standalone.group(2)!,
+            _unescapeLinkTitle(standalone.group(1)!), false);
+        if (card != null) {
           flushMd();
-          out.add(CanvasCardSegment(
-            title: title,
-            rawHref: href,
-            ref: ref,
-            inline: false,
-          ));
+          out.add(card);
           continue;
         }
       }
 
       final bare = _standaloneBareCanvasLinkRe.firstMatch(trimmed);
       if (bare != null) {
-        final href = bare.group(1)!;
-        final ref = parseCanvasRef(href);
-        if (ref != null) {
+        final card = _cardFor(bare.group(1)!, null, false);
+        if (card != null) {
           flushMd();
-          out.add(CanvasCardSegment(
-            title: ref.frameId,
-            rawHref: href,
-            ref: ref,
-            inline: false,
-          ));
+          out.add(card);
           continue;
         }
       }
 
       // Inline canvas links keep the surrounding markdown sentence and attach
       // preview cards directly below it.
-      final inlineCards = <CanvasCardSegment>[];
+      final inlineCards = <CanvasMarkdownSegment>[];
       for (final m in _markdownCanvasLinkRe.allMatches(line)) {
         if (_insideInlineCode(line, m.start)) continue;
-        final ref = parseCanvasRef(m.group(2));
-        if (ref == null) continue;
-        inlineCards.add(CanvasCardSegment(
-          title: _unescapeLinkTitle(m.group(1)!),
-          rawHref: m.group(2)!,
-          ref: ref,
-          inline: true,
-        ));
+        final card =
+            _cardFor(m.group(2)!, _unescapeLinkTitle(m.group(1)!), true);
+        if (card != null) inlineCards.add(card);
       }
       // Bare `canvas:` references inside a sentence, outside markdown links.
       final stripped = line.replaceAll(_markdownCanvasLinkRe, '');
       for (final m in _bareCanvasLinkRe.allMatches(stripped)) {
-        final ref = parseCanvasRef(m.group(0));
-        if (ref == null || _insideInlineCode(stripped, m.start)) continue;
-        inlineCards.add(CanvasCardSegment(
-          title: ref.frameId,
-          rawHref: m.group(0)!,
-          ref: ref,
-          inline: true,
-        ));
+        if (_insideInlineCode(stripped, m.start)) continue;
+        final card = _cardFor(m.group(0)!, null, true);
+        if (card != null) inlineCards.add(card);
       }
       if (inlineCards.isNotEmpty) {
         mdLines.add(line);
