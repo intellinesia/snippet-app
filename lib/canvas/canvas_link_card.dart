@@ -12,10 +12,11 @@ import '../widgets.dart' show AppIcon;
 import 'canvas_card_client.dart';
 import 'canvas_client.dart' show DaemonCanvasClient;
 import 'canvas_link.dart';
-import 'canvas_models.dart' show CanvasRevEvent;
+import 'canvas_models.dart' show CanvasRevEvent, formatCanvasRelativeTime;
 import 'canvas_nav.dart';
 
-const double _kMaxThumbHeight = 220;
+const double _kMaxThumbHeight = 84;
+const double _kThumbWidth = 128;
 const double _kThumbRadius = 10;
 
 /// Compact Quiet v10 preview card for a `[title](canvas:...)` markdown link.
@@ -52,6 +53,7 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
   _CardPhase _phase = _CardPhase.loading;
   CanvasLinkMeta? _meta;
   CanvasLayout? _layout;
+  CanvasCardActivity? _activity;
   int? _liveRev;
   Size? _decodedImageSize;
   bool _imageFailed = false;
@@ -205,8 +207,13 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
         }
       }
       if (!mounted || seq != _loadSeq) return;
+      final activity = await client
+          .fetchCardActivity(widget.canvasRef, meta.rev)
+          .catchError((_) => null);
+      if (!mounted || seq != _loadSeq) return;
       setState(() {
         _meta = meta;
+        _activity = activity ?? _activity;
         _layout = layout;
         _liveRev = widget.canvasRef.isLive ? meta.rev : null;
         _imageFailed = false;
@@ -271,7 +278,7 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
       );
     }
 
-    final maxWidth = kMobile ? 420.0 : 380.0;
+    final maxWidth = kMobile ? 420.0 : 400.0;
     final revLabel = _effectiveRev != null ? ', revision $_effectiveRev' : '';
     final liveLabel = widget.canvasRef.isLive ? ', live' : '';
     return Semantics(
@@ -295,13 +302,15 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
               onTap: () => _handleTap(context),
               child: Padding(
                 padding: EdgeInsets.all(S.s8),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    _buildThumbnailArea(context),
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(S.s4, S.s8, S.s4, S.s2),
+                    SizedBox(
+                      width: _kThumbWidth,
+                      child: _buildThumbnailArea(context),
+                    ),
+                    SizedBox(width: S.s12),
+                    Expanded(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -319,9 +328,12 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
                           ),
                           SizedBox(height: S.s2),
                           _buildSecondaryLine(),
+                          _buildActivityLine(),
                         ],
                       ),
                     ),
+                    SizedBox(width: S.s8),
+                    _buildOpenAction(context),
                   ],
                 ),
               ),
@@ -333,12 +345,46 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
     );
   }
 
+  Widget _buildOpenAction(BuildContext context) => Semantics(
+        button: true,
+        label: 'Open canvas',
+        excludeSemantics: true,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+          alignment: Alignment.center,
+          padding: EdgeInsets.symmetric(horizontal: S.s8),
+          child: Text('Open',
+              style: sans(13, weight: W.label, color: AppColors.accent)),
+        ),
+      );
+
+  Widget _buildActivityLine() {
+    final a = _activity;
+    if (_phase != _CardPhase.ready || a == null) return const SizedBox.shrink();
+    final parts = <String>[
+      if (a.author != null && a.author!.isNotEmpty)
+        'Edited by ${a.author}'
+            '${a.editedAt != null ? ', ${formatCanvasRelativeTime(a.editedAt!)}' : ''}',
+      if (a.comments > 0) '${a.comments} ${a.comments == 1 ? 'comment' : 'comments'}',
+    ];
+    if (parts.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: EdgeInsets.only(top: S.s2),
+      child: Text(
+        parts.join(' · '),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: sans(12, height: 1.35, color: AppColors.fg3, tabular: true),
+      ),
+    );
+  }
+
   Widget _buildThumbnailArea(BuildContext context) {
     if (_phase == _CardPhase.loading) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(_kThumbRadius),
         child: const SizedBox(
-          height: 140,
+          height: 72,
           width: double.infinity,
           child: LoadingBlock(radius: _kThumbRadius, spinner: true),
         ),
@@ -347,7 +393,7 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
 
     if (_phase == _CardPhase.unavailable || _imageFailed || _meta == null) {
       return Container(
-        height: 96,
+        height: 72,
         decoration: BoxDecoration(
           color: AppColors.surface1,
           borderRadius: BorderRadius.circular(_kThumbRadius),

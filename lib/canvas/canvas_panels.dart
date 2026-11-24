@@ -491,7 +491,7 @@ class StepsHistoryView extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    _formatRelativeTime(batch.ts),
+                    formatCanvasRelativeTime(batch.ts),
                     style: mono(11, color: AppColors.fg4),
                   ),
                 ],
@@ -543,13 +543,6 @@ class StepsHistoryView extends StatelessWidget {
   }
 }
 
-String _formatRelativeTime(DateTime ts) {
-  final diff = DateTime.now().difference(ts);
-  if (diff.inSeconds < 60) return 'just now';
-  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-  if (diff.inHours < 24) return '${diff.inHours}h ago';
-  return '${diff.inDays}d ago';
-}
 
 /// Close affordance: 48 on phone, 44 on desktop.
 class CanvasCloseButton extends StatelessWidget {

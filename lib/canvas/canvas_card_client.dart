@@ -82,6 +82,15 @@ class CanvasLinkMeta {
   }
 }
 
+/// Who last edited a frame, when, and how many pins are on it.
+class CanvasCardActivity {
+  const CanvasCardActivity({this.author, this.editedAt, this.comments = 0});
+
+  final String? author;
+  final DateTime? editedAt;
+  final int comments;
+}
+
 /// Logical pixel rectangle for an element in `layout.json`.
 class CanvasElementBox {
   const CanvasElementBox({
@@ -196,6 +205,10 @@ abstract class CanvasCardClient {
     String? canvasId,
     int? rev,
   });
+
+  /// Best-effort author, time and comment count; null when unavailable.
+  Future<CanvasCardActivity?> fetchCardActivity(CanvasRef ref, int rev) async =>
+      null;
 
   ImageProvider imageProvider(String thumbUrl, {int? rev});
 

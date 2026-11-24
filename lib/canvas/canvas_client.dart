@@ -240,6 +240,34 @@ class DaemonCanvasClient implements CanvasClient, CanvasCardClient {
   }
 
   @override
+  Future<CanvasCardActivity?> fetchCardActivity(CanvasRef ref, int rev) async {
+    try {
+      final results = await Future.wait([
+        fetchOps(since: rev > 0 ? rev - 1 : 0),
+        fetchPins(),
+      ]);
+      final ops = results[0] as List<CanvasOpBatch>;
+      final pins = results[1] as List<CanvasPin>;
+      CanvasOpBatch? last;
+      for (final b in ops) {
+        if (last == null || b.rev > last.rev) last = b;
+      }
+      final comments = pins
+          .where((p) =>
+              p.frameId == ref.frameId &&
+              (ref.elId == null || p.elId == ref.elId))
+          .length;
+      return CanvasCardActivity(
+        author: last?.author,
+        editedAt: last?.ts,
+        comments: comments,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
   Future<int> revertBatch(String batchId) async {
     final json = await daemon.postCanvasRevert(batchId);
     return (json['rev'] as num?)?.toInt() ?? 0;

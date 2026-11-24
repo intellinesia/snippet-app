@@ -5,6 +5,8 @@ final _revDigitsRe = RegExp(r'^\d+$');
 final _whitespaceRe = RegExp(r'\s');
 final _markdownCanvasLinkRe =
     RegExp(r'(?<!!)\[((?:\\.|[^\]\n])+)\]\((canvas:[^)\s]+)\)');
+final _bareCanvasLinkRe = RegExp(r'(?<![\w\](/:<])canvas:[^\s)>\]]*[^\s)>\].,;:!?]');
+final _standaloneBareCanvasLinkRe = RegExp(r'^<?(canvas:[^\s<>]+)>?$');
 final _standaloneCanvasLinkRe =
     RegExp(r'^\[((?:\\.|[^\]\n])+)\]\((canvas:[^)\s]+)\)$');
 
@@ -204,6 +206,22 @@ List<CanvasMarkdownSegment> splitCanvasMarkdown(String markdown) {
         }
       }
 
+      final bare = _standaloneBareCanvasLinkRe.firstMatch(trimmed);
+      if (bare != null) {
+        final href = bare.group(1)!;
+        final ref = parseCanvasRef(href);
+        if (ref != null) {
+          flushMd();
+          out.add(CanvasCardSegment(
+            title: ref.frameId,
+            rawHref: href,
+            ref: ref,
+            inline: false,
+          ));
+          continue;
+        }
+      }
+
       // Inline canvas links keep the surrounding markdown sentence and attach
       // preview cards directly below it.
       final inlineCards = <CanvasCardSegment>[];
@@ -214,6 +232,18 @@ List<CanvasMarkdownSegment> splitCanvasMarkdown(String markdown) {
         inlineCards.add(CanvasCardSegment(
           title: _unescapeLinkTitle(m.group(1)!),
           rawHref: m.group(2)!,
+          ref: ref,
+          inline: true,
+        ));
+      }
+      // Bare `canvas:` references inside a sentence, outside markdown links.
+      final stripped = line.replaceAll(_markdownCanvasLinkRe, '');
+      for (final m in _bareCanvasLinkRe.allMatches(stripped)) {
+        final ref = parseCanvasRef(m.group(0));
+        if (ref == null || _insideInlineCode(stripped, m.start)) continue;
+        inlineCards.add(CanvasCardSegment(
+          title: ref.frameId,
+          rawHref: m.group(0)!,
           ref: ref,
           inline: true,
         ));

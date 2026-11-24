@@ -49,6 +49,11 @@ class _TestCanvasCardClient implements CanvasCardClient {
   Stream<void> get onReconnected => const Stream.empty();
 
   @override
+  Future<CanvasCardActivity?> fetchCardActivity(CanvasRef ref, int rev) async =>
+      const CanvasCardActivity(
+          author: 'You', editedAt: null, comments: 2);
+
+  @override
   Future<CanvasLinkMeta> resolveLink(CanvasRef ref) async {
     resolveCalls++;
     if (unreachable) throw const CanvasUnreachableException();
@@ -160,6 +165,31 @@ void main() {
       expect(parseCanvasRef('canvas:c/f@abc'), isNull);
       expect(parseCanvasRef('canvas:c/f@-1'), isNull);
       expect(parseCanvasRef('canvas:c/f with space'), isNull);
+    });
+  });
+
+  group('bare canvas: links', () {
+    test('standalone line and inline sentence become cards', () {
+      final lone = splitCanvasMarkdown('Look:\ncanvas:app/home@3\nthanks');
+      expect(lone.whereType<CanvasCardSegment>().single.ref.rev, 3);
+      final inline = splitCanvasMarkdown('See canvas:app/home/cta, then reply.');
+      final card = inline.whereType<CanvasCardSegment>().single;
+      expect(card.ref.elId, 'cta');
+      expect(card.inline, isTrue);
+    });
+
+    test('markdown link is not duplicated and code is skipped', () {
+      expect(
+        splitCanvasMarkdown('[a](canvas:app/home) here')
+            .whereType<CanvasCardSegment>()
+            .length,
+        1,
+      );
+      expect(
+        splitCanvasMarkdown('use `canvas:app/home` literally')
+            .whereType<CanvasCardSegment>(),
+        isEmpty,
+      );
     });
   });
 
