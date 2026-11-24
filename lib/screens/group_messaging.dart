@@ -1683,7 +1683,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
           e
     ];
     final reactionsByTarget = groupMessageReactions(_events);
-    if (visible.isEmpty && !kMobile) {
+    if (visible.isEmpty) {
       final ids = _group.agentIds;
       final names = [for (final id in ids) _agentName(id)];
       final who = names.length <= 1
@@ -1703,6 +1703,17 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                 if (lead != null && lead.isNotEmpty) '${_agentName(lead)} leads.',
               ].join(' '),
               note: 'Everyone in the group sees what you send',
+              suggestions: kMobile
+                  ? const [
+                      'Who is working on what?',
+                      'Give me a status round',
+                      'What is blocked?',
+                    ]
+                  : const [],
+              onSuggest: (t) {
+                _input.text = t;
+                _input.selection = TextSelection.collapsed(offset: t.length);
+              },
             ),
           ),
         ),

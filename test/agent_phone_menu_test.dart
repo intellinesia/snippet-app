@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:snippet/api.dart';
+import 'package:snippet/chat/stage_bar.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/agent_messaging.dart';
 import 'package:snippet/screens/agent_view_switcher.dart';
@@ -85,7 +86,7 @@ void main() {
     // The chat view's header shows presence, not the view name.
     expect(find.text('Chat'), findsNothing);
 
-    await t.tap(find.text('Growth').first);
+    await t.tap(find.descendant(of: find.byType(StageBar), matching: find.text('Growth')));
     await _settle(t);
     // The chat title opens the agent page; its Work rows switch views.
     for (final row in ['Inbox', 'Board', 'Desk session']) {

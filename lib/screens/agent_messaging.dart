@@ -1346,7 +1346,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       for (final e in _events)
         if (!isReactionEvent(e) && !_isAck(e)) e
     ];
-    if (visible.isEmpty && !kMobile && !_showHead) {
+    if (visible.isEmpty && (kMobile || !_showHead)) {
       final caps = _agent?.capabilities ?? const <String>[];
       return LayoutBuilder(
         builder: (_, c) => SingleChildScrollView(
@@ -1360,6 +1360,17 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                   ? caps.map((x) => x.replaceAll('-', ' ')).join(', ')
                   : (widget.subtitle ?? '').trim(),
               note: 'No messages yet',
+              suggestions: kMobile
+                  ? const [
+                      'What are you working on right now?',
+                      'Summarise what changed today',
+                      'What needs my attention?',
+                    ]
+                  : const [],
+              onSuggest: (t) {
+                _input.text = t;
+                _input.selection = TextSelection.collapsed(offset: t.length);
+              },
             ),
           ),
         ),

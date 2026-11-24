@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
+import '../platform.dart';
 import 'package:flutter/services.dart';
 import '../phosphor_icons.dart';
 
@@ -205,9 +206,9 @@ class MessageFocusOverlay extends StatelessWidget {
 
   static const _springCurve = Cubic(0.22, 1.12, 0.36, 1.0);
   static const _gap = 10.0;
-  static const _barHeight = 52.0;
-  static const _cardWidth = 220.0;
-  static const _rowHeight = 44.0;
+  static const _barHeight = 56.0;
+  static const _cardWidth = 240.0;
+  static const _rowHeight = 48.0;
   static const _sideMargin = 16.0;
 
   @override
@@ -264,7 +265,7 @@ class MessageFocusOverlay extends StatelessWidget {
 
     final estimatedBarW = math.min(
       screen.width - _sideMargin * 2,
-      20.0 + quickReactions.length * 42.0 + (showMoreButton ? 40.0 : 0.0),
+      20.0 + quickReactions.length * 48.0 + (showMoreButton ? 52.0 : 0.0),
     );
     final barLeft = (mine ? bubbleRight - estimatedBarW : bubbleLeft)
         .clamp(
@@ -321,8 +322,9 @@ class MessageFocusOverlay extends StatelessWidget {
             );
           }
 
-          final scrimColor = AppColors.glassScrim
-              .withValues(alpha: AppColors.glassScrim.a * t);
+          // Spec CH-10: the dark scrim 0.58, the light one warm at 0.36.
+          final base = kMobile ? AppColors.scrim : AppColors.glassScrim;
+          final scrimColor = base.withValues(alpha: base.a * t);
           Widget backdrop = ColoredBox(color: scrimColor);
           if (Glass.effectiveEnabled && t > 0.001) {
             backdrop = BackdropFilter(
@@ -422,7 +424,7 @@ class _ReactionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 52,
+      height: 56,
       child: Glass(
         radius: BorderRadius.circular(R.of(28)),
         child: Material(
@@ -440,12 +442,12 @@ class _ReactionBar extends StatelessWidget {
                       borderRadius: BorderRadius.circular(R.of(20)),
                       onTap: () => onReact(emoji),
                       child: SizedBox(
-                        width: 42,
-                        height: 44,
+                        width: 48,
+                        height: 48,
                         child: Center(
                           child: Text(
                             emoji,
-                            style: const TextStyle(fontSize: 28, height: 1.1),
+                            style: const TextStyle(fontSize: 24, height: 1.1),
                           ),
                         ),
                       ),
@@ -461,8 +463,8 @@ class _ReactionBar extends StatelessWidget {
                         borderRadius: BorderRadius.circular(R.of(18)),
                         onTap: onMore,
                         child: Container(
-                          width: 34,
-                          height: 34,
+                          width: 48,
+                          height: 48,
                           decoration: BoxDecoration(
                             color: AppColors.fg1.withValues(alpha: 0.08),
                             shape: BoxShape.circle,
@@ -546,7 +548,7 @@ class _ActionRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: SizedBox(
-        height: 44,
+        height: 48,
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: S.s16),
           child: Row(

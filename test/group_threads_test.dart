@@ -423,7 +423,7 @@ void main() {
       expect(find.text('Waiting for approval · t1 · Auth fix · Worker session'),
           findsOneWidget);
 
-      await tester.tap(find.text('Approve'));
+      await tester.tap(find.text('Allow once'));
       await tester.pump(const Duration(milliseconds: 50));
       await tester.pump(const Duration(milliseconds: 50));
 
@@ -590,7 +590,7 @@ void main() {
       }
 
       final before = client.groupEventsCalls;
-      expect(find.text('Approve'), findsOneWidget);
+      expect(find.text('Allow once'), findsOneWidget);
 
       client.thread = [
         makeApproval(
@@ -604,7 +604,7 @@ void main() {
       });
       await tester.pump(const Duration(milliseconds: 400));
       expect(client.groupEventsCalls, before);
-      expect(find.text('Approve'), findsOneWidget);
+      expect(find.text('Allow once'), findsOneWidget);
 
       client.deviceEvents.add({
         'kind': 'coordination_event_updated',
@@ -616,7 +616,7 @@ void main() {
 
       expect(client.groupEventsCalls, before + 1);
       expect(find.text('No longer waiting on this'), findsOneWidget);
-      expect(find.text('Approve'), findsNothing);
+      expect(find.text('Allow once'), findsNothing);
 
       await tester.pumpWidget(const SizedBox());
       debugDefaultTargetPlatformOverride = null;
