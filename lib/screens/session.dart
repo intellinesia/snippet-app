@@ -1987,30 +1987,41 @@ class _SessionScreenState extends State<SessionScreen>
                                                         (_glassHeader
                                                             ? _composerH
                                                             : 0),
-                                                    child: Material(
-                                                      color: AppColors.surface1,
-                                                      shape:
-                                                          const CircleBorder(),
-                                                      elevation: 0,
-                                                      child: InkWell(
-                                                        customBorder:
-                                                            const CircleBorder(),
-                                                        onTap: () {
-                                                          _stickToBottom = true;
-                                                          setState(() {});
-                                                          _scheduleBottom(
-                                                              settle: true,
-                                                              smooth: true);
-                                                        },
-                                                        child: Padding(
-                                                          padding:
-                                                              EdgeInsets.all(
-                                                                  S.s8),
-                                                          child: AppIcon(
-                                                              'chevron-down',
-                                                              size: 16,
-                                                              color: AppColors
-                                                                  .fg3),
+                                                    child: Semantics(
+                                                      button: true,
+                                                      label: 'New messages',
+                                                      excludeSemantics: true,
+                                                      child: Material(
+                                                        color: AppColors.surface3,
+                                                        shape: const StadiumBorder(),
+                                                        child: InkWell(
+                                                          customBorder: const StadiumBorder(),
+                                                          onTap: () {
+                                                            _stickToBottom = true;
+                                                            setState(() {});
+                                                            _scheduleBottom(
+                                                                settle: true,
+                                                                smooth: true);
+                                                          },
+                                                          child: ConstrainedBox(
+                                                            constraints: const BoxConstraints(minHeight: 36),
+                                                            child: Padding(
+                                                              padding: const EdgeInsets.symmetric(horizontal: 14),
+                                                              child: Row(
+                                                                mainAxisSize: MainAxisSize.min,
+                                                                children: [
+                                                                  Text('New messages',
+                                                                      style: sans(12,
+                                                                          weight: W.label,
+                                                                          color: AppColors.fg1)),
+                                                                  const SizedBox(width: 6),
+                                                                  AppIcon('chevron-down',
+                                                                      size: 16,
+                                                                      color: AppColors.fg2),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          ),
                                                         ),
                                                       ),
                                                     ),

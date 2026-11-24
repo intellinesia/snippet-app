@@ -443,46 +443,31 @@ class _MdCodeBlockState extends State<_MdCodeBlock> {
     final lines = widget.code.split('\n');
     final lang =
         widget.language.trim().isEmpty ? 'code' : widget.language.trim();
-    final gutterW = (lines.length.toString().length.clamp(2, 5) * 7.5) + 4.0;
     if (!kMobile) {
       return _desktop(lines, () => setState(() => _wrap = !_wrap));
     }
+    // Phone spec CH-22: surface1 radius 10, language label, copy 48 target,
+    // horizontal scroll and never a wrap; keywords differ by weight only.
     return Padding(
       padding: EdgeInsets.symmetric(vertical: S.s8),
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: kMobile
-              ? Color.lerp(AppColors.bg, Colors.black, 0.35)
-              : AppColors.surface2,
-          borderRadius: BorderRadius.circular(kMobile ? 14 : R.sm),
-          border: kMobile
-              ? Border.all(color: AppColors.fg1.withValues(alpha: 0.07))
-              : null,
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: kMobile
-                  ? EdgeInsets.fromLTRB(S.of(14), S.s6, S.s6, S.s6)
-                  : EdgeInsets.fromLTRB(S.s12, S.s8, S.s6, S.s8),
+              padding: const EdgeInsets.fromLTRB(14, 0, 0, 0),
               child: Row(children: [
-                Text(lang, style: codeMono(11, color: AppColors.fg3)),
+                Text(lang, style: sans(11, weight: W.label, color: AppColors.fg3)),
                 const Spacer(),
                 IconBtn(
-                  'wrap',
-                  size: 28,
-                  iconSize: 13,
-                  active: _wrap,
-                  tooltip: _wrap ? 'Unwrap lines' : 'Wrap lines',
-                  onTap: () => setState(() => _wrap = !_wrap),
-                ),
-                SizedBox(width: S.s2),
-                IconBtn(
                   'copy',
-                  size: 28,
-                  iconSize: 13,
+                  size: 48,
+                  iconSize: 20,
                   tooltip: 'Copy',
                   onTap: () {
                     Clipboard.setData(ClipboardData(text: widget.code));
@@ -491,63 +476,15 @@ class _MdCodeBlockState extends State<_MdCodeBlock> {
                 ),
               ]),
             ),
-            Divider(
-                height: 1, color: kMobile ? AppColors.line : AppColors.border),
-            if (_wrap)
-              Padding(
-                padding: EdgeInsets.fromLTRB(S.s8, S.s8, S.s12, S.of(10)),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (var i = 0; i < lines.length; i++)
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(
-                            width: gutterW,
-                            child: Text(
-                              '${i + 1}',
-                              textAlign: TextAlign.right,
-                              style: codeMono(11,
-                                  height: 1.55, color: AppColors.fg4),
-                            ),
-                          ),
-                          SizedBox(width: S.of(10)),
-                          Expanded(
-                            child: Text.rich(
-                              highlightedCodeSpan(
-                                  lines[i].isEmpty ? ' ' : lines[i],
-                                  language: widget.language),
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-              )
-            else
-              NotificationListener<ScrollNotification>(
-                onNotification: (_) => true,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: EdgeInsets.fromLTRB(S.s8, S.s8, S.s12, S.of(10)),
-                  child: SelectableText.rich(
-                    TextSpan(children: [
-                      for (var i = 0; i < lines.length; i++) ...[
-                        TextSpan(
-                          text: '${i + 1}'.padLeft(3),
-                          style:
-                              codeMono(12, height: 1.55, color: AppColors.fg3),
-                        ),
-                        const TextSpan(text: '  '),
-                        highlightedCodeSpan(
-                            i == lines.length - 1 ? lines[i] : '${lines[i]}\n',
-                            language: widget.language),
-                      ],
-                    ]),
-                  ),
-                ),
+            NotificationListener<ScrollNotification>(
+              onNotification: (_) => true,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                child: SelectableText.rich(highlightedCodeSpan(widget.code,
+                    language: widget.language, fontSize: 11, height: 1.55)),
               ),
+            ),
           ],
         ),
       ),

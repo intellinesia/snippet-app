@@ -132,6 +132,17 @@ MarkdownStyleSheet chatMarkdownStyle(BuildContext context,
         decorationColor: linkColor.withValues(alpha: 0.5)),
     listBullet: soft,
     blockquote: soft.copyWith(fontStyle: FontStyle.italic),
+    // Phone spec CH-22: hairline rows, 12.5 head in fg2, 13 body, 36 rows.
+    tableHead: sans(12.5, weight: W.label, color: AppColors.fg2),
+    tableBody: sans(13, color: AppColors.fg1),
+    tableBorder: TableBorder(
+        horizontalInside: BorderSide(color: AppColors.border, width: 1),
+        bottom: BorderSide(color: AppColors.border, width: 1)),
+    tableCellsPadding:
+        const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+    tableCellsDecoration: const BoxDecoration(),
+    codeblockDecoration: BoxDecoration(
+        color: AppColors.surface1, borderRadius: BorderRadius.circular(10)),
     h1: prose.copyWith(
         fontSize: ChatColors.fontSize + 3, fontWeight: weightFor(W.strong)),
     h2: prose.copyWith(

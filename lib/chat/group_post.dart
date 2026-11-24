@@ -22,7 +22,7 @@ class GroupPostHeader extends StatelessWidget {
   final String? time;
 
   /// The face column: posts below it indent by this much.
-  static const double face = 20;
+  static const double face = 24;
 
   /// Prose sits flush at the 16 gutter; the face does not take a column.
   static const double indent = 0;
@@ -45,11 +45,11 @@ class GroupPostHeader extends StatelessWidget {
             child: Text(name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: sans(14, weight: W.label, color: AppColors.fg1)),
+                style: sans(13, weight: W.label, color: AppColors.fg1)),
           ),
           if (time != null) ...[
             const SizedBox(width: 8),
-            Text(time!, style: sans(12, color: AppColors.fg3, tabular: true)),
+            Text(time!, style: sans(11.5, color: AppColors.fg3, tabular: true)),
           ],
         ]),
       ));
