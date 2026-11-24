@@ -528,7 +528,7 @@ void main() {
 
       await tester.tap(find.text('Production'));
       await tester.pump();
-      await tester.tap(find.text('Send'));
+      await tester.tap(find.text('Answer Production'));
       await tester.pump(const Duration(milliseconds: 50));
       await tester.pump(const Duration(milliseconds: 50));
 
