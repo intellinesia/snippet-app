@@ -271,7 +271,7 @@ String describeCanvasBatch(CanvasOpBatch b, Map<String, String> frameTitles) {
   final creates = b.changes.where((c) => c.op == 'create_frame').length;
   final phrases = <String>[];
   if (creates > 3) {
-    phrases.add('Created $creates frames');
+    phrases.add('Created ${canvasCount(creates, 'frame')}');
   }
   for (final c in b.changes) {
     final String text;
@@ -482,6 +482,9 @@ String formatCanvasMarkdownLink({
   );
   return '[$label]($uri)';
 }
+
+/// "1 frame", "2 frames".
+String canvasCount(int n, String noun) => '$n $noun${n == 1 ? '' : 's'}';
 
 /// Short relative time: just now, 5m ago, 3h ago, 2d ago.
 String formatCanvasRelativeTime(DateTime ts) {

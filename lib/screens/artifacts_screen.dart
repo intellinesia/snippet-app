@@ -118,7 +118,7 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
           style: sans(14, color: AppColors.fg1),
           decoration: InputDecoration(
             hintText: 'Name',
-            hintStyle: sans(14, color: AppColors.fg4),
+            hintStyle: sans(14, color: AppColors.fg3),
           ),
           onSubmitted: (v) =>
               Navigator.of(ctx).pop(v.trim().isEmpty ? null : v.trim()),

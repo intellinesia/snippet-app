@@ -170,7 +170,7 @@ class _PinComposerViewState extends State<PinComposerView> {
             style: sans(13, color: AppColors.fg1),
             decoration: InputDecoration(
               hintText: 'Leave a note for this element...',
-              hintStyle: sans(13, color: AppColors.fg4),
+              hintStyle: sans(13, color: AppColors.fg3),
               filled: true,
               fillColor: AppColors.surface2,
               contentPadding: EdgeInsets.all(S.s12),
@@ -313,10 +313,16 @@ class PinsListView extends StatelessWidget {
                           target,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: mono(11, color: AppColors.fg3),
+                          style: mono(11,
+                              color: isSelected ? AppColors.fg2 : AppColors.fg3),
                         ),
                       ),
-                      _StatusPill(resolved: pin.isResolved),
+                      if (pin.isResolved)
+                        Text('Resolved',
+                            style: sans(12,
+                                color: isSelected
+                                    ? AppColors.fg2
+                                    : AppColors.fg3)),
                     ],
                   ),
                   SizedBox(height: S.s8),
@@ -401,30 +407,6 @@ class PinsListView extends StatelessWidget {
   }
 }
 
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.resolved});
-  final bool resolved;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: S.s6, vertical: S.s2),
-      decoration: BoxDecoration(
-        color: resolved ? AppColors.okBg : AppColors.surface3,
-        borderRadius: BorderRadius.circular(R.chip),
-      ),
-      child: Text(
-        resolved ? 'Resolved' : 'Open',
-        style: sans(
-          11,
-          weight: W.label,
-          color: resolved ? AppColors.ok : AppColors.fg2,
-        ),
-      ),
-    );
-  }
-}
-
 /// Versions list: every edit is a named step. Tap a step to preview that
 /// version on the canvas; Revert undoes that single step.
 class StepsHistoryView extends StatelessWidget {
@@ -471,7 +453,7 @@ class StepsHistoryView extends StatelessWidget {
           return Padding(
             padding: EdgeInsets.fromLTRB(S.s8, S.s12, S.s8, 0),
             child: Text('Reverting adds a step; nothing is lost.',
-                style: sans(12, color: AppColors.fg4)),
+                style: sans(12, color: AppColors.fg3)),
           );
         }
         final batch = sorted[index];
@@ -531,7 +513,9 @@ class StepsHistoryView extends StatelessWidget {
                                   style: sans(12, color: AppColors.fg2)),
                             Text(
                               '${batch.author} · ${formatCanvasRelativeTime(batch.ts)} · r${batch.rev}${isCurrent ? ' · current' : ''}',
-                              style: sans(11, color: AppColors.fg3),
+                              style: sans(11,
+                                  color:
+                                      isPreview ? AppColors.fg2 : AppColors.fg3),
                             ),
                           ],
                         ),

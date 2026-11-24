@@ -1893,7 +1893,7 @@ class _CanvasScreenState extends State<CanvasScreen>
             children: [
               AppIcon('pin',
                   size: 15,
-                  color: openPins > 0 ? AppColors.run : AppColors.fg2),
+                  color: openPins > 0 ? AppColors.fg1 : AppColors.fg3),
               SizedBox(width: S.s6),
               Text('${_pins.length}',
                   style: mono(12, weight: W.label, color: AppColors.fg1)),

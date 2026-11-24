@@ -55,7 +55,7 @@ class PinThreadView extends StatelessWidget {
         ),
         Padding(
           padding: EdgeInsets.only(top: S.s4, bottom: S.s12),
-          child: Text('$who$when', style: sans(11, color: AppColors.fg4)),
+          child: Text('$who$when', style: sans(11, color: AppColors.fg3)),
         ),
         if (reply.isNotEmpty) ...[
           Row(
@@ -261,7 +261,7 @@ class _CanvasRevThumbState extends State<CanvasRevThumb> {
             return Center(
               child: snap.hasError
                   ? Text('Not available',
-                      style: sans(11, color: AppColors.fg4))
+                      style: sans(11, color: AppColors.fg3))
                   : const DelayedSpinner(size: 16),
             );
           },

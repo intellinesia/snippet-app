@@ -8,7 +8,8 @@ import 'package:snippet/api.dart';
 import 'package:snippet/canvas/artifact_cards.dart';
 import 'package:snippet/canvas/artifact_link_card.dart';
 import 'package:snippet/canvas/canvas_card_client.dart';
-import 'package:snippet/canvas/canvas_models.dart' show CanvasRevEvent;
+import 'package:snippet/canvas/canvas_models.dart'
+    show CanvasRevEvent, canvasCount;
 import 'package:snippet/canvas/canvas_link.dart';
 import 'package:snippet/canvas/canvas_link_card.dart';
 import 'package:snippet/chat/group_post.dart';
@@ -335,6 +336,38 @@ void main() {
     expect(find.text('By You, just now'), findsOneWidget);
     expect(find.text('Open'), findsOneWidget);
     expect(find.byType(ArtifactLinkCard), findsNWidgets(2));
+  });
+
+  test('canvasCount pluralises', () {
+    expect(canvasCount(1, 'frame'), '1 frame');
+    expect(canvasCount(0, 'frame'), '0 frames');
+    expect(canvasCount(24, 'frame'), '24 frames');
+  });
+
+  testWidgets('narrow card drops the thumbnail and keeps a readable title',
+      (tester) async {
+    final daemon = DaemonClient('https://daemon.invalid', 'test');
+    await tester.pumpWidget(MaterialApp(
+      theme: buildAppTheme(),
+      home: Scaffold(
+        body: Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: 250,
+            child: ArtifactLinkCard(
+              title: 'x',
+              artifactRef: const ArtifactRef('s1/report'),
+              daemonClient: daemon,
+              resolver: (id) async =>
+                  ArtifactCard(id: id, kind: 'pdf', title: 'Q4 report', rev: 2),
+            ),
+          ),
+        ),
+      ),
+    ));
+    await tester.pump();
+    await tester.pump();
+    expect(tester.getTopLeft(find.text('Q4 report')).dx, lessThan(40));
   });
 
   testWidgets('canvas: link in chat transcript renders CanvasLinkCard',

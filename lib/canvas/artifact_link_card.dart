@@ -14,8 +14,8 @@ import 'canvas_nav.dart';
 
 /// Opens a card in its own home: a canvas as a shell tab, everything else in
 /// the existing artifact viewer.
-void openArtifactCard(BuildContext context, DaemonClient client,
-    ArtifactCard card,
+void openArtifactCard(
+    BuildContext context, DaemonClient client, ArtifactCard card,
     {int? rev}) {
   if (card.isCanvas) {
     openCanvas(context, canvasId: card.id, title: card.displayTitle);
@@ -80,7 +80,9 @@ class _ArtifactLinkCardState extends State<ArtifactLinkCard> {
   bool _started = false;
 
   DaemonClient? get _daemon =>
-      widget.daemonClient ?? DaemonScope.maybeOf(context) ?? DaemonScope.current;
+      widget.daemonClient ??
+      DaemonScope.maybeOf(context) ??
+      DaemonScope.current;
 
   @override
   void didChangeDependencies() {
@@ -137,7 +139,8 @@ class _ArtifactLinkCardState extends State<ArtifactLinkCard> {
       if (rev != null && rev > 0) 'rev $rev',
     ].join(' · ');
     final by = [
-      if (card?.author != null) 'By ${card!.author == 'user' ? 'You' : card.author}',
+      if (card?.author != null)
+        'By ${card!.author == 'user' ? 'You' : card.author}',
       if (card?.updatedAt != null) formatCanvasRelativeTime(card!.updatedAt!),
     ].join(', ');
     return Semantics(
@@ -161,55 +164,60 @@ class _ArtifactLinkCardState extends State<ArtifactLinkCard> {
                 onTap: card == null ? null : _open,
                 child: Padding(
                   padding: EdgeInsets.all(S.s8),
-                  child: Row(
-                    children: [
-                      _thumb(card),
-                      SizedBox(width: S.s12),
-                      Expanded(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: sans(kMobile ? 14 : 13,
-                                    weight: W.label,
-                                    height: 1.3,
-                                    color: AppColors.fg1)),
-                            SizedBox(height: S.s2),
-                            Text(
-                                _loading
-                                    ? 'Loading'
-                                    : _missing
-                                        ? 'No longer available'
-                                        : meta,
-                                maxLines: 1,
-                                style: sans(12,
-                                    height: 1.35, color: AppColors.fg3)),
-                            if (by.isNotEmpty)
-                              Text(by,
-                                  maxLines: 1,
+                  child: LayoutBuilder(builder: (context, box) {
+                    final compact = box.maxWidth < 300;
+                    return Row(
+                      children: [
+                        if (!compact) ...[
+                          _thumb(card),
+                          SizedBox(width: S.s12),
+                        ],
+                        Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(title,
+                                  maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
+                                  style: sans(kMobile ? 14 : 13,
+                                      weight: W.label,
+                                      height: 1.3,
+                                      color: AppColors.fg1)),
+                              SizedBox(height: S.s2),
+                              Text(
+                                  _loading
+                                      ? 'Loading'
+                                      : _missing
+                                          ? 'No longer available'
+                                          : meta,
+                                  maxLines: 1,
                                   style: sans(12,
                                       height: 1.35, color: AppColors.fg3)),
-                          ],
+                              if (by.isNotEmpty)
+                                Text(by,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: sans(12,
+                                        height: 1.35, color: AppColors.fg3)),
+                            ],
+                          ),
                         ),
-                      ),
-                      if (card != null) ...[
-                        SizedBox(width: S.s8),
-                        Container(
-                          constraints: const BoxConstraints(
-                              minHeight: 44, minWidth: 44),
-                          alignment: Alignment.center,
-                          padding: EdgeInsets.symmetric(horizontal: S.s8),
-                          child: Text('Open',
-                              style: sans(13,
-                                  weight: W.label, color: AppColors.accent)),
-                        ),
+                        if (card != null) ...[
+                          SizedBox(width: S.s8),
+                          Container(
+                            constraints: const BoxConstraints(
+                                minHeight: 44, minWidth: 44),
+                            alignment: Alignment.center,
+                            padding: EdgeInsets.symmetric(horizontal: S.s8),
+                            child: Text('Open',
+                                style: sans(13,
+                                    weight: W.label, color: AppColors.accent)),
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
+                    );
+                  }),
                 ),
               ),
             ),
@@ -226,7 +234,8 @@ class _ArtifactLinkCardState extends State<ArtifactLinkCard> {
     Widget fallback() => Container(
           width: 72,
           height: 72,
-          decoration: BoxDecoration(color: AppColors.surface1, borderRadius: box),
+          decoration:
+              BoxDecoration(color: AppColors.surface1, borderRadius: box),
           alignment: Alignment.center,
           child: AppIcon(
             switch (card?.kind) {

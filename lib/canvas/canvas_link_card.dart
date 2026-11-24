@@ -65,8 +65,9 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
   CanvasCardClient? _resolveClient(BuildContext context) {
     final override = widget.client ?? CanvasCardClientScope.maybeOf(context);
     if (override != null) return override;
-    final daemon =
-        widget.daemonClient ?? DaemonScope.maybeOf(context) ?? DaemonScope.current;
+    final daemon = widget.daemonClient ??
+        DaemonScope.maybeOf(context) ??
+        DaemonScope.current;
     if (daemon == null) return null;
     return DaemonCanvasClient.forDaemon(daemon);
   }
@@ -239,8 +240,7 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
     return widget.canvasRef.frameId;
   }
 
-  int? get _effectiveRev =>
-      widget.canvasRef.rev ?? _liveRev ?? _meta?.rev;
+  int? get _effectiveRev => widget.canvasRef.rev ?? _liveRev ?? _meta?.rev;
 
   double get _aspectRatio {
     final metaAspect = _meta?.aspectRatio;
@@ -276,7 +276,8 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
     if (_phase == _CardPhase.unreachable) {
       if (widget.inline) return const SizedBox.shrink();
       return _PlainLinkFallback(
-        title: widget.title.isNotEmpty ? widget.title : widget.canvasRef.format(),
+        title:
+            widget.title.isNotEmpty ? widget.title : widget.canvasRef.format(),
         onTap: () => _handleTap(context),
       );
     }
@@ -288,63 +289,69 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
       button: true,
       label: 'Open canvas frame $_displayTitle$revLabel$liveLabel',
       child: Align(
-      alignment: Alignment.centerLeft,
-      heightFactor: 1,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: maxWidth),
-        child: Container(
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: AppColors.surface2,
-            borderRadius: BorderRadius.circular(R.of(14)),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Material(
-            type: MaterialType.transparency,
-            child: InkWell(
-              onTap: () => _handleTap(context),
-              child: Padding(
-                padding: EdgeInsets.all(S.s8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    SizedBox(
-                      width: _kThumbWidth,
-                      child: _buildThumbnailArea(context),
-                    ),
-                    SizedBox(width: S.s12),
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _displayTitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(
-                              kMobile ? 14 : 13,
-                              weight: W.label,
-                              height: 1.3,
-                              color: AppColors.fg1,
-                            ),
+        alignment: Alignment.centerLeft,
+        heightFactor: 1,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxWidth),
+          child: Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(R.of(14)),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                onTap: () => _handleTap(context),
+                child: Padding(
+                  padding: EdgeInsets.all(S.s8),
+                  child: LayoutBuilder(builder: (context, box) {
+                    // Narrow bubbles drop the thumbnail so the text keeps room.
+                    final compact = box.maxWidth < 300;
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (!compact) ...[
+                          SizedBox(
+                            width: _kThumbWidth,
+                            child: _buildThumbnailArea(context),
                           ),
-                          SizedBox(height: S.s2),
-                          _buildSecondaryLine(),
-                          _buildActivityLine(),
+                          SizedBox(width: S.s12),
                         ],
-                      ),
-                    ),
-                    SizedBox(width: S.s8),
-                    _buildOpenAction(context),
-                  ],
+                        Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _displayTitle,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: sans(
+                                  kMobile ? 14 : 13,
+                                  weight: W.label,
+                                  height: 1.3,
+                                  color: AppColors.fg1,
+                                ),
+                              ),
+                              SizedBox(height: S.s2),
+                              _buildSecondaryLine(),
+                              _buildActivityLine(),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: S.s8),
+                        _buildOpenAction(context),
+                      ],
+                    );
+                  }),
                 ),
               ),
             ),
           ),
         ),
       ),
-    ),
     );
   }
 
@@ -368,7 +375,8 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
       if (a.author != null && a.author!.isNotEmpty)
         'Edited by ${a.author}'
             '${a.editedAt != null ? ', ${formatCanvasRelativeTime(a.editedAt!)}' : ''}',
-      if (a.comments > 0) '${a.comments} ${a.comments == 1 ? 'comment' : 'comments'}',
+      if (a.comments > 0)
+        '${a.comments} ${a.comments == 1 ? 'comment' : 'comments'}',
     ];
     if (parts.isEmpty) return const SizedBox.shrink();
     return Padding(
@@ -412,13 +420,15 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
     final provider = client.imageProvider(meta.thumbUrl, rev: rev);
     final elId = widget.canvasRef.elId ?? meta.elId;
     final box = (elId != null && _layout != null) ? _layout![elId] : null;
-    final logicalW = _layout?.frameWidth ?? meta.width ?? _decodedImageSize?.width;
+    final logicalW =
+        _layout?.frameWidth ?? meta.width ?? _decodedImageSize?.width;
     final logicalH =
         _layout?.frameHeight ?? meta.height ?? _decodedImageSize?.height;
 
     return LayoutBuilder(builder: (context, constraints) {
       final aspect = _aspectRatio.clamp(0.25, 4.0);
-      final availW = constraints.maxWidth.isFinite ? constraints.maxWidth : 340.0;
+      final availW =
+          constraints.maxWidth.isFinite ? constraints.maxWidth : 340.0;
       var renderW = availW;
       var renderH = renderW / aspect;
       if (renderH > _kMaxThumbHeight) {
@@ -571,7 +581,8 @@ class _CanvasThumbImageState extends State<_CanvasThumbImage> {
     if (_stream != null && _listener != null) {
       _stream!.removeListener(_listener!);
     }
-    final stream = widget.provider.resolve(createLocalImageConfiguration(context));
+    final stream =
+        widget.provider.resolve(createLocalImageConfiguration(context));
     final listener = ImageStreamListener(
       (info, _) {
         final ui.Image img = info.image;
@@ -686,9 +697,9 @@ class _PlainLinkFallback extends StatelessWidget {
             child: Text(
               title,
               style: TS.body(AppColors.accent).copyWith(
-                decoration: TextDecoration.underline,
-                decorationColor: AppColors.accent.withValues(alpha: 0.5),
-              ),
+                    decoration: TextDecoration.underline,
+                    decorationColor: AppColors.accent.withValues(alpha: 0.5),
+                  ),
             ),
           ),
         ),

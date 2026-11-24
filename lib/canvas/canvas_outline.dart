@@ -205,7 +205,7 @@ class _CanvasOutlineRailState extends State<CanvasOutlineRail> {
             child: ListView(
               padding: EdgeInsets.only(bottom: S.s16),
               children: [
-                _header('Frames', '${frames.length} frames'),
+                _header('Frames', canvasCount(frames.length, 'frame')),
                 if (frames.isEmpty) _empty('No frames match'),
                 for (final f in frames)
                   _row(
@@ -256,14 +256,14 @@ class _CanvasOutlineRailState extends State<CanvasOutlineRail> {
                   style: sans(12, weight: W.label, color: AppColors.fg3)),
             ),
             if (trailing != null)
-              Text(trailing, style: sans(12, color: AppColors.fg4)),
+              Text(trailing, style: sans(12, color: AppColors.fg3)),
           ],
         ),
       );
 
   Widget _empty(String text) => Padding(
         padding: EdgeInsets.symmetric(horizontal: S.s16, vertical: S.s8),
-        child: Text(text, style: sans(12, color: AppColors.fg4)),
+        child: Text(text, style: sans(12, color: AppColors.fg3)),
       );
 
   Widget _row({
@@ -309,7 +309,9 @@ class _CanvasOutlineRailState extends State<CanvasOutlineRail> {
                       ),
                       if (trailing != null) ...[
                         SizedBox(width: S.s8),
-                        Text(trailing, style: mono(11, color: AppColors.fg4)),
+                        Text(trailing,
+            style: mono(11,
+                color: selected ? AppColors.fg2 : AppColors.fg3)),
                       ],
                     ],
                   ),
