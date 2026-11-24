@@ -58,7 +58,7 @@ class _CallPromptCardState extends State<CallPromptCard> {
                 width: 8,
                 height: 8,
                 decoration: BoxDecoration(
-                    color: tracking ? AppColors.danger : AppColors.accent,
+                    color: tracking ? (kMobile ? AppColors.fg1 : AppColors.danger) : AppColors.accent,
                     shape: BoxShape.circle),
               ),
               SizedBox(width: S.s8),
@@ -90,17 +90,17 @@ class _CallPromptCardState extends State<CallPromptCard> {
               child: Wrap(spacing: S.s8, runSpacing: S.s8, children: [
                 if (tracking)
                   Btn('Stop',
-                      small: true,
+                      small: !kMobile,
                       variant: BtnVariant.secondary,
                       disabled: _busy,
                       onTap: () => _run(callActionStop))
                 else ...[
                   Btn('Take notes',
-                      small: true,
+                      small: !kMobile,
                       disabled: _busy,
                       onTap: () => _run(callActionTrack)),
                   Btn('Ignore',
-                      small: true,
+                      small: !kMobile,
                       variant: BtnVariant.secondary,
                       disabled: _busy,
                       onTap: () => _run(callActionIgnore)),
@@ -111,7 +111,7 @@ class _CallPromptCardState extends State<CallPromptCard> {
               Padding(
                 padding: EdgeInsets.only(top: S.s6, left: S.s16),
                 child: Text("Couldn't reach Snippet. Try again.",
-                    style: sans(12, color: AppColors.danger)),
+                    style: sans(12, color: kMobile ? AppColors.fg2 : AppColors.danger)),
               ),
           ],
         ),

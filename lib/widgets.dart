@@ -777,7 +777,7 @@ class Btn extends StatelessWidget {
     // Material's 48dp floors — and it is the primary action of the agent thread
     // composer and every dialog footer. Desktop keeps the compact 28/34 so a
     // mouse-sized toolbar does not grow.
-    final h = small ? (kMobile ? 36.0 : 28.0) : (kMobile ? 46.0 : 28.0);
+    final h = small ? (kMobile ? 36.0 : 28.0) : (kMobile ? 48.0 : 28.0);
     final radius = kMobile ? R.pill : (small ? R.sm : R.md);
     final child = Row(
       mainAxisSize: full ? MainAxisSize.max : MainAxisSize.min,
