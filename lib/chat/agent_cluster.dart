@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../mochi.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'chat_style.dart';
@@ -66,26 +67,6 @@ class _CountBadge extends StatelessWidget {
           style: sans(d * 0.55, weight: W.label, color: AppColors.fg1)),
     );
   }
-}
-
-class _MoreDisc extends StatelessWidget {
-  const _MoreDisc({required this.count, required this.size});
-
-  final int count;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        width: size,
-        height: size,
-        decoration: avatarDecoration(size,
-            color: AppColors.surface3,
-            side: BorderSide(color: readingBg, width: 2)),
-        alignment: Alignment.center,
-        child: Text('+$count',
-            maxLines: 1,
-            style: sans(11, weight: W.label, color: AppColors.fg2)),
-      );
 }
 
 /// The quiet group mark: a rounded square with the people glyph in fg2.
