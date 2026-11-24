@@ -24,7 +24,11 @@ void openArtifactCard(
   final doc = card.documentRef;
   if (doc == null) return;
   openArtifact(context,
-      client: client, session: doc.session, id: doc.id, version: rev);
+      client: client,
+      session: doc.session,
+      id: doc.id,
+      version: rev,
+      title: card.displayTitle);
 }
 
 /// The chat card for any link: `canvas:` deep links keep their live frame

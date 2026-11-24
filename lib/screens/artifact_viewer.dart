@@ -220,6 +220,7 @@ Future<void> openArtifact(
   required String session,
   required String id,
   int? version,
+  String? title,
 }) {
   if (kMobile) {
     return showArtifactSheet(
@@ -238,6 +239,7 @@ Future<void> openArtifact(
     maxWidth: 820,
     purpose: ShellPanelPurpose.artifact,
     panelId: id,
+    title: title,
     originClient: client,
     originSessionId: session,
     builder: (_, close) => ArtifactViewer(
