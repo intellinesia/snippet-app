@@ -1,4 +1,5 @@
 import '../../toast_avoid.dart';
+import 'collapsing_root.dart';
 import 'package:flutter/material.dart';
 
 import '../../crew_status.dart';
@@ -19,53 +20,6 @@ enum _Filter { all, needs, running }
 
 /// Quiet Home and Sessions: two calm lists, no hero, no shader, no cards.
 /// Both read the same sessions; Home shows only what matters now.
-class QuietPlaceHeader extends StatelessWidget {
-  const QuietPlaceHeader(
-      {super.key,
-      required this.title,
-      this.onSearch,
-      this.onSettings,
-      this.onNewMenu,
-      this.trailing,
-      this.tagline});
-  final String title;
-  final VoidCallback? onSearch;
-  final VoidCallback? onSettings;
-
-  /// Phone "+": opens the New menu (session, agent, group) below the glyph.
-  final void Function(BuildContext anchor)? onNewMenu;
-  final Widget? trailing;
-
-  /// One calm sentence under the title.
-  final String? tagline;
-
-  @override
-  Widget build(BuildContext context) => ToastAvoid(child: Padding(
-        padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s12, S.s4),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-            if (onNewMenu != null)
-              Builder(
-                  builder: (c) => _IconTap('plus', 'New', () => onNewMenu!(c))),
-            if (onSearch != null) _IconTap('search', 'Search', onSearch!),
-            if (onSettings != null)
-              _IconTap('settings', 'Settings', onSettings!),
-            if (trailing != null) trailing!,
-          ]),
-          Text(title,
-              style: sans(28,
-                  height: 37.8 / 28,
-                  weight: FontWeight.w500,
-                  color: AppColors.fg1)),
-          if (tagline != null)
-            Padding(
-              padding: EdgeInsets.only(top: S.s4),
-              child: Text(tagline!, style: sans(13, color: AppColors.fg3)),
-            ),
-        ]),
-      ));
-}
-
 class _IconTap extends StatelessWidget {
   const _IconTap(this.icon, this.label, this.onTap);
   final String icon, label;
@@ -82,7 +36,7 @@ class _IconTap extends StatelessWidget {
               width: 48,
               height: 48,
               child:
-                  Center(child: AppIcon(icon, size: 22, color: AppColors.fg1))),
+                  Center(child: AppIcon(icon, size: 20, color: AppColors.fg2))),
         ),
       );
 }
@@ -298,9 +252,13 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
             !sessionBusy(s) && !sessionNeedsYou(s) && s.lastActive >= dayStart)
         .length;
 
-    final bar = _Bar(onSearch: w.onSearch, onSettings: w.onSettings);
+    const bar = LargeTitle('Agents');
+    Widget root(Widget list) => CollapsingRoot(title: 'Agents', actions: [
+          _IconTap('search', 'Search', w.onSearch),
+          _IconTap('settings', 'Settings', w.onSettings),
+        ], child: list);
     if (all.isEmpty && w.groups.isEmpty) {
-      return ListView(children: [
+      return root(ListView(children: [
         bar,
         if (w.offline != null) w.offline!,
         Padding(
@@ -331,7 +289,7 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
             ),
           ),
         ),
-      ]);
+      ]));
     }
 
     String status(_HomeAgent a) {
@@ -432,7 +390,7 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
           onFinished: w.onOpenSessions),
     );
 
-    return CustomScrollView(slivers: [
+    return root(CustomScrollView(slivers: [
       SliverList(
         delegate: SliverChildListDelegate([
           bar,
@@ -458,7 +416,7 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
         hasScrollBody: false,
         child: Align(alignment: Alignment.bottomCenter, child: foot),
       ),
-    ]);
+    ]));
   }
 }
 
@@ -474,31 +432,6 @@ class _Empty extends StatelessWidget {
 }
 
 /// Home bar: 28/500 title at x16, search and settings as 48 x 48 targets.
-class _Bar extends StatelessWidget {
-  const _Bar({required this.onSearch, required this.onSettings});
-  final VoidCallback onSearch, onSettings;
-
-  @override
-  Widget build(BuildContext context) => ToastAvoid(
-        child: Padding(
-          padding: const EdgeInsets.only(left: kGutter, top: 4),
-          child: Row(children: [
-            Expanded(
-                child: Text('Agents',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(28,
-                        height: 34 / 28,
-                        weight: FontWeight.w500,
-                        color: AppColors.fg1))),
-            _IconTap('search', 'Search', onSearch),
-            _IconTap('settings', 'Settings', onSettings),
-          ]),
-        ),
-      );
-}
-
-
 class QuietSessionsScreen extends StatefulWidget {
   const QuietSessionsScreen({
     super.key,
@@ -598,12 +531,7 @@ class _QuietSessionsScreenState extends State<QuietSessionsScreen> {
           ]),
         )
       else
-        QuietPlaceHeader(
-            title: 'Sessions',
-            onSearch: () => setState(() {
-                  _searching = !_searching;
-                  if (!_searching) _q.clear();
-                })),
+        const LargeTitle('Sessions'),
       if (_searching)
         ToastAvoid(child: Padding(
           padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
@@ -710,7 +638,16 @@ class _QuietSessionsScreenState extends State<QuietSessionsScreen> {
       ));
     }
     children.add(SizedBox(height: S.s24));
-    return ListView(children: children);
+    return CollapsingRoot(
+        title: 'Sessions',
+        actions: [
+          if (!widget.selecting)
+            _IconTap('search', 'Search', () => setState(() {
+                  _searching = !_searching;
+                  if (!_searching) _q.clear();
+                })),
+        ],
+        child: ListView(children: children));
   }
 }
 

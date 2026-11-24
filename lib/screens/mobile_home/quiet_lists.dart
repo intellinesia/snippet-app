@@ -6,7 +6,7 @@ import '../../quiet.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
 import '../tasks/task_common.dart' show openTaskDetail, showCreateTask;
-import 'quiet_home.dart';
+import 'collapsing_root.dart';
 export 'all_agents_phone.dart';
 
 int _epoch(String iso) =>
@@ -49,24 +49,7 @@ class _QuietTasksScreenState extends State<QuietTasksScreen> {
   Widget build(BuildContext context) {
     final tasks = _tasks;
     final children = <Widget>[
-      QuietPlaceHeader(
-        title: 'Tasks',
-        trailing: Semantics(
-          button: true,
-          label: 'New task',
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () async {
-              if (await showCreateTask(context, widget.client)) _load();
-            },
-            child: SizedBox(
-                width: 48,
-                height: 48,
-                child: Center(
-                    child: AppIcon('plus', size: 22, color: AppColors.fg1))),
-          ),
-        ),
-      ),
+      const LargeTitle('Tasks'),
     ];
     if (tasks == null) {
       children.add(_error == null
@@ -136,7 +119,26 @@ class _QuietTasksScreenState extends State<QuietTasksScreen> {
       }
     }
     children.add(SizedBox(height: S.s24));
-    return RefreshIndicator(
-        onRefresh: _load, child: ListView(children: children));
+    return CollapsingRoot(
+        title: 'Tasks',
+        actions: [
+          Semantics(
+            button: true,
+            label: 'New task',
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () async {
+                if (await showCreateTask(context, widget.client)) _load();
+              },
+              child: SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: Center(
+                      child: AppIcon('plus', size: 20, color: AppColors.fg2))),
+            ),
+          ),
+        ],
+        child: RefreshIndicator(
+            onRefresh: _load, child: ListView(children: children)));
   }
 }
