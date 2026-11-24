@@ -42,6 +42,8 @@ import '../chat/chat_style.dart';
 import '../chat/group_notice.dart';
 import '../chat/stage_bar.dart';
 import '../chat/draft_sink.dart';
+import '../chat/runs_dock.dart';
+import 'agent_messaging.dart' show openAgentThread;
 import '../chat/stage_header.dart';
 import '../chat/run_head.dart';
 import '../chat/chat_empty_intro.dart';
@@ -1285,6 +1287,46 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     return n.isEmpty ? _agentName(id) : n;
   }
 
+  List<RunLine> _runLines() {
+    final store = widget.client.presence;
+    return [
+      for (final id in _group.agentIds)
+        if (store.presenceForAgentId(id) case final p?)
+          if (p.state == 'running' ||
+              p.state == 'typing' ||
+              p.state == 'thinking' ||
+              p.state == 'error' ||
+              p.state == 'failed')
+            RunLine(
+                id,
+                _agentName(id),
+                p.state == 'error' || p.state == 'failed' ? 'Failed' : 'Working',
+                _group.title,
+                failed: p.state == 'error' || p.state == 'failed'),
+    ];
+  }
+
+  /// Phone: the working members as a dock; tap opens the Activity sheet.
+  Widget _runsDock() => ListenableBuilder(
+        listenable: widget.client.presence,
+        builder: (_, __) {
+          final runs = _runLines();
+          if (runs.isEmpty) return const SizedBox.shrink();
+          return RunsDock(
+            runs: runs,
+            onOpen: () => showAppSheet<void>(
+              context,
+              title: 'Activity',
+              child: RunsSheet(
+                runs: runs,
+                onOpenChat: (id) => openAgentThread(context,
+                    client: widget.client, agentId: id, agentName: _agentName(id)),
+              ),
+            ),
+          );
+        },
+      );
+
   /// The member a working line shows: typing first, then the first replying.
   String? _typingAgentId() {
     final store = widget.client.presence;
@@ -2326,6 +2368,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         voice: _voice,
         listen: _attachments,
         above: [
+          if (kMobile) _runsDock(),
           if (_mention != null && _mentionCandidates.isNotEmpty) _mentionList(),
         ],
         attachments: () =>
