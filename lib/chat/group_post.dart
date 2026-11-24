@@ -10,25 +10,35 @@ class GroupPostHeader extends StatelessWidget {
     super.key,
     required this.agentId,
     required this.name,
+    this.mascot,
     this.time,
-    this.lead = false,
   });
 
   final String agentId;
   final String name;
+
+  /// The mascot's name, read out before the agent: "Buddy, Snippet, 09:31".
+  final String? mascot;
   final String? time;
-  final bool lead;
 
   /// The face column: posts below it indent by this much.
-  static const double face = 24;
-  static const double indent = face + 8;
+  static const double face = 20;
+
+  /// Prose sits flush at the 16 gutter; the face does not take a column.
+  static const double indent = 0;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.only(bottom: S.s4),
+  Widget build(BuildContext context) => Semantics(
+        header: true,
+        container: true,
+        label: [if (mascot != null) mascot!, name, if (time != null) time!]
+            .join(', '),
+        excludeSemantics: true,
+        child: Padding(
+        padding: const EdgeInsets.only(bottom: 6),
         child: Row(children: [
           ClipRRect(
-              borderRadius: BorderRadius.circular(R.of(7)),
+              borderRadius: BorderRadius.circular(R.of(6)),
               child: AgentMochi(agentId, size: face)),
           const SizedBox(width: 8),
           Flexible(
@@ -37,20 +47,16 @@ class GroupPostHeader extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: sans(14, weight: W.label, color: AppColors.fg1)),
           ),
-          if (lead) ...[
-            const SizedBox(width: 6),
-            Text('lead', style: sans(12, color: AppColors.fg3)),
-          ],
           if (time != null) ...[
             const SizedBox(width: 8),
             Text(time!, style: sans(12, color: AppColors.fg3, tabular: true)),
           ],
         ]),
-      );
+      ));
 }
 
-const int _capLines = 8;
-const int _capChars = 480;
+const int _capLines = 3;
+const int _capChars = 170;
 
 /// The preview of a long post, or null when it fits.
 String? groupPostPreview(String body) {
@@ -96,7 +102,7 @@ class _CappedProseState extends State<CappedProse> {
           behavior: HitTestBehavior.opaque,
           onTap: () => setState(() => _open = !_open),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 44, minWidth: 94),
+            constraints: const BoxConstraints(minHeight: 48, minWidth: 94),
             child: Align(
               alignment: Alignment.centerLeft,
               widthFactor: 1,

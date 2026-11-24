@@ -1261,6 +1261,13 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   String _agentName(String id) => groupMemberName(
       GroupMember.fromJson({'kind': 'agent', 'id': id}), _agents);
 
+  /// The agent's own name, shown on post headers; the mascot is the face.
+  String _agentFullName(String id) {
+    final a = _agents[id];
+    final n = a?.fullName.trim() ?? '';
+    return n.isEmpty ? _agentName(id) : n;
+  }
+
   /// The member a working line shows: typing first, then the first replying.
   String? _typingAgentId() {
     final store = widget.client.presence;
@@ -1782,10 +1789,15 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
           final showStamp = at != null &&
               (prevAt == null ||
                   !_sameDay(prevAt, at) ||
-                  (run.first &&
+                  (!kMobile &&
+                      run.first &&
                       at.difference(prevAt).abs() >=
                           const Duration(minutes: 15)));
           final stamp = showStamp ? _dayTimeStamp(at) : null;
+          // The header carries a time only after a 10 minute gap.
+          final headerTime = at != null &&
+              (prevAt == null ||
+                  at.difference(prevAt).abs() >= const Duration(minutes: 10));
           final readLine = i == lastHumanIndex ? _readByLine(e) : null;
           return KeyedSubtree(
             key: ValueKey(rowId),
@@ -1802,6 +1814,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                     index: i,
                     run: run,
                     stamp: stamp,
+                    headerTime: headerTime,
                     readLine: readLine,
                     reactions: reactionsByTarget[e.eventId] ?? const [],
                   ),
@@ -1950,13 +1963,17 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     required int index,
     required ({bool first, bool last}) run,
     required (String, String)? stamp,
+    bool headerTime = true,
     required String? readLine,
     List<ReactionGroup> reactions = const [],
   }) {
     final sys = _systemText(e);
+    // Phone rhythm: 12 post to post, 28 run to run.
     final topGap = index == 0
         ? 0.0
-        : (run.first ? ChatColors.groupGap : ChatColors.runGap);
+        : kMobile
+            ? (run.first ? 28.0 : 12.0)
+            : (run.first ? ChatColors.groupGap : ChatColors.runGap);
     if (sys != null) {
       final at = _eventTime(e);
       final time = at == null ? null : _dayTimeStamp(at).$2;
@@ -1976,7 +1993,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (stamp != null) ChatSystemLine(stamp.$2, bold: stamp.$1),
+            if (stamp != null) _dayDivider(stamp),
             GroupNotice(
               text: sys,
               kind: kind,
@@ -2015,7 +2032,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         (!mine
             ? prose()
             : kMobile
-                ? ChatBubble(mine: mine, tail: run.last, child: body)
+                ? _yourBubble(body)
                 : ConstrainedBox(
                     constraints: BoxConstraints(
                         maxWidth: MediaQuery.sizeOf(context).width * 0.5),
@@ -2044,15 +2061,17 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         crossAxisAlignment:
             mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
-          if (stamp != null) ChatSystemLine(stamp.$2, bold: stamp.$1),
+          if (stamp != null) _dayDivider(stamp),
           if (!mine && run.first)
             Padding(
               padding: EdgeInsets.only(top: S.s2),
               child: GroupPostHeader(
                 agentId: e.actorId,
-                name: _agentName(e.actorId),
-                time: at == null ? null : _dayTimeStamp(at).$2,
-                lead: e.actorId == _group.lead,
+                name: _agentFullName(e.actorId),
+                mascot: _agentName(e.actorId),
+                time: at == null || !headerTime
+                    ? null
+                    : _dayTimeStamp(at).$2,
               ),
             ),
           _indented(
@@ -2121,6 +2140,31 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       ),
     );
   }
+
+  /// Your post on the phone: s2, radius 18, at most 80 percent of the width.
+  Widget _yourBubble(Widget body) => ConstrainedBox(
+        constraints: BoxConstraints(
+            maxWidth: (MediaQuery.sizeOf(context).width - 32) * 0.8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.surface2,
+            borderRadius: BorderRadius.circular(R.of(18)),
+          ),
+          child: DefaultTextStyle.merge(
+              style: sans(15, height: 22 / 15, color: AppColors.fg1),
+              child: body),
+        ),
+      );
+
+  /// Phone: the day alone, one 12pt line, 16 above and below.
+  Widget _dayDivider((String, String) stamp) => kMobile
+      ? Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Center(
+              child: Text(stamp.$1,
+                  style: sans(12, color: AppColors.fg3, tabular: true))))
+      : ChatSystemLine(stamp.$2, bold: stamp.$1);
 
   // Cards share the bubbles' lane: same avatar column, same width cap.
   Widget _rowFor({

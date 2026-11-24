@@ -4,48 +4,66 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'chat_style.dart';
 
-/// An iMessage-style cluster of agent discs inside a circle of [size].
+/// The group mark (G1): the lead face with a member count badge.
 ///
-/// One id is a single disc; two overlap diagonally; three or more sit in a
-/// triangle, and past three members the last slot counts the rest as '+N'.
+/// A single id is a plain disc; two or more show the first face and the
+/// count of everyone in the group, you included, in a small s3 badge.
 class AgentCluster extends StatelessWidget {
-  const AgentCluster({super.key, required this.ids, required this.size});
+  const AgentCluster(
+      {super.key, required this.ids, required this.size, this.count});
 
   final List<String> ids;
   final double size;
+
+  /// Members shown on the badge; defaults to the agents plus you.
+  final int? count;
 
   @override
   Widget build(BuildContext context) {
     if (ids.length < 2) {
       return AgentDisc(id: ids.isEmpty ? '' : ids.first, size: size);
     }
-    if (ids.length == 2) {
-      final d = size * 0.62;
-      return SizedBox.square(
+    final n = count ?? ids.length + 1;
+    return Semantics(
+      label: 'Group, $n members',
+      excludeSemantics: true,
+      child: SizedBox.square(
         dimension: size,
-        child: Stack(children: [
-          Positioned(left: 0, top: 0, child: AgentDisc(id: ids[0], size: d)),
-          Positioned(
-              right: 0,
-              bottom: 0,
-              child: AgentDisc(id: ids[1], size: d, ring: true)),
+        child: Stack(clipBehavior: Clip.none, children: [
+          Positioned.fill(
+              child: ClipOval(child: AgentMochi(ids.first, size: size))),
+          if (size >= 20)
+            Positioned(
+                right: -size * 0.06,
+                bottom: -size * 0.06,
+                child: _CountBadge(count: n, size: size)),
         ]),
-      );
-    }
-    final d = size * 0.5;
-    final overflow = ids.length > 3;
-    Widget slot(int i) {
-      if (overflow && i == 2) return _MoreDisc(count: ids.length - 2, size: d);
-      return AgentDisc(id: ids[i], size: d, ring: i > 0);
-    }
+      ),
+    );
+  }
+}
 
-    return SizedBox.square(
-      dimension: size,
-      child: Stack(children: [
-        Positioned(left: size * 0.25, top: size * 0.04, child: slot(0)),
-        Positioned(left: 0, top: size * 0.46, child: slot(1)),
-        Positioned(left: size * 0.5, top: size * 0.46, child: slot(2)),
-      ]),
+class _CountBadge extends StatelessWidget {
+  const _CountBadge({required this.count, required this.size});
+
+  final int count;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final d = (size * 0.42).clamp(12.0, 20.0);
+    return Container(
+      width: d,
+      height: d,
+      decoration: BoxDecoration(
+        color: AppColors.surface3,
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.bg, width: 2),
+      ),
+      alignment: Alignment.center,
+      child: Text('$count',
+          maxLines: 1,
+          style: sans(d * 0.55, weight: W.label, color: AppColors.fg1)),
     );
   }
 }
@@ -72,11 +90,17 @@ class _MoreDisc extends StatelessWidget {
 
 /// The quiet group mark: a rounded square with the people glyph in fg2.
 class GroupGlyph extends StatelessWidget {
-  const GroupGlyph({super.key, required this.size});
+  const GroupGlyph({super.key, required this.size, this.ids, this.count});
   final double size;
 
+  /// The group's agents: with them the glyph is the G1 face plus count.
+  final List<String>? ids;
+  final int? count;
+
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => (ids?.length ?? 0) >= 2
+      ? AgentCluster(ids: ids!, size: size, count: count)
+      : Container(
         width: size,
         height: size,
         alignment: Alignment.center,
