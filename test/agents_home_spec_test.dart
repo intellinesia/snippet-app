@@ -140,8 +140,11 @@ void main() {
           expect(t.getSize(find.byWidget(r.widget)).width, w);
         }
         expect(find.byType(MarkRow).evaluate().length, lessThanOrEqualTo(4));
-        final title = t.widget<Text>(find.text('Agents').first);
-        expect(title.style!.fontSize, 28);
+        final sizes = [
+          for (final e in find.text('Agents').evaluate())
+            (e.widget as Text).style!.fontSize
+        ];
+        expect(sizes, contains(28));
         report.add(
             'HOME w=$w s=$scale card=$c0 ask=$ask footer=$foot search=$search');
         sem.dispose();

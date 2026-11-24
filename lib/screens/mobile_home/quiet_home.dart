@@ -12,6 +12,7 @@ import '../session_list_row.dart' show sessionNeedsYou;
 import '../shell_nav.dart' show sessionBusy;
 import '../../pins.dart';
 import 'agents_home.dart';
+import 'lead_phone.dart';
 import 'home_data.dart';
 import 'home_style.dart' show homeAge;
 import 'needs_you_pager.dart' show askText;
@@ -313,6 +314,18 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
 
     final f = _filter;
     final body = <Widget>[];
+    final delegating = [
+      for (final s in w.sessions)
+        if (s.ownerAgentId == 'lead' &&
+            s.workerAgentId != null &&
+            !s.settled &&
+            sessionBusy(s))
+          s
+    ];
+    if (f == HomeFilter.all && delegating.isNotEmpty && w.onOpenLead != null) {
+      body.add(LeadHomeCard(
+          running: delegating.length, onTap: () => w.onOpenLead!()));
+    }
     if (f == HomeFilter.all || f == HomeFilter.needs) {
       if (pager.isNotEmpty) {
         body.add(const SizedBox(height: 16));

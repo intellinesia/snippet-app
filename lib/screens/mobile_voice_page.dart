@@ -13,7 +13,8 @@ import '../models.dart';
 import '../swr.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import 'mobile_home/agents_home.dart' show PushedBar;
+import 'mobile_home/agents_home.dart' show PushedBar, BarIcon;
+import 'mobile_home/autonomy_phone.dart';
 import '../chat_scene.dart' show SceneBackdrop;
 import '../tap_detector.dart';
 
@@ -247,7 +248,16 @@ class _MobileVoicePageState extends State<MobileVoicePage>
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               PushedBar(
-                  title: 'Lead ambient', onBack: _pop),
+                  title: 'Lead ambient',
+                  onBack: _pop,
+                  actions: [
+                    if (widget.client != null)
+                      BarIcon('sliders', 'Autonomy', () {
+                        Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) =>
+                                AutonomyPhonePage(client: widget.client!)));
+                      }),
+                  ]),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
