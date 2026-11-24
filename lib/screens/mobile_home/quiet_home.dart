@@ -367,7 +367,7 @@ class _StartGroup extends StatelessWidget {
   final VoidCallback? onNew;
 
   @override
-  Widget build(BuildContext context) => Padding(
+  Widget build(BuildContext context) => ToastAvoid(child: Padding(
         padding: EdgeInsets.symmetric(horizontal: S.s16),
         child: Container(
           decoration: BoxDecoration(
@@ -393,7 +393,7 @@ class _StartGroup extends StatelessWidget {
             ),
           ]),
         ),
-      );
+      ));
 }
 
 class _Ask extends StatefulWidget {

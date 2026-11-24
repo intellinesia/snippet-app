@@ -5,6 +5,7 @@ import 'package:snippet/api.dart';
 import 'package:snippet/canvas/canvas_screen.dart';
 import 'package:snippet/mochi.dart';
 import 'package:snippet/models.dart';
+import 'package:snippet/quiet.dart' show QuietRow;
 import 'package:snippet/tap_detector.dart';
 import 'package:snippet/notification_card.dart';
 import 'package:snippet/notification_popovers.dart';
@@ -58,6 +59,9 @@ void main() {
             find.bySemanticsLabel('Settings'),
             find.ancestor(
                 of: find.byType(AgentMochi), matching: find.byType(TapDetector)),
+            find.ancestor(
+                of: find.text('Ask Lead what is next'),
+                matching: find.byType(QuietRow)),
           ],
     ),
     'artifacts': (
