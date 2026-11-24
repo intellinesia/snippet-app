@@ -167,7 +167,7 @@ class ChatBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Agent replies are plain prose on the canvas; yours sits on s2.
-    if (!mine && color == null) {
+    if (!mine && color == null && !kMobile) {
       return ChatBubbleFill(
         fill: AppColors.bg,
         child: Builder(
@@ -179,9 +179,14 @@ class ChatBubble extends StatelessWidget {
         ),
       );
     }
-    final fill = color ?? (mine ? AppColors.surface2 : ChatColors.received);
+    // Phone spec: user surface3, agent surface1, padding 12 x 11, no tail.
+    final fill = color ??
+        (kMobile
+            ? (mine ? AppColors.surface3 : AppColors.surface1)
+            : (mine ? AppColors.surface2 : ChatColors.received));
     final h = kMobile ? 12.0 : 11.0;
-    final v = kMobile ? 8.0 : 6.0;
+    final v = kMobile ? 11.0 : 6.0;
+    final tailPad = kMobile ? 0.0 : _tailW;
     if (flat && !kMobile) {
       return ChatBubbleFill(
         fill: fill,
@@ -210,13 +215,16 @@ class ChatBubble extends StatelessWidget {
               color: fill,
               mine: mine,
               tail: false,
-              radius: ChatColors.radius),
+              radius: ChatColors.radius,
+              tailW: tailPad),
           child: Padding(
             padding: EdgeInsets.fromLTRB(
-                h + (!mine ? _tailW : 0), v, h + (mine ? _tailW : 0), v + 1),
+                h + (!mine ? tailPad : 0), v, h + (mine ? tailPad : 0), v),
             child: DefaultTextStyle.merge(
               style: chatText(mine: mine, context: bubbleCtx),
-              textWidthBasis: TextWidthBasis.longestLine,
+              // A wrapped bubble fills its cap, not the longest line.
+              textWidthBasis:
+                  kMobile ? TextWidthBasis.parent : TextWidthBasis.longestLine,
               child: child,
             ),
           ),
@@ -231,8 +239,10 @@ class _BubblePainter extends CustomPainter {
       {required this.color,
       required this.mine,
       required this.tail,
-      required this.radius});
+      required this.radius,
+      this.tailW = ChatBubble._tailW});
 
+  final double tailW;
   final Color color;
   final bool mine;
   final bool tail;
@@ -241,7 +251,7 @@ class _BubblePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = color;
-    const t = ChatBubble._tailW;
+    final t = tailW;
     final w = size.width;
     final h = size.height;
     final r = math.min(radius, h / 2);
@@ -283,10 +293,15 @@ class _BubblePainter extends CustomPainter {
       old.color != color ||
       old.mine != mine ||
       old.tail != tail ||
-      old.radius != radius;
+      old.radius != radius ||
+      old.tailW != tailW;
 }
 
-/// Caps a bubble's width at [ChatColors.maxShare] of the transcript and aligns it.
+/// Bubble caps as fractions of the content width (viewport minus 32).
+const double kUserBubbleShare = 0.79;
+const double kAgentBubbleShare = 0.88;
+
+/// Caps a bubble's width (user 0.79, agent 0.88 of content) and aligns it.
 class ChatBubbleRow extends StatelessWidget {
   const ChatBubbleRow({
     super.key,
@@ -314,8 +329,9 @@ class ChatBubbleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(builder: (_, box) {
-        final max =
-            box.maxWidth.isFinite ? box.maxWidth * ChatColors.maxShare : 520.0;
+        // One cap everywhere: user 0.79 W, agent 0.88 W, cards the whole W.
+        final share = fill ? 1.0 : (mine ? kUserBubbleShare : kAgentBubbleShare);
+        final max = box.maxWidth.isFinite ? box.maxWidth * share : 520.0;
         final bubble = fill
             ? SizedBox(width: max, child: child)
             : ConstrainedBox(

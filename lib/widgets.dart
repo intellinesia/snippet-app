@@ -1874,8 +1874,11 @@ class Bubble extends StatelessWidget {
         styleSheet: chatMarkdownStyle(context, mine: false),
       );
       final body = selectable && !kMobile ? SelectionArea(child: reply) : reply;
-      final bubble = ChatBubbleRow(
-          mine: false, child: ChatBubble(mine: false, child: body));
+      // Long prose reads without a bubble, at the full content width.
+      final bubble = shown.length > 600
+          ? SizedBox(width: double.infinity, child: body)
+          : ChatBubbleRow(
+              mine: false, child: ChatBubble(mine: false, child: body));
       return Padding(
         padding: EdgeInsets.symmetric(vertical: S.s2),
         child: onLongPress != null

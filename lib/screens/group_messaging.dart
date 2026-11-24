@@ -2142,7 +2142,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
             LayoutBuilder(
               builder: (_, box) {
                 final max = box.maxWidth.isFinite
-                    ? box.maxWidth * ChatColors.maxShare
+                    ? box.maxWidth
                     : 520.0;
                 return Padding(
                   padding: EdgeInsets.only(

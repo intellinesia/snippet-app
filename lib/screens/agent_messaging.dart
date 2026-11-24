@@ -1693,7 +1693,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                       card is DecidedCard ||
                       card is AgentQuestionsCard
                   ? keyedCard
-                  : ChatBubbleRow(mine: false, child: keyedCard))
+                  : ChatBubbleRow(mine: false, fill: true, child: keyedCard))
               : card is DeskApprovalCard ||
                       card is DecidedCard ||
                       card is AgentQuestionsCard
@@ -1844,7 +1844,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
             LayoutBuilder(
               builder: (_, box) {
                 final max = box.maxWidth.isFinite
-                    ? box.maxWidth * ChatColors.maxShare
+                    ? box.maxWidth
                     : 520.0;
                 return Align(
                   alignment:

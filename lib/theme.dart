@@ -302,7 +302,7 @@ final _quietLight = _palette(
   fg4: const Color(0xFFA8A8A0),
   ok: const Color(0xFF55554F),
   run: const Color(0xFF8A5A00),
-  danger: const Color(0xFFA33A31),
+  danger: const Color(0xFFB3261E),
   diffAddFg: const Color(0xFF2E6A45),
   diffDelFg: const Color(0xFF9A3B33),
   diffAddBg: const Color(0xFFE8F1EA),
@@ -912,8 +912,15 @@ class AppColors {
   static Color get line => currentTheme.border;
   static Color get lineStrong => currentTheme.border2;
 
-  static Color get scrim => const Color(0xFF000000)
-      .withValues(alpha: ThemeManager.instance.resolved.translucency.scrim);
+  // Spec: dark rgba(0,0,0,0.58); light rgba(20,20,18,0.36) so paper stays warm.
+  static Color get scrim => ThemeManager.instance.resolved.translucency.scrim ==
+              0.6 &&
+          currentTheme.bg.computeLuminance() > 0.18
+      ? const Color(0x5C141412)
+      : const Color(0xFF000000).withValues(
+          alpha: ThemeManager.instance.resolved.translucency.scrim == 0.6
+              ? 0.58
+              : ThemeManager.instance.resolved.translucency.scrim);
   // Lighter, so a glass sheet still shows the page through its blur.
   static Color get glassScrim => const Color(0xFF000000).withValues(
       alpha: ThemeManager.instance.resolved.translucency.glassScrim);
