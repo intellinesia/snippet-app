@@ -14,7 +14,7 @@ export 'desktop_composer.dart';
 
 /// The one composer surface: a 52px Duet pill, attach | field | trailing
 /// controls. The field grows upward and the controls stay on the last line.
-class ComposerCard extends StatelessWidget {
+class ComposerCard extends StatefulWidget {
   const ComposerCard({
     super.key,
     required this.field,
@@ -55,11 +55,23 @@ class ComposerCard extends StatelessWidget {
         hintText: hint,
         hintMaxLines: 1,
         hintStyle: (style ?? TS.body()).copyWith(
-            color: hintColor ?? AppColors.fg3,
-            overflow: TextOverflow.ellipsis),
+            color: hintColor ?? AppColors.fg3, overflow: TextOverflow.ellipsis),
       );
 
-  bool _compact(double width, String draft) {
+  static bool _wraps(double width, String draft, BuildContext context) {
+    if (draft.isEmpty) return false;
+    if (draft.contains('\n')) return true;
+    final p = TextPainter(
+      text: TextSpan(text: draft, style: fieldStyle),
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    // Room beside attach (48) and voice plus send (96).
+    return p.width > width - 8 - 48 - 96 - 8;
+  }
+
+  static bool _compact(double width, String draft) {
     if (width < 380) return true;
     if (draft.isEmpty || draft.contains('\n')) return false;
     final p = TextPainter(
@@ -71,17 +83,61 @@ class ComposerCard extends StatelessWidget {
   }
 
   @override
+  State<ComposerCard> createState() => _ComposerCardState();
+}
+
+class _ComposerCardState extends State<ComposerCard> {
+  // Keeps the field's state when the layout flips between one line and many.
+  final _fieldKey = GlobalKey();
+
+  ComposerCard get _w => widget;
+
+  @override
   Widget build(BuildContext context) {
+    final field = KeyedSubtree(key: _fieldKey, child: _w.field);
+    final banner = _w.banner,
+        attach = _w.attach,
+        trailing = _w.trailing,
+        mic = _w.mic,
+        send = _w.send,
+        text = _w.text,
+        highlight = _w.highlight;
     final pill = ComposerPillSurface(
       highlight: highlight,
       child: LayoutBuilder(
         builder: (context, box) => ValueListenableBuilder<TextEditingValue>(
           valueListenable: text ?? ValueNotifier(TextEditingValue.empty),
           builder: (context, v, _) {
-            final compact = _compact(box.maxWidth, v.text);
+            final compact = ComposerCard._compact(box.maxWidth, v.text);
             Widget inSlot(Widget w) => ConstrainedBox(
                 constraints: BoxConstraints(minHeight: C7.btn),
                 child: Center(child: w));
+            // Phone: past one line the field takes the width and the controls
+            // drop to a footer row (attach, chips, voice, send).
+            if (kMobile && ComposerCard._wraps(box.maxWidth, v.text, context)) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (banner != null)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 4, 8, 2),
+                      child: banner,
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 1, 10, 0),
+                    child: field,
+                  ),
+                  Row(children: [
+                    if (attach != null) inSlot(attach),
+                    if (trailing != null) inSlot(trailing(false)),
+                    const Spacer(),
+                    if (mic != null) inSlot(mic),
+                    inSlot(send),
+                  ]),
+                ],
+              );
+            }
             return Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -89,12 +145,12 @@ class ComposerCard extends StatelessWidget {
                 if (banner != null)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(8, 4, 8, 2),
-                    child: banner!,
+                    child: banner,
                   ),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    if (attach != null) inSlot(attach!),
+                    if (attach != null) inSlot(attach),
                     Expanded(
                       child: ConstrainedBox(
                         constraints: BoxConstraints(minHeight: C7.btn),
@@ -102,8 +158,8 @@ class ComposerCard extends StatelessWidget {
                             alignment: Alignment.centerLeft, child: field),
                       ),
                     ),
-                    if (trailing != null) inSlot(trailing!(compact)),
-                    if (mic != null) inSlot(mic!),
+                    if (trailing != null) inSlot(trailing(compact)),
+                    if (mic != null) inSlot(mic),
                     const SizedBox(width: 4),
                     inSlot(send),
                   ],
@@ -116,7 +172,8 @@ class ComposerCard extends StatelessWidget {
     );
     return highlight
         ? pill
-        : Tactile(radius: BorderRadius.circular(radius), child: pill);
+        : Tactile(
+            radius: BorderRadius.circular(ComposerCard.radius), child: pill);
   }
 }
 
@@ -143,7 +200,8 @@ class ComposerIconButton extends StatelessWidget {
         child: SizedBox.square(
           dimension: C7.btn,
           child: Center(
-              child: AppIcon(icon, size: kMobile ? 20 : 22, color: color ?? AppColors.fg2)),
+              child: AppIcon(icon,
+                  size: kMobile ? 20 : 22, color: color ?? AppColors.fg2)),
         ),
       ),
     );

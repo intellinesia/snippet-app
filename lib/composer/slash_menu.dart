@@ -163,7 +163,6 @@ class SlashController extends ChangeNotifier {
       };
 
   bool get isOpen =>
-      !kMobile &&
       env != null &&
       (_sub != null || (!_dismissed && rootItems.isNotEmpty));
 
@@ -464,16 +463,24 @@ class SlashMenuView extends StatelessWidget {
       }
     }
     return Container(
-      width: 300,
+      // Phone: the full content width, above the composer, 6 rows then scroll.
+      width: kMobile ? double.infinity : 300,
+      constraints: kMobile ? const BoxConstraints(maxHeight: 6 * 48 + 8) : null,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(kMobile ? 12 : 10),
       ),
-      child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: rows),
+      child: kMobile
+          ? SingleChildScrollView(
+              child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: rows))
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: rows),
     );
   }
 
@@ -506,11 +513,15 @@ class _Row extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
           child: Container(
-            height: 30,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            constraints: BoxConstraints(minHeight: kMobile ? 48 : 30),
+            padding: EdgeInsets.symmetric(horizontal: kMobile ? 12 : 8),
             decoration: BoxDecoration(
-              color: on ? AppColors.fg1.withValues(alpha: 0.07) : null,
-              borderRadius: BorderRadius.circular(6),
+              color: on
+                  ? (kMobile
+                      ? AppColors.surface3
+                      : AppColors.fg1.withValues(alpha: 0.07))
+                  : null,
+              borderRadius: BorderRadius.circular(kMobile ? 8 : 6),
             ),
             child: Row(children: [
               if (icon != null) ...[
@@ -521,7 +532,7 @@ class _Row extends StatelessWidget {
               Expanded(
                   child: Text(label,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(12.5, color: AppColors.fg2))),
+                      style: sans(kMobile ? 13 : 12.5, color: AppColors.fg2))),
               right,
             ]),
           ),

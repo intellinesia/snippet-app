@@ -74,8 +74,17 @@ void main() {
         expect(back.size, const Size(48, 48));
         expect(more.size, const Size(48, 48));
         expect(t.takeException(), isNull);
-        debugDefaultTargetPlatformOverride = null;
         expect(typed, isFalse);
+        // Three lines: the controls drop to a footer row, the pill grows.
+        input.text = 'one\ntwo\nthree';
+        await t.pump(const Duration(milliseconds: 400));
+        final tall = t.getRect(find.byType(ComposerPillSurface));
+        // ignore: avoid_print
+        print('W $vw x$scale three lines pill height=${tall.height}');
+        expect(tall.height, greaterThan(100));
+        expect(t.getRect(find.byType(ComposerSendButton)).size, const Size(48, 48));
+        expect(t.takeException(), isNull);
+        debugDefaultTargetPlatformOverride = null;
       });
     }
   }

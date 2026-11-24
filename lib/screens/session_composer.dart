@@ -982,7 +982,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
           ),
         if (_heldQueue.isNotEmpty) _queuedCard(),
         if (_mentionQuery != null && !_isLead) _mentionList(),
-        if (!kMobile) SlashMenuPopover(controller: _slash),
+        SlashMenuPopover(controller: _slash),
         if (top != null) top,
       ],
       attachments: () => _attachments.isNotEmpty ? _attachmentBar() : null,

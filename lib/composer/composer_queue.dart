@@ -81,9 +81,15 @@ class ComposerQueueList extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(6, 4, 6, 6),
               child: Row(children: [
                 Expanded(
-                  child: Text('$n queued · sent in order when this turn ends',
+                  child: Text(
+                      kMobile
+                          ? 'Queued $n, sent after this run'
+                          : '$n queued · sent in order when this turn ends',
                       maxLines: 2,
-                      style: sans(14, height: 19 / 14, color: AppColors.fg3)),
+                      style: kMobile
+                          ? sans(11.5,
+                              weight: W.label, height: 16 / 11.5, color: AppColors.fg3)
+                          : sans(14, height: 19 / 14, color: AppColors.fg3)),
                 ),
                 link('Clear', onClear, AppColors.fg2),
                 link('Send all now', onSendAll, AppColors.accent, strong: true),
@@ -103,11 +109,16 @@ class ComposerQueueList extends StatelessWidget {
 
   Widget _row(int i, int n, ComposerQueueEntry e) {
     return Container(
-      color: C7.row,
-      constraints: const BoxConstraints(minHeight: 56),
-      padding: const EdgeInsets.fromLTRB(14, 6, 4, 6),
+      decoration: BoxDecoration(
+          color: kMobile ? AppColors.surface3 : C7.row,
+          borderRadius: BorderRadius.circular(kMobile ? 8 : 0)),
+      constraints: BoxConstraints(minHeight: kMobile ? 48 : 56),
+      padding: EdgeInsets.fromLTRB(kMobile ? 10 : 14, 6, 4, 6),
       child: Row(children: [
-        if (n > 1) ...[
+        if (kMobile) ...[
+          AppIcon('grip', size: 16, color: AppColors.fg3),
+          const SizedBox(width: 10),
+        ] else if (n > 1) ...[
           SizedBox(
             width: 12,
             child: Text('${i + 1}', style: codeMono(12, color: AppColors.fg4)),
@@ -123,8 +134,8 @@ class ComposerQueueList extends StatelessWidget {
               Text(e.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(15,
-                      height: 20 / 15,
+                  style: sans(kMobile ? 14 : 15,
+                      height: 20 / (kMobile ? 14 : 15),
                       color: e.muted ? AppColors.fg3 : AppColors.fg1)),
               if (n == 1)
                 Text('Queued · sent when this turn ends',
