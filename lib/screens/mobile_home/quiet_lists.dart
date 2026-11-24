@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 
 import '../../api.dart';
 import '../../crew_status.dart';
-import '../../menu_widgets.dart' show relativeTime;
 import '../../mochi.dart';
 import '../../models.dart';
 import '../../quiet.dart';
@@ -41,10 +40,12 @@ class _QuietTasksScreenState extends State<QuietTasksScreen> {
   Future<void> _load() async {
     try {
       final t = await widget.client.tasks();
-      if (mounted) setState(() {
-        _tasks = t;
-        _error = null;
-      });
+      if (mounted) {
+        setState(() {
+          _tasks = t;
+          _error = null;
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => _error = '$e');
     }
@@ -141,7 +142,8 @@ class _QuietTasksScreenState extends State<QuietTasksScreen> {
       }
     }
     children.add(SizedBox(height: S.s24));
-    return RefreshIndicator(onRefresh: _load, child: ListView(children: children));
+    return RefreshIndicator(
+        onRefresh: _load, child: ListView(children: children));
   }
 }
 
@@ -192,8 +194,8 @@ class _QuietAgentsScreenState extends State<QuietAgentsScreen> {
     final q = _q.text.trim().toLowerCase();
     final rows = agentRows(widget.agents, widget.sessions);
     final all = [...rows.needs, ...rows.working, ...rows.asleep]
-        .where((r) =>
-            q.isEmpty || r.agent.displayName.toLowerCase().contains(q))
+        .where(
+            (r) => q.isEmpty || r.agent.displayName.toLowerCase().contains(q))
         .toList();
     final groups = sortedGroups(_groups)
         .where((g) => q.isEmpty || g.title.toLowerCase().contains(q))
@@ -256,14 +258,14 @@ class _QuietAgentsScreenState extends State<QuietAgentsScreen> {
             sub: names(g),
             face: g.agentIds.isEmpty
                 ? AppIcon('users', size: 22, color: AppColors.fg2)
-                : GroupGlyph(size: 40, ids: g.agentIds, count: g.members.length),
+                : GroupGlyph(
+                    size: 40, ids: g.agentIds, count: g.members.length),
             onTap: () =>
                 openGroupThread(context, client: widget.client, group: g),
           ),
       ],
       QuietSectionLabel('Agents', count: all.length),
-      for (final r in all)
-        _agentLine(r, sessionsOf(r.agent)),
+      for (final r in all) _agentLine(r, sessionsOf(r.agent)),
       SizedBox(height: S.s24),
     ]);
   }
@@ -367,8 +369,8 @@ class _QuietAgentsScreenState extends State<QuietAgentsScreen> {
           child: Container(
               width: 6,
               height: 6,
-              decoration:
-                  BoxDecoration(color: AppColors.fg2, shape: BoxShape.circle))));
+              decoration: BoxDecoration(
+                  color: AppColors.fg2, shape: BoxShape.circle))));
 }
 
 /// A 64pt list line: 40pt face, title, a quiet status line, trailing meta.
@@ -407,7 +409,8 @@ class AgentListLine extends StatelessWidget {
                 SizedBox.square(
                   dimension: 40,
                   child: Center(
-                      child: face ?? ClipOval(child: AgentMochi(id ?? '', size: 40))),
+                      child: face ??
+                          ClipOval(child: AgentMochi(id ?? '', size: 40))),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -422,7 +425,10 @@ class AgentListLine extends StatelessWidget {
                                 weight: W.label, color: AppColors.fg1)),
                         const SizedBox(height: 2),
                         Row(children: [
-                          if (mark != null) ...[mark!, const SizedBox(width: 4)],
+                          if (mark != null) ...[
+                            mark!,
+                            const SizedBox(width: 4)
+                          ],
                           Flexible(
                             child: Text(sub,
                                 maxLines: 1,

@@ -255,8 +255,9 @@ class ModalGlass extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final anim = ModalRoute.of(context)?.animation;
-    if (anim == null || !Glass.effectiveEnabled || _phone(context))
+    if (anim == null || !Glass.effectiveEnabled || _phone(context)) {
       return child;
+    }
     return Stack(fit: StackFit.passthrough, children: [
       Positioned.fill(
         child: IgnorePointer(

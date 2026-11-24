@@ -2,7 +2,6 @@ import '../../chat/agent_cluster.dart';
 import 'package:flutter/material.dart';
 
 import '../../crew_status.dart';
-import '../../menu_widgets.dart' show relativeTime, showAppMenu, appMenuItem;
 import '../../mochi.dart';
 import '../../models.dart';
 import '../../quiet.dart';
@@ -224,7 +223,8 @@ class QuietHomeScreen extends StatelessWidget {
                 if (askers.contains(id))
                   ((names[id] ?? '').trim().isEmpty ? id : names[id]!)
             ].join(', ')}',
-            leading: GroupGlyph(size: 28, ids: g.agentIds, count: g.members.length),
+            leading:
+                GroupGlyph(size: 28, ids: g.agentIds, count: g.members.length),
             trailing: const QuietHand(size: 14),
             onTap: onOpenGroup == null ? null : () => onOpenGroup!(g),
           ),
@@ -250,7 +250,8 @@ class QuietHomeScreen extends StatelessWidget {
             QuietRow(
               title: g.title.isEmpty ? 'Group' : g.title,
               sub: '${g.members.length} members',
-              leading: GroupGlyph(size: 28, ids: g.agentIds, count: g.members.length),
+              leading: GroupGlyph(
+                  size: 28, ids: g.agentIds, count: g.members.length),
               onTap: onOpenGroup == null ? null : () => onOpenGroup!(g),
             ),
         ],

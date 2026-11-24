@@ -14,7 +14,6 @@ import 'api.dart';
 import 'gesture_physics.dart';
 import 'platform.dart';
 import 'screens/file_viewer.dart';
-import 'menu_widgets.dart';
 import 'theme.dart';
 import 'tool_sheet.dart';
 import 'widgets.dart';
@@ -1050,20 +1049,20 @@ class _ImageViewerState extends State<_ImageViewer>
           child: ClipRRect(
             borderRadius: BorderRadius.circular(kMobile ? R.of(10) : 0),
             child: Image(
-            image: ResizeImage.resizeIfNeeded(
-              (size.width * dpr).round().clamp(720, 2400),
-              null,
-              widget.client.imageProvider(widget.paths[i]),
-            ),
-            fit: BoxFit.contain,
-            // The client fetch reports no progress, so wait on the first frame.
-            frameBuilder: (_, child, frame, sync) => sync || frame != null
-                ? child
-                : Center(
-                    child: Text('Loading image',
-                        style: sans(13, color: _ink.withValues(alpha: 0.7)))),
-            errorBuilder: (_, __, ___) => Text("Can't load this image",
-                style: sans(13, color: _ink.withValues(alpha: 0.7))),
+              image: ResizeImage.resizeIfNeeded(
+                (size.width * dpr).round().clamp(720, 2400),
+                null,
+                widget.client.imageProvider(widget.paths[i]),
+              ),
+              fit: BoxFit.contain,
+              // The client fetch reports no progress, so wait on the first frame.
+              frameBuilder: (_, child, frame, sync) => sync || frame != null
+                  ? child
+                  : Center(
+                      child: Text('Loading image',
+                          style: sans(13, color: _ink.withValues(alpha: 0.7)))),
+              errorBuilder: (_, __, ___) => Text("Can't load this image",
+                  style: sans(13, color: _ink.withValues(alpha: 0.7))),
             ),
           ),
         ),
@@ -1076,7 +1075,9 @@ class _ImageViewerState extends State<_ImageViewer>
 
   void _toggleZoom() {
     final z = _zoomFor(_index);
-    z.value = _zoomed ? Matrix4.identity() : (Matrix4.identity()..scale(2.0));
+    z.value = _zoomed
+        ? Matrix4.identity()
+        : (Matrix4.identity()..scaleByDouble(2.0, 2.0, 1.0, 1.0));
     setState(() => _wasZoomed = _zoomed);
   }
 
@@ -1161,9 +1162,7 @@ class _ImageViewerState extends State<_ImageViewer>
                           textAlign: TextAlign.center,
                           overflow: TextOverflow.ellipsis,
                           style: sans(15,
-                              height: 20 / 15,
-                              weight: W.label,
-                              color: _ink)),
+                              height: 20 / 15, weight: W.label, color: _ink)),
                     ),
                   ),
                   _bar('share', 'Share', _share),
@@ -1224,9 +1223,8 @@ class _ImageViewerState extends State<_ImageViewer>
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(R.of(8)),
                                 border: Border.all(
-                                    color: i == _index
-                                        ? _ink
-                                        : Colors.transparent,
+                                    color:
+                                        i == _index ? _ink : Colors.transparent,
                                     width: 2),
                               ),
                               child: ClipRRect(
@@ -1277,8 +1275,7 @@ class _ImageViewerState extends State<_ImageViewer>
           child: SizedBox(
               width: 48,
               height: 48,
-              child:
-                  Center(child: AppIcon(icon, size: 22, color: _ink))),
+              child: Center(child: AppIcon(icon, size: 22, color: _ink))),
         ),
       );
 }

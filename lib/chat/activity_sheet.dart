@@ -15,8 +15,7 @@ import '../theme.dart';
 import '../tool_activity.dart';
 import '../tool_sheet.dart' show ToolBatch;
 import '../tool_views.dart';
-import '../transcript.dart'
-    show TerminalBlock, isLookupStep, isSearchStep;
+import '../transcript.dart' show TerminalBlock, isLookupStep, isSearchStep;
 import '../widgets.dart';
 import 'activity_dock.dart';
 import '../tap_detector.dart';
@@ -240,26 +239,25 @@ class _ListPage extends StatelessWidget {
         // "Activity", then one meta line in words; no pill.
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
-          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Semantics(
-                  header: true,
-                  child: Text('Activity',
-                      style: sans(17, weight: W.title, color: AppColors.fg1)),
-                ),
-                const SizedBox(height: 2),
-                if (batch.running && startedAt != null)
-                  _RunClock(startedAt!, steps: steps.length)
-                else
-                  Text(
-                      [
-                        'Done',
-                        '${steps.length} ${steps.length == 1 ? 'step' : 'steps'}',
-                        if (t != null) formatWorkDuration(t),
-                      ].join(' · '),
-                      style: sans(13, color: AppColors.fg3, tabular: true)),
-              ]),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Semantics(
+              header: true,
+              child: Text('Activity',
+                  style: sans(17, weight: W.title, color: AppColors.fg1)),
+            ),
+            const SizedBox(height: 2),
+            if (batch.running && startedAt != null)
+              _RunClock(startedAt!, steps: steps.length)
+            else
+              Text(
+                  [
+                    'Done',
+                    '${steps.length} ${steps.length == 1 ? 'step' : 'steps'}',
+                    if (t != null) formatWorkDuration(t),
+                  ].join(' · '),
+                  style: sans(13, color: AppColors.fg3, tabular: true)),
+          ]),
         ),
         Expanded(
           child: ListView(
@@ -392,8 +390,9 @@ List<String> _errorLines(ToolStep s) {
   final d = s.data;
   var text = (d?['stderr'] ?? '').toString();
   final err = s.result is Map ? (s.result as Map)['error'] : null;
-  if (text.trim().isEmpty && err is Map)
+  if (text.trim().isEmpty && err is Map) {
     text = (err['message'] ?? '').toString();
+  }
   if (text.trim().isEmpty) text = s.stdout;
   final lines = text
       .split('\n')
@@ -452,7 +451,8 @@ class _StepRow extends StatelessWidget {
                 text: '+${chip.added}', style: TextStyle(color: AppColors.ok)),
             TextSpan(
                 text: ' −${chip.removed}',
-                style: TextStyle(color: AppColors.fg1, fontWeight: FontWeight.w500)),
+                style: TextStyle(
+                    color: AppColors.fg1, fontWeight: FontWeight.w500)),
           ]),
           style: sans(12.5, tabular: true));
     } else if (chip != null) {
@@ -466,8 +466,9 @@ class _StepRow extends StatelessWidget {
               tabular: true));
     } else {
       final d = stepDuration(step);
-      if (d != null)
+      if (d != null) {
         meta = Text(d, style: sans(13, color: AppColors.fg3, tabular: true));
+      }
     }
     if (failed) {
       meta = Row(mainAxisSize: MainAxisSize.min, children: [
@@ -527,8 +528,7 @@ class _StepRow extends StatelessWidget {
                 child: Text(err.join('\n'),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style:
-                        codeMono(12.5, height: 1.6, color: AppColors.fg1)),
+                    style: codeMono(12.5, height: 1.6, color: AppColors.fg1)),
               ),
           ],
         ),
@@ -572,7 +572,8 @@ class _GroupRow extends StatelessWidget {
               TextSpan(text: '+$added', style: TextStyle(color: AppColors.ok)),
               TextSpan(
                   text: ' −$removed',
-                  style: TextStyle(color: AppColors.fg1, fontWeight: FontWeight.w500)),
+                  style: TextStyle(
+                      color: AppColors.fg1, fontWeight: FontWeight.w500)),
             ]),
             style: sans(13.5, tabular: true));
       }

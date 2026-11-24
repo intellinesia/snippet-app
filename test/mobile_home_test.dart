@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart' hide testWidgets;
-import 'package:flutter_test/flutter_test.dart' as flutter_test show testWidgets;
-import 'package:snippet/agent_character.dart';
+import 'package:flutter_test/flutter_test.dart' as flutter_test
+    show testWidgets;
 import 'package:snippet/api.dart';
 import 'package:snippet/ink.dart';
 import 'package:snippet/mochi.dart';
@@ -191,8 +191,7 @@ void main() {
 
     test('askHeadlineSpans italicises branch names and code tokens', () {
       const base = TextStyle(fontFamily: 'Literata', fontSize: 30);
-      final spans =
-          askHeadlineSpans('Push fix/handoff-sweep to origin?', base);
+      final spans = askHeadlineSpans('Push fix/handoff-sweep to origin?', base);
       final texts = [for (final s in spans.cast<TextSpan>()) s.text];
       final styles = [
         for (final s in spans.cast<TextSpan>()) s.style?.fontStyle
@@ -211,8 +210,9 @@ void main() {
     });
 
     test('every roster colour keeps high-contrast ink readable', () {
-      final j = jsonDecode(File('assets/avatars/roster.json').readAsStringSync())
-          as Map<String, dynamic>;
+      final j =
+          jsonDecode(File('assets/avatars/roster.json').readAsStringSync())
+              as Map<String, dynamic>;
       final colours = [
         for (final c in j['characters'] as List)
           CharacterSpec.fromJson(c as Map<String, dynamic>).color,
@@ -223,7 +223,8 @@ void main() {
       }
     });
 
-    test('sortedGroups orders most recent activity first and breaks ties by title',
+    test(
+        'sortedGroups orders most recent activity first and breaks ties by title',
         () {
       final groups = sortedGroups([
         _group('b', 'Bravo',
@@ -251,7 +252,8 @@ void main() {
       const names = {'crawler': 'Scraper Bot', 'rust': 'Rust PR Reviewer'};
       expect(groupMatchesQuery(gc, '', agentNames: names), isTrue);
       expect(groupMatchesQuery(gc, 'SCRAPPER', agentNames: names), isTrue);
-      expect(groupMatchesQuery(gc, 'proxy rotation', agentNames: names), isTrue);
+      expect(
+          groupMatchesQuery(gc, 'proxy rotation', agentNames: names), isTrue);
       expect(groupMatchesQuery(gc, 'crawler', agentNames: names), isTrue);
       expect(groupMatchesQuery(gc, 'PR Reviewer', agentNames: names), isTrue);
       expect(groupMatchesQuery(gc, 'unrelated', agentNames: names), isFalse);
@@ -329,7 +331,8 @@ void main() {
       for (var i = 0; i < 6; i++) _s('h$i'),
     ];
 
-    testWidgets('quiet state rests cleanly with bare top bar and Everyone handle',
+    testWidgets(
+        'quiet state rests cleanly with bare top bar and Everyone handle',
         (tester) async {
       await pumpHome(tester, [_s('h0')]);
       expect(find.text('Snippet'), findsOneWidget);
@@ -340,7 +343,8 @@ void main() {
       expect(find.text('Everyone'), findsOneWidget);
     });
 
-    testWidgets('busy state centres the top ask (even managed), Approve advances and 2 more cycles',
+    testWidgets(
+        'busy state centres the top ask (even managed), Approve advances and 2 more cycles',
         (tester) async {
       await pumpHome(tester, base);
       // The header status and the strip under the ask both say it.
@@ -392,7 +396,8 @@ void main() {
       expect(find.text('Deny'), findsNothing);
     });
 
-    test('folds default: Asleep open, Settled closed, search opens Settled', () {
+    test('folds default: Asleep open, Settled closed, search opens Settled',
+        () {
       expect(asleepOpenFor(null), isTrue);
       expect(asleepOpenFor(false), isFalse);
       expect(settledOpenFor(null), isFalse);
@@ -438,15 +443,22 @@ void main() {
 
     testWidgets('working state fits a 360 dp phone at large text',
         (tester) async {
-      await pumpHome(tester, [
-        _s('w1', extra: {
-          'status': 'running',
-          'running': true,
-          'worker_agent_id': 'snippet',
-          'plan': {'done': 1, 'total': 4, 'current': 'Design merged Wakes page (phone + desktop)'},
-        }),
-        _managed('m1', 'snippet', status: 'running'),
-      ], textScale: 1.3);
+      await pumpHome(
+          tester,
+          [
+            _s('w1', extra: {
+              'status': 'running',
+              'running': true,
+              'worker_agent_id': 'snippet',
+              'plan': {
+                'done': 1,
+                'total': 4,
+                'current': 'Design merged Wakes page (phone + desktop)'
+              },
+            }),
+            _managed('m1', 'snippet', status: 'running'),
+          ],
+          textScale: 1.3);
       tester.view.physicalSize = const Size(360, 740) * 3;
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.textContaining('is working'), findsOneWidget);
@@ -454,7 +466,8 @@ void main() {
       expect(find.text('Last result'), findsNothing);
       expect(tester.takeException(), isNull);
       final top = tester.getTopLeft(find.textContaining('is working')).dy;
-      final bar = tester.getBottomLeft(find.byKey(const ValueKey('home-stage-bar'))).dy;
+      final bar =
+          tester.getBottomLeft(find.byKey(const ValueKey('home-stage-bar'))).dy;
       expect(top, greaterThan(bar + 24));
     });
 
@@ -475,11 +488,10 @@ void main() {
       expect(find.text('Session m1'), findsNothing);
       expect(find.text('4 managed'), findsOneWidget);
       expect(find.text('1 managed'), findsNWidgets(2));
-      expect(find.bySemanticsLabel('Snippet, 4 managed sessions'),
-          findsOneWidget);
+      expect(
+          find.bySemanticsLabel('Snippet, 4 managed sessions'), findsOneWidget);
       // Composer stays on top of the Everyone sheet.
-      expect(find.byKey(const ValueKey('home-open-lead')),
-          findsOneWidget);
+      expect(find.byKey(const ValueKey('home-open-lead')), findsOneWidget);
 
       // Tapping the managed pill opens ManagedView with Running and Idle.
       await tester.tap(find.text('4 managed'));
@@ -504,7 +516,8 @@ void main() {
       expect(find.textContaining('0 managed'), findsNothing);
     });
 
-    testWidgets('Lead button sits inside composer left edge and opens Lead chat directly',
+    testWidgets(
+        'Lead button sits inside composer left edge and opens Lead chat directly',
         (tester) async {
       await pumpHome(tester, [_s('h0')]);
       final btn = find.byKey(const ValueKey('home-open-lead'));
@@ -512,14 +525,14 @@ void main() {
       final rect = tester.getRect(btn);
       expect(rect.width, inInclusiveRange(44, 52));
       expect(rect.height, inInclusiveRange(44, 52));
-      expect(find.bySemanticsLabel('Lead, open chat'),
-          findsOneWidget);
+      expect(find.bySemanticsLabel('Lead, open chat'), findsOneWidget);
       await tester.tap(btn);
       await tester.pump();
       expect(opened, ['lead']);
     });
 
-    testWidgets('controls are 44 to 52 high, at least 44 wide, and never overlap',
+    testWidgets(
+        'controls are 44 to 52 high, at least 44 wide, and never overlap',
         (tester) async {
       await pumpHome(tester, base);
       Rect rectOf(Finder f) => tester.getRect(f.first);
@@ -540,8 +553,8 @@ void main() {
       for (final e in boxes.entries) {
         expect(e.value.width, greaterThanOrEqualTo(44), reason: e.key);
         // The Everyone handle is a deliberately taller 64 pt pull zone.
-        expect(e.value.height,
-            inInclusiveRange(44, e.key == 'everyone' ? 64 : 52),
+        expect(
+            e.value.height, inInclusiveRange(44, e.key == 'everyone' ? 64 : 52),
             reason: e.key);
       }
       final keys = boxes.keys.toList();
@@ -566,7 +579,8 @@ void main() {
       final tap = find.descendant(
           of: find.byKey(const ValueKey('agent-row-snippet')),
           matching: find.byType(InkWell));
-      expect(tester.getRect(tap.first).right, lessThanOrEqualTo(pill.left + 0.5));
+      expect(
+          tester.getRect(tap.first).right, lessThanOrEqualTo(pill.left + 0.5));
     });
 
     testWidgets('at 1.3x text scale ask and Everyone sheet render cleanly',
@@ -631,7 +645,8 @@ void main() {
             'gc-1',
             'scrapper bois',
             agentIds: const ['snippet', 'rust'],
-            lastEventAt: _now.subtract(const Duration(minutes: 4)).toIso8601String(),
+            lastEventAt:
+                _now.subtract(const Duration(minutes: 4)).toIso8601String(),
             unread: 3,
             previewBody: 'Found 42 fresh leads',
           ),
@@ -689,7 +704,8 @@ void main() {
       expect(find.text('Groups'), findsOneWidget);
       expect(find.text('scrapper bois'), findsOneWidget);
       expect(find.text('release crew'), findsOneWidget);
-      expect(find.textContaining('Mobile Design is replying', findRichText: true),
+      expect(
+          find.textContaining('Mobile Design is replying', findRichText: true),
           findsOneWidget);
 
       final asleepY =

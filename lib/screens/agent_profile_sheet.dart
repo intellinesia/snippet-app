@@ -160,11 +160,16 @@ class _ProfileSheetState extends State<_ProfileSheet> {
         child: TapDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
-          child: SizedBox(
-            height: 48,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 48),
             child: Center(
+              widthFactor: 1,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
                 child:
-                    Text(text, style: sans(14, weight: W.label, color: color))),
+                    Text(text, style: sans(14, weight: W.label, color: color)),
+              ),
+            ),
           ),
         ),
       );

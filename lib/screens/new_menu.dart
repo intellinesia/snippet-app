@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../menu_widgets.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -94,7 +93,6 @@ String _parentOf(String path) {
   return parent.isEmpty ? '~' : parent;
 }
 
-
 /// The phone New sheet behind the one create button: Session, Agent, Group.
 Future<void> showNewSheet(
   BuildContext context, {
@@ -106,10 +104,10 @@ Future<void> showNewSheet(
     context,
     title: 'New',
     child: Column(mainAxisSize: MainAxisSize.min, children: [
-      _NewSheetRow(_NewAction.session, 'edit', 'Session',
-          'Start work with an agent'),
-      _NewSheetRow(_NewAction.agent, 'bot', 'Agent',
-          'Add an agent to your roster'),
+      _NewSheetRow(
+          _NewAction.session, 'edit', 'Session', 'Start work with an agent'),
+      _NewSheetRow(
+          _NewAction.agent, 'bot', 'Agent', 'Add an agent to your roster'),
       _NewSheetRow(
           _NewAction.group, 'users', 'Group', 'Bring agents into one thread'),
     ]),
@@ -157,8 +155,8 @@ class _NewSheetRow extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(label,
-                          style: sans(15,
-                              weight: W.label, color: AppColors.fg1)),
+                          style:
+                              sans(15, weight: W.label, color: AppColors.fg1)),
                       const SizedBox(height: 2),
                       Text(detail,
                           maxLines: 1,
@@ -171,4 +169,3 @@ class _NewSheetRow extends StatelessWidget {
         ),
       );
 }
-
