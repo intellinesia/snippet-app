@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'mobile_home/agent_work_phone.dart';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
@@ -89,6 +90,18 @@ void _presentRecords(BuildContext host, String title, String agentName,
 void openAgentRecordsPage(
     BuildContext host, String title, String agentName, Widget Function() view) {
   if (kMobile) {
+    final v = view();
+    final (c, id, n, tab) = switch (v) {
+      AgentInboxView() => (v.client, v.agentId, v.agentName, 0),
+      AgentBoardView() => (v.client, v.agentId, v.agentName, 1),
+      _ => (null, '', '', 0),
+    };
+    if (c != null) {
+      Navigator.of(host, rootNavigator: true).push<void>(AppPageRoute<void>(
+          builder: (_) => AgentWorkPage(
+              client: c, agentId: id, agentName: n, initialTab: tab)));
+      return;
+    }
     Navigator.of(host, rootNavigator: true).push<void>(AppPageRoute<void>(
         builder: (page) => _RecordsPage(
             title: title,
