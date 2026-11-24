@@ -1359,6 +1359,72 @@ class DaemonClient {
     return utf8.decode(r.bodyBytes, allowMalformed: true);
   }
 
+  /// GET /canvas/link?ref=<canvas:...> — resolve canvas card metadata.
+  Future<Map<String, dynamic>> canvasLink(String ref) async {
+    final r = await _get(_uri('/canvas/link', {'ref': ref}));
+    if (r.statusCode != 200) {
+      throw CanvasHttpException(r.statusCode, _err('load canvas link', r));
+    }
+    final decoded = jsonDecode(r.body);
+    if (decoded is! Map) {
+      throw const CanvasHttpException(502, 'Invalid canvas link response');
+    }
+    return decoded.cast<String, dynamic>();
+  }
+
+  /// GET /canvas/frames/{id}/layout.json — element bounding boxes in logical px.
+  Future<Map<String, dynamic>?> canvasFrameLayout(
+    String frameId, {
+    String? canvasId,
+    int? rev,
+  }) async {
+    final extra = <String, String>{
+      if (canvasId != null && canvasId.isNotEmpty) 'canvas_id': canvasId,
+      if (rev != null) 'rev': '$rev',
+    };
+    final r = await _get(
+      _uri(
+        '/canvas/frames/${Uri.encodeComponent(frameId)}/layout.json',
+        extra.isEmpty ? null : extra,
+      ),
+    );
+    if (r.statusCode == 404 || r.statusCode == 410) return null;
+    if (r.statusCode != 200) {
+      throw CanvasHttpException(r.statusCode, _err('load canvas layout', r));
+    }
+    final decoded = jsonDecode(r.body);
+    if (decoded is! Map) return null;
+    return decoded.cast<String, dynamic>();
+  }
+
+  /// Resolves a canvas thumbnail path or URL against [baseUrl], rejecting
+  /// cross-origin URLs and attaching [token] when not already signed.
+  Uri canvasAssetUri(String thumbUrl, {int? rev}) {
+    final base = Uri.parse(baseUrl);
+    final resolved = base.resolve(thumbUrl);
+    final sameOrigin = resolved.scheme == base.scheme &&
+        resolved.host == base.host &&
+        resolved.port == base.port;
+    if (!sameOrigin) {
+      throw const FormatException('Canvas asset URL must match daemon origin');
+    }
+    final params = Map<String, String>.from(resolved.queryParameters);
+    if (!params.containsKey('token') &&
+        !params.containsKey('sig') &&
+        token.isNotEmpty) {
+      params['token'] = token;
+    }
+    if (rev != null) {
+      params['rev'] = '$rev';
+    }
+    return resolved.replace(queryParameters: params.isEmpty ? null : params);
+  }
+
+  /// Authenticated PNG thumbnail loader for canvas cards, reusing the same
+  /// [TimedNetworkImage] pipeline as [artifactImage].
+  ImageProvider canvasImage(String thumbUrl, {int? rev}) =>
+      TimedNetworkImage(canvasAssetUri(thumbUrl, rev: rev).toString(), _imageBytes);
+
   /// GET /memory/scopes — every memory repo on the machine.
   Future<List<MemoryScope>> memoryScopes() async {
     final r = await _get(_uri('/memory/scopes'));
@@ -2453,6 +2519,95 @@ class DaemonClient {
     if (r.statusCode != 200) throw _err('delete recurring job', r);
   }
 
+  /// Canvas endpoints (`/canvas`, thumbnails, layout rects, hit, pins, ops, revert).
+  Future<Map<String, dynamic>> getCanvas() async {
+    final r = await _get(_uri('/canvas'));
+    if (r.statusCode != 200) throw _err('load canvas', r);
+    final d = jsonDecode(r.body);
+    return d is Map ? d.cast<String, dynamic>() : const <String, dynamic>{};
+  }
+
+  Uri canvasThumbUri(String frameId, double scale, {int? rev}) => _uri(
+        '/canvas/frames/${Uri.encodeComponent(frameId)}/thumb.png',
+        {
+          'scale': scale.toString(),
+          if (rev != null) 'rev': '$rev',
+        },
+      );
+
+  Future<Uint8List> getCanvasThumbPng(String frameId, double scale,
+          {int? rev}) =>
+      _imageBytes(canvasThumbUri(frameId, scale, rev: rev));
+
+  Future<Object?> getCanvasLayout(String frameId, {int? rev}) async {
+    final r = await _get(_uri(
+      '/canvas/frames/${Uri.encodeComponent(frameId)}/layout.json',
+      rev != null ? {'rev': '$rev'} : null,
+    ));
+    if (r.statusCode != 200) throw _err('load canvas layout', r);
+    return jsonDecode(r.body);
+  }
+
+  Future<Map<String, dynamic>> postCanvasHit(
+      String frameId, double x, double y) async {
+    final r = await _post(
+      _uri('/canvas/hit'),
+      headers: _json,
+      body: jsonEncode({'frame_id': frameId, 'x': x, 'y': y}),
+    );
+    if (r.statusCode != 200) throw _err('hit test canvas', r);
+    final d = jsonDecode(r.body);
+    return d is Map ? d.cast<String, dynamic>() : const <String, dynamic>{};
+  }
+
+  Future<Object?> getCanvasPins() async {
+    final r = await _get(_uri('/canvas/pins'));
+    if (r.statusCode != 200) throw _err('load canvas pins', r);
+    return jsonDecode(r.body);
+  }
+
+  Future<Map<String, dynamic>> postCanvasPin(Map<String, dynamic> body) async {
+    final r = await _post(
+      _uri('/canvas/pins'),
+      headers: _json,
+      body: jsonEncode(body),
+    );
+    if (r.statusCode != 200 && r.statusCode != 201) {
+      throw _err('create canvas pin', r);
+    }
+    final d = jsonDecode(r.body);
+    return d is Map ? d.cast<String, dynamic>() : const <String, dynamic>{};
+  }
+
+  Future<Map<String, dynamic>> patchCanvasPin(
+      String id, Map<String, dynamic> body) async {
+    final r = await _patch(
+      _uri('/canvas/pins/${Uri.encodeComponent(id)}'),
+      headers: _json,
+      body: jsonEncode(body),
+    );
+    if (r.statusCode != 200) throw _err('update canvas pin', r);
+    final d = jsonDecode(r.body);
+    return d is Map ? d.cast<String, dynamic>() : const <String, dynamic>{};
+  }
+
+  Future<Object?> getCanvasOps({int since = 0}) async {
+    final r = await _get(_uri('/canvas/ops', {'since': '$since'}));
+    if (r.statusCode != 200) throw _err('load canvas ops', r);
+    return jsonDecode(r.body);
+  }
+
+  Future<Map<String, dynamic>> postCanvasRevert(String batchId) async {
+    final r = await _post(
+      _uri('/canvas/revert'),
+      headers: _json,
+      body: jsonEncode({'batch_id': batchId}),
+    );
+    if (r.statusCode != 200) throw _err('revert canvas batch', r);
+    final d = jsonDecode(r.body);
+    return d is Map ? d.cast<String, dynamic>() : const <String, dynamic>{};
+  }
+
   String _err(String what, http.Response r) {
     final detail = errorDetail(r.body);
     return 'Failed to $what (HTTP ${r.statusCode})${detail.isNotEmpty ? ': $detail' : ''}';
@@ -2622,6 +2777,17 @@ class AgentNowBoardRow {
         at: j['at'] as String? ?? '',
         summary: j['summary'] as String? ?? '',
       );
+}
+
+/// HTTP error from a canvas endpoint preserving its status code so callers can
+/// distinguish unreachable/5xx errors from 4xx unavailable frames.
+class CanvasHttpException implements Exception {
+  const CanvasHttpException(this.statusCode, this.message);
+  final int statusCode;
+  final String message;
+
+  @override
+  String toString() => message;
 }
 
 /// A network image fetched through the client, so a stalled download times

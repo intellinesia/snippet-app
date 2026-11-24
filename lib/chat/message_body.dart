@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:markdown/markdown.dart' as md;
 
 import '../api.dart';
+import '../canvas/canvas_link.dart';
+import '../canvas/canvas_link_card.dart';
 import '../media_views.dart';
 import '../message_reactions.dart';
 import '../platform.dart';
@@ -69,42 +71,57 @@ class _LinkSegment extends _BodySegment {
   final Uri uri;
 }
 
+class _CanvasSegment extends _BodySegment {
+  _CanvasSegment(this.card);
+  final CanvasCardSegment card;
+}
+
 List<_BodySegment> _splitBodySegments(String shown) {
+  final unwrapped = unwrapCodedLinks(shown);
+  final canvasSegs = splitCanvasMarkdown(unwrapped);
   final out = <_BodySegment>[];
-  final mdLines = <String>[];
-  var inFence = false;
 
-  void flushMd() {
-    if (mdLines.isEmpty) return;
-    final chunk = mdLines.join('\n').trim();
-    mdLines.clear();
-    if (chunk.isNotEmpty) out.add(_MarkdownSegment(chunk));
-  }
+  for (final seg in canvasSegs) {
+    switch (seg) {
+      case CanvasCardSegment():
+        out.add(_CanvasSegment(seg));
+      case CanvasTextSegment(:final text):
+        final mdLines = <String>[];
+        var inFence = false;
 
-  for (final line in shown.split('\n')) {
-    final trimmed = line.trim();
-    if (trimmed.startsWith('```') || trimmed.startsWith('~~~')) {
-      inFence = !inFence;
-      mdLines.add(line);
-      continue;
-    }
-    if (!inFence) {
-      final m = _standaloneUrlRe.firstMatch(trimmed);
-      if (m != null) {
-        final url = (m.group(1) ?? m.group(2))!;
-        final uri = Uri.tryParse(url);
-        if (uri != null &&
-            (uri.scheme == 'http' || uri.scheme == 'https') &&
-            uri.host.isNotEmpty) {
-          flushMd();
-          out.add(_LinkSegment(url, uri));
-          continue;
+        void flushMd() {
+          if (mdLines.isEmpty) return;
+          final chunk = mdLines.join('\n').trim();
+          mdLines.clear();
+          if (chunk.isNotEmpty) out.add(_MarkdownSegment(chunk));
         }
-      }
+
+        for (final line in text.split('\n')) {
+          final trimmed = line.trim();
+          if (trimmed.startsWith('```') || trimmed.startsWith('~~~')) {
+            inFence = !inFence;
+            mdLines.add(line);
+            continue;
+          }
+          if (!inFence) {
+            final m = _standaloneUrlRe.firstMatch(trimmed);
+            if (m != null) {
+              final url = (m.group(1) ?? m.group(2))!;
+              final uri = Uri.tryParse(url);
+              if (uri != null &&
+                  (uri.scheme == 'http' || uri.scheme == 'https') &&
+                  uri.host.isNotEmpty) {
+                flushMd();
+                out.add(_LinkSegment(url, uri));
+                continue;
+              }
+            }
+          }
+          mdLines.add(line);
+        }
+        flushMd();
     }
-    mdLines.add(line);
   }
-  flushMd();
   return out;
 }
 
@@ -353,6 +370,12 @@ class ChatMessageBody extends StatelessWidget {
                   ),
                 _LinkSegment(:final url, :final uri) =>
                   _LinkCard(url: url, uri: uri),
+                _CanvasSegment(:final card) => CanvasLinkCard(
+                    title: card.title,
+                    canvasRef: card.ref,
+                    daemonClient: client,
+                    inline: card.inline,
+                  ),
               },
             ],
           ],

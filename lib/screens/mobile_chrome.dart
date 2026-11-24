@@ -632,7 +632,7 @@ class BottomFade extends StatelessWidget {
       );
 }
 
-enum MobileMenuPick { newSession, tasks, usage, machines }
+enum MobileMenuPick { newSession, tasks, canvas, usage, machines }
 
 Future<void> showMobileMenu(
   BuildContext context, {
@@ -743,6 +743,7 @@ class _MobileMenu extends StatelessWidget {
                 SizedBox(height: S.s8),
                 if (client != null) ...[
                   _row('task', 'Tasks', MobileMenuPick.tasks),
+                  _row('grid', 'Canvas', MobileMenuPick.canvas),
                   _row('analytics', 'Usage', MobileMenuPick.usage),
                 ],
                 _row('server', 'Machines', MobileMenuPick.machines),

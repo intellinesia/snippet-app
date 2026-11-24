@@ -16,6 +16,9 @@ import 'package:flutter/gestures.dart'
     show kTouchSlop, kMiddleMouseButton, PointerDeviceKind;
 import 'gesture_physics.dart';
 import 'api.dart';
+import 'canvas/canvas_link.dart';
+import 'canvas/canvas_link_card.dart';
+import 'canvas/canvas_nav.dart';
 import 'chat_links.dart';
 import 'media_views.dart';
 import 'theme.dart';
@@ -173,7 +176,7 @@ class Pills<T> extends StatelessWidget {
 const _linkColor = Color(0xFF8AB4FF);
 
 final _codedLink = RegExp(
-    r'`(\[[^\]`]+\]\((?:session|artifact|agent|thread|task):[^)\s`]+\))`');
+    r'`(\[[^\]`]+\]\((?:session|artifact|agent|thread|task|canvas):[^)\s`]+\))`');
 final _diffFenceOpenRe = RegExp(r'^([ \t]{0,3})(`{3,})(diff|patch)\s*$');
 final _innerBacktickLineRe = RegExp(r'^[ +\-]?[ \t]*`{3,}');
 
@@ -237,6 +240,11 @@ String _widenDiffFences(String text) {
 
 void openMarkdownLink(String? href, [BuildContext? context, String? text]) {
   if (href == null || href.isEmpty) return;
+  if (parseCanvasRef(href) case final ref?) {
+    if (context == null) return;
+    openCanvas(context, frameId: ref.frameId, elId: ref.elId, rev: ref.rev);
+    return;
+  }
   if (parseChatLink(href) case final link?) {
     if (context == null) return;
     final client = DaemonScope.maybeOf(context) ?? DaemonScope.current;
@@ -1778,16 +1786,60 @@ class Bubble extends StatelessWidget {
         matches.where((m) => isAudioAttachmentPath(m.group(2) ?? '')).length;
     final images = matches.where((m) => m.group(1) == 'image').length;
     final files = matches.length - images - audio;
+    Widget buildMarkdown(
+      String raw, {
+      required MarkdownStyleSheet styleSheet,
+      md.ExtensionSet? extensionSet,
+    }) {
+      final unwrapped = unwrapCodedLinks(raw);
+      final segments = splitCanvasMarkdown(unwrapped);
+      if (segments.isEmpty) return const SizedBox.shrink();
+      if (segments.length == 1 && segments.first is CanvasTextSegment) {
+        return MarkdownBody(
+          data: (segments.first as CanvasTextSegment).text,
+          selectable: false,
+          extensionSet: extensionSet,
+          styleSheet: styleSheet,
+          builders: {'pre': PreBlockBuilder()},
+          onTapLink: (txt, href, title) =>
+              openMarkdownLink(href, context, txt),
+        );
+      }
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < segments.length; i++) ...[
+            if (i > 0) SizedBox(height: S.s6),
+            switch (segments[i]) {
+              CanvasTextSegment(:final text) => MarkdownBody(
+                  data: text,
+                  selectable: false,
+                  extensionSet: extensionSet,
+                  styleSheet: styleSheet,
+                  builders: {'pre': PreBlockBuilder()},
+                  onTapLink: (txt, href, title) =>
+                      openMarkdownLink(href, context, txt),
+                ),
+              CanvasCardSegment(:final title, :final ref, :final inline) =>
+                CanvasLinkCard(
+                  title: title,
+                  canvasRef: ref,
+                  daemonClient: client,
+                  inline: inline,
+                ),
+            },
+          ],
+        ],
+      );
+    }
+
     final textBody = shown.isNotEmpty
-        ? MarkdownBody(
-            data: unwrapCodedLinks(shown),
-            selectable: false,
+        ? buildMarkdown(
+            shown,
             // Your message reads in the primary ink, not the body grey.
             styleSheet: markdownStyle(context).copyWith(
                 p: markdownStyle(context).p?.copyWith(color: AppColors.fg1)),
-            builders: {'pre': PreBlockBuilder()},
-            onTapLink: (txt, href, title) =>
-                openMarkdownLink(href, context, txt),
           )
         : null;
     final voice = <Widget>[
@@ -1809,13 +1861,10 @@ class Bubble extends StatelessWidget {
     final mineText = textBody == null
         ? const SizedBox.shrink()
         : (selectable ? SelectionArea(child: textBody) : textBody);
-    final agentContent = MarkdownBody(
-      data: unwrapCodedLinks(shown),
-      selectable: false,
+    final agentContent = buildMarkdown(
+      shown,
       extensionSet: md.ExtensionSet.gitHubFlavored,
       styleSheet: agentMarkdownStyle(context),
-      builders: {'pre': PreBlockBuilder()},
-      onTapLink: (txt, href, title) => openMarkdownLink(href, context, txt),
     );
 
     final agent =
@@ -1823,13 +1872,10 @@ class Bubble extends StatelessWidget {
 
     final chatBubbles = ChatBubbleScope.of(context);
     if (chatBubbles && !mine && shown.isNotEmpty) {
-      final reply = MarkdownBody(
-        data: unwrapCodedLinks(shown),
-        selectable: false,
+      final reply = buildMarkdown(
+        shown,
         extensionSet: md.ExtensionSet.gitHubFlavored,
         styleSheet: chatMarkdownStyle(context, mine: false),
-        builders: {'pre': PreBlockBuilder()},
-        onTapLink: (txt, href, title) => openMarkdownLink(href, context, txt),
       );
       final body = selectable && !kMobile ? SelectionArea(child: reply) : reply;
       final bubble = ChatBubbleRow(
@@ -1906,13 +1952,9 @@ class Bubble extends StatelessWidget {
               if (shown.isNotEmpty && chatBubbles)
                 ChatBubble(
                   mine: true,
-                  child: MarkdownBody(
-                    data: unwrapCodedLinks(shown),
-                    selectable: false,
+                  child: buildMarkdown(
+                    shown,
                     styleSheet: chatMarkdownStyle(context, mine: true),
-                    builders: {'pre': PreBlockBuilder()},
-                    onTapLink: (txt, href, title) =>
-                        openMarkdownLink(href, context, txt),
                   ),
                 )
               else if (shown.isNotEmpty)
