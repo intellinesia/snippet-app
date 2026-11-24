@@ -109,41 +109,30 @@ class GlassTopFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bg = color ?? AppColors.bg;
-    final on = Glass.effectiveEnabled;
     final up = StatusInset.of(context);
+    // Quiet v10: the status bar and header sit on solid ground, no blur;
+    // a 24pt eased fade on the content side is the only transition.
     final frame = Stack(clipBehavior: Clip.none, children: [
       Positioned(
         top: -up,
         left: 0,
         right: 0,
-        bottom: 0,
+        bottom: -(24 - fade),
         child: IgnorePointer(
-          child: Stack(children: [
-            if (on)
-              // One variable-radius blur (two shader passes) kept to the
-              // status-bar and header zone, ramping smoothly to zero across
-              // the lower edge so body text below the header stays crisp.
-              Positioned.fill(
-                child: _SettledBlur(
-                    sigma: 14 * MediaQuery.devicePixelRatioOf(context)),
-              ),
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    // Eased fade: tinted at the status bar, gone at the lower edge. The tint
-                    // stays strong because the blur shader is not drawn on every renderer.
-                    stops: const [0, 0.45, 0.74, 0.9, 1],
-                    colors: [
-                      bg.withValues(alpha: on ? 0.98 : 0.98),
-                      bg.withValues(alpha: on ? 0.96 : 0.94),
-                      bg.withValues(alpha: on ? 0.85 : 0.8),
-                      bg.withValues(alpha: on ? 0.35 : 0.35),
-                      bg.withValues(alpha: 0),
-                    ],
-                  ),
+          child: Column(children: [
+            Expanded(child: ColoredBox(color: bg)),
+            Container(
+              height: 24,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: const [0, 0.5, 1],
+                  colors: [
+                    bg,
+                    bg.withValues(alpha: 0.6),
+                    bg.withValues(alpha: 0),
+                  ],
                 ),
               ),
             ),

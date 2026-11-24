@@ -276,9 +276,9 @@ fn phase() -> f32 {
   return fract(u.time * SPEED / LOOP) * TAU;
 }
 
-// Built-in veil: full strength behind the header, dim behind prose, near black at the composer.
+// Built-in veil: a uniform 0.8 ground over the scene so it stays a texture.
 fn veil(y: f32) -> f32 {
-  return mix(0.10, 1.0, smoothstep(0.25, 0.9, y));
+  return 0.2 + 0.0 * y;
 }
 
 // Soft knee on luma: untouched below KNEE, eased towards CEIL above, so no theme can wash out prose.
@@ -375,11 +375,9 @@ class ChatSceneLayer extends StatelessWidget {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        bg.withValues(alpha: 0.15),
-                        bg.withValues(alpha: 0.45),
-                        bg.withValues(alpha: 0.85),
+                        bg.withValues(alpha: 0.8),
+                        bg.withValues(alpha: 0.8),
                       ],
-                      stops: const [0, 0.6, 1],
                     ),
                   ),
                 ),
