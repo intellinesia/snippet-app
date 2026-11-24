@@ -11,7 +11,7 @@ final Map<State, Rect> _bars = {};
 void _publish() {
   var bottom = 0.0;
   for (final r in _bars.values) {
-    if (r.top < 160 && r.height <= 200 && r.bottom > bottom) bottom = r.bottom;
+    if (r.top < 160 && r.height <= 400 && r.bottom > bottom) bottom = r.bottom;
   }
   if (toastTopInset.value != bottom) toastTopInset.value = bottom;
 }

@@ -590,7 +590,7 @@ class _QuietSessionsScreenState extends State<QuietSessionsScreen> {
                   if (!_searching) _q.clear();
                 })),
       if (_searching)
-        Padding(
+        ToastAvoid(child: Padding(
           padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
           child: TextField(
             controller: _q,
@@ -611,7 +611,7 @@ class _QuietSessionsScreenState extends State<QuietSessionsScreen> {
                   borderSide: BorderSide.none),
             ),
           ),
-        ),
+        )),
       Padding(
         padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
         child: Wrap(spacing: S.s8, children: [

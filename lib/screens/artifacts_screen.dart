@@ -224,7 +224,7 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
                 ],
               ),
             )),
-            Padding(
+            ToastAvoid(child: Padding(
               padding: EdgeInsets.symmetric(horizontal: S.s16),
               child: Container(
                 height: 44,
@@ -257,8 +257,8 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
                   ],
                 ),
               ),
-            ),
-            SizedBox(
+            )),
+            ToastAvoid(child: SizedBox(
               height: kTapTarget + S.s8,
               child: ListView(
                 scrollDirection: Axis.horizontal,
@@ -301,7 +301,7 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
                     ),
                 ],
               ),
-            ),
+            )),
             Expanded(child: _body(shown)),
           ],
         ),
