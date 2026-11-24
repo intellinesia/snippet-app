@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../chat/chat_card.dart';
-import '../chat/signal_row.dart' show profileMeta;
+import '../chat/signal_row.dart' show profileMeta, prettyModel, prettyProvider;
 import '../mochi.dart';
 import '../models.dart';
 import '../quiet.dart';
@@ -74,15 +74,20 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
         if (s.displayAgentId == a.id) s
     ]..sort((x, y) => y.lastActive.compareTo(x.lastActive));
     final ask = mine.where(sessionNeedsYou).firstOrNull;
-    final busy = mine.any((s) => !s.settled && sessionBusy(s));
-    final state = ask != null || a.needsYou > 0
-        ? 'Needs you'
-        : busy
-            ? 'Working'
-            : a.available
-                ? 'Available'
-                : 'Asleep';
     final profile = a.deskProfile ?? a.profile;
+    final meta = profileMeta(_profiles, profile);
+    final model = (_profiles[profile ?? '']?.model ?? '').trim();
+    final folder = mine
+            .map((s) => s.projectFolder.trim())
+            .where((f) => f.isNotEmpty)
+            .firstOrNull ??
+        '';
+    // v8 frame: harness, model, workspace.
+    final metaLine = [
+      if ((meta.provider ?? '').isNotEmpty) prettyProvider(meta.provider!),
+      if (model.isNotEmpty) prettyModel(model),
+      if (folder.isNotEmpty) 'in ${lastPathSegment(folder, ifEmpty: folder)}',
+    ].join(' \u00b7 ');
     return Material(
       color: AppColors.bg,
       child: SafeArea(
@@ -104,22 +109,21 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
                 textAlign: TextAlign.center,
                 style: sans(24, weight: W.label, color: AppColors.fg1)),
             const SizedBox(height: 4),
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Text(state, style: sans(14, color: AppColors.fg2)),
-              if (profile != null && profile.trim().isNotEmpty) ...[
-                Text(' · ', style: sans(14, color: AppColors.fg3)),
-                if (providerLogoAsset(profileMeta(_profiles, profile).provider) != null) ...[
-                  ProviderLogo(profileMeta(_profiles, profile).provider, size: 14, color: AppColors.fg2),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                if (providerLogoAsset(meta.provider) != null) ...[
+                  ProviderLogo(meta.provider, size: 14, color: AppColors.fg2),
                   const SizedBox(width: 6),
                 ],
                 Flexible(
-                  child: Text(profileMeta(_profiles, profile).label,
+                  child: Text(metaLine,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(14, color: AppColors.fg2)),
                 ),
-              ],
-            ]),
+              ]),
+            ),
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),

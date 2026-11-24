@@ -152,7 +152,9 @@ class QuietAgentsScreen extends StatefulWidget {
     required this.sessions,
     required this.onOpenAgent,
     required this.onOpenLead,
+    this.onNewMenu,
   });
+  final void Function(BuildContext anchor)? onNewMenu;
   final DaemonClient client;
   final List<CoordinationAgent> agents;
   final List<SessionInfo> sessions;
@@ -199,7 +201,7 @@ class _QuietAgentsScreenState extends State<QuietAgentsScreen> {
           _ => 'Asleep',
         };
     return ListView(children: [
-      const QuietPlaceHeader(title: 'Agents'),
+      QuietPlaceHeader(title: 'Agents', onNewMenu: widget.onNewMenu),
       Padding(
         padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s4),
         child: TextField(

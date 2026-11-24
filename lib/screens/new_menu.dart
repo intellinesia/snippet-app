@@ -14,8 +14,8 @@ Future<void> showNewMenu(
   required VoidCallback onNewSession,
   required VoidCallback onNewAgent,
   required VoidCallback onNewGroup,
-  required VoidCallback onNewShell,
-  required VoidCallback onNewTask,
+  VoidCallback? onNewShell,
+  VoidCallback? onNewTask,
   List<String> recentProjects = const [],
   ValueChanged<String>? onNewSessionIn,
 }) async {
@@ -33,7 +33,7 @@ Future<void> showNewMenu(
         icon: 'chat',
         label: 'New session',
         description: 'Pick a project, agent and model',
-        trailingWidget: key(kMacOS ? '⌘ N' : 'Ctrl N'),
+        trailingWidget: kMobile ? null : key(kMacOS ? '⌘ N' : 'Ctrl N'),
         height: 50,
       ),
       appMenuRow<Object>(
@@ -50,11 +50,14 @@ Future<void> showNewMenu(
         description: 'Several agents in one conversation',
         height: 50,
       ),
-      const PopupMenuDivider(height: 9),
-      appMenuRow<Object>(
-          value: _NewAction.shell, icon: 'terminal', label: 'New shell'),
-      appMenuRow<Object>(
-          value: _NewAction.task, icon: 'kanban', label: 'New task'),
+      if (onNewShell != null || onNewTask != null)
+        const PopupMenuDivider(height: 9),
+      if (onNewShell != null)
+        appMenuRow<Object>(
+            value: _NewAction.shell, icon: 'terminal', label: 'New shell'),
+      if (onNewTask != null)
+        appMenuRow<Object>(
+            value: _NewAction.task, icon: 'kanban', label: 'New task'),
       if (projects.isNotEmpty && onNewSessionIn != null) ...[
         appMenuHeading<Object>('New session in'),
         for (final p in projects)
@@ -75,9 +78,9 @@ Future<void> showNewMenu(
     case _NewAction.group:
       onNewGroup();
     case _NewAction.shell:
-      onNewShell();
+      onNewShell?.call();
     case _NewAction.task:
-      onNewTask();
+      onNewTask?.call();
     case final String folder:
       onNewSessionIn?.call(folder);
     default:

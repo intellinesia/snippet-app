@@ -1,6 +1,6 @@
 import 'agent_profile_popover.dart';
 import 'dart:async';
-import '../chat/signal_row.dart' show prettyModel, prettyProfile;
+import '../chat/signal_row.dart' show prettyModel, prettyProfile, prettyProvider, profileMeta;
 import '../quiet.dart' show QuietHand;
 import 'session_list_row.dart' show sessionNeedsYou;
 import 'shell_nav.dart' show sessionBusy;
@@ -1138,12 +1138,10 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   String _stageSubtitle(String subtitle) {
     final p = widget.client.presence.presenceForAgentId(widget.agentId);
     final prof = _agent?.deskProfile ?? _agent?.profile;
-    final rawModel = (_profiles[prof ?? '']?.model ?? '').trim();
-    final model = rawModel.isEmpty ? '' : prettyModel(rawModel);
-    // Provider and model, never the raw profile id.
-    final named = prof == null || prof.trim().isEmpty
-        ? ''
-        : (model.isEmpty ? prettyProfile(prof) : model);
+    // v8 phone frame: provider, then state.
+    final meta = profileMeta(_profiles, prof);
+    final prov = (meta.provider ?? '').isEmpty ? '' : prettyProvider(meta.provider!);
+    final named = prov.isNotEmpty ? prov : meta.label;
     final status = p == null
         ? ''
         : (_typing ? 'typing\u2026' : PresenceStore.chatWord(p));

@@ -1054,19 +1054,24 @@ AnimationStyle get sheetMotion => AnimationStyle(
 
 /// The only spacing values the app uses.
 class S {
+  // Phones always use the stock scale at density 1: a saved or imported theme
+  // must not shrink the 16pt gutter below the spec.
+  static ThemeSpaceScale get _scale =>
+      kMobile ? ThemeSpaceScale.defaults : _space.scale;
   static ThemeSpaceTokens get _space => ThemeManager.instance.resolved.space;
-  static double get _density => math.max(0.0, _space.density);
+  static double get _density =>
+      kMobile ? 1.0 : math.max(0.0, _space.density);
 
-  static double get s2 => _space.scale.s2 * _density;
-  static double get s4 => _space.scale.s4 * _density;
-  static double get s6 => _space.scale.s6 * _density;
-  static double get s8 => _space.scale.s8 * _density;
-  static double get s12 => _space.scale.s12 * _density;
-  static double get s16 => _space.scale.s16 * _density;
-  static double get s20 => _space.scale.s20 * _density;
-  static double get s24 => _space.scale.s24 * _density;
-  static double get s32 => _space.scale.s32 * _density;
-  static double get s40 => _space.scale.s40 * _density;
+  static double get s2 => _scale.s2 * _density;
+  static double get s4 => _scale.s4 * _density;
+  static double get s6 => _scale.s6 * _density;
+  static double get s8 => _scale.s8 * _density;
+  static double get s12 => _scale.s12 * _density;
+  static double get s16 => _scale.s16 * _density;
+  static double get s20 => _scale.s20 * _density;
+  static double get s24 => _scale.s24 * _density;
+  static double get s32 => _scale.s32 * _density;
+  static double get s40 => _scale.s40 * _density;
 
   /// An off-scale spacing value that still follows the theme's density.
   static double of(double v) => v * _density;

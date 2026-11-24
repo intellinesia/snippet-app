@@ -21,11 +21,15 @@ class QuietPlaceHeader extends StatelessWidget {
       required this.title,
       this.onSearch,
       this.onSettings,
+      this.onNewMenu,
       this.trailing,
       this.tagline});
   final String title;
   final VoidCallback? onSearch;
   final VoidCallback? onSettings;
+
+  /// Phone "+": opens the New menu (session, agent, group) below the glyph.
+  final void Function(BuildContext anchor)? onNewMenu;
   final Widget? trailing;
 
   /// One calm sentence under the title.
@@ -36,6 +40,10 @@ class QuietPlaceHeader extends StatelessWidget {
         padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s12, S.s4),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+            if (onNewMenu != null)
+              Builder(
+                  builder: (c) =>
+                      _IconTap('plus', 'New', () => onNewMenu!(c))),
             if (onSearch != null)
               _IconTap('search', 'Search', onSearch!),
             if (onSettings != null) _IconTap('settings', 'Settings', onSettings!),
@@ -106,6 +114,7 @@ class QuietHomeScreen extends StatelessWidget {
     required this.onSettings,
     required this.onSearch,
     this.onNew,
+    this.onNewMenu,
     this.onOpenAgent,
     this.onOpenLead,
     this.onAllAgents,
@@ -124,6 +133,7 @@ class QuietHomeScreen extends StatelessWidget {
   final VoidCallback onSettings;
   final VoidCallback onSearch;
   final VoidCallback? onNew;
+  final void Function(BuildContext anchor)? onNewMenu;
   final void Function(CoordinationAgent a)? onOpenAgent;
   final VoidCallback? onOpenLead;
   final VoidCallback? onAllAgents;
@@ -179,6 +189,7 @@ class QuietHomeScreen extends StatelessWidget {
       children: [
         QuietPlaceHeader(
           title: 'Agents',
+          onNewMenu: onNewMenu,
           onSearch: onSearch,
           onSettings: onSettings,
           tagline: quiet && strip.isNotEmpty
