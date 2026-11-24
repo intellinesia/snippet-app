@@ -68,6 +68,20 @@ extension _DesktopShellMobileExt on _DesktopShellState {
     });
   }
 
+  /// The one phone opener for an agent: Lead opens its dedicated session,
+  /// anyone else opens their agent panel.
+  void _openMobileAgent(CoordinationAgent a) {
+    if (agentOpensLeadSession(a)) {
+      _openLeadTab();
+      return;
+    }
+    _setState(() {
+      _mobileHome = MobileHome.agents;
+      _mobileAgent = a;
+      _pushMobileRoute(_MobileRoute(home: MobileHome.agents, agent: a));
+    });
+  }
+
   void _goMobileHome(MobileHome home,
       {SettingsPage? section, CoordinationAgent? agent}) {
     FocusManager.instance.primaryFocus?.unfocus();

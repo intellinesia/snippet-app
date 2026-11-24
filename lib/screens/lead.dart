@@ -5,6 +5,7 @@ library;
 
 export 'lead/lead_state.dart'
     show
+        agentOpensLeadSession,
         isDedicatedLeadSession,
         isInboxSession,
         isInboxSessionRow,

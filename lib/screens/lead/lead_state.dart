@@ -5,6 +5,11 @@ library;
 import '../../envelope.dart';
 import '../../models.dart';
 
+/// Lead is a Mission Control session, never an agent chat: every phone agent
+/// entry point (avatar, row, sheet, list) resolves it here.
+bool agentOpensLeadSession(CoordinationAgent a) =>
+    a.isLead || isDedicatedLeadSession(a.id);
+
 bool isDedicatedLeadSession(String? id) {
   if (id == null || id.isEmpty) return false;
   final normalized = id.replaceAll(r'\', '/').trim();
