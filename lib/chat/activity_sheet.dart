@@ -524,12 +524,33 @@ class _StepRow extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                    color: AppColors.surface3,
-                    borderRadius: BorderRadius.circular(14)),
+                    color: AppColors.bg,
+                    borderRadius: BorderRadius.circular(8)),
+                // Wraps at any text size, never clipped.
                 child: Text(err.join('\n'),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: codeMono(12.5, height: 1.6, color: AppColors.fg1)),
+                    style: codeMono(11.5, height: 1.6, color: AppColors.fg2)),
+              ),
+            if (err.isNotEmpty)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 36),
+                  child: TapDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: err.join('\n')));
+                      toast(context, 'Copied');
+                    },
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 48),
+                      child: Center(
+                        widthFactor: 1,
+                        child: Text('Copy stderr',
+                            style: sans(12, color: AppColors.fg3)),
+                      ),
+                    ),
+                  ),
+                ),
               ),
           ],
         ),

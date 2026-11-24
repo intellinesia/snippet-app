@@ -385,7 +385,7 @@ class _VoiceCircleBtn extends StatelessWidget {
     required this.onTap,
   });
 
-  static const double size = 56;
+  static const double size = 64;
   final String icon;
   final Color fill;
   final Color iconColor;

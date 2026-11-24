@@ -287,7 +287,8 @@ class ComposerVoicePill extends StatelessWidget {
       );
     }
     final timer = Row(mainAxisSize: MainAxisSize.min, children: [
-      if (recording) ...[
+      // Phone spec CH-09: no red anywhere; the timer alone says it is live.
+      if (recording && !kMobile) ...[
         Container(
           width: 8,
           height: 8,
@@ -298,6 +299,7 @@ class ComposerVoicePill extends StatelessWidget {
       ],
       Text(time,
           style: sans(14,
+              weight: kMobile ? W.label : null,
               tabular: true,
               color: recording ? AppColors.fg1 : AppColors.fg3)),
     ]);

@@ -453,7 +453,7 @@ class FileChip extends StatelessWidget {
         label.contains('.') ? label.split('.').last.toUpperCase() : 'FILE';
     final tap = onTap ??
         (client == null ? null : () => openMedia(context, client!, path));
-    const radius = 14.0;
+    final radius = kMobile ? 8.0 : 14.0;
     return Material(
       color: AppColors.surface2,
       borderRadius: BorderRadius.circular(radius),
@@ -461,28 +461,30 @@ class FileChip extends StatelessWidget {
         onTap: tap,
         borderRadius: BorderRadius.circular(radius),
         child: Container(
-          constraints: const BoxConstraints(maxWidth: 260),
+          constraints: BoxConstraints(
+              maxWidth: kMobile ? 280 : 260, minHeight: kMobile ? 48 : 0),
           padding: kMobile
-              ? EdgeInsets.fromLTRB(S.of(10), S.of(10), S.s12, S.of(10))
+              ? EdgeInsets.fromLTRB(S.of(10), S.s6, S.s12, S.s6)
               : EdgeInsets.fromLTRB(S.s8, S.of(7), S.of(10), S.of(7)),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(radius),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Container(
-              width: kMobile ? 36 : 30,
-              height: kMobile ? 36 : 30,
+              width: kMobile ? 32 : 30,
+              height: kMobile ? 32 : 30,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: kind == MediaKind.pdf
+                color: kind == MediaKind.pdf && !kMobile
                     ? AppColors.dangerBg
                     : AppColors.surface3,
                 borderRadius: BorderRadius.circular(kMobile ? 10 : R.sm),
               ),
               child: AppIcon(_iconFor(kind),
                   size: 15,
-                  color:
-                      kind == MediaKind.pdf ? AppColors.danger : AppColors.fg2),
+                  color: kind == MediaKind.pdf && !kMobile
+                      ? AppColors.danger
+                      : AppColors.fg2),
             ),
             SizedBox(width: S.of(9)),
             Flexible(

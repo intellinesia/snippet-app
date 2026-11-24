@@ -873,21 +873,63 @@ class _SendBackSheetState extends State<_SendBackSheet> {
           maxLines: 5,
           onSubmitted: (_) => _submit(),
         ),
-        SizedBox(height: kMobile ? S.s16 : 14),
+        if (kMobile) ...[
+          const SizedBox(height: 8),
+          Wrap(spacing: 8, children: [
+            for (final q in const ['Needs tests', 'Smaller diff'])
+              Semantics(
+                button: true,
+                label: q,
+                excludeSemantics: true,
+                child: TapDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    final t = _controller.text.trim();
+                    _controller.text = t.isEmpty ? q : '$t. $q';
+                    _controller.selection = TextSelection.collapsed(
+                        offset: _controller.text.length);
+                  },
+                  // 32 high visual inside a 48 target.
+                  child: SizedBox(
+                    height: 48,
+                    child: Center(
+                      child: Container(
+                        height: 32,
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                            color: AppColors.surface3,
+                            borderRadius: BorderRadius.circular(16)),
+                        child: Text(q,
+                            style: sans(13, color: AppColors.fg1)),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ]),
+        ],
+        SizedBox(height: kMobile ? S.s8 : 14),
         Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            _chatPill(
-              label: 'Cancel',
-              primary: false,
-              onTap: () => Navigator.of(context).pop(),
+            Expanded(
+              flex: kMobile ? 1 : 0,
+              child: _chatPill(
+                label: 'Cancel',
+                primary: false,
+                onTap: () => Navigator.of(context).pop(),
+              ),
             ),
             SizedBox(width: S.s8),
-            _chatPill(
-              label: 'Send back',
-              primary: true,
-              disabled: !canSubmit,
-              onTap: _submit,
+            Expanded(
+              flex: kMobile ? 1 : 0,
+              child: _chatPill(
+                label: 'Send back',
+                primary: true,
+                disabled: !canSubmit,
+                onTap: _submit,
+              ),
             ),
           ],
         ),
