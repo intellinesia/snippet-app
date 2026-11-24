@@ -16,7 +16,7 @@ import '../tool_activity.dart';
 import '../tool_sheet.dart' show ToolBatch;
 import '../tool_views.dart';
 import '../transcript.dart'
-    show RunSpinner, TerminalBlock, isLookupStep, isSearchStep;
+    show TerminalBlock, isLookupStep, isSearchStep;
 import '../widgets.dart';
 import 'activity_dock.dart';
 import '../tap_detector.dart';
@@ -237,17 +237,29 @@ class _ListPage extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // "Activity", then one meta line in words; no pill.
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 2, 20, 4),
-          child: Row(children: [
-            Expanded(
-                child: Text('Activity',
-                    style: sans(17, weight: W.title, color: AppColors.fg1))),
-            if (batch.running && startedAt != null)
-              _RunClock(startedAt!)
-            else if (t != null)
-              _Pill(formatWorkDuration(t)),
-          ]),
+          padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
+          child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Semantics(
+                  header: true,
+                  child: Text('Activity',
+                      style: sans(17, weight: W.title, color: AppColors.fg1)),
+                ),
+                const SizedBox(height: 2),
+                if (batch.running && startedAt != null)
+                  _RunClock(startedAt!, steps: steps.length)
+                else
+                  Text(
+                      [
+                        'Done',
+                        '${steps.length} ${steps.length == 1 ? 'step' : 'steps'}',
+                        if (t != null) formatWorkDuration(t),
+                      ].join(' · '),
+                      style: sans(13, color: AppColors.fg3, tabular: true)),
+              ]),
         ),
         Expanded(
           child: ListView(
@@ -263,8 +275,9 @@ class _ListPage extends StatelessWidget {
 }
 
 class _RunClock extends StatefulWidget {
-  const _RunClock(this.startedAt);
+  const _RunClock(this.startedAt, {this.steps = 0});
   final DateTime startedAt;
+  final int steps;
 
   @override
   State<_RunClock> createState() => _RunClockState();
@@ -290,8 +303,14 @@ class _RunClockState extends State<_RunClock> {
   @override
   Widget build(BuildContext context) {
     final s = DateTime.now().difference(widget.startedAt).inSeconds;
-    return _Pill(formatWorkDuration(Duration(seconds: s < 0 ? 0 : s)),
-        tone: _Tone.run);
+    final n = widget.steps;
+    return Text(
+        [
+          'Running',
+          if (n > 0) '$n ${n == 1 ? 'step' : 'steps'}',
+          formatWorkDuration(Duration(seconds: s < 0 ? 0 : s)),
+        ].join(' · '),
+        style: sans(13, color: AppColors.fg3, tabular: true));
   }
 }
 
@@ -340,16 +359,10 @@ class _Tile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (bg, fg) = _toneColors(tone);
-    return Container(
-      width: 34,
-      height: 34,
-      alignment: Alignment.center,
-      decoration:
-          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
-      child: tone == _Tone.run
-          ? RunSpinner(size: 16, color: AppColors.fg2)
-          : AppIcon(icon, size: 17, color: fg),
+    // Quiet rows: an 18pt fg2 icon, no tinted tile; state is told in words.
+    return SizedBox.square(
+      dimension: 24,
+      child: Center(child: AppIcon(icon, size: 18, color: AppColors.fg2)),
     );
   }
 }
@@ -418,8 +431,8 @@ class _StepRow extends StatelessWidget {
       if (path.startsWith('/') &&
           const {'png', 'jpg', 'jpeg', 'gif', 'webp'}.contains(ext)) {
         return ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: ImageThumb(client: client, path: path, width: 34, height: 34),
+          borderRadius: BorderRadius.circular(6),
+          child: ImageThumb(client: client, path: path, width: 24, height: 24),
         );
       }
     }
@@ -454,14 +467,33 @@ class _StepRow extends StatelessWidget {
     } else {
       final d = stepDuration(step);
       if (d != null)
-        meta = Text(d, style: sans(13.5, color: AppColors.fg3, tabular: true));
+        meta = Text(d, style: sans(13, color: AppColors.fg3, tabular: true));
+    }
+    if (failed) {
+      meta = Row(mainAxisSize: MainAxisSize.min, children: [
+        AppIcon('alert-triangle', size: 14, color: AppColors.fg1),
+        const SizedBox(width: 4),
+        Text('Failed', style: sans(13, weight: W.label, color: AppColors.fg1)),
+      ]);
+    } else if (step.running) {
+      final d = stepDuration(step);
+      meta = Row(mainAxisSize: MainAxisSize.min, children: [
+        Container(
+            width: 6,
+            height: 6,
+            decoration:
+                BoxDecoration(color: AppColors.fg2, shape: BoxShape.circle)),
+        const SizedBox(width: 6),
+        Text(d == null ? 'Running' : 'Running $d',
+            style: sans(13, color: AppColors.fg2, tabular: true)),
+      ]);
     }
     final err = failed ? _errorLines(step) : const <String>[];
     return TapDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(20 + indent, 5, 20, 5),
+        padding: EdgeInsets.fromLTRB(16 + indent, 4, 16, 4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -477,8 +509,7 @@ class _StepRow extends StatelessWidget {
                       Text(stepTitle(step),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: sans(14.5,
-                              weight: W.label, color: AppColors.fg1)),
+                          style: sans(14, color: AppColors.fg1)),
                     ],
                   ),
                 ),
@@ -487,7 +518,7 @@ class _StepRow extends StatelessWidget {
             ),
             if (err.isNotEmpty)
               Container(
-                margin: const EdgeInsets.only(top: 6, left: 46),
+                margin: const EdgeInsets.only(top: 6, left: 36),
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
@@ -558,7 +589,7 @@ class _GroupRow extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 5, 20, 5),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 40),
           child: Row(children: [
@@ -568,8 +599,7 @@ class _GroupRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: sans(15.5, weight: W.label, color: AppColors.fg1)),
+                  Text(title, style: sans(14, color: AppColors.fg1)),
                   Text(sub,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -709,7 +739,8 @@ class _DetailPage extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            _Pill('${index + 1} / ${steps.length}'),
+            Text('${index + 1} of ${steps.length}',
+                style: sans(13, color: AppColors.fg3, tabular: true)),
           ]),
         ),
         Padding(
@@ -717,7 +748,8 @@ class _DetailPage extends StatelessWidget {
           child: Wrap(spacing: 8, runSpacing: 8, children: [
             if (added > 0) _Pill('+$added', tone: _Tone.ok),
             if (removed > 0) _Pill('−$removed', tone: _Tone.bad),
-            if (step.running) const _Pill('running', tone: _Tone.run),
+            if (step.running)
+              Text('Running', style: sans(13, color: AppColors.fg2)),
             if (tone == _Tone.bad && chip != null)
               _Pill(chip.text.split(' · ').last, tone: _Tone.bad),
             if (dur != null) _Pill(dur),
