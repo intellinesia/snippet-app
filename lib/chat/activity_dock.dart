@@ -103,7 +103,7 @@ class FailedPill extends StatelessWidget {
         onTap: onTap,
         // 44pt transparent hit area around the 24/28pt visual.
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 44),
+          constraints: const BoxConstraints(minHeight: 48),
           child: Center(
             widthFactor: 1,
             heightFactor: 1,
@@ -117,10 +117,10 @@ class FailedPill extends StatelessWidget {
                 widthFactor: 1,
                 heightFactor: 1,
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  AppIcon('alert-triangle', size: 14, color: AppColors.fg1),
+                  AppIcon('alert-triangle', size: compact ? 16 : 14, color: AppColors.fg1),
                   const SizedBox(width: 6),
                   Text('$count failed',
-                      style: sans(compact ? 13 : 14,
+                      style: sans(compact ? 11.5 : 14,
                           weight: W.label, color: AppColors.fg1)),
                 ]),
               ),
@@ -188,7 +188,10 @@ class _ActivityDockState extends State<ActivityDock> {
         onTap: () => widget.onOpen(null),
         child: Container(
           constraints: const BoxConstraints(minHeight: 48),
-          padding: const EdgeInsets.fromLTRB(0, 0, 4, 0),
+          padding: const EdgeInsets.fromLTRB(12, 0, 8, 0),
+          decoration: BoxDecoration(
+              color: AppColors.surface1,
+              borderRadius: BorderRadius.circular(10)),
           child: Row(children: [
             SizedBox.square(
               dimension: 16,
@@ -254,7 +257,10 @@ class ActivityPill extends StatelessWidget {
       onTap: () => onOpen(null),
       child: Container(
         constraints: const BoxConstraints(minHeight: 48),
-        padding: const EdgeInsets.fromLTRB(0, 0, 4, 0),
+        padding: const EdgeInsets.fromLTRB(12, 0, 8, 0),
+        decoration: BoxDecoration(
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.circular(10)),
         child: Row(children: [
           AppIcon(failed > 0 ? 'alert-triangle' : 'terminal',
               size: 16, color: failed > 0 ? AppColors.fg1 : AppColors.fg2),
@@ -263,12 +269,12 @@ class ActivityPill extends StatelessWidget {
             child: Text(describeWork(steps).text,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: sans(15, color: AppColors.fg2)),
+                style: sans(13.5, color: AppColors.fg2)),
           ),
           if (t != null) ...[
             const SizedBox(width: 10),
             Text(formatWorkDuration(t),
-                style: sans(14, color: AppColors.fg2, tabular: true)),
+                style: sans(12, color: AppColors.fg3, tabular: true)),
           ],
           if (failed > 0) ...[
             const SizedBox(width: 10),

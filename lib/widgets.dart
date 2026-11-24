@@ -2099,6 +2099,23 @@ class NoteLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Theme.of(context); // Rebuild on theme change
+    if (!error && kMobile && icon != null) {
+      // Phone spec: icon 16 at x21, text 12 fg2 at x48, rows at least 40.
+      return ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 40),
+        child: Row(children: [
+          const SizedBox(width: 5),
+          AppIcon(icon!, size: 16, color: AppColors.fg3),
+          const SizedBox(width: 11),
+          Flexible(
+            child: Text(text,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: sans(12, height: 1.4, color: AppColors.fg2)),
+          ),
+        ]),
+      );
+    }
     if (!error) {
       return Padding(
         padding: EdgeInsets.symmetric(vertical: S.of(3)),

@@ -101,14 +101,20 @@ class PresentedFileCard extends StatelessWidget {
           child: InkWell(
             onTap: () => _download(context),
             customBorder: const CircleBorder(),
-            child: Container(
-              width: kMobile ? 36 : 28,
-              height: kMobile ? 36 : 28,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                  color: AppColors.surface3, shape: BoxShape.circle),
-              child: AppIcon('download',
-                  size: kMobile ? 16 : 14, color: AppColors.fg2),
+            child: SizedBox(
+              width: kMobile ? 48 : 28,
+              height: kMobile ? 48 : 28,
+              child: Center(
+                child: Container(
+                  width: kMobile ? 36 : 28,
+                  height: kMobile ? 36 : 28,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                      color: AppColors.surface3, shape: BoxShape.circle),
+                  child: AppIcon('download',
+                      size: kMobile ? 16 : 14, color: AppColors.fg2),
+                ),
+              ),
             ),
           ),
         ),
