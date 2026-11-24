@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../media_views.dart';
+import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import '../tap_detector.dart';
@@ -27,7 +28,22 @@ class ComposerAttachmentBar extends StatelessWidget {
         children: [
           for (final v in voice)
             Padding(padding: EdgeInsets.only(top: S.s6), child: v),
-          if (rest.isNotEmpty)
+          if (rest.isNotEmpty && kMobile)
+            // Phone spec CH-07: a tray of two-column tiles, 118 high each.
+            Container(
+              margin: EdgeInsets.only(top: S.s6),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                  color: AppColors.surface1,
+                  borderRadius: BorderRadius.circular(16)),
+              child: LayoutBuilder(
+                builder: (_, c) => Wrap(spacing: 10, runSpacing: 10, children: [
+                  for (final t in rest)
+                    SizedBox(width: (c.maxWidth - 10) / 2, child: t),
+                ]),
+              ),
+            )
+          else if (rest.isNotEmpty)
             SizedBox(
               height: 62,
               child: ListView.separated(
@@ -175,8 +191,8 @@ class ComposerAttachmentTile extends StatelessWidget {
                           color: AppColors.accentBg,
                           shape: BoxShape.circle,
                         ),
-                        child: AppIcon('play',
-                            size: 14, color: AppColors.accent),
+                        child:
+                            AppIcon('play', size: 14, color: AppColors.accent),
                       ),
                       SizedBox(width: S.s12),
                       Expanded(child: NoteWaveStrip(seed: name.hashCode)),
@@ -209,7 +225,111 @@ class ComposerAttachmentTile extends StatelessWidget {
           child: _tile(),
         );
 
-  Widget _tile() => Stack(clipBehavior: Clip.none, children: [
+  static String _bytes(int b) => b < 1024
+      ? '$b B'
+      : b < 1048576
+          ? '${(b / 1024).round()} KB'
+          : '${(b / 1048576).toStringAsFixed(1)} MB';
+
+  Widget _phoneTile() {
+    final meta = pastedText != null
+        ? '${pastedText!.length} chars'
+        : (sizeBytes != null
+            ? _bytes(sizeBytes!)
+            : (isImage ? 'Image' : 'File'));
+    final thumb = isImage && localPath != null && File(localPath!).existsSync()
+        ? Image.file(File(localPath!),
+            fit: BoxFit.cover, cacheWidth: 300, cacheHeight: 150)
+        : Center(
+            child: AppIcon(
+                pastedText != null
+                    ? 'file-text'
+                    : (mediaKindOf(name) == MediaKind.pdf ? 'pdf' : 'file'),
+                size: 20,
+                color: AppColors.fg3));
+    return Container(
+      constraints: const BoxConstraints(minHeight: 118),
+      decoration: BoxDecoration(
+          color: AppColors.surface2, borderRadius: BorderRadius.circular(10)),
+      child: Stack(children: [
+        Semantics(
+          button: onOpen != null,
+          label: 'Preview $name',
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onOpen,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(6, 6, 6, 4),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 72,
+                    width: double.infinity,
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                        color: AppColors.bg,
+                        borderRadius: BorderRadius.circular(6)),
+                    child: thumb,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12, weight: W.label, color: AppColors.fg1)),
+                  Text(meta,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(11, color: AppColors.fg3)),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (uploading)
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                  color: AppColors.scrim,
+                  borderRadius: BorderRadius.circular(10)),
+              alignment: Alignment.center,
+              child: Spinner(size: 16, color: AppColors.fg1),
+            ),
+          ),
+        Positioned(
+          top: 0,
+          right: 0,
+          child: Semantics(
+            button: true,
+            label: 'Remove $name',
+            child: TapDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onRemove,
+              child: SizedBox(
+                width: 48,
+                height: 48,
+                child: Center(
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                        color: AppColors.surface3, shape: BoxShape.circle),
+                    child: AppIcon('x', size: 12, color: AppColors.fg1),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ]),
+    );
+  }
+
+  Widget _tile() => kMobile ? _phoneTile() : _deskTile();
+
+  Widget _deskTile() => Stack(clipBehavior: Clip.none, children: [
         onOpen == null
             ? (body ?? _defaultBody())
             : Semantics(
