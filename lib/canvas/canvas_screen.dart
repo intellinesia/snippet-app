@@ -852,17 +852,10 @@ class _CanvasScreenState extends State<CanvasScreen>
           ),
           SizedBox(
             height: 44,
-            child: FilledButton(
+            child: TextButton(
               onPressed: () => Navigator.of(dlgCtx).pop(true),
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.danger,
-                foregroundColor: AppColors.accentFg,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(R.sm),
-                ),
-              ),
               child: Text('Revert',
-                  style: sans(13, weight: W.label, color: AppColors.accentFg)),
+                  style: sans(13, weight: W.label, color: AppColors.danger)),
             ),
           ),
         ],
@@ -1359,7 +1352,7 @@ class _CanvasScreenState extends State<CanvasScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               AppIcon('pin',
-                  size: 14, color: openPins > 0 ? AppColors.run : AppColors.fg2),
+                  size: 14, color: openPins > 0 ? AppColors.fg1 : AppColors.fg3),
               SizedBox(width: S.s6),
               Text(
                 '${_pins.length}',

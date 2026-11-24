@@ -261,7 +261,7 @@ class InfiniteCanvasPainter extends CustomPainter {
       final screenPos = viewport.worldToScreen(worldPos);
       final isSelected = pin.id == selectedPinId;
       final radius = isSelected ? 11.5 : 9.5;
-      final fillColor = pin.isResolved ? AppColors.fg3 : AppColors.run;
+      final fillColor = pin.isResolved ? AppColors.fg3 : AppColors.fg1;
 
       if (isSelected) {
         canvas.drawCircle(
