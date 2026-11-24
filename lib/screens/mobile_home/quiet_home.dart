@@ -49,8 +49,8 @@ class QuietPlaceHeader extends StatelessWidget {
             if (trailing != null) trailing!,
           ]),
           Text(title,
-              style: sans(34,
-                  height: 41 / 34,
+              style: sans(28,
+                  height: 37.8 / 28,
                   weight: FontWeight.w500,
                   color: AppColors.fg1)),
           if (tagline != null)

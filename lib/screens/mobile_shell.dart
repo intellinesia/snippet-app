@@ -32,6 +32,9 @@ class MobileShell extends StatefulWidget {
   final VoidCallback? onNew;
   final VoidCallback? onNewLong;
 
+  /// Opens the Artifacts list (a pushed page) from the Artifacts tab.
+  final VoidCallback? onArtifacts;
+
   const MobileShell({
     super.key,
     required this.activeTabBody,
@@ -50,6 +53,7 @@ class MobileShell extends StatefulWidget {
     this.onSwipeToSessions,
     this.onNew,
     this.onNewLong,
+    this.onArtifacts,
   });
 
   @override
@@ -342,6 +346,7 @@ class _MobileShellState extends State<MobileShell>
                   places: const [
                     QuietPlace.agents,
                     QuietPlace.sessions,
+                    QuietPlace.artifacts,
                     QuietPlace.tasks,
                   ],
                   selected: switch (mobileHome) {
@@ -351,12 +356,19 @@ class _MobileShellState extends State<MobileShell>
                     MobileHome.agents => QuietPlace.agents,
                     MobileHome.settings => null,
                   },
-                  onSelect: (p) => onMobileHome(switch (p) {
-                    QuietPlace.home => MobileHome.home,
-                    QuietPlace.sessions => MobileHome.chats,
-                    QuietPlace.tasks => MobileHome.tasks,
-                    QuietPlace.agents => MobileHome.home,
-                  }),
+                  onSelect: (p) {
+                    if (p == QuietPlace.artifacts) {
+                      widget.onArtifacts?.call();
+                      return;
+                    }
+                    onMobileHome(switch (p) {
+                      QuietPlace.home => MobileHome.home,
+                      QuietPlace.sessions => MobileHome.chats,
+                      QuietPlace.tasks => MobileHome.tasks,
+                      QuietPlace.agents => MobileHome.home,
+                      QuietPlace.artifacts => MobileHome.home,
+                    });
+                  },
                   onNew: widget.onNew!,
                   onNewLong: widget.onNewLong,
                 ),

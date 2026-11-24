@@ -329,10 +329,11 @@ class QuietOfflineBanner extends StatelessWidget {
       );
 }
 
-/// The four places, in order. The same four sit in the desktop sidebar.
+/// The places, in order. Phone shows Agents, Sessions, Artifacts, Tasks.
 enum QuietPlace {
   home('Home', 'home'),
   sessions('Sessions', 'layers'),
+  artifacts('Artifacts', 'file-stack'),
   tasks('Tasks', 'list-checks'),
   agents('Agents', 'users');
 
@@ -341,8 +342,9 @@ enum QuietPlace {
   final String icon;
 }
 
-/// Floating phone tab bar: four places on a raised pill, New set apart on its
-/// own primary circle. 48pt targets; the selected place takes fill weight.
+/// Floating phone tab bar: one 56 high capsule at x12 holding four tabs and a
+/// 48 New button. Tab labels clamp the text scaler at 1.35; the capsule grows
+/// 8 per extra scale unit so nothing overlaps.
 class QuietTabBar extends StatelessWidget {
   const QuietTabBar({
     super.key,
@@ -351,7 +353,12 @@ class QuietTabBar extends StatelessWidget {
     required this.onNew,
     this.onNewLong,
     this.attention = const {},
-    this.places = QuietPlace.values,
+    this.places = const [
+      QuietPlace.agents,
+      QuietPlace.sessions,
+      QuietPlace.artifacts,
+      QuietPlace.tasks,
+    ],
   });
 
   /// Which places the bar shows, in order. The phone leads with Agents.
@@ -366,116 +373,127 @@ class QuietTabBar extends StatelessWidget {
   /// Places with something waiting: a quiet amber dot on the icon.
   final Set<QuietPlace> attention;
 
-  /// 58 at normal text, growing with text size so labels never overflow.
+  /// 56, plus 8 per scale unit above 1, clamped at 1.35.
   static double _barHeight(BuildContext context) {
-    final scale = (MediaQuery.textScalerOf(context).scale(11) / 11).clamp(1.0, 2.0);
-    return 58 + 14 * (scale - 1);
+    final scale =
+        (MediaQuery.textScalerOf(context).scale(10.5) / 10.5).clamp(1.0, 1.35);
+    return 56 + 8 * (scale - 1);
   }
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s8),
-        child: Row(children: [
-          Expanded(
-            child: Container(
-              height: _barHeight(context),
-              padding: EdgeInsets.symmetric(horizontal: S.s4),
-              decoration: BoxDecoration(
-                color: AppColors.surface1,
-                borderRadius: BorderRadius.circular(29),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Row(children: [
-                for (final p in places)
-                  Expanded(
-                    child: _Tab(
-                      place: p,
-                      selected: p == selected,
-                      dot: attention.contains(p),
-                      onTap: () => onSelect(p),
-                    ),
-                  ),
-              ]),
-            ),
-          ),
-          SizedBox(width: S.s8),
-          Semantics(
-            button: true,
-            label: 'New: session, agent or group',
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onNew,
-              onLongPress: onNewLong,
-              child: Container(
-                width: 58,
-                height: 58,
-                decoration: BoxDecoration(
-                  color: AppColors.surface3,
-                  shape: BoxShape.circle,
+  Widget build(BuildContext context) {
+    final h = _barHeight(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      child: Container(
+        height: h,
+        decoration: BoxDecoration(
+          color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(28),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Row(children: [
+            for (var i = 0; i < places.length; i++)
+              Expanded(
+                child: _Tab(
+                  place: places[i],
+                  index: i,
+                  count: places.length,
+                  selected: places[i] == selected,
+                  dot: attention.contains(places[i]),
+                  onTap: () => onSelect(places[i]),
                 ),
-                child: Center(
-                    child: AppIcon('edit', size: 22, color: AppColors.fg1)),
+              ),
+            const SizedBox(width: 8),
+            Semantics(
+              button: true,
+              label: 'New',
+              hint: 'Session, agent, group, shell or task',
+              excludeSemantics: true,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onNew,
+                onLongPress: onNewLong,
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.fg1,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                      child: AppIcon('edit', size: 22, color: AppColors.bg)),
+                ),
               ),
             ),
-          ),
-        ]),
-      );
+          ]),
+        ),
+      ),
+    );
+  }
 }
 
 class _Tab extends StatelessWidget {
   const _Tab(
       {required this.place,
+      required this.index,
+      required this.count,
       required this.selected,
       required this.dot,
       required this.onTap});
   final QuietPlace place;
+  final int index, count;
   final bool selected, dot;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AppColors.fg1 : AppColors.fg3;
+    final color = selected ? AppColors.fg1 : AppColors.fg2;
+    final clamped = MediaQuery.textScalerOf(context)
+        .clamp(maxScaleFactor: 1.35);
     return Semantics(
       button: true,
       selected: selected,
-      label: place.label,
+      label: '${place.label} tab, ${index + 1} of $count',
+      excludeSemantics: true,
       child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Container(
-          margin: EdgeInsets.symmetric(vertical: 5),
+          height: 48,
           decoration: BoxDecoration(
             color: selected ? AppColors.surface3 : Colors.transparent,
             borderRadius: BorderRadius.circular(24),
           ),
           child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Stack(clipBehavior: Clip.none, children: [
-              AppIcon(place.icon, size: 22, color: color, filled: selected),
-              if (dot)
-                Positioned(
-                  right: -2,
-                  top: -1,
-                  child: Container(
-                    width: 7,
-                    height: 7,
-                    decoration: BoxDecoration(
-                        color: quietAmber, shape: BoxShape.circle),
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Stack(clipBehavior: Clip.none, children: [
+                AppIcon(place.icon, size: 22, color: color, filled: selected),
+                if (dot)
+                  Positioned(
+                    right: -3,
+                    top: -1,
+                    child: Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                          color: quietAmber, shape: BoxShape.circle),
+                    ),
                   ),
-                ),
-            ]),
-            SizedBox(height: S.s2),
-            Text(place.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sans(11,
-                    height: 14 / 11,
-                    weight: selected ? W.label : W.body,
-                    color: color)),
-          ],
-        ),
+              ]),
+              const SizedBox(height: 2),
+              Text(place.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textScaler: clamped,
+                  style: sans(10.5,
+                      height: 13 / 10.5,
+                      weight: selected ? W.label : W.body,
+                      color: color)),
+            ],
+          ),
         ),
       ),
     );

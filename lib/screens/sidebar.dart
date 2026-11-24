@@ -1528,6 +1528,7 @@ child: PhoneAgentPage(
           );
         }
       case QuietPlace.sessions:
+      case QuietPlace.artifacts:
         break;
     }
   }

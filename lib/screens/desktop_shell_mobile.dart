@@ -139,6 +139,8 @@ extension _DesktopShellMobileExt on _DesktopShellState {
       onNewSession: _newSessionFlow,
       onNewAgent: () => showCreateAgentDialog(context, c),
       onNewGroup: () => createAndOpenGroup(context, c),
+      onNewShell: _newGlobalShell,
+      onNewTask: () => showCreateTask(context, c),
     );
   }
 
@@ -179,6 +181,7 @@ extension _DesktopShellMobileExt on _DesktopShellState {
       onSwipeToSessions: () => _goMobileHome(homeFirstTab()),
       onNew: _openNewSheet,
       onNewLong: _newSessionFlow,
+      onArtifacts: () => openArtifactsList(context),
       canPopRoute: _mobileRouteHistory.length > 1,
       onPopRoute: () {
         _handleMobileBack();

@@ -93,24 +93,45 @@ String _parentOf(String path) {
   return parent.isEmpty ? '~' : parent;
 }
 
-/// The phone New sheet behind the one create button: Session, Agent, Group.
+/// The phone New sheet behind the one create button: five one-line rows.
 Future<void> showNewSheet(
   BuildContext context, {
   required VoidCallback onNewSession,
   required VoidCallback onNewAgent,
   required VoidCallback onNewGroup,
+  VoidCallback? onNewShell,
+  VoidCallback? onNewTask,
 }) async {
-  final picked = await showAppSheet<_NewAction>(
-    context,
-    title: 'New',
-    child: Column(mainAxisSize: MainAxisSize.min, children: [
-      _NewSheetRow(
-          _NewAction.session, 'edit', 'Session', 'Start work with an agent'),
-      _NewSheetRow(
-          _NewAction.agent, 'bot', 'Agent', 'Add an agent to your roster'),
-      _NewSheetRow(
-          _NewAction.group, 'users', 'Group', 'Bring agents into one thread'),
-    ]),
+  final dark = AppColors.bg.computeLuminance() < 0.5;
+  final reduced = reduceMotion(context);
+  final rows = <(_NewAction, String, String, String)>[
+    (_NewAction.session, 'chat', 'New session', 'Start work with an agent'),
+    (_NewAction.agent, 'bot', 'New agent', 'Add an agent to your roster'),
+    (_NewAction.group, 'users', 'New group', 'Bring agents into one thread'),
+    if (onNewShell != null)
+      (_NewAction.shell, 'terminal', 'New shell', 'Open a terminal here'),
+    if (onNewTask != null)
+      (_NewAction.task, 'kanban', 'New task', 'Add work to the task list'),
+  ];
+  final picked = await showModalBottomSheet<_NewAction>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: false,
+    backgroundColor: AppColors.surface1,
+    barrierColor: Colors.black.withValues(alpha: dark ? 0.58 : 0.32),
+    shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    clipBehavior: Clip.antiAlias,
+    constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+        maxWidth: double.infinity),
+    sheetAnimationStyle: AnimationStyle(
+      duration: Duration(milliseconds: reduced ? 1 : 200),
+      reverseDuration: Duration(milliseconds: reduced ? 1 : 200),
+      curve: Curves.easeOut,
+      reverseCurve: Curves.easeOut,
+    ),
+    builder: (ctx) => _NewSheetBody(rows: rows),
   );
   switch (picked) {
     case _NewAction.session:
@@ -119,51 +140,101 @@ Future<void> showNewSheet(
       onNewAgent();
     case _NewAction.group:
       onNewGroup();
+    case _NewAction.shell:
+      onNewShell?.call();
+    case _NewAction.task:
+      onNewTask?.call();
     default:
   }
 }
 
+class _NewSheetBody extends StatelessWidget {
+  const _NewSheetBody({required this.rows});
+  final List<(_NewAction, String, String, String)> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.paddingOf(context).bottom;
+    final screenH = MediaQuery.sizeOf(context).height;
+    return ConstrainedBox(
+      constraints: BoxConstraints(minHeight: (screenH * 0.45).clamp(0, screenH * 0.85)),
+      child: FocusScope(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                      color: AppColors.surface3,
+                      borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 13, 20, 8),
+                child: Text('New',
+                    style: sans(13, weight: W.label, color: AppColors.fg3)),
+              ),
+              for (var i = 0; i < rows.length; i++)
+                _NewSheetRow(
+                  rows[i].$1,
+                  rows[i].$2,
+                  rows[i].$3,
+                  rows[i].$4,
+                  autofocus: i == 0,
+                  last: i == rows.length - 1,
+                ),
+              SizedBox(height: bottom + 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _NewSheetRow extends StatelessWidget {
-  const _NewSheetRow(this.value, this.icon, this.label, this.detail);
+  const _NewSheetRow(this.value, this.icon, this.label, this.hint,
+      {required this.autofocus, required this.last});
 
   final _NewAction value;
-  final String icon, label, detail;
+  final String icon, label, hint;
+  final bool autofocus, last;
 
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
-        label: '$label, $detail',
+        label: label,
+        hint: hint,
         excludeSemantics: true,
         child: InkWell(
+          autofocus: autofocus,
           onTap: () => Navigator.of(context).pop(value),
-          borderRadius: BorderRadius.circular(R.of(12)),
-          child: SizedBox(
-            height: 72,
-            child: Row(children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                    color: AppColors.surface2, shape: BoxShape.circle),
-                alignment: Alignment.center,
-                child: AppIcon(icon, size: 18, color: AppColors.fg2),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 56),
+            child: Stack(children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(26, 8, 16, 8),
+                child: Row(children: [
+                  AppIcon(icon, size: 20, color: AppColors.fg1),
+                  const SizedBox(width: 18),
+                  Expanded(
+                    child: Text(label,
+                        style: sans(15, color: AppColors.fg1)),
+                  ),
+                ]),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(label,
-                          style:
-                              sans(15, weight: W.label, color: AppColors.fg1)),
-                      const SizedBox(height: 2),
-                      Text(detail,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(13, color: AppColors.fg3)),
-                    ]),
-              ),
+              if (!last)
+                Positioned(
+                  left: 64,
+                  right: 16,
+                  bottom: 0,
+                  child: Container(height: 1, color: AppColors.border),
+                ),
             ]),
           ),
         ),
