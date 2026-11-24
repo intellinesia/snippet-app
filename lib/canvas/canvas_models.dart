@@ -50,6 +50,9 @@ class CanvasFrame {
 
   Rect get bounds => Rect.fromLTWH(x, y, w, h);
 
+  bool overlapsRect(Rect r) =>
+      x < r.right && x + w > r.left && y < r.bottom && y + h > r.top;
+
   CanvasFrame copyWith({
     String? title,
     double? x,

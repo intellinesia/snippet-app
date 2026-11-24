@@ -99,7 +99,11 @@ class _CanvasScreenState extends State<CanvasScreen>
   // Trackpad / pinch gesture state.
   Offset _lastFocal = Offset.zero;
   double _lastScale = 1.0;
+  double _lastTrackpadScale = 1.0;
   Offset? _lastTapDownPos;
+  Set<String> _lastQueuedVisibleIds = const <String>{};
+  double _lastQueuedScaleBucket = -1;
+  int _lastQueuedCacheGen = -1;
 
   // Visibility-aware live refresh state.
   StreamSubscription<CanvasRevEvent>? _revSub;
@@ -353,9 +357,9 @@ class _CanvasScreenState extends State<CanvasScreen>
     if (requestedRev != null && snap != null && snap.rev != requestedRev) {
       _showToast('Showing latest r${snap.rev} (link was r$requestedRev)');
     }
-    final targetId = widget.initialFrameId;
+          final targetId = widget.initialFrameId;
     if (targetId != null && targetId.isNotEmpty) {
-      final frame = _index.frames.where((f) => f.id == targetId).firstOrNull;
+      final frame = _index.frameById(targetId);
       if (frame != null) {
         setState(() => _selectedFrameId = frame.id);
         _viewport.fitRect(frame.bounds, _viewportSize, padding: _fitPadding());
@@ -430,7 +434,7 @@ class _CanvasScreenState extends State<CanvasScreen>
       }
     }
 
-    final frame = _index.frames.where((f) => f.id == frameId).firstOrNull;
+    final frame = _index.frameById(frameId);
     final future = () async {
       try {
         final rects = await client.fetchLayout(frameId, rev: frame?.rev);
@@ -452,23 +456,45 @@ class _CanvasScreenState extends State<CanvasScreen>
 
   void _onVisibleFrames(List<CanvasFrame> visible, double scaleBucket) {
     final zoom = _viewport.scale;
-    final now = DateTime.now();
-
-    _pendingThumbQueue.clear();
-    for (final frame in visible) {
-      final key = ThumbCacheKey(
-        frameId: frame.id,
-        rev: frame.rev,
-        scale: scaleBucket,
-      );
-      final failedAt = _failedThumbs[key];
-      final inCooldown =
-          failedAt != null && now.difference(failedAt) < _retryCooldown;
-      if (!_thumbCache.containsKey(key) &&
-          !_inFlightThumbs.contains(key) &&
-          !inCooldown) {
-        _pendingThumbQueue.add(_ThumbFetchJob(frame: frame, key: key));
+    var sameVisible = _lastQueuedScaleBucket == scaleBucket &&
+        _lastQueuedCacheGen == _cacheGeneration &&
+        _lastQueuedVisibleIds.length == visible.length;
+    if (sameVisible) {
+      for (final f in visible) {
+        if (!_lastQueuedVisibleIds.contains(f.id)) {
+          sameVisible = false;
+          break;
+        }
       }
+    }
+
+    if (!sameVisible) {
+      _lastQueuedScaleBucket = scaleBucket;
+      _lastQueuedCacheGen = _cacheGeneration;
+      _lastQueuedVisibleIds = {for (final f in visible) f.id};
+      final now = DateTime.now();
+      _pendingThumbQueue.clear();
+      for (final frame in visible) {
+        final key = ThumbCacheKey(
+          frameId: frame.id,
+          rev: frame.rev,
+          scale: scaleBucket,
+        );
+        final failedAt = _failedThumbs[key];
+        final inCooldown =
+            failedAt != null && now.difference(failedAt) < _retryCooldown;
+        if (!_thumbCache.containsKey(key) &&
+            !_inFlightThumbs.contains(key) &&
+            !inCooldown) {
+          _pendingThumbQueue.add(_ThumbFetchJob(frame: frame, key: key));
+        }
+      }
+      if (_pendingThumbQueue.isNotEmpty) {
+        scheduleMicrotask(_pumpThumbQueue);
+      }
+    }
+
+    for (final frame in visible) {
       if (frame.w * zoom > 400 &&
           !_layouts.containsKey(frame.id) &&
           !_inFlightLayouts.containsKey(frame.id)) {
@@ -476,9 +502,6 @@ class _CanvasScreenState extends State<CanvasScreen>
           () => _ensureLayoutLoaded(frame.id, respectCooldown: true),
         );
       }
-    }
-    if (_pendingThumbQueue.isNotEmpty) {
-      scheduleMicrotask(_pumpThumbQueue);
     }
   }
 
@@ -525,9 +548,9 @@ class _CanvasScreenState extends State<CanvasScreen>
       final estimatedBytes = img.width * img.height * 4;
       _thumbCache.put(job.key, img, estimatedBytes);
       _failedThumbs.remove(job.key);
-      _paintVersion++;
-      setState(() {});
+      _viewport.markNeedsPaint();
     } catch (_) {
+      _lastQueuedCacheGen = -1;
       _failedThumbs[job.key] = DateTime.now();
     } finally {
       _inFlightThumbs.remove(job.key);
@@ -554,6 +577,33 @@ class _CanvasScreenState extends State<CanvasScreen>
         final factor = math.exp(-event.scrollDelta.dy * 0.0022);
         _viewport.zoomAt(factor, event.localPosition);
       }
+    }
+  }
+
+  void _handlePointerPanZoomStart(PointerPanZoomStartEvent event) {
+    _animController.stop();
+    _lastTrackpadScale = 1.0;
+    if (!_isInteracting) {
+      setState(() => _isInteracting = true);
+    }
+  }
+
+  void _handlePointerPanZoomUpdate(PointerPanZoomUpdateEvent event) {
+    if (event.localPanDelta != Offset.zero) {
+      _viewport.panBy(event.localPanDelta);
+    }
+    if (_lastTrackpadScale > 0 && event.scale > 0) {
+      final stepScale = event.scale / _lastTrackpadScale;
+      if ((stepScale - 1.0).abs() > 1e-4) {
+        _lastTrackpadScale = event.scale;
+        _viewport.zoomAt(stepScale, event.localPosition);
+      }
+    }
+  }
+
+  void _handlePointerPanZoomEnd(PointerPanZoomEndEvent event) {
+    if (_isInteracting) {
+      setState(() => _isInteracting = false);
     }
   }
 
@@ -588,15 +638,12 @@ class _CanvasScreenState extends State<CanvasScreen>
   }
 
   CanvasPin? _hitTestPin(Offset screenPos) {
-    final frameById = <String, CanvasFrame>{
-      for (final f in _index.frames) f.id: f,
-    };
     final baseRadius = _isPhoneLayout(context) ? 22.0 : 18.0;
     final hitRadius =
         math.max(12.0, baseRadius * canvasChromeScale(_viewport.scale));
     for (var i = _pins.length - 1; i >= 0; i--) {
       final pin = _pins[i];
-      final frame = frameById[pin.frameId];
+      final frame = _index.frameById(pin.frameId);
       if (frame == null) continue;
       final anchor = pinWorldAnchor(pin, frame, _layouts);
       final screenAnchor = _viewport.worldToScreen(anchor);
@@ -787,7 +834,7 @@ class _CanvasScreenState extends State<CanvasScreen>
   }
 
   void _focusPin(CanvasPin pin) {
-    final frame = _index.frames.where((f) => f.id == pin.frameId).firstOrNull;
+    final frame = _index.frameById(pin.frameId);
     setState(() {
       _selectedPinId = pin.id;
       if (frame != null) _selectedFrameId = frame.id;
@@ -898,9 +945,7 @@ class _CanvasScreenState extends State<CanvasScreen>
       return;
     }
     final frame = (_selectedFrameId != null
-            ? _index.frames
-                .where((f) => f.id == _selectedFrameId)
-                .firstOrNull
+            ? _index.frameById(_selectedFrameId!)
             : null) ??
         _index.frames.first;
 
@@ -1131,6 +1176,9 @@ class _CanvasScreenState extends State<CanvasScreen>
             Positioned.fill(
               child: Listener(
                 onPointerSignal: _handlePointerSignal,
+                onPointerPanZoomStart: _handlePointerPanZoomStart,
+                onPointerPanZoomUpdate: _handlePointerPanZoomUpdate,
+                onPointerPanZoomEnd: _handlePointerPanZoomEnd,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTapDown: (d) => _lastTapDownPos = d.localPosition,
@@ -1141,26 +1189,28 @@ class _CanvasScreenState extends State<CanvasScreen>
                   onScaleStart: _handleScaleStart,
                   onScaleUpdate: _handleScaleUpdate,
                   onScaleEnd: _handleScaleEnd,
-                  child: CustomPaint(
-                    size: size,
-                    painter: InfiniteCanvasPainter(
-                      viewport: _viewport,
-                      index: _index,
-                      cache: _thumbCache,
-                      devicePixelRatio: dpr,
-                      isInteracting: _isInteracting,
-                      isPhone: isPhone,
-                      paintVersion: _paintVersion,
-                      selectedFrameId: _selectedFrameId,
-                      selectedElement: _selectedElement,
-                      pins: _pins,
-                      selectedPinId: _selectedPinId,
-                      layouts: _layouts,
-                      onVisibleFrames: _onVisibleFrames,
-                      onTapPin: (pin) {
-                        setState(() => _selectedPinId = pin.id);
-                        _openPinsPanel();
-                      },
+                  child: RepaintBoundary(
+                    child: CustomPaint(
+                      size: size,
+                      painter: InfiniteCanvasPainter(
+                        viewport: _viewport,
+                        index: _index,
+                        cache: _thumbCache,
+                        devicePixelRatio: dpr,
+                        isInteracting: _isInteracting,
+                        isPhone: isPhone,
+                        paintVersion: _paintVersion,
+                        selectedFrameId: _selectedFrameId,
+                        selectedElement: _selectedElement,
+                        pins: _pins,
+                        selectedPinId: _selectedPinId,
+                        layouts: _layouts,
+                        onVisibleFrames: _onVisibleFrames,
+                        onTapPin: (pin) {
+                          setState(() => _selectedPinId = pin.id);
+                          _openPinsPanel();
+                        },
+                      ),
                     ),
                   ),
                 ),

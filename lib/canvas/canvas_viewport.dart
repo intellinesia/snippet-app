@@ -20,6 +20,8 @@ class CanvasViewportController extends ChangeNotifier {
   double get tx => _transform.storage[12];
   double get ty => _transform.storage[13];
 
+  void markNeedsPaint() => notifyListeners();
+
   void setTransform(Matrix4 next) {
     _transform = next.clone();
     notifyListeners();

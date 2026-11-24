@@ -10,8 +10,13 @@ class CanvasSpatialIndex {
   final double cellSize;
   final Map<int, List<CanvasFrame>> _cells = <int, List<CanvasFrame>>{};
   final Map<String, int> _orderById = <String, int>{};
+  final Map<String, CanvasFrame> _frameById = <String, CanvasFrame>{};
   List<CanvasFrame> _all = const <CanvasFrame>[];
   Rect? _contentBounds;
+  Rect? _lastQueryViewport;
+  List<CanvasFrame> _lastQueryResult = const <CanvasFrame>[];
+
+  CanvasFrame? frameById(String id) => _frameById[id];
 
   List<CanvasFrame> get frames => _all;
   int get length => _all.length;
@@ -20,6 +25,9 @@ class CanvasSpatialIndex {
   void rebuild(Iterable<CanvasFrame> frames) {
     _cells.clear();
     _orderById.clear();
+    _frameById.clear();
+    _lastQueryViewport = null;
+    _lastQueryResult = const <CanvasFrame>[];
     final list = <CanvasFrame>[
       for (final frame in frames)
         if (frame.x.isFinite &&
@@ -44,6 +52,7 @@ class CanvasSpatialIndex {
     for (var i = 0; i < list.length; i++) {
       final frame = list[i];
       _orderById[frame.id] = i;
+      _frameById[frame.id] = frame;
       final b = frame.bounds;
       if (b.left < minX) minX = b.left;
       if (b.top < minY) minY = b.top;
@@ -76,6 +85,18 @@ class CanvasSpatialIndex {
         !viewport.bottom.isFinite) {
       return const <CanvasFrame>[];
     }
+    if (_lastQueryViewport == viewport) {
+      return _lastQueryResult;
+    }
+    if (_all.length <= 64) {
+      final out = <CanvasFrame>[
+        for (final frame in _all)
+          if (frame.overlapsRect(viewport)) frame,
+      ];
+      _lastQueryViewport = viewport;
+      _lastQueryResult = out;
+      return out;
+    }
     final x0 = _cellCoord(viewport.left);
     final x1 = _cellCoord(viewport.right);
     final y0 = _cellCoord(viewport.top);
@@ -85,10 +106,13 @@ class CanvasSpatialIndex {
     // When zoomed so far out that the viewport spans more cells than frames exist,
     // a linear scan avoids hashing thousands of empty cells.
     if (cellCount > _cells.length && cellCount > 256) {
-      return [
+      final out = <CanvasFrame>[
         for (final frame in _all)
-          if (frame.bounds.overlaps(viewport)) frame,
+          if (frame.overlapsRect(viewport)) frame,
       ];
+      _lastQueryViewport = viewport;
+      _lastQueryResult = out;
+      return out;
     }
 
     final seen = <String>{};
@@ -98,7 +122,7 @@ class CanvasSpatialIndex {
         final bucket = _cells[_packKey(cx, cy)];
         if (bucket == null) continue;
         for (final frame in bucket) {
-          if (seen.add(frame.id) && frame.bounds.overlaps(viewport)) {
+          if (seen.add(frame.id) && frame.overlapsRect(viewport)) {
             out.add(frame);
           }
         }
@@ -107,6 +131,8 @@ class CanvasSpatialIndex {
     if (out.length > 1) {
       out.sort((a, b) => (_orderById[a.id] ?? 0).compareTo(_orderById[b.id] ?? 0));
     }
+    _lastQueryViewport = viewport;
+    _lastQueryResult = out;
     return out;
   }
 

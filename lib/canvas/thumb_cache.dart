@@ -59,6 +59,8 @@ class ThumbLruCache<T> {
 
   final LinkedHashMap<ThumbCacheKey, _CacheEntry<T>> _entries =
       LinkedHashMap<ThumbCacheKey, _CacheEntry<T>>();
+  final Map<String, Set<ThumbCacheKey>> _keysByFrame =
+      <String, Set<ThumbCacheKey>>{};
 
   int _currentBytes = 0;
   int _evictionCount = 0;
@@ -100,13 +102,24 @@ class ThumbLruCache<T> {
     while (_entries.isNotEmpty && _currentBytes + safeBytes > maxBytes) {
       final oldestKey = _entries.keys.first;
       final removed = _entries.remove(oldestKey)!;
+      _removeFrameKey(oldestKey);
       _currentBytes -= removed.bytes;
       _evictionCount++;
       onEvict?.call(oldestKey, removed.value);
     }
 
     _entries[key] = _CacheEntry<T>(value, safeBytes);
+    (_keysByFrame[key.frameId] ??= <ThumbCacheKey>{}).add(key);
     _currentBytes += safeBytes;
+  }
+
+  void _removeFrameKey(ThumbCacheKey key) {
+    final set = _keysByFrame[key.frameId];
+    if (set == null) return;
+    set.remove(key);
+    if (set.isEmpty) {
+      _keysByFrame.remove(key.frameId);
+    }
   }
 
   /// Returns the closest cached thumbnail for [frameId], preferring matching [rev] then closest scale.
@@ -114,9 +127,11 @@ class ThumbLruCache<T> {
     final exact = get(ThumbCacheKey(frameId: frameId, rev: rev, scale: preferredScale));
     if (exact != null) return exact;
 
+    final frameKeys = _keysByFrame[frameId];
+    if (frameKeys == null || frameKeys.isEmpty) return null;
+
     ThumbCacheKey? bestKey;
-    for (final key in _entries.keys) {
-      if (key.frameId != frameId) continue;
+    for (final key in frameKeys) {
       if (bestKey == null || _isBetterFallback(key, bestKey, rev, preferredScale)) {
         bestKey = key;
       }
@@ -144,20 +159,26 @@ class ThumbLruCache<T> {
 
   /// Removes all cached scales for [frameId] except optionally keeping [keepRev].
   void invalidateFrame(String frameId, {int? keepRev}) {
+    final frameKeys = _keysByFrame[frameId];
+    if (frameKeys == null) return;
     final toRemove = <ThumbCacheKey>[
-      for (final k in _entries.keys)
-        if (k.frameId == frameId && (keepRev == null || k.rev != keepRev)) k,
+      for (final k in frameKeys)
+        if (keepRev == null || k.rev != keepRev) k,
     ];
     for (final key in toRemove) {
-      final removed = _entries.remove(key)!;
-      _currentBytes -= removed.bytes;
-      onEvict?.call(key, removed.value);
+      final removed = _entries.remove(key);
+      _removeFrameKey(key);
+      if (removed != null) {
+        _currentBytes -= removed.bytes;
+        onEvict?.call(key, removed.value);
+      }
     }
   }
 
   void clear() {
     final items = _entries.entries.toList(growable: false);
     _entries.clear();
+    _keysByFrame.clear();
     _currentBytes = 0;
     for (final item in items) {
       onEvict?.call(item.key, item.value.value);

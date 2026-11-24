@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart';
@@ -21,9 +22,92 @@ typedef CanvasVisibleCallback = void Function(
   double scaleBucket,
 );
 
+class _CachedTextPainterKey {
+  const _CachedTextPainterKey(
+    this.text,
+    this.fontSizeBucket,
+    this.weightIndex,
+    this.colorValue,
+    this.maxWidthBucket,
+    this.isMono,
+  );
+
+  final String text;
+  final int fontSizeBucket;
+  final int weightIndex;
+  final int colorValue;
+  final int maxWidthBucket;
+  final bool isMono;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _CachedTextPainterKey &&
+      other.text == text &&
+      other.fontSizeBucket == fontSizeBucket &&
+      other.weightIndex == weightIndex &&
+      other.colorValue == colorValue &&
+      other.maxWidthBucket == maxWidthBucket &&
+      other.isMono == isMono;
+
+  @override
+  int get hashCode => Object.hash(
+        text,
+        fontSizeBucket,
+        weightIndex,
+        colorValue,
+        maxWidthBucket,
+        isMono,
+      );
+}
+
 /// Single CustomPainter that renders the infinite canvas, culled frames,
 /// cached thumbnails, selection overlays, and anchored pins.
 class InfiniteCanvasPainter extends CustomPainter {
+  static final Map<_CachedTextPainterKey, TextPainter> _textCache =
+      <_CachedTextPainterKey, TextPainter>{};
+
+  static TextPainter _layoutCachedText({
+    required String text,
+    required double fontSize,
+    required FontWeight weight,
+    required Color color,
+    required double maxWidth,
+    bool isMono = false,
+    String? ellipsis = '...',
+  }) {
+    final sizeBucket = (fontSize * 20).round();
+    final widthBucket = maxWidth.isFinite ? (maxWidth / 4).round() * 4 : -1;
+    final key = _CachedTextPainterKey(
+      text,
+      sizeBucket,
+      weight.value,
+      color.toARGB32(),
+      widthBucket,
+      isMono,
+    );
+    final existing = _textCache.remove(key);
+    if (existing != null) {
+      _textCache[key] = existing;
+      return existing;
+    }
+    if (_textCache.length >= 512) {
+      _textCache.remove(_textCache.keys.first);
+    }
+    final resolvedSize = sizeBucket / 20.0;
+    final style = isMono
+        ? mono(resolvedSize, weight: weight, color: color)
+        : sans(resolvedSize, weight: weight, color: color);
+    final tp = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+      ellipsis: ellipsis,
+    )..layout(
+        maxWidth: widthBucket > 0 ? widthBucket.toDouble() : double.infinity,
+      );
+    _textCache[key] = tp;
+    return tp;
+  }
   InfiniteCanvasPainter({
     required this.viewport,
     required this.index,
@@ -166,19 +250,37 @@ class InfiniteCanvasPainter extends CustomPainter {
 
     final startX = (worldRect.left / step).floor() * step;
     final startY = (worldRect.top / step).floor() * step;
-    final points = <Offset>[];
+    final cols = ((worldRect.right - startX) / step).floor() + 2;
+    final rows = ((worldRect.bottom - startY) / step).floor() + 2;
+    if (cols <= 0 || rows <= 0) return;
+    final xs = Float32List(cols);
+    var nx = 0;
     for (var wx = startX; wx <= worldRect.right; wx += step) {
       final sx = wx * zoom + viewport.tx;
-      if (sx < -2 || sx > size.width + 2) continue;
-      for (var wy = startY; wy <= worldRect.bottom; wy += step) {
-        final sy = wy * zoom + viewport.ty;
-        if (sy < -2 || sy > size.height + 2) continue;
-        points.add(Offset(sx, sy));
+      if (sx >= -2 && sx <= size.width + 2) {
+        xs[nx++] = sx;
       }
     }
-    if (points.isNotEmpty) {
-      canvas.drawPoints(ui.PointMode.points, points, paint);
+    final ys = Float32List(rows);
+    var ny = 0;
+    for (var wy = startY; wy <= worldRect.bottom; wy += step) {
+      final sy = wy * zoom + viewport.ty;
+      if (sy >= -2 && sy <= size.height + 2) {
+        ys[ny++] = sy;
+      }
     }
+    final count = nx * ny;
+    if (count == 0) return;
+    final coords = Float32List(count * 2);
+    var k = 0;
+    for (var ix = 0; ix < nx; ix++) {
+      final sx = xs[ix];
+      for (var iy = 0; iy < ny; iy++) {
+        coords[k++] = sx;
+        coords[k++] = ys[iy];
+      }
+    }
+    canvas.drawRawPoints(ui.PointMode.points, coords, paint);
   }
 
   void _paintPlaceholder(Canvas canvas, Rect rect) {
@@ -198,12 +300,13 @@ class InfiniteCanvasPainter extends CustomPainter {
 
   void _paintBlockTitle(Canvas canvas, String title, Rect rect) {
     if (title.isEmpty) return;
-    final tp = TextPainter(
-      text: TextSpan(text: title, style: sans(10, color: AppColors.fg2)),
-      textDirection: TextDirection.ltr,
-      maxLines: 1,
-      ellipsis: '...',
-    )..layout(maxWidth: math.max(1, rect.width - 8));
+    final tp = _layoutCachedText(
+      text: title,
+      fontSize: 10,
+      weight: W.body,
+      color: AppColors.fg2,
+      maxWidth: math.max(1, rect.width - 8),
+    );
     tp.paint(
       canvas,
       Offset(rect.center.dx - tp.width / 2, rect.center.dy - tp.height / 2),
@@ -218,19 +321,13 @@ class InfiniteCanvasPainter extends CustomPainter {
     double chrome,
   ) {
     if (title.isEmpty) return;
-    final tp = TextPainter(
-      text: TextSpan(
-        text: title,
-        style: sans(
-          11 * chrome,
-          weight: isSelected ? W.label : W.body,
-          color: isSelected ? AppColors.fg1 : AppColors.fg3,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-      maxLines: 1,
-      ellipsis: '...',
-    )..layout(maxWidth: math.max(40, screenRect.width));
+    final tp = _layoutCachedText(
+      text: title,
+      fontSize: 11 * chrome,
+      weight: isSelected ? W.label : W.body,
+      color: isSelected ? AppColors.fg1 : AppColors.fg3,
+      maxWidth: math.max(40, screenRect.width),
+    );
     final at = Offset(
       screenRect.left,
       screenRect.top - tp.height - 6 * chrome,
@@ -328,13 +425,15 @@ class InfiniteCanvasPainter extends CustomPainter {
           ..strokeWidth = 1.5,
       );
 
-      final tp = TextPainter(
-        text: TextSpan(
-          text: '${i + 1}',
-          style: mono(10 * chrome, weight: W.strong, color: AppColors.bg),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
+      final tp = _layoutCachedText(
+        text: '${i + 1}',
+        fontSize: 10 * chrome,
+        weight: W.strong,
+        color: AppColors.bg,
+        maxWidth: double.infinity,
+        isMono: true,
+        ellipsis: null,
+      );
       tp.paint(
         canvas,
         Offset(screenPos.dx - tp.width / 2, screenPos.dy - tp.height / 2),
