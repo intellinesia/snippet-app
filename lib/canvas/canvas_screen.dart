@@ -40,8 +40,7 @@ String canvasLoadMessage(Object e) => e is TimeoutException
 
 /// Title for the top bar: the frame under the viewport centre, the only
 /// visible frame, else [fallback] (the canvas title) when several compete.
-String canvasBarTitle(
-    List<CanvasFrame> frames, Rect world, String fallback) {
+String canvasBarTitle(List<CanvasFrame> frames, Rect world, String fallback) {
   final visible = [
     for (final f in frames)
       if (f.bounds.overlaps(world)) f
@@ -176,7 +175,9 @@ class _CanvasScreenState extends State<CanvasScreen>
     if (widget.client != null) {
       _attachClient(widget.client!, owns: false);
     } else if (widget.daemonClient != null) {
-      _attachClient(DaemonCanvasClient(widget.daemonClient!, canvasId: widget.canvasId), owns: true);
+      _attachClient(
+          DaemonCanvasClient(widget.daemonClient!, canvasId: widget.canvasId),
+          owns: true);
     } else {
       _loading = false;
       _error = 'Connect to a daemon to view Canvas.';
@@ -916,9 +917,8 @@ class _CanvasScreenState extends State<CanvasScreen>
     final changed = touching.isNotEmpty && frame != null;
     return PinThreadView(
       pin: pin,
-      frameTitle: frame == null || frame.title.isEmpty
-          ? pin.frameId
-          : frame.title,
+      frameTitle:
+          frame == null || frame.title.isEmpty ? pin.frameId : frame.title,
       client: _client,
       beforeRev: changed ? pinRev : null,
       afterRev: changed ? frame.rev : null,
@@ -1488,25 +1488,29 @@ class _CanvasScreenState extends State<CanvasScreen>
                   onScaleStart: _handleScaleStart,
                   onScaleUpdate: _handleScaleUpdate,
                   onScaleEnd: _handleScaleEnd,
-                  child: RepaintBoundary(
-                    child: CustomPaint(
-                      size: size,
-                      painter: InfiniteCanvasPainter(
-                        viewport: _viewport,
-                        index: _index,
-                        cache: _thumbCache,
-                        devicePixelRatio: dpr,
-                        isInteracting: _isInteracting,
-                        isPhone: isPhone,
-                        paintVersion: _paintVersion,
-                        previewRev: _previewRev,
-                        selectedFrameId: _selectedFrameId,
-                        selectedElement: _selectedElement,
-                        pins: _pins,
-                        selectedPinId: _selectedPinId,
-                        layouts: _layouts,
-                        onVisibleFrames: _onVisibleFrames,
-                        onTapPin: _openPinThread,
+                  // Frames pan past the surface edge; clip so they never paint
+                  // over the top-band toast above the page.
+                  child: ClipRect(
+                    child: RepaintBoundary(
+                      child: CustomPaint(
+                        size: size,
+                        painter: InfiniteCanvasPainter(
+                          viewport: _viewport,
+                          index: _index,
+                          cache: _thumbCache,
+                          devicePixelRatio: dpr,
+                          isInteracting: _isInteracting,
+                          isPhone: isPhone,
+                          paintVersion: _paintVersion,
+                          previewRev: _previewRev,
+                          selectedFrameId: _selectedFrameId,
+                          selectedElement: _selectedElement,
+                          pins: _pins,
+                          selectedPinId: _selectedPinId,
+                          layouts: _layouts,
+                          onVisibleFrames: _onVisibleFrames,
+                          onTapPin: _openPinThread,
+                        ),
                       ),
                     ),
                   ),
@@ -1612,7 +1616,8 @@ class _CanvasScreenState extends State<CanvasScreen>
         autofocus: true,
         child: Scaffold(
           backgroundColor: AppColors.bg,
-          body: SafeArea(child: _buildShellBody(canvasArea, isPhone, isDesktopPanel)),
+          body: SafeArea(
+              child: _buildShellBody(canvasArea, isPhone, isDesktopPanel)),
         ),
       ),
     );
@@ -1623,7 +1628,8 @@ class _CanvasScreenState extends State<CanvasScreen>
         ? _buildDesktopSidePanel()
         : null;
     if (isPhone) {
-      return Row(children: [Expanded(child: canvasArea), if (panel != null) panel]);
+      return Row(
+          children: [Expanded(child: canvasArea), if (panel != null) panel]);
     }
     final open = _outlineOpen ?? (_contentWidth >= 900);
     final room = _contentWidth - 248 - (panel != null ? 340 : 0);
@@ -1633,10 +1639,7 @@ class _CanvasScreenState extends State<CanvasScreen>
       children: [
         Row(
           children: [
-            if (inline)
-              _buildOutlineRail()
-            else
-              _outlineStrip(),
+            if (inline) _buildOutlineRail() else _outlineStrip(),
             Expanded(child: canvasArea),
             if (panel != null) panel,
           ],
@@ -1910,45 +1913,49 @@ class _CanvasScreenState extends State<CanvasScreen>
   }
 
   Widget _topStatusBar(int openPins) {
-    return ToastAvoid(child: Row(
+    return ToastAvoid(
+        child: Row(
       children: [
         Expanded(
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: IntrinsicWidth(
-              child: _ChromePill(
-          onTap: () => Navigator.of(context).maybePop(),
-          minSize: kTapTarget,
-          semanticLabel: _snapshot == null
-              ? 'Back from canvas'
-              : 'Back from canvas, revision ${_snapshot!.rev}',
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppIcon('arrow-left', size: 16, color: AppColors.fg1),
-              SizedBox(width: S.s6),
-              Flexible(
-                child: ListenableBuilder(
-                  listenable: _viewport,
-                  builder: (_, __) => Text(
-                    _snapshot == null || _viewportSize.isEmpty
-                        ? _topTitle
-                        : canvasBarTitle(_snapshot!.frames,
-                            _viewport.worldViewport(_viewportSize), _topTitle),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(13, weight: W.label, color: AppColors.fg1),
+            child: Align(
+                alignment: Alignment.centerLeft,
+                child: IntrinsicWidth(
+                    child: _ChromePill(
+                  onTap: () => Navigator.of(context).maybePop(),
+                  minSize: kTapTarget,
+                  semanticLabel: _snapshot == null
+                      ? 'Back from canvas'
+                      : 'Back from canvas, revision ${_snapshot!.rev}',
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AppIcon('arrow-left', size: 16, color: AppColors.fg1),
+                      SizedBox(width: S.s6),
+                      Flexible(
+                        child: ListenableBuilder(
+                          listenable: _viewport,
+                          builder: (_, __) => Text(
+                            _snapshot == null || _viewportSize.isEmpty
+                                ? _topTitle
+                                : canvasBarTitle(
+                                    _snapshot!.frames,
+                                    _viewport.worldViewport(_viewportSize),
+                                    _topTitle),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style:
+                                sans(13, weight: W.label, color: AppColors.fg1),
+                          ),
+                        ),
+                      ),
+                      if (_snapshot != null) ...[
+                        SizedBox(width: S.s8),
+                        Text('r${_snapshot!.rev}',
+                            style: mono(11, color: AppColors.fg3)),
+                      ],
+                    ],
                   ),
-                ),
-              ),
-              if (_snapshot != null) ...[
-                SizedBox(width: S.s8),
-                Text('r${_snapshot!.rev}',
-                    style: mono(11, color: AppColors.fg3)),
-              ],
-            ],
-          ),
-        )))),
+                )))),
         SizedBox(width: S.s8),
         _ChromePill(
           onTap: _openPinsPanel,
@@ -1973,14 +1980,14 @@ class _CanvasScreenState extends State<CanvasScreen>
   Widget _buildToolbar({required bool isPhone}) {
     final items = <_ToolbarItem>[
       if (!isPhone && widget.onClose == null)
-        _ToolbarItem('arrow-left', 'Back', () => Navigator.of(context).maybePop(),
+        _ToolbarItem(
+            'arrow-left', 'Back', () => Navigator.of(context).maybePop(),
             showLabel: false),
       if (isPhone) ...[
-        _ToolbarItem('layers', 'Select',
-            () => setState(() => _tool = CanvasTool.select),
-            active: _tool == CanvasTool.select, showLabel: false),
         _ToolbarItem(
-            'pin', 'Pin', () => setState(() => _tool = CanvasTool.pin),
+            'layers', 'Select', () => setState(() => _tool = CanvasTool.select),
+            active: _tool == CanvasTool.select, showLabel: false),
+        _ToolbarItem('pin', 'Pin', () => setState(() => _tool = CanvasTool.pin),
             active: _tool == CanvasTool.pin, showLabel: false),
       ],
       _ToolbarItem('expand', 'Fit', _fitToContent, showLabel: !isPhone),
@@ -2045,9 +2052,8 @@ class _OverflowToolbar extends StatelessWidget {
           }
           final hidden = items.sublist(shown);
           return Row(
-            mainAxisSize: spread && hidden.isEmpty
-                ? MainAxisSize.max
-                : MainAxisSize.min,
+            mainAxisSize:
+                spread && hidden.isEmpty ? MainAxisSize.max : MainAxisSize.min,
             mainAxisAlignment: spread && hidden.isEmpty
                 ? MainAxisAlignment.spaceEvenly
                 : MainAxisAlignment.start,
@@ -2091,8 +2097,8 @@ class _OverflowToolbar extends StatelessWidget {
                       width: kTapTarget,
                       height: kTapTarget,
                       child: Center(
-                        child: AppIcon('ellipsis',
-                            size: 18, color: AppColors.fg2),
+                        child:
+                            AppIcon('ellipsis', size: 18, color: AppColors.fg2),
                       ),
                     ),
                   ),

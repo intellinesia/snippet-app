@@ -57,6 +57,15 @@ void main() {
       }
       // ignore: avoid_print
       print('CANVASNOTICE ${scale}x toast=$toast targets=$targets');
+      // The canvas paint area is clipped to start below the toast band.
+      final paint = find.descendant(
+          of: find.byType(CanvasScreen), matching: find.byType(CustomPaint));
+      final clip = find.ancestor(of: paint.first, matching: find.byType(ClipRect));
+      expect(clip, findsWidgets);
+      final clipRect = tester.getRect(clip.first);
+      // ignore: avoid_print
+      print('CANVASCLIP ${scale}x clip=$clipRect toast=$toast');
+      expect(clipRect.top, greaterThanOrEqualTo(toast.bottom - 0.5));
       expect(toast.top, lessThan(16));
       expect(toast.bottom, lessThan(852 / 2));
       expect(targets, isNotEmpty);
