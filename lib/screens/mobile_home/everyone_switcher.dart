@@ -108,7 +108,7 @@ class _EveryoneSwitcherState extends State<EveryoneSwitcher> {
       ...rows.take(kSwitcherFold),
       Semantics(
         button: true,
-        label: 'Show ${rows.length - kSwitcherFold} more',
+        label: 'Show all ${rows.length}',
         excludeSemantics: true,
         child: InkWell(
           onTap: () => setState(() => _open.add(key)),
@@ -119,7 +119,7 @@ class _EveryoneSwitcherState extends State<EveryoneSwitcher> {
               child: Row(children: [
                 AppIcon('chevron-down', size: 16, color: AppColors.fg2),
                 const SizedBox(width: 8),
-                Text('Show ${rows.length - kSwitcherFold} more',
+                Text('Show all ${rows.length}',
                     style: sans(14, weight: W.label, color: AppColors.fg2)),
               ]),
             ),

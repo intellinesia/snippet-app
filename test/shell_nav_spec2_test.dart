@@ -96,10 +96,15 @@ void main() {
         print('w=$w s=$scale search=${search.size} row=${r.size}');
         expect(r.width, w);
         expect(r.height, greaterThanOrEqualTo(48));
-        expect(find.text('Show 3 more'), findsOneWidget);
-        await tester.tap(find.text('Show 3 more'));
+        expect(find.text('Show all 9'), findsOneWidget);
+        final fold = tester.getRect(find
+            .ancestor(of: find.text('Show all 9'), matching: find.byType(InkWell))
+            .first);
+        expect(fold.height, greaterThanOrEqualTo(48));
+        expect(fold.width, w);
+        await tester.tap(find.text('Show all 9'));
         await tester.pump();
-        expect(find.text('Show 3 more'), findsNothing);
+        expect(find.text('Show all 9'), findsNothing);
         expect(find.byKey(const ValueKey('sw-agent-a8')), findsOneWidget);
       });
       testWidgets('terminals w=$w s=$scale', (tester) async {
