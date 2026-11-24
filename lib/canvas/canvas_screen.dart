@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show SocketException;
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -29,6 +30,13 @@ enum CanvasTool { select, pin }
 enum _SidePanelMode { none, pins, pinThread, pinComposer, steps }
 
 /// In-app infinite canvas screen rendered from server PNG thumbnails.
+/// A readable reason a canvas failed to load; Retry stays on the error state.
+String canvasLoadMessage(Object e) => e is TimeoutException
+    ? 'The daemon took too long to send this canvas. Check the connection and retry.'
+    : e is SocketException
+        ? 'Could not reach the daemon. Check the connection and retry.'
+        : '$e';
+
 class CanvasScreen extends StatefulWidget {
   const CanvasScreen({
     super.key,
@@ -318,7 +326,7 @@ class _CanvasScreenState extends State<CanvasScreen>
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = '$e';
+        _error = canvasLoadMessage(e);
         _loading = false;
       });
     }

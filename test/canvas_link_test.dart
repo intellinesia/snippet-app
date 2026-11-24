@@ -9,7 +9,8 @@ import 'package:snippet/canvas/artifact_cards.dart';
 import 'package:snippet/canvas/artifact_link_card.dart';
 import 'package:snippet/canvas/canvas_card_client.dart';
 import 'package:snippet/canvas/canvas_models.dart'
-    show CanvasRevEvent, canvasCount;
+    show CanvasRevEvent, CanvasSnapshot, canvasCount;
+import 'package:snippet/canvas/canvas_screen.dart' show canvasLoadMessage;
 import 'package:snippet/canvas/canvas_link.dart';
 import 'package:snippet/canvas/canvas_link_card.dart';
 import 'package:snippet/chat/group_post.dart';
@@ -106,6 +107,7 @@ class _TestCanvasCardClient implements CanvasCardClient {
 }
 
 void main() {
+  canvasLiteTests();
   group('canvas: link parser and formatter', () {
     test('parses and formats canvas/frame without el or rev', () {
       final ref = parseCanvasRef('canvas:design-1/hero-frame');
@@ -582,5 +584,46 @@ void main() {
     expect(find.byType(CanvasLinkCard), findsOneWidget);
     expect(find.text('Pricing board'), findsOneWidget);
     expect(find.text('Canvas · rev 4'), findsOneWidget);
+  });
+}
+
+void canvasLiteTests() {
+  test('lite snapshot without html parses', () {
+    final s = CanvasSnapshot.fromJson({
+      'canvas_id': 'c',
+      'rev': 4,
+      'frames': [
+        {'id': 'a', 'title': 'Home', 'x': 0, 'y': 0, 'w': 390, 'h': 800, 'rev': 1}
+      ],
+    });
+    expect(s.frames.single.id, 'a');
+    expect(s.rev, 4);
+  });
+
+  test('362-frame snapshot decodes, large bodies off the UI thread', () async {
+    final frames = [
+      for (var i = 0; i < 362; i++)
+        {
+          'id': 'f$i',
+          'title': 'Frame $i',
+          'x': i * 400.0,
+          'y': 0,
+          'w': 390,
+          'h': 800,
+          'rev': 1,
+          'html': 'x' * 18000,
+        }
+    ];
+    final body = jsonEncode({'canvas_id': 'big', 'rev': 9, 'frames': frames});
+    expect(body.length, greaterThan(512 * 1024));
+    final json = await decodeCanvasBody(body);
+    final s = CanvasSnapshot.fromJson(json);
+    expect(s.frames.length, 362);
+    expect(s.frames.last.id, 'f361');
+  });
+
+  test('load failures read as real messages', () {
+    expect(canvasLoadMessage(TimeoutException('x')), contains('too long'));
+    expect(canvasLoadMessage('boom'), 'boom');
   });
 }

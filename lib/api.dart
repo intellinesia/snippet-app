@@ -55,6 +55,16 @@ class TaskVerdictConflict implements Exception {
 /// Last-seen session rows, so a session opens with its real header at once.
 final Map<String, SessionInfo> knownSessions = {};
 
+/// Decodes a canvas snapshot; bodies over 512 KB go to a background isolate.
+Future<Map<String, dynamic>> decodeCanvasBody(String body) async {
+  final d = body.length > 512 * 1024
+      ? await compute(_decodeJson, body)
+      : jsonDecode(body);
+  return d is Map ? d.cast<String, dynamic>() : const <String, dynamic>{};
+}
+
+Object? _decodeJson(String body) => jsonDecode(body);
+
 class DaemonClient {
   @visibleForTesting
   static WebSocketChannel Function(Uri uri,
@@ -2575,10 +2585,12 @@ class DaemonClient {
   }
 
   Future<Map<String, dynamic>> getCanvas({String? canvasId}) async {
-    final r = await _get(_uri('/canvas', _canvasQuery(canvasId)));
+    // lite=1 drops each frame's inlined html; an older daemon ignores it.
+    final r = await _get(
+        _uri('/canvas', _canvasQuery(canvasId, {'lite': '1'})),
+        timeout: const Duration(seconds: 60));
     if (r.statusCode != 200) throw _err('load canvas', r);
-    final d = jsonDecode(r.body);
-    return d is Map ? d.cast<String, dynamic>() : const <String, dynamic>{};
+    return decodeCanvasBody(r.body);
   }
 
   Uri canvasThumbUri(String frameId, double scale,
