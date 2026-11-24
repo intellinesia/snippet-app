@@ -769,6 +769,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
               TurnChangesCard(
                 event: e,
                 onOpenFile: _openChangedFile,
+                onReview: () => _performMacAction('file_changes'),
               ));
         case 'file_presented':
           endTools(key);

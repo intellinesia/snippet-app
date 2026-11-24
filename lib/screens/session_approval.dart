@@ -404,23 +404,19 @@ class ApprovalBarState extends State<ApprovalBar> {
             ),
           ),
         ),
-        ChatCardActions(
-          buttons: [
-            ChatCardButton('Deny',
-                kind: ChatCardButtonKind.secondary,
-                onTap: _sent ? null : () => _decide({'kind': 'deny'})),
-            ChatCardButton('Approve',
-                icon: PhIcons.check,
-                busy: _sent,
-                onTap: () => _decide({'kind': 'approve'})),
-          ],
-          link: ruleLabel != null
-              ? 'Always allow $ruleLabel in this session'
-              : (canAlways ? 'Always allow' : null),
-          onLink: _sent
-              ? null
-              : () => _decide(
-                  {'kind': ruleLabel != null ? 'approve_rule' : 'approve_all'}),
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+              ChatCard.pad, 0, ChatCard.pad, ChatCard.pad),
+          child: ApprovalDecideButtons(
+            busy: _sent,
+            onAllowOnce: () => _decide({'kind': 'approve'}),
+            onDeny: () => _decide({'kind': 'deny'}),
+            onAlways: ruleLabel != null || canAlways
+                ? () => _decide({
+                      'kind': ruleLabel != null ? 'approve_rule' : 'approve_all'
+                    })
+                : null,
+          ),
         ),
       ]),
     );

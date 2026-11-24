@@ -124,7 +124,7 @@ void main() {
     expect(find.text('Rook · waiting on you'), findsOneWidget);
     expect(find.text('Rook asks · plan 4/5'), findsOneWidget);
     expect(find.text('waiting 2 min'), findsOneWidget);
-    expect(find.text('Approve'), findsOneWidget);
+    expect(find.text('Allow once'), findsOneWidget);
     expect(find.text('Deny'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();

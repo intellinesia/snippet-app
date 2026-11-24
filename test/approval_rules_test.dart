@@ -120,10 +120,9 @@ void main() {
     expect(find.text('Run this command?'), findsNothing);
     expect(find.text('Rewrites lane/sidebar-polish on origin.'),
         findsOneWidget);
-    expect(find.text('Always allow pushes in this session'), findsOneWidget);
-    expect(find.text('Always allow'), findsNothing);
+    expect(find.text('Always allow'), findsOneWidget);
 
-    await tester.tap(find.text('Always allow pushes in this session'));
+    await tester.tap(find.text('Always allow'));
     await tester.pump(const Duration(milliseconds: 100));
     final sent = _sentKinds(attach).where((m) => m['kind'] != null).toList();
     expect(sent.last['kind'], 'approve_rule');
@@ -161,7 +160,7 @@ void main() {
     expect(find.text('Push the rebased branch?'), findsOneWidget);
     expect(find.text('Rewrites lane/sidebar-polish on origin.'),
         findsOneWidget);
-    expect(find.text('Always allow pushes in this session'), findsOneWidget);
+    expect(find.text('Always allow'), findsOneWidget);
     await _unmount(tester);
   });
 
@@ -261,9 +260,9 @@ void main() {
       expect(find.text('Push the rebased branch?'), findsOneWidget);
       expect(
           find.text('Rewrites lane/sidebar-polish on origin.'), findsOneWidget);
-      expect(find.text('Always allow pushes in this session'), findsOneWidget);
+      expect(find.text('Always allow'), findsOneWidget);
 
-      await t.tap(find.text('Always allow pushes in this session'));
+      await t.tap(find.text('Always allow'));
       await t.pump(const Duration(milliseconds: 50));
       await t.pump(const Duration(milliseconds: 50));
 
@@ -271,7 +270,7 @@ void main() {
       expect(sent['kind'], 'approve_rule');
       expect(sent['via'], 'desk');
       expect(find.textContaining('Approved'), findsOneWidget);
-      expect(find.text('Approve'), findsNothing);
+      expect(find.text('Allow once'), findsNothing);
     });
 
     testWidgets('without the new fields it has no link or headline',
@@ -279,7 +278,7 @@ void main() {
       await pump(t, ev(withRule: false));
       expect(find.textContaining('Always allow'), findsNothing);
       expect(find.text('Push the rebased branch?'), findsNothing);
-      expect(find.text('Approve'), findsOneWidget);
+      expect(find.text('Allow once'), findsOneWidget);
     });
 
     testWidgets('an approved_rule outcome reads as approved', (t) async {
@@ -287,7 +286,7 @@ void main() {
       (e.payload['approval'] as Map)['outcome'] = {'state': 'approved_rule'};
       await pump(t, e);
       expect(find.textContaining('Approved'), findsOneWidget);
-      expect(find.text('Approve'), findsNothing);
+      expect(find.text('Allow once'), findsNothing);
     });
   });
 }

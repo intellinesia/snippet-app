@@ -642,3 +642,76 @@ class ChatCardFooter extends StatelessWidget {
     );
   }
 }
+
+
+/// Phone approval buttons per spec CH-05: Allow once (primary), then Always
+/// allow and Deny side by side. Never red; targets 48.
+class ApprovalDecideButtons extends StatelessWidget {
+  const ApprovalDecideButtons({
+    super.key,
+    required this.onAllowOnce,
+    required this.onDeny,
+    this.onAlways,
+    this.busy = false,
+  });
+
+  final VoidCallback onAllowOnce;
+  final VoidCallback onDeny;
+
+  /// Null when there is nothing to remember: Deny then takes the full row.
+  final VoidCallback? onAlways;
+  final bool busy;
+
+  Widget _btn(String label, VoidCallback onTap, {required bool primary}) =>
+      Semantics(
+        button: true,
+        enabled: !busy,
+        label: label,
+        excludeSemantics: true,
+        child: Opacity(
+          opacity: busy ? 0.5 : 1,
+          child: Material(
+            color: primary ? AppColors.fg1 : AppColors.surface2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: primary ? BorderSide.none : BorderSide(color: AppColors.border),
+            ),
+            child: InkWell(
+              customBorder: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              onTap: busy ? null : onTap,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: Center(
+                  child: Text(label,
+                      textAlign: TextAlign.center,
+                      style: sans(14,
+                          weight: W.label,
+                          color: primary ? AppColors.bg : AppColors.fg1)),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _btn('Allow once', onAllowOnce, primary: true),
+          const SizedBox(height: 8),
+          if (onAlways == null)
+            _btn('Deny', onDeny, primary: false)
+          else
+            IntrinsicHeight(
+              child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Expanded(child: _btn('Always allow', onAlways!, primary: false)),
+                const SizedBox(width: 8),
+                Expanded(child: _btn('Deny', onDeny, primary: false)),
+              ]),
+            ),
+        ],
+      );
+}

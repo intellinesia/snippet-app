@@ -1,0 +1,73 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:snippet/chat/chat_card.dart';
+import 'package:snippet/theme.dart';
+import 'package:snippet/turn_changes_card.dart';
+
+// Spec C CH-05 and CH-15: Allow once first, 333 x 48 style buttons at card
+// padding; Review changes 48 high; card the full 361 at 393.
+void main() {
+  for (final vw in [360.0, 393.0, 430.0]) {
+    for (final scale in [1.0, 1.35, 2.0]) {
+      testWidgets('approval buttons and changes card at $vw x$scale', (t) async {
+        t.view.devicePixelRatio = 1;
+        t.view.physicalSize = Size(vw, 852);
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(t.view.reset);
+        await t.pumpWidget(MaterialApp(
+          theme: buildAppTheme(),
+          builder: (c, w) => MediaQuery(
+              data: MediaQuery.of(c)
+                  .copyWith(textScaler: TextScaler.linear(scale)),
+              child: w!),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(children: [
+                ApprovalDecideButtons(
+                    onAllowOnce: () {}, onAlways: () {}, onDeny: () {}),
+                TurnChangesCard(event: const {
+                  'total_files': 7,
+                  'add': 212,
+                  'del': 48,
+                  'files': [
+                    {'path': 'lib/a.dart', 'add': 10, 'del': 2},
+                    {'path': 'lib/b.dart', 'add': 10, 'del': 2},
+                    {'path': 'lib/c.dart', 'add': 10, 'del': 2},
+                    {'path': 'lib/d.dart', 'add': 10, 'del': 2},
+                  ]
+                }, onReview: () {}),
+              ]),
+            ),
+          ),
+        ));
+        final w = vw - 32;
+        final once = t.getRect(find.text('Allow once'));
+        final onceBtn = t.getRect(find.ancestor(
+            of: find.text('Allow once'), matching: find.byType(Material)).first);
+        final always = t.getRect(find.ancestor(
+            of: find.text('Always allow'), matching: find.byType(Material)).first);
+        final deny = t.getRect(find.ancestor(
+            of: find.text('Deny'), matching: find.byType(Material)).first);
+        final review = t.getRect(find.ancestor(
+            of: find.text('Review changes'), matching: find.byType(Material)).first);
+        final card = t.getRect(find.byType(TurnChangesCard));
+        // ignore: avoid_print
+        print('W $vw x$scale allowOnce=$onceBtn always=$always deny=$deny '
+            'review=$review card=${card.width}');
+        expect(once.top, lessThan(always.top));
+        expect(onceBtn.width, w);
+        expect(onceBtn.height, greaterThanOrEqualTo(48));
+        expect(always.width, closeTo((w - 8) / 2, 0.1));
+        expect(deny.width, closeTo((w - 8) / 2, 0.1));
+        expect(review.height, 48);
+        expect(always.height, deny.height);
+        expect(card.width, w);
+        expect(find.text('4 more files'), findsOneWidget);
+        expect(t.takeException(), isNull);
+        debugDefaultTargetPlatformOverride = null;
+      });
+    }
+  }
+}

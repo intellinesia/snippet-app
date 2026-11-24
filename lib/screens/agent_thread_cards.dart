@@ -1298,16 +1298,11 @@ class _DeskDecideButtons extends StatelessWidget {
     final deny = _btn('Deny', onDeny, primary: false);
     final approve = _btn('Approve', onApprove, primary: true);
     if (kMobile) {
-      final row = Row(children: [
-        Expanded(child: deny),
-        SizedBox(width: S.s8),
-        Expanded(child: approve),
-      ]);
-      if (link == null) return row;
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [row, _link()],
+      return ApprovalDecideButtons(
+        busy: busy,
+        onAllowOnce: onApprove,
+        onDeny: onDeny,
+        onAlways: link == null ? null : onLink,
       );
     }
     return Row(mainAxisAlignment: MainAxisAlignment.end, children: [

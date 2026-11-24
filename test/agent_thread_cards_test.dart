@@ -452,7 +452,7 @@ void main() {
 
     expect(find.byType(ChatBubble), findsOneWidget);
     expect(find.text('Fallback message body'), findsOneWidget);
-    expect(find.text('Approve'), findsNothing);
+    expect(find.text('Allow once'), findsNothing);
     await t.pumpWidget(const SizedBox());
     debugDefaultTargetPlatformOverride = null;
   });
@@ -496,7 +496,7 @@ void main() {
     expect(find.text('Waiting for approval · t1 · Auth cleanup · Fix login'),
         findsOneWidget);
     expect(find.text('Needs the full suite before the PR.'), findsOneWidget);
-    expect(find.text('Approve'), findsOneWidget);
+    expect(find.text('Allow once'), findsOneWidget);
     expect(find.text('Deny'), findsOneWidget);
   });
 
@@ -626,12 +626,12 @@ void main() {
       await t.pump();
 
       expect(client.sessionsCalls, 0);
-      expect(find.text('Approve'), findsNWidgets(2));
+      expect(find.text('Allow once'), findsNWidgets(2));
       expect(find.text('Deny'), findsNWidgets(2));
 
       await t.tap(find.descendant(
         of: find.byKey(const ValueKey('c1')),
-        matching: find.text('Approve'),
+        matching: find.text('Allow once'),
       ));
       await t.pump(const Duration(milliseconds: 50));
       await t.pump(const Duration(milliseconds: 50));
@@ -648,7 +648,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const ValueKey('c2')),
-          matching: find.text('Approve'),
+          matching: find.text('Allow once'),
         ),
         findsOneWidget,
       );
@@ -679,7 +679,7 @@ void main() {
 
         expect(client.sessionsCalls, 0);
         expect(find.textContaining(c.label), findsOneWidget);
-        expect(find.text('Approve'), findsNothing);
+        expect(find.text('Allow once'), findsNothing);
         expect(find.text('Deny'), findsNothing);
       });
     }
@@ -695,7 +695,7 @@ void main() {
       final client = await _open(t, [live]);
       final before = client.threadPageCalls;
 
-      expect(find.text('Approve'), findsOneWidget);
+      expect(find.text('Allow once'), findsOneWidget);
       expect(find.textContaining('Approved'), findsNothing);
 
       client.thread = [resolved];
@@ -706,7 +706,7 @@ void main() {
       });
       await t.pump(const Duration(milliseconds: 400));
       expect(client.threadPageCalls, before);
-      expect(find.text('Approve'), findsOneWidget);
+      expect(find.text('Allow once'), findsOneWidget);
 
       client.deviceEvents.add({
         'kind': 'coordination_event_updated',
@@ -718,7 +718,7 @@ void main() {
 
       expect(client.threadPageCalls, before + 1);
       expect(find.textContaining('Approved'), findsOneWidget);
-      expect(find.text('Approve'), findsNothing);
+      expect(find.text('Allow once'), findsNothing);
       await t.pumpWidget(const SizedBox());
     });
   });
@@ -806,7 +806,7 @@ void main() {
     expect(find.textContaining('Declined'), findsNWidgets(2));
     expect(find.text('No longer waiting on this'), findsOneWidget);
     expect(find.textContaining('Rejected'), findsNothing);
-    expect(find.text('Approve'), findsNothing);
+    expect(find.text('Allow once'), findsNothing);
     await t.pumpWidget(const SizedBox());
   });
 }
