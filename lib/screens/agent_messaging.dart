@@ -1817,8 +1817,10 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                 ],
               ));
         }
+        final reading = kMobile && !mine && readingMode(e.body);
         return ChatBubbleRow(
           mine: mine,
+          fill: reading,
           child: Column(
             crossAxisAlignment:
                 mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -1837,6 +1839,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                   child: ChatBubble(
                     mine: mine,
                     tail: tail,
+                    reading: reading,
                     child: _bubbleBody(e, mine: mine),
                   ),
                 ),

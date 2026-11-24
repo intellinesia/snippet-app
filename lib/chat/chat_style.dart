@@ -161,6 +161,7 @@ class ChatBubble extends StatelessWidget {
     this.tail = true,
     this.color,
     this.flat = false,
+    this.reading = false,
   });
 
   final bool mine;
@@ -170,6 +171,9 @@ class ChatBubble extends StatelessWidget {
   /// Desktop: a plain 8 px card with no tail, 7/11 padding.
   final bool flat;
 
+  /// Phone reading mode: no fill or padding, the text at the full width.
+  final bool reading;
+
   /// Overrides the fill, for a tinted bubble such as an error.
   final Color? color;
 
@@ -178,7 +182,7 @@ class ChatBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Agent replies are plain prose on the canvas; yours sits on s2.
-    if (!mine && color == null && !kMobile) {
+    if (!mine && color == null && (!kMobile || reading)) {
       return ChatBubbleFill(
         fill: AppColors.bg,
         child: Builder(
@@ -307,6 +311,13 @@ class _BubblePainter extends CustomPainter {
       old.radius != radius ||
       old.tailW != tailW;
 }
+
+/// Agent prose over 600 characters, or with a table or code block, reads
+/// without a bubble at the full content width (spec CH-22).
+bool readingMode(String body) =>
+    body.length > 600 ||
+    body.contains('```') ||
+    RegExp(r'^\s*\|?\s*:?-{3,}:?\s*\|', multiLine: true).hasMatch(body);
 
 /// Bubble caps as fractions of the content width (viewport minus 32).
 const double kUserBubbleShare = 0.79;

@@ -82,9 +82,8 @@ class StageBar extends StatelessWidget {
         : ClipRRect(
             borderRadius: BorderRadius.circular(avatarSize / 2),
             child: AgentMochi(members.first.agentId, size: avatarSize));
-    final body = SizedBox(
-      width: double.infinity,
-      height: h,
+    final body = ConstrainedBox(
+      constraints: BoxConstraints(minHeight: h),
       child: Row(children: [
         // Spec B header: back 48 at x0, avatar 32 at x56, title at x96.
         if (onBack != null)
