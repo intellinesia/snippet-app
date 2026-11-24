@@ -12,9 +12,12 @@ import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'canvas_client.dart';
+import 'canvas_minimap.dart';
 import 'canvas_models.dart';
+import 'canvas_outline.dart';
 import 'canvas_painter.dart';
 import 'canvas_panels.dart';
+import 'canvas_tool_rail.dart';
 import 'canvas_viewport.dart';
 import 'spatial_index.dart';
 import 'thumb_cache.dart';
@@ -159,8 +162,9 @@ class _CanvasScreenState extends State<CanvasScreen>
 
   bool _tryAttachDaemonFromScope() {
     if (_client != null) return true;
-    final daemon =
-        widget.daemonClient ?? DaemonScope.maybeOf(context) ?? DaemonScope.current;
+    final daemon = widget.daemonClient ??
+        DaemonScope.maybeOf(context) ??
+        DaemonScope.current;
     if (daemon == null) return false;
     _attachClient(DaemonCanvasClient(daemon), owns: true);
     return true;
@@ -357,7 +361,7 @@ class _CanvasScreenState extends State<CanvasScreen>
     if (requestedRev != null && snap != null && snap.rev != requestedRev) {
       _showToast('Showing latest r${snap.rev} (link was r$requestedRev)');
     }
-          final targetId = widget.initialFrameId;
+    final targetId = widget.initialFrameId;
     if (targetId != null && targetId.isNotEmpty) {
       final frame = _index.frameById(targetId);
       if (frame != null) {
@@ -509,7 +513,8 @@ class _CanvasScreenState extends State<CanvasScreen>
     while (_activeThumbFetches < _maxConcurrentThumbFetches &&
         _pendingThumbQueue.isNotEmpty) {
       final job = _pendingThumbQueue.removeAt(0);
-      if (_thumbCache.containsKey(job.key) || _inFlightThumbs.contains(job.key)) {
+      if (_thumbCache.containsKey(job.key) ||
+          _inFlightThumbs.contains(job.key)) {
         continue;
       }
       _inFlightThumbs.add(job.key);
@@ -706,7 +711,10 @@ class _CanvasScreenState extends State<CanvasScreen>
     if (client == null) return;
     try {
       final elId = await client.hitTestRemote(frame.id, local.dx, local.dy);
-      if (!mounted || _selectedFrameId != frame.id || elId == null || elId.isEmpty) {
+      if (!mounted ||
+          _selectedFrameId != frame.id ||
+          elId == null ||
+          elId.isEmpty) {
         return;
       }
       setState(() {
@@ -1011,7 +1019,8 @@ class _CanvasScreenState extends State<CanvasScreen>
                     Text('New pin',
                         style: sans(15, weight: W.label, color: AppColors.fg1)),
                     const Spacer(),
-                    CanvasCloseButton(onPressed: () => Navigator.of(sheetCtx).pop()),
+                    CanvasCloseButton(
+                        onPressed: () => Navigator.of(sheetCtx).pop()),
                   ],
                 ),
               ),
@@ -1060,7 +1069,8 @@ class _CanvasScreenState extends State<CanvasScreen>
                             style: sans(15,
                                 weight: W.label, color: AppColors.fg1)),
                         const Spacer(),
-                        CanvasCloseButton(onPressed: () => Navigator.of(sheetCtx).pop()),
+                        CanvasCloseButton(
+                            onPressed: () => Navigator.of(sheetCtx).pop()),
                       ],
                     ),
                   ),
@@ -1114,7 +1124,8 @@ class _CanvasScreenState extends State<CanvasScreen>
                           style:
                               sans(15, weight: W.label, color: AppColors.fg1)),
                       const Spacer(),
-                      CanvasCloseButton(onPressed: () => Navigator.of(sheetCtx).pop()),
+                      CanvasCloseButton(
+                          onPressed: () => Navigator.of(sheetCtx).pop()),
                     ],
                   ),
                 ),
@@ -1248,12 +1259,29 @@ class _CanvasScreenState extends State<CanvasScreen>
                 bottom: S.s12,
                 child: _buildToolbar(isPhone: true),
               )
-            else
+            else ...[
               Positioned(
                 top: S.s16,
                 left: S.s16,
                 child: _buildToolbar(isPhone: false),
               ),
+              Positioned(
+                top: 88,
+                left: S.s16,
+                child: CanvasToolRail(tools: _railTools()),
+              ),
+              Positioned(
+                right: S.s16,
+                bottom: S.s16,
+                child: CanvasMinimap(
+                  frames: _index.frames,
+                  contentBounds: _index.contentBounds,
+                  viewport: _viewport,
+                  viewportSize: _viewportSize,
+                  selectedFrameId: _selectedFrameId,
+                ),
+              ),
+            ],
           ],
         );
       },
@@ -1279,6 +1307,7 @@ class _CanvasScreenState extends State<CanvasScreen>
           body: SafeArea(
             child: Row(
               children: [
+                if (isDesktopPanel) _buildOutlineRail(),
                 Expanded(child: canvasArea),
                 if (isDesktopPanel && _panelMode != _SidePanelMode.none)
                   _buildDesktopSidePanel(),
@@ -1287,6 +1316,60 @@ class _CanvasScreenState extends State<CanvasScreen>
           ),
         ),
       ),
+    );
+  }
+
+  List<CanvasRailTool> _railTools() {
+    const hint = 'Frames, text and shapes are made by agents. Ask in chat.';
+    return [
+      CanvasRailTool(
+        icon: 'corner-up-left',
+        label: 'Select',
+        active: _tool == CanvasTool.select,
+        onTap: () => setState(() => _tool = CanvasTool.select),
+      ),
+      const CanvasRailTool(icon: 'scan', label: 'Frame', disabledHint: hint),
+      const CanvasRailTool(
+          icon: 'file-type', label: 'Text', disabledHint: hint),
+      const CanvasRailTool(icon: 'circle', label: 'Shape', disabledHint: hint),
+      CanvasRailTool(
+        icon: 'pin',
+        label: 'Pin',
+        active: _tool == CanvasTool.pin,
+        onTap: () => setState(() => _tool = CanvasTool.pin),
+      ),
+    ];
+  }
+
+  Widget _buildOutlineRail() {
+    final id = _selectedFrameId;
+    if (id != null && !_layouts.containsKey(id)) {
+      scheduleMicrotask(() => _ensureLayoutLoaded(id, respectCooldown: true));
+    }
+    return CanvasOutlineRail(
+      frames: _index.frames,
+      selectedFrameId: id,
+      selectedElementId: _selectedElement?.id,
+      layers: id == null ? null : _layouts[id],
+      layersLoading: id != null && _inFlightLayouts.containsKey(id),
+      onSelectFrame: (frame) {
+        setState(() {
+          _selectedFrameId = frame.id;
+          _selectedElement = null;
+          _selectedPinId = null;
+        });
+        _fitFrame(frame);
+        _ensureLayoutLoaded(frame.id);
+      },
+      onSelectElement: (el) {
+        final frame = _selectedFrameId == null
+            ? null
+            : _index.frameById(_selectedFrameId!);
+        setState(() => _selectedElement = el);
+        if (frame != null && frame.w * _viewport.scale <= 400) {
+          _fitFrame(frame);
+        }
+      },
     );
   }
 
@@ -1416,7 +1499,8 @@ class _CanvasScreenState extends State<CanvasScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               AppIcon('pin',
-                  size: 14, color: openPins > 0 ? AppColors.fg1 : AppColors.fg3),
+                  size: 14,
+                  color: openPins > 0 ? AppColors.fg1 : AppColors.fg3),
               SizedBox(width: S.s6),
               Text(
                 '${_pins.length}',
@@ -1471,7 +1555,8 @@ class _CanvasScreenState extends State<CanvasScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               AppIcon('pin',
-                  size: 15, color: openPins > 0 ? AppColors.run : AppColors.fg2),
+                  size: 15,
+                  color: openPins > 0 ? AppColors.run : AppColors.fg2),
               SizedBox(width: S.s6),
               Text('${_pins.length}',
                   style: mono(12, weight: W.label, color: AppColors.fg1)),
@@ -1509,22 +1594,24 @@ class _CanvasScreenState extends State<CanvasScreen>
             ),
             _ToolbarDivider(),
           ],
-          _ToolbarButton(
-            icon: 'layers',
-            label: 'Select',
-            active: _tool == CanvasTool.select,
-            showLabel: !isPhone,
-            minSize: btnSize,
-            onTap: () => setState(() => _tool = CanvasTool.select),
-          ),
-          _ToolbarButton(
-            icon: 'pin',
-            label: 'Pin',
-            active: _tool == CanvasTool.pin,
-            showLabel: !isPhone,
-            minSize: btnSize,
-            onTap: () => setState(() => _tool = CanvasTool.pin),
-          ),
+          if (isPhone) ...[
+            _ToolbarButton(
+              icon: 'layers',
+              label: 'Select',
+              active: _tool == CanvasTool.select,
+              showLabel: false,
+              minSize: btnSize,
+              onTap: () => setState(() => _tool = CanvasTool.select),
+            ),
+            _ToolbarButton(
+              icon: 'pin',
+              label: 'Pin',
+              active: _tool == CanvasTool.pin,
+              showLabel: false,
+              minSize: btnSize,
+              onTap: () => setState(() => _tool = CanvasTool.pin),
+            ),
+          ],
           _ToolbarButton(
             icon: 'expand',
             label: 'Fit',
@@ -1590,7 +1677,8 @@ class _ChromePill extends StatelessWidget {
             onTap: onTap,
             borderRadius: BorderRadius.circular(R.md),
             child: Container(
-              constraints: BoxConstraints(minHeight: minSize, minWidth: minSize),
+              constraints:
+                  BoxConstraints(minHeight: minSize, minWidth: minSize),
               padding: EdgeInsets.symmetric(horizontal: S.s12),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(R.md),
@@ -1642,7 +1730,8 @@ class _ToolbarButton extends StatelessWidget {
             onTap: onTap,
             borderRadius: BorderRadius.circular(R.sm),
             child: ConstrainedBox(
-              constraints: BoxConstraints(minWidth: minSize, minHeight: minSize),
+              constraints:
+                  BoxConstraints(minWidth: minSize, minHeight: minSize),
               child: Padding(
                 padding:
                     EdgeInsets.symmetric(horizontal: showLabel ? S.s8 : S.s6),
