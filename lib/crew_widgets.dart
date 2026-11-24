@@ -179,7 +179,8 @@ Future<void> runCrewAgentAction(
         title: 'Delete $name?',
         body:
             "This removes the agent, its identity and its notes. Its past task history loses it too. This can't be undone.",
-        confirmLabel: 'Delete agent');
+        confirmLabel: 'Delete agent',
+        typedName: name);
     if (!ok || !context.mounted) return;
     try {
       await client.deleteAgent(agent.id);

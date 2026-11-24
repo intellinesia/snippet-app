@@ -209,7 +209,8 @@ Future<bool> confirmDeleteGroup(
       title: 'Delete $name?',
       body: 'This removes the group chat and its messages for everyone in it. '
           'The agents stay. This can\'t be undone.',
-      confirmLabel: 'Delete group');
+      confirmLabel: 'Delete group',
+      typedName: group.title.trim().isEmpty ? null : name);
   if (!ok || !context.mounted) return false;
   try {
     await client.deleteGroup(group.id);

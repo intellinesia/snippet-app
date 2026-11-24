@@ -112,7 +112,8 @@ class _ProfileSheetState extends State<_ProfileSheet> {
     final ok = await confirmAction(context,
         title: 'Delete ${a.displayName}?',
         body: 'Its sessions stay; the agent, its desk and memory go.',
-        confirmLabel: 'Delete agent');
+        confirmLabel: 'Delete agent',
+        typedName: a.displayName.trim().isEmpty ? null : a.displayName.trim());
     if (!ok) return;
     try {
       await widget.client.deleteAgent(a.id);

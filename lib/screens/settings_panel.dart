@@ -2427,6 +2427,7 @@ Future<void> showManageMachineSheet({
           body:
               '${instance.label}\n\nRemoves the saved connection from this app. The machine and its sessions are untouched.',
           confirmLabel: 'Remove',
+          typedName: instance.label.trim().isEmpty ? null : instance.label.trim(),
         );
         if (ok) onRemove(instance);
       }, danger: true),
