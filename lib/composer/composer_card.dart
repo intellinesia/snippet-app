@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../desktop_look.dart';
 import 'package:flutter/material.dart';
+import '../tap_detector.dart' show HitArea;
 
 import '../platform.dart';
 import '../theme.dart';
@@ -225,48 +226,63 @@ class ComposerChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-        color: selected ? AppColors.accentBg : Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.transparent,
         child: InkWell(
           onTap: () {
             pickHaptic();
             onTap();
           },
           borderRadius: BorderRadius.circular(16),
-          child: Container(
-            height: 32,
-            padding: EdgeInsets.fromLTRB(compact ? S.s8 : (kMobile ? S.of(9) : S.s8), 0,
-                compact ? S.s8 : (onClear == null ? (kMobile ? S.s8 : S.of(7)) : S.s4), 0),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                AppIcon(icon,
-                    size: 14,
-                    color: selected ? AppColors.accent : AppColors.fg2),
-                if (!compact) SizedBox(width: S.s6),
-                if (!compact)
-                  ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: kMobile ? 110 : 140),
-                    child: Text(label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(14,
-                            color:
-                                selected ? AppColors.accent : AppColors.fg3)),
-                  ),
-                if (compact)
-                  const SizedBox.shrink()
-                else if (onClear != null)
-                  IconBtn('x',
-                      size: 22, iconSize: 12, tooltip: 'Clear', onTap: onClear)
-                else ...[
-                  SizedBox(width: S.of(5)),
-                  AppIcon('chevron-down',
-                      size: 13,
-                      color: selected ? AppColors.accent : AppColors.fg4),
+          child: HitArea(
+            alignment: Alignment.center,
+            child: Container(
+              height: 32,
+              decoration: BoxDecoration(
+                color: selected ? AppColors.accentBg : Colors.transparent,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              padding: EdgeInsets.fromLTRB(
+                  compact ? S.s8 : (kMobile ? S.of(9) : S.s8),
+                  0,
+                  compact
+                      ? S.s8
+                      : (onClear == null ? (kMobile ? S.s8 : S.of(7)) : S.s4),
+                  0),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  AppIcon(icon,
+                      size: 14,
+                      color: selected ? AppColors.accent : AppColors.fg2),
+                  if (!compact) SizedBox(width: S.s6),
+                  if (!compact)
+                    ConstrainedBox(
+                      constraints:
+                          BoxConstraints(maxWidth: kMobile ? 110 : 140),
+                      child: Text(label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(14,
+                              color:
+                                  selected ? AppColors.accent : AppColors.fg3)),
+                    ),
+                  if (compact)
+                    const SizedBox.shrink()
+                  else if (onClear != null)
+                    IconBtn('x',
+                        size: 22,
+                        iconSize: 12,
+                        tooltip: 'Clear',
+                        onTap: onClear)
+                  else ...[
+                    SizedBox(width: S.of(5)),
+                    AppIcon('chevron-down',
+                        size: 13,
+                        color: selected ? AppColors.accent : AppColors.fg4),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

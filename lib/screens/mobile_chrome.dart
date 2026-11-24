@@ -61,10 +61,7 @@ class RoundBtn extends StatelessWidget {
                     onTap!();
                   },
             child: Stack(clipBehavior: Clip.none, children: [
-              if (bare)
-                _face()
-              else
-                Glass(radius: null, child: _face()),
+              if (bare) _face() else Glass(radius: null, child: _face()),
               if (badge && badgeCount <= 0)
                 Positioned(
                   right: 1,
@@ -276,26 +273,29 @@ class MobileMissionBar extends StatelessWidget {
                 child: TapDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: onActions,
-                  child: Glass(
-                    radius: BorderRadius.circular(R.of(20)),
-                    child: Container(
-                      height: 40,
-                      padding: EdgeInsets.symmetric(horizontal: S.s16),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        AgentMochi('lead', size: 22),
-                        SizedBox(width: S.of(7)),
-                        Flexible(
-                          child: Text(
-                            'Lead',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TS.ui(AppColors.fg1).copyWith(
-                                fontSize: 14,
-                                fontWeight: W.strong,
-                                height: 1.2),
+                  child: HitArea(
+                    alignment: Alignment.center,
+                    child: Glass(
+                      radius: BorderRadius.circular(R.of(20)),
+                      child: Container(
+                        height: 40,
+                        padding: EdgeInsets.symmetric(horizontal: S.s16),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          AgentMochi('lead', size: 22),
+                          SizedBox(width: S.of(7)),
+                          Flexible(
+                            child: Text(
+                              'Lead',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TS.ui(AppColors.fg1).copyWith(
+                                  fontSize: 14,
+                                  fontWeight: W.strong,
+                                  height: 1.2),
+                            ),
                           ),
-                        ),
-                      ]),
+                        ]),
+                      ),
                     ),
                   ),
                 ),
@@ -313,8 +313,7 @@ class MobileMissionBar extends StatelessWidget {
                   size: 44,
                   onTap: () => startMobileVoice(context, c),
                   child: AppIcon('phone',
-                      size: 18,
-                      color: live ? AppColors.ok : AppColors.fg1),
+                      size: 18, color: live ? AppColors.ok : AppColors.fg1),
                 );
               },
             )
@@ -362,8 +361,7 @@ class MobileBackBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pill =
-        onTitleTap != null || subtitle != null || subtitleView != null;
+    final pill = onTitleTap != null || subtitle != null || subtitleView != null;
     // iOS has no system back for these pages, so only Android loses the button,
     // and only when nothing on the right would leave the bar lopsided.
     final showBack = menu ||
