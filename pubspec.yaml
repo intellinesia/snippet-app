@@ -52,6 +52,7 @@ dependencies:
   snippet_render:
     path: packages/snippet_render
   flutter_soloud: ^4.1.7
+  pdfrx: ^2.4.8
 dev_dependencies:
   flutter_test:
     sdk: flutter

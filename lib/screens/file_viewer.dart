@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
+import 'file_preview_parts.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:media_store_plus/media_store_plus.dart';
@@ -311,7 +312,9 @@ class _FileViewerState extends State<FileViewer> {
       );
   bool get _isVideo => _videoExts.contains(_ext);
   bool get _isAudio => _audioExts.contains(_ext);
-  bool get _isMedia => _isImage || _isVideo || _isAudio;
+  // Phones render PDFs on device; desktop keeps the download path.
+  bool get _isPdf => kMobile && _ext == 'pdf';
+  bool get _isMedia => _isImage || _isVideo || _isAudio || _isPdf;
 
   Future<void> _download() async {
     setState(() => _downloading = true);
@@ -471,7 +474,28 @@ class _FileViewerState extends State<FileViewer> {
         bottom: false,
         child: Column(children: [
           // The Mac window bar has no file actions; other desktops get them from CardTabStrip.
-          if (!widget.embedded)
+          if (!widget.embedded && kMobile)
+            PreviewTopBar(
+                client: widget.client,
+                path: widget.path,
+                name: widget.name,
+                onClose: widget.onClose ?? () => Navigator.pop(context),
+                onSave: _download,
+                onEdit: editable ? edit : null),
+          if (!widget.embedded && kMobile && meta != null)
+            Padding(
+              padding: EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, 8),
+              child: Text(
+                  [
+                    if (languageForExt(_ext) != null) languageForExt(_ext)!,
+                    meta,
+                  ].join(' · '),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(13, color: AppColors.fg3, tabular: true)),
+            ),
+          if (!widget.embedded && !kMobile)
             SnAppBar(
                 title: widget.name,
                 subtitle: meta == null
@@ -485,7 +509,11 @@ class _FileViewerState extends State<FileViewer> {
               (_isMedia || f == null || f.binary) &&
               barActions.isNotEmpty)
             _FileToolbar(actions: barActions),
-          if (_isImage)
+          if (_isPdf)
+            Expanded(
+                child: PdfPreview(
+                    client: widget.client, path: widget.path, name: widget.name))
+          else if (_isImage)
             Expanded(
               child: InteractiveViewer(
                 minScale: 1,
@@ -539,15 +567,47 @@ class _FileViewerState extends State<FileViewer> {
                 name: widget.name,
               ),
             )
+          else if (_loading && kMobile)
+            const Expanded(
+                child: PreviewNotice(icon: 'file-text', title: 'Loading preview'))
           else if (_loading)
             Expanded(child: Center(child: DelayedSpinner(size: 22)))
+          else if (_error != null && kMobile)
+            Expanded(
+                child: PreviewNotice(
+                    icon: 'alert-triangle',
+                    title: 'Could not load the preview',
+                    line: 'The connection to the machine dropped. Try again.',
+                    actions: [('Try again', _load, true)]))
           else if (_error != null)
             Expanded(
                 child: EmptyState(
                     icon: 'alert-triangle',
                     title: 'Failed to load',
                     body: _error!))
-          else if (f!.binary)
+          else if (f!.binary && kMobile)
+            Expanded(
+                child: PreviewNotice(
+                    icon: notPreviewable(_ext).$1,
+                    title: '${_ext.isEmpty ? 'File' : _ext.toUpperCase()} · ${formatBytes(f.size)}',
+                    line: notPreviewable(_ext).$2,
+                    actions: [
+                  ('Open in…',
+                      () => openPreviewFileIn(
+                          context, widget.client, widget.path, widget.name),
+                      true),
+                  ('Share',
+                      () => sharePreviewFile(
+                          context, widget.client, widget.path, widget.name),
+                      false),
+                ]))
+          else if (kMobile && f.content.isEmpty)
+            const Expanded(
+                child: PreviewNotice(
+                    icon: 'file-text',
+                    title: 'This file is empty',
+                    line: 'There is nothing to show.'))
+          else if (f.binary)
             Expanded(
               child: Center(
                 child: EmptyState(
