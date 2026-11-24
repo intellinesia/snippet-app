@@ -1,9 +1,7 @@
-import '../../chat/agent_cluster.dart';
 import '../../toast_avoid.dart';
 import 'package:flutter/material.dart';
 
 import '../../crew_status.dart';
-import '../../mochi.dart';
 import '../../models.dart';
 import '../../quiet.dart';
 import '../../tap_detector.dart';
@@ -11,7 +9,13 @@ import '../../theme.dart';
 import '../../widgets.dart';
 import '../session_list_row.dart' show sessionNeedsYou;
 import '../shell_nav.dart' show sessionBusy;
+import '../../pins.dart';
+import 'agents_home.dart';
 import 'home_data.dart';
+import 'home_style.dart' show homeAge;
+import 'needs_you_pager.dart' show askText;
+
+enum _Filter { all, needs, running }
 
 /// Quiet Home and Sessions: two calm lists, no hero, no shader, no cards.
 /// Both read the same sessions; Home shows only what matters now.
@@ -105,7 +109,9 @@ String _stateWord(SessionInfo s) => sessionNeedsYou(s)
             ? 'Completed'
             : 'Idle';
 
-class QuietHomeScreen extends StatelessWidget {
+enum HomeFilter { all, working, needs, pinned }
+
+class QuietHomeScreen extends StatefulWidget {
   const QuietHomeScreen({
     super.key,
     required this.sessions,
@@ -116,6 +122,7 @@ class QuietHomeScreen extends StatelessWidget {
     required this.onSearch,
     this.onNew,
     this.onNewMenu,
+    this.onNewAgent,
     this.onOpenAgent,
     this.onOpenLead,
     this.onAllAgents,
@@ -125,6 +132,7 @@ class QuietHomeScreen extends StatelessWidget {
     this.offline,
     this.groups = const [],
     this.onOpenGroup,
+    this.pinHost,
   });
 
   final Widget? offline;
@@ -136,6 +144,7 @@ class QuietHomeScreen extends StatelessWidget {
   final VoidCallback onSearch;
   final VoidCallback? onNew;
   final void Function(BuildContext anchor)? onNewMenu;
+  final VoidCallback? onNewAgent;
   final void Function(CoordinationAgent a)? onOpenAgent;
   final VoidCallback? onOpenLead;
   final VoidCallback? onAllAgents;
@@ -143,352 +152,352 @@ class QuietHomeScreen extends StatelessWidget {
   final void Function(CoordinationAgent a)? onProfile;
   final List<GroupSummary> groups;
   final void Function(GroupSummary g)? onOpenGroup;
-  int get groupCount => groups.length;
   final Future<bool> Function(SessionInfo s, bool approve)? onDecide;
+
+  /// Host the pins are stored under; null means nothing is pinned.
+  final String? pinHost;
+  int get groupCount => groups.length;
+
+  @override
+  State<QuietHomeScreen> createState() => _QuietHomeScreenState();
+}
+
+class _HomeAgent {
+  _HomeAgent(this.agent, this.state, this.line, this.activityMs, this.since);
+  final CoordinationAgent agent;
+  final CrewState state;
+  final String line;
+  final int activityMs;
+
+  /// Unix seconds the current work started; null when not working.
+  final int? since;
+}
+
+class _QuietHomeScreenState extends State<QuietHomeScreen> {
+  HomeFilter _filter = HomeFilter.all;
+  bool _showAllWorking = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Pins.instance.addListener(_pins);
+  }
+
+  @override
+  void dispose() {
+    Pins.instance.removeListener(_pins);
+    super.dispose();
+  }
+
+  void _pins() {
+    if (mounted) setState(() {});
+  }
+
+  bool _pinned(CoordinationAgent a) =>
+      widget.pinHost != null &&
+      Pins.instance.isPinned(Pins.agent, a.id, host: widget.pinHost!);
 
   @override
   Widget build(BuildContext context) {
-    final names = {for (final a in agents) a.id: a.displayName};
-    final asks = needsYouItems(sessions);
+    final w = widget;
+    final names = {for (final a in w.agents) a.id: a.displayName};
+    final asks = needsYouItems(w.sessions);
+    final rows = agentRows(w.agents, w.sessions);
+    final lead = w.agents.where((a) => a.isLead).firstOrNull;
+    final nowS = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+    List<SessionInfo> mine(CoordinationAgent a) => [
+          for (final s in w.sessions)
+            if (s.displayAgentId == a.id) s
+        ]..sort((x, y) => y.lastActive.compareTo(x.lastActive));
+    int activity(CoordinationAgent a) {
+      final s = mine(a).firstOrNull?.lastActive ?? 0;
+      final said = a.lastMessage?.at?.millisecondsSinceEpoch ?? 0;
+      return s * 1000 > said ? s * 1000 : said;
+    }
+
+    final all = <_HomeAgent>[];
+    for (final r in [...rows.needs, ...rows.working, ...rows.asleep]) {
+      final ms = mine(r.agent);
+      final busy = ms.where((s) => !s.settled && sessionBusy(s)).firstOrNull;
+      all.add(_HomeAgent(
+          r.agent,
+          r.state,
+          r.state == CrewState.working
+              ? (busy?.title.trim().isNotEmpty == true
+                  ? busy!.title.trim()
+                  : r.line)
+              : r.line,
+          activity(r.agent),
+          r.state == CrewState.working
+              ? (busy?.runningSince ?? busy?.lastActive)
+              : null));
+    }
+    if (lead != null) {
+      final ls = w.sessions.where((s) => s.displayAgentId == 'lead').toList();
+      final busy = ls.any((s) => !s.settled && sessionBusy(s));
+      all.add(_HomeAgent(
+          lead,
+          busy ? CrewState.working : CrewState.standingBy,
+          lead.lastMessage?.text ?? 'Orchestrator',
+          activity(lead),
+          busy ? nowS : null));
+    }
     final working = [
-      for (final s in sessions)
-        if (!s.settled && sessionBusy(s) && !sessionNeedsYou(s)) s
-    ]..sort((a, b) => b.lastActive.compareTo(a.lastActive));
-    final rows = agentRows(agents, sessions);
-    final lead = agents.where((a) => a.isLead).firstOrNull;
-    // Lead first, then whoever needs you, then who is working, then the rest.
-    final strip = <(CoordinationAgent, CrewState)>[
-      if (lead != null)
-        (lead, working.isNotEmpty ? CrewState.working : CrewState.standingBy),
-      for (final r in rows.needs) (r.agent, r.state),
-      for (final r in rows.working) (r.agent, r.state),
-      for (final r in rows.asleep) (r.agent, r.state),
+      for (final a in all)
+        if (a.state == CrewState.working) a
+    ]..sort((a, b) => (a.since ?? nowS).compareTo(b.since ?? nowS));
+    final needsAgents = {
+      for (final a in all)
+        if (a.state == CrewState.needsYou) a.agent.id
+    };
+    final recent = [
+      for (final a in all)
+        if (a.state == CrewState.standingBy) a
+    ]..sort((a, b) => b.activityMs.compareTo(a.activityMs));
+    final pinned = [
+      for (final a in all)
+        if (_pinned(a.agent)) a
     ];
-    // A group ask counts only when its asker has no session ask of its own.
+
+    // Group asks count only when the asker has no session ask of its own.
     final withAsk = {for (final a in asks) a.agentId};
     final askers = {
-      for (final r in rows.needs)
-        if (!withAsk.contains(r.agent.id)) r.agent.id
+      for (final id in needsAgents)
+        if (!withAsk.contains(id)) id
     };
     final groupAsks = [
-      for (final g in groups)
+      for (final g in w.groups)
         if (g.agentIds.any(askers.contains)) g
     ];
-    final quiet = asks.isEmpty && working.isEmpty && groupAsks.isEmpty;
+    final pager = <AskCardData>[
+      for (final a in asks)
+        AskCardData(
+            agentId: a.agentId,
+            name: _agentName(a.session, names),
+            time: relativeTime(a.session.lastActive),
+            text: askText(a).ask,
+            onTap: () => w.onOpenSession(a.session)),
+      for (final g in groupAsks)
+        AskCardData(
+            agentId: g.agentIds.firstOrNull ?? 'snippet',
+            name: g.title.isEmpty ? 'Group' : g.title,
+            time: relativeTime(
+                (groupActivityAt(g)?.millisecondsSinceEpoch ?? 0) ~/ 1000),
+            text:
+                'Waiting on ${[for (final id in g.agentIds) if (askers.contains(id)) (names[id] ?? id)].join(', ')}',
+            onTap: () => w.onOpenGroup?.call(g)),
+    ];
+
     final dayStart = DateTime.now()
             .copyWith(hour: 0, minute: 0, second: 0, millisecond: 0)
             .millisecondsSinceEpoch ~/
         1000;
-    final finished = sessions
+    final finished = w.sessions
         .where((s) =>
             !sessionBusy(s) && !sessionNeedsYou(s) && s.lastActive >= dayStart)
         .length;
-    final total =
-        agents.where((a) => !a.isLead).length + (lead != null ? 1 : 0);
-    final allLabel = groupCount > 0
-        ? 'All $total agents and $groupCount ${groupCount == 1 ? 'group' : 'groups'}'
-        : 'All $total agents';
-    return ListView(
-      padding: EdgeInsets.only(bottom: S.s24),
-      children: [
-        QuietPlaceHeader(
-          title: 'Agents',
-          onNewMenu: onNewMenu,
-          onSearch: onSearch,
-          onSettings: onSettings,
-          tagline: quiet &&
-                  strip.isNotEmpty &&
-                  MediaQuery.textScalerOf(context).scale(10) < 15
-              ? 'Tap an agent to talk to it. Nobody is working.'
-              : null,
+
+    final bar = _Bar(onSearch: w.onSearch, onSettings: w.onSettings);
+    if (all.isEmpty && w.groups.isEmpty) {
+      return ListView(children: [
+        bar,
+        if (w.offline != null) w.offline!,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(kGutter, 24, kGutter, 12),
+          child: Text('No agents yet',
+              style: sans(14, weight: FontWeight.w500, color: AppColors.fg1)),
         ),
-        if (offline != null) offline!,
-        if (strip.isNotEmpty)
-          _FaceStrip(
-              items: strip,
-              onOpen: (a) => onOpenAgent?.call(a),
-              onProfile: onProfile),
-        if (asks.isNotEmpty) ...[
-          QuietSectionLabel('Needs you', count: asks.length + groupAsks.length),
-          for (final a in asks)
-            _Ask(
-                item: a,
-                names: names,
-                onOpen: onOpenSession,
-                onDecide: onDecide),
-        ],
-        if (groupAsks.isNotEmpty && asks.isEmpty) ...[
-          QuietSectionLabel('Needs you', count: groupAsks.length),
-        ],
-        for (final g in groupAsks)
-          QuietRow(
-            title: g.title.isEmpty ? 'Group' : g.title,
-            sub: 'Waiting on ${[
-              for (final id in g.agentIds)
-                if (askers.contains(id))
-                  ((names[id] ?? '').trim().isEmpty ? id : names[id]!)
-            ].join(', ')}',
-            leading:
-                GroupGlyph(size: 28, ids: g.agentIds, count: g.members.length),
-            trailing: const QuietHand(size: 14),
-            onTap: onOpenGroup == null ? null : () => onOpenGroup!(g),
-          ),
-        if (working.isNotEmpty) ...[
-          QuietSectionLabel('Working', count: working.length),
-          for (final s in working)
-            QuietRow(
-              title: _agentName(s, names),
-              titleLines: 1,
-              sub: s.title.isEmpty ? 'Untitled session' : s.title,
-              meta: relativeTime(s.lastActive),
-              leading: AgentMochi(s.displayAgentId ?? 'snippet', size: 28),
-              onTap: () => onOpenSession(s),
-            ),
-        ],
-        if (quiet) ...[
-          const QuietSectionLabel('Start'),
-          _StartGroup(onOpenLead: onOpenLead, onNew: onNew),
-        ],
-        if (groups.isNotEmpty) ...[
-          QuietSectionLabel('Groups', count: groups.length),
-          for (final g in groups)
-            QuietRow(
-              title: g.title.isEmpty ? 'Group' : g.title,
-              sub: '${g.members.length} members',
-              leading: GroupGlyph(
-                  size: 28, ids: g.agentIds, count: g.members.length),
-              onTap: onOpenGroup == null ? null : () => onOpenGroup!(g),
-            ),
-        ],
-        if (finished > 0) ...[
-          SizedBox(height: S.s8),
-          QuietRow(
-            title: '$finished finished today',
-            leading: AppIcon('check-circle', size: 20, color: AppColors.fg3),
-            trailing: AppIcon('chevron-right', size: 16, color: AppColors.fg3),
-            onTap: onOpenSessions,
-          ),
-        ],
-        if (onAllAgents != null)
-          QuietRow(
-            title: allLabel,
-            leading: AppIcon('users', size: 20, color: AppColors.fg3),
-            trailing: AppIcon('chevron-right', size: 16, color: AppColors.fg3),
-            onTap: onAllAgents,
-          ),
-        if (onArtifacts != null)
-          QuietRow(
-            title: 'Artifacts',
-            leading: AppIcon('file-stack', size: 20, color: AppColors.fg3),
-            trailing: AppIcon('chevron-right', size: 16, color: AppColors.fg3),
-            onTap: onArtifacts,
-          ),
-      ],
-    );
-  }
-}
-
-/// Who is here: 56 pt faces with a 16 pt state badge, scrolling sideways.
-class _FaceStrip extends StatelessWidget {
-  const _FaceStrip({required this.items, required this.onOpen, this.onProfile});
-  final void Function(CoordinationAgent a)? onProfile;
-  final List<(CoordinationAgent, CrewState)> items;
-  final void Function(CoordinationAgent a) onOpen;
-
-  @override
-  Widget build(BuildContext context) => ToastAvoid(child: SizedBox(
-        height: 92 + (MediaQuery.textScalerOf(context).scale(11) - 11) * 2,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: EdgeInsets.symmetric(horizontal: S.s16, vertical: S.s4),
-          itemCount: items.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 16),
-          itemBuilder: (_, i) {
-            final (a, state) = items[i];
-            return Semantics(
-              button: true,
-              label: a.displayName,
-              child: TapDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => onOpen(a),
-                onLongPress: () async {
-                  final pick = await showAppMenu<String>(context, items: [
-                    appMenuItem(
-                        value: 'message', icon: 'message', label: 'Message'),
-                    appMenuItem(
-                        value: 'profile', icon: 'user', label: 'Profile'),
-                  ]);
-                  if (pick == 'message') onOpen(a);
-                  if (pick == 'profile') onProfile?.call(a);
-                },
-                child: SizedBox(
-                  width: 56,
-                  child: Column(children: [
-                    SizedBox(
-                      width: 56,
-                      height: 56,
-                      child: Stack(clipBehavior: Clip.none, children: [
-                        AgentMochi(a.id, size: 56),
-                        if (state != CrewState.standingBy)
-                          Positioned(
-                            right: -2,
-                            bottom: -2,
-                            child: Container(
-                              width: 16,
-                              height: 16,
-                              decoration: BoxDecoration(
-                                  color: AppColors.bg, shape: BoxShape.circle),
-                              alignment: Alignment.center,
-                              child: state == CrewState.needsYou
-                                  ? const QuietHand(size: 12)
-                                  : AppIcon('circle',
-                                      size: 10, color: AppColors.fg1),
-                            ),
-                          ),
-                      ]),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(a.displayName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: sans(11, color: AppColors.fg3)),
-                  ]),
-                ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: kGutter),
+          child: Semantics(
+            button: true,
+            label: 'New agent',
+            excludeSemantics: true,
+            child: TapDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: w.onNewAgent ?? w.onNew,
+              child: Container(
+                key: const ValueKey('empty-new-agent'),
+                constraints: const BoxConstraints(minHeight: 48),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                    color: AppColors.fg1,
+                    borderRadius: BorderRadius.circular(24)),
+                child: Text('New agent',
+                    style: sans(14,
+                        weight: FontWeight.w500, color: AppColors.bg)),
               ),
-            );
-          },
-        ),
-      ));
-}
-
-/// The Start group: one calm place for the two things you do first.
-class _StartGroup extends StatelessWidget {
-  const _StartGroup({this.onOpenLead, this.onNew});
-  final VoidCallback? onOpenLead;
-  final VoidCallback? onNew;
-
-  @override
-  Widget build(BuildContext context) {
-    // At large text the one-line explainers go, so the groups below stay on screen.
-    final compact = MediaQuery.textScalerOf(context).scale(10) >= 15;
-    return ToastAvoid(child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: S.s16),
-        child: Container(
-          decoration: BoxDecoration(
-              color: AppColors.surface1,
-              borderRadius: BorderRadius.circular(R.md)),
-          clipBehavior: Clip.antiAlias,
-          child: Column(children: [
-            QuietRow(
-              title: 'Ask Lead what is next',
-              sub: compact ? null : 'Lead plans it and hands it out',
-              leading: AgentMochi('lead', size: 28),
-              trailing:
-                  AppIcon('chevron-right', size: 16, color: AppColors.fg3),
-              onTap: onOpenLead,
             ),
-            QuietRow(
-              title: 'New session',
-              sub: compact ? null : 'Pick an agent, then say what to make',
-              leading: AppIcon('edit', size: 22, color: AppColors.fg2),
-              trailing:
-                  AppIcon('chevron-right', size: 16, color: AppColors.fg3),
-              onTap: onNew,
-            ),
-          ]),
+          ),
         ),
-      ));
-  }
-}
+      ]);
+    }
 
-class _Ask extends StatefulWidget {
-  const _Ask(
-      {required this.item,
-      required this.names,
-      required this.onOpen,
-      required this.onDecide});
-  final AskItem item;
-  final Map<String, String> names;
-  final void Function(SessionInfo) onOpen;
-  final Future<bool> Function(SessionInfo, bool)? onDecide;
+    String status(_HomeAgent a) {
+      if (a.state == CrewState.working) {
+        final age = homeAge(a.since ?? nowS);
+        return 'Working · ${age == 'now' ? '1m' : age}';
+      }
+      return a.state == CrewState.needsYou ? 'Needs you' : 'Idle';
+    }
 
-  @override
-  State<_Ask> createState() => _AskState();
-}
+    AgentCardData card(_HomeAgent a) => AgentCardData(
+        a.agent, status(a), a.line,
+        working: a.state == CrewState.working);
+    void open(CoordinationAgent a) {
+      if (a.isLead && w.onOpenLead != null) {
+        w.onOpenLead!();
+      } else {
+        w.onOpenAgent?.call(a);
+      }
+    }
 
-class _AskState extends State<_Ask> {
-  bool _busy = false;
+    final f = _filter;
+    final body = <Widget>[];
+    if (f == HomeFilter.all || f == HomeFilter.needs) {
+      if (pager.isNotEmpty) {
+        body.add(const SizedBox(height: 16));
+        body.add(AskPager(items: pager));
+      } else if (f == HomeFilter.needs) {
+        body.add(const _Empty('Nothing needs you'));
+      }
+    }
+    if (f == HomeFilter.all || f == HomeFilter.working) {
+      if (working.isNotEmpty) {
+        body.add(HomeLabel('Working  ${working.length}'));
+        final shown = _showAllWorking || f == HomeFilter.working
+            ? working
+            : working.take(4).toList();
+        body.add(
+            AgentGrid(cards: [for (final a in shown) card(a)], onOpen: open));
+        if (shown.length < working.length) {
+          body.add(TextLink('Show ${working.length - shown.length} more',
+              () => setState(() => _showAllWorking = true)));
+        }
+      } else if (f == HomeFilter.working) {
+        body.add(const _Empty('No agents are working'));
+      }
+    }
+    if (f == HomeFilter.pinned) {
+      if (pinned.isEmpty) {
+        body.add(const _Empty('Nothing is pinned'));
+      } else {
+        body.add(HomeLabel('Pinned  ${pinned.length}'));
+        body.add(
+            AgentGrid(cards: [for (final a in pinned) card(a)], onOpen: open));
+      }
+    }
+    if (f == HomeFilter.all) {
+      if (w.groups.isNotEmpty) {
+        body.add(const HomeLabel('Groups'));
+        final workingIds = {
+          for (final a in all)
+            if (a.state == CrewState.working) a.agent.id
+        };
+        for (final g in sortedGroups(w.groups)) {
+          final n = g.members.length;
+          final active =
+              g.members.where((m) => workingIds.contains(m.id)).length;
+          body.add(MarkRow(
+            mark: groupMark(36),
+            title: g.title.isEmpty ? 'Group' : g.title,
+            sub: '$n ${n == 1 ? 'member' : 'members'} · $active active',
+            trailing: AppIcon('chevron-right', size: 16, color: AppColors.fg3),
+            hairline: false,
+            onTap: w.onOpenGroup == null ? null : () => w.onOpenGroup!(g),
+          ));
+        }
+      }
+      if (recent.isNotEmpty) {
+        body.add(const HomeLabel('Recent'));
+        for (final a in recent.take(3)) {
+          final at = a.activityMs;
+          body.add(MarkRow(
+            mark: agentFace(a.agent.id, 36),
+            title: a.agent.displayName,
+            time: at == 0 ? null : relativeTime(at ~/ 1000),
+            sub: a.line,
+            onTap: () => open(a.agent),
+          ));
+        }
+      }
+    }
 
-  Future<void> _decide(bool approve) async {
-    setState(() => _busy = true);
-    await widget.onDecide!(widget.item.session, approve);
-    if (mounted) setState(() => _busy = false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final s = widget.item.session;
-    final canDecide =
-        widget.item.kind == AskKind.approval && widget.onDecide != null;
-    return Container(
-      margin: EdgeInsets.fromLTRB(S.s16, 0, S.s16, S.s8),
-      padding: EdgeInsets.all(S.s12),
-      decoration: BoxDecoration(
-        color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(R.of(14)),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        TapDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => widget.onOpen(s),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Padding(
-                padding: EdgeInsets.only(top: S.s2), child: const QuietHand()),
-            SizedBox(width: S.s12),
-            Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(s.title.isEmpty ? 'Untitled session' : s.title,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(15,
-                            height: 20 / 15,
-                            weight: W.label,
-                            color: AppColors.fg1)),
-                    Text(
-                        '${_agentName(s, widget.names)} · ${switch (widget.item.kind) {
-                          AskKind.approval => 'Asks to run something',
-                          AskKind.question => 'Asked you a question',
-                          AskKind.handoff => 'Ready for review',
-                        }}',
-                        style: sans(13, height: 18 / 13, color: AppColors.fg3)),
-                  ]),
-            ),
-            SizedBox(width: S.s8),
-            Text(relativeTime(s.lastActive),
-                style: sans(12, height: 16 / 12, color: AppColors.fg3)),
-          ]),
-        ),
-        SizedBox(height: S.s12),
-        Row(children: [
-          if (canDecide) ...[
-            Btn('Approve',
-                small: true, onTap: _busy ? null : () => _decide(true)),
-            SizedBox(width: S.s8),
-          ],
-          Btn(canDecide ? 'Reply' : 'Open',
-              small: true,
-              variant: BtnVariant.secondary,
-              onTap: () => widget.onOpen(s)),
-        ]),
-      ]),
+    final foot = Padding(
+      padding: const EdgeInsets.only(top: 16, bottom: 16),
+      child: HomeFooter(
+          onAll: w.onAllAgents,
+          finished: finished,
+          onFinished: w.onOpenSessions),
     );
+
+    return CustomScrollView(slivers: [
+      SliverList(
+        delegate: SliverChildListDelegate([
+          bar,
+          if (w.offline != null) w.offline!,
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: ChipRow(chips: [
+              StateChip('All', f == HomeFilter.all,
+                  () => setState(() => _filter = HomeFilter.all)),
+              StateChip('Working', f == HomeFilter.working,
+                  () => setState(() => _filter = HomeFilter.working)),
+              StateChip('Needs you', f == HomeFilter.needs,
+                  () => setState(() => _filter = HomeFilter.needs),
+                  amberDot: pager.isNotEmpty),
+              StateChip('Pinned', f == HomeFilter.pinned,
+                  () => setState(() => _filter = HomeFilter.pinned)),
+            ]),
+          ),
+          ...body,
+        ]),
+      ),
+      SliverFillRemaining(
+        hasScrollBody: false,
+        child: Align(alignment: Alignment.bottomCenter, child: foot),
+      ),
+    ]);
   }
 }
 
-enum _Filter { all, needs, running }
+class _Empty extends StatelessWidget {
+  const _Empty(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(kGutter, 24, kGutter, 8),
+        child: Center(child: Text(text, style: sans(14, color: AppColors.fg3))),
+      );
+}
+
+/// Home bar: 28/500 title at x16, search and settings as 48 x 48 targets.
+class _Bar extends StatelessWidget {
+  const _Bar({required this.onSearch, required this.onSettings});
+  final VoidCallback onSearch, onSettings;
+
+  @override
+  Widget build(BuildContext context) => ToastAvoid(
+        child: Padding(
+          padding: const EdgeInsets.only(left: kGutter, top: 4),
+          child: Row(children: [
+            Expanded(
+                child: Text('Agents',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(28,
+                        height: 34 / 28,
+                        weight: FontWeight.w500,
+                        color: AppColors.fg1))),
+            _IconTap('search', 'Search', onSearch),
+            _IconTap('settings', 'Settings', onSettings),
+          ]),
+        ),
+      );
+}
+
 
 class QuietSessionsScreen extends StatefulWidget {
   const QuietSessionsScreen({

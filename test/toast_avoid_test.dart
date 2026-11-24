@@ -5,7 +5,6 @@ import 'package:snippet/api.dart';
 import 'package:snippet/canvas/canvas_screen.dart';
 import 'package:snippet/mochi.dart';
 import 'package:snippet/models.dart';
-import 'package:snippet/quiet.dart' show QuietRow;
 import 'package:snippet/tap_detector.dart';
 import 'package:snippet/notification_card.dart';
 import 'package:snippet/notification_popovers.dart';
@@ -13,6 +12,7 @@ import 'package:snippet/notification_sync.dart';
 import 'package:snippet/screens/artifact_viewer.dart';
 import 'package:snippet/screens/artifacts_screen.dart';
 import 'package:snippet/screens/mobile_chrome.dart';
+import 'package:snippet/screens/mobile_home/agents_home.dart';
 import 'package:snippet/screens/mobile_home/quiet_home.dart';
 import 'package:snippet/theme.dart';
 
@@ -88,13 +88,10 @@ void main() {
             'Search': find.bySemanticsLabel('Search'),
             'Settings': find.bySemanticsLabel('Settings'),
             'Avatar': find.ancestor(
-                of: find.byType(AgentMochi), matching: find.byType(TapDetector)),
-            'AskLead': find.ancestor(
-                of: find.text('Ask Lead what is next'),
-                matching: find.byType(QuietRow)),
+                of: find.byType(AgentMochi).first,
+                matching: find.byType(MarkRow)),
             'CanvasReview': find.ancestor(
-                of: find.text('Canvas review'),
-                matching: find.byType(QuietRow)),
+                of: find.text('Canvas review'), matching: find.byType(MarkRow)),
           },
     ),
     'sessions': (

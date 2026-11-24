@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../chat/agent_cluster.dart' show GroupGlyph;
 import '../chat/chat_card.dart';
-import '../chat/signal_row.dart' show profileMeta, prettyModel;
+import '../chat/signal_row.dart'
+    show prettyModel, prettyProfile, prettyProvider;
 import '../mochi.dart';
 import '../models.dart';
 import '../quiet.dart';
@@ -13,6 +14,9 @@ import '../tap_detector.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'agent_profile_panel.dart';
+import 'agent_wake_panel.dart' show showAgentWakeSettings;
+import 'agent_reach_panel.dart' show showAgentReachSettings;
+import 'mobile_home/agents_home.dart';
 import 'agent_profile_sheet.dart';
 import 'group_messaging.dart' show openGroupThread, groupMemberName;
 import 'lead/coordination_agent_detail.dart';
@@ -76,6 +80,8 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
   Map<String, InferenceProfile> _profiles = const {};
   List<GroupSummary> _groups = const [];
   Map<String, CoordinationAgent> _agents = const {};
+  int? _memory;
+  String? _wakes, _reach;
 
   @override
   void initState() {
@@ -93,6 +99,24 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
             ]);
       }
     }).catchError((_) {});
+    widget.client.memoryScopes().then((scopes) {
+      final m = scopes
+          .where((x) => x.kind == 'agent' && x.key.contains(a.id))
+          .firstOrNull;
+      if (mounted && m != null) setState(() => _memory = m.entries);
+    }).catchError((_) {});
+    widget.client.wakes().then((l) {
+      final mine = l.wakes.where((w) => w.owner == a.id && w.enabled).toList();
+      if (!mounted || mine.isEmpty) return;
+      setState(() => _wakes = mine.map((w) => w.scheduleText).join(', '));
+    }).catchError((_) {});
+    widget.client.agentReach(a.id).then((r) {
+      final on = [
+        for (final c in AgentReach.channelOrder)
+          if (r.channel(c).enabled) reachChannelLabel(c)
+      ];
+      if (mounted && on.isNotEmpty) setState(() => _reach = on.join(', '));
+    }).catchError((_) {});
     widget.client.coordinationAgents().then((all) {
       if (mounted) setState(() => _agents = {for (final x in all) x.id: x});
     }).catchError((_) {});
@@ -101,7 +125,6 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
   CoordinationAgent get a => widget.agent;
   String get _name =>
       a.displayName.trim().isEmpty ? a.id : a.displayName.trim();
-  String get _handle => a.fullName.trim().isEmpty ? a.id : a.fullName.trim();
   bool get _isPaused => _paused ?? a.status == 'paused';
 
   List<SessionInfo> get _mine => [
@@ -126,6 +149,34 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
         onPauseChanged: (p) => setState(() => _paused = p),
         onDeleted: widget.onClose,
       ));
+
+  void _openWake() => unawaited(showAgentWakeSettings(context,
+      client: widget.client, owner: a.id, name: _name));
+
+  void _openReach() => unawaited(showAgentReachSettings(context,
+      client: widget.client, agentId: a.id, name: _name));
+
+  Future<void> _more() async {
+    final pick = await showAppMenu<String>(context, items: [
+      appMenuItem(value: 'model', icon: 'sliders', label: 'Model'),
+      appMenuItem(
+          value: 'pause',
+          icon: _isPaused ? 'play' : 'pause',
+          label: _isPaused ? 'Resume' : 'Pause'),
+      appMenuItem(value: 'rename', icon: 'edit', label: 'Rename'),
+      appMenuItem(value: 'delete', icon: 'trash', label: 'Delete'),
+    ]);
+    if (!mounted) return;
+    switch (pick) {
+      case 'model':
+        unawaited(showAgentProfileSettings(context,
+            client: widget.client, agent: a, name: _name));
+      case 'pause':
+        unawaited(_togglePause());
+      case 'rename' || 'delete':
+        _openProfile();
+    }
+  }
 
   Future<void> _togglePause() async {
     final next = !_isPaused;
@@ -162,148 +213,143 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
         if (!active.contains(s)) s
     ].take(3).toList();
     final profile = a.deskProfile ?? a.profile;
-    final meta = profileMeta(_profiles, profile);
     final model = (_profiles[profile ?? '']?.model ?? '').trim();
-    final folder = mine
-            .map((s) => s.projectFolder.trim())
-            .where((f) => f.isNotEmpty)
-            .firstOrNull ??
-        '';
     final live = _isPaused ? null : active.firstOrNull;
     Widget sessionRow(SessionInfo s) => QuietRow(
           title: s.title.isEmpty ? 'Untitled session' : s.title,
           sub: [sessionStateWord(s), relativeTime(s.lastActive)]
               .where((x) => x.isNotEmpty)
-              .join(' · '),
+              .join(' \u00b7 '),
           leading: sessionStateMark(s),
           trailing: AppIcon('chevron-right', size: 16, color: AppColors.fg3),
           onTap: () => widget.onOpenSession(s),
         );
+    final statusWord = _isPaused
+        ? 'Paused'
+        : live == null
+            ? 'Idle'
+            : sessionStateWord(live);
+    final statusLine = live == null
+        ? statusWord
+        : '$statusWord \u00b7 ${relativeTime(live.runningSince ?? live.lastActive)}';
+    final provider = (_profiles[profile ?? '']?.provider ?? '').trim();
+    final providerValue = [
+      if (provider.isNotEmpty) prettyProvider(provider),
+      if (model.isNotEmpty) prettyModel(model),
+    ].join(', ');
+    final profileValue = [
+      if ((profile ?? '').isNotEmpty) prettyProfile(profile!),
+      if (a.maxContextTokens != null)
+        '${(a.maxContextTokens! / 1000).round()}k context',
+    ].join(', ');
+    final sessionTitle = (live ?? mine.firstOrNull)?.title.trim() ?? '';
+    final rows = <Widget>[
+      if (a.role.isNotEmpty) ProfileRow('Role', a.role),
+      if (providerValue.isNotEmpty)
+        ProfileRow('Provider', providerValue,
+            onTap: () => showAgentProfileSettings(context,
+                client: widget.client, agent: a, name: _name)),
+      if (profileValue.isNotEmpty)
+        ProfileRow('Profile', profileValue,
+            onTap: () => showAgentProfileSettings(context,
+                client: widget.client, agent: a, name: _name)),
+      if (sessionTitle.isNotEmpty)
+        ProfileRow('Session', sessionTitle,
+            onTap: () => widget.onOpenSession(live ?? mine.first)),
+      if (_wakes != null && _wakes!.isNotEmpty)
+        ProfileRow('Wake', _wakes!, onTap: _openWake),
+      if (_memory != null)
+        ProfileRow('Memory', '$_memory ${_memory == 1 ? 'entry' : 'entries'}'),
+      if (_reach != null && _reach!.isNotEmpty)
+        ProfileRow('Reach', _reach!, onTap: _openReach),
+    ];
     return Material(
       color: AppColors.bg,
       child: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.only(bottom: 32),
-          children: [
-            Row(children: [
-              IconBtn('chevron-left',
-                  size: 48, iconSize: 22, tooltip: 'Back', onTap: widget.onClose),
-              const Spacer(),
-              IconBtn('more-horizontal',
-                  size: 48, iconSize: 20, tooltip: 'More', onTap: _openProfile),
-            ]),
-            // Identity: the whole block opens the profile sheet.
-            Semantics(
-              button: true,
-              label: '$_name, $_handle, profile',
-              excludeSemantics: true,
-              child: TapDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: _openProfile,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                  child: Row(children: [
-                    ClipRRect(
-                        borderRadius: BorderRadius.circular(R.of(18)),
-                        child: AgentMochi(a.id, size: 64)),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(children: [
-                              Flexible(
-                                child: Text(_name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: sans(22,
-                                        weight: W.label, color: AppColors.fg1)),
-                              ),
-                              const SizedBox(width: 4),
-                              AppIcon('chevron-right',
-                                  size: 16, color: AppColors.fg3),
-                            ]),
-                            const SizedBox(height: 2),
-                            Text(_handle,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: sans(13, color: AppColors.fg2)),
-                          ]),
+        child: Column(children: [
+          PushedBar(
+            title: _name,
+            titleSize: 17,
+            onBack: widget.onClose,
+            actions: [BarIcon('more-horizontal', 'More', _more)],
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.only(bottom: 32),
+              children: [
+                const SizedBox(height: 16),
+                Center(
+                    child: ClipOval(child: AgentMochi(a.id, size: 96))),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: Text(_name,
+                      maxLines: 1,
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(20, weight: W.label, color: AppColors.fg1)),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    live == null
+                        ? AppIcon('circle', size: 16, color: AppColors.fg2)
+                        : sessionStateMark(live),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(statusLine,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(13,
+                              weight: statusWord == 'Needs you'
+                                  ? W.label
+                                  : W.body,
+                              color: statusWord == 'Needs you'
+                                  ? quietAmber
+                                  : AppColors.fg2)),
                     ),
                   ]),
                 ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _StatusLine(
-                word: _isPaused
-                    ? 'Paused'
-                    : live == null
-                        ? 'Idle'
-                        : sessionStateWord(live),
-                detail: live?.title,
-                time: live != null
-                    ? relativeTime(live.runningSince ?? live.lastActive)
-                    : mine.isEmpty
-                        ? ''
-                        : relativeTime(mine.first.lastActive),
-                mark: live == null ? null : sessionStateMark(live),
-                onTap: live == null ? null : () => widget.onOpenSession(live),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(children: [
-                Expanded(
-                    child: _Action('chat', 'Message',
-                        primary: true,
-                        onTap: () => setState(() => _chat = true))),
-                const SizedBox(width: 8),
-                Expanded(
-                    child: _Action('sliders', 'Model',
-                        onTap: () => showAgentProfileSettings(context,
-                            client: widget.client, agent: a, name: _name))),
-                const SizedBox(width: 8),
-                Expanded(
-                    child: _Action(_isPaused ? 'play' : 'pause',
-                        _isPaused ? 'Resume' : 'Pause',
-                        onTap: _togglePause)),
-              ]),
-            ),
-            if (ask != null) ...[
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _askCard(ask),
-              ),
-            ],
-            const SizedBox(height: 16),
-            if (active.isNotEmpty) ...[
-              QuietSectionLabel('Active', count: active.length),
-              for (final s in active) sessionRow(s),
-            ],
-            if (recent.isNotEmpty) ...[
-              const QuietSectionLabel('Recent'),
-              for (final s in recent) sessionRow(s),
-            ],
-            if (mine.isNotEmpty)
-              QuietRow(
-                title: 'All sessions',
-                leading: AppIcon('layers', size: 20, color: AppColors.fg2),
-                meta: '${mine.length}',
-                trailing:
-                    AppIcon('chevron-right', size: 16, color: AppColors.fg3),
-                onTap: widget.onAllSessions,
-              ),
-            const QuietSectionLabel('Details'),
-            if (model.isNotEmpty)
-              DetailRow('Model', prettyModel(model))
-            else if ((meta.provider ?? '').isNotEmpty)
-              DetailRow('Model', meta.provider!),
-            DetailRow('Machine', _machine),
-            if (folder.isNotEmpty) DetailRow('Workspace', shortPath(folder)),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                  child: Row(children: [
+                    Expanded(
+                        child: ProfileTile('chat', 'Chat',
+                            onTap: () => setState(() => _chat = true))),
+                    const SizedBox(width: 8),
+                    Expanded(
+                        child: ProfileTile('task', 'Tasks',
+                            onTap: widget.onAllSessions)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                        child: ProfileTile('clock', 'Wake', onTap: _openWake)),
+                  ]),
+                ),
+                if (ask != null) ...[
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _askCard(ask),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                ...rows,
+                if (active.isNotEmpty) ...[
+                  QuietSectionLabel('Active', count: active.length),
+                  for (final s in active) sessionRow(s),
+                ],
+                if (recent.isNotEmpty) ...[
+                  const QuietSectionLabel('Recent'),
+                  for (final s in recent) sessionRow(s),
+                ],
+                if (mine.isNotEmpty)
+                  QuietRow(
+                    title: 'All sessions',
+                    leading: AppIcon('layers', size: 20, color: AppColors.fg2),
+                    meta: '${mine.length}',
+                    trailing: AppIcon('chevron-right',
+                        size: 16, color: AppColors.fg3),
+                    onTap: widget.onAllSessions,
+                  ),
             if (_groups.isNotEmpty) ...[
               QuietSectionLabel('Groups', count: _groups.length),
               for (final g in _groups)
@@ -316,8 +362,10 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
                       client: widget.client, group: g),
                 ),
             ],
-          ],
-        ),
+              ],
+            ),
+          ),
+        ]),
       ),
     );
   }
@@ -370,104 +418,6 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
 String shortPath(String p) =>
     p.replaceFirst(RegExp(r'^/(home|Users)/[^/]+'), '~');
 
-/// The agent's live line on s1: mark, state word, the task, elapsed time.
-class _StatusLine extends StatelessWidget {
-  const _StatusLine(
-      {required this.word, this.detail, this.time = '', this.mark, this.onTap});
-
-  final String word;
-  final String? detail;
-  final String time;
-  final Widget? mark;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-        button: onTap != null,
-        label: [
-          word,
-          if (detail != null && detail!.isNotEmpty) detail!,
-          if (time.isNotEmpty) time
-        ].join(', '),
-        excludeSemantics: true,
-        child: TapDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: Container(
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-                color: AppColors.surface1,
-                borderRadius: BorderRadius.circular(R.of(12))),
-            child: Row(children: [
-              if (mark != null) ...[mark!, const SizedBox(width: 6)],
-              Text(word, style: sans(14, weight: W.label, color: AppColors.fg1)),
-              if (detail != null && detail!.isNotEmpty) ...[
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(detail!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(14, color: AppColors.fg2)),
-                ),
-              ] else
-                const Spacer(),
-              if (time.isNotEmpty) ...[
-                const SizedBox(width: 8),
-                Text(time,
-                    style: sans(13, color: AppColors.fg3, tabular: true)),
-              ],
-            ]),
-          ),
-        ),
-      );
-}
-
-/// One of the three quick actions: 44 tall, an icon and a word.
-class _Action extends StatelessWidget {
-  const _Action(this.icon, this.label,
-      {required this.onTap, this.primary = false});
-
-  final String icon, label;
-  final bool primary;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final fg = primary ? AppColors.accentFg : AppColors.fg1;
-    return Semantics(
-      button: true,
-      label: label,
-      excludeSemantics: true,
-      child: TapDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Padding(
-          // 44 visible, 48 to touch.
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Container(
-            height: 44,
-            decoration: BoxDecoration(
-              color: primary ? AppColors.accentFill : AppColors.surface2,
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              AppIcon(icon, size: 16, color: fg),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(14, weight: W.label, color: fg)),
-              ),
-            ]),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// A 44 tall detail line: label fg2 left, value fg1 right.
 class DetailRow extends StatelessWidget {
   const DetailRow(this.label, this.value, {super.key, this.mono = false});
@@ -497,4 +447,88 @@ class DetailRow extends StatelessWidget {
           ),
         ),
       );
+}
+
+
+/// Profile tile (HM-05): 56 high, radius 12, icon 24 over a 12/400 label.
+class ProfileTile extends StatelessWidget {
+  const ProfileTile(this.icon, this.label, {super.key, required this.onTap});
+  final String icon, label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: label,
+        excludeSemantics: true,
+        child: TapDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 56),
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            decoration: BoxDecoration(
+                color: AppColors.surface1,
+                borderRadius: BorderRadius.circular(12)),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              AppIcon(icon, size: 24, color: AppColors.fg2),
+              Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(12, color: AppColors.fg2)),
+            ]),
+          ),
+        ),
+      );
+}
+
+/// Detail row (HM-05): 80 wide label at x16, value at x100, chevron at the
+/// end. At 1.35x and above the label sits above the value.
+class ProfileRow extends StatelessWidget {
+  const ProfileRow(this.label, this.value, {super.key, this.onTap});
+  final String label, value;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final stacked = bigText(context);
+    final labelW = Text(label, style: sans(12, color: AppColors.fg3));
+    final valueW = Text(value,
+        maxLines: stacked ? 4 : 1,
+        overflow: TextOverflow.ellipsis,
+        style: sans(14, color: AppColors.fg1));
+    return Semantics(
+      button: onTap != null,
+      label: '$label, $value',
+      excludeSemantics: true,
+      child: TapDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+              border: Border(
+                  bottom: BorderSide(color: AppColors.border, width: 1))),
+          child: Row(children: [
+            Expanded(
+              child: stacked
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [labelW, valueW])
+                  : Row(children: [
+                      SizedBox(width: 84, child: labelW),
+                      Expanded(child: valueW),
+                    ]),
+            ),
+            if (onTap != null) ...[
+              const SizedBox(width: 8),
+              AppIcon('chevron-right', size: 16, color: AppColors.fg3),
+            ],
+          ]),
+        ),
+      ),
+    );
+  }
 }

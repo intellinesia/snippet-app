@@ -5,6 +5,7 @@ import 'package:snippet/models.dart';
 import 'package:snippet/notification_popovers.dart';
 import 'package:snippet/notification_sync.dart';
 import 'package:snippet/quiet.dart';
+import 'package:snippet/screens/mobile_home/agents_home.dart';
 import 'package:snippet/screens/mobile_home/quiet_home.dart';
 import 'package:snippet/theme.dart';
 
@@ -75,7 +76,7 @@ void main() {
         ));
         await tester.pump(const Duration(milliseconds: 700));
         final row = tester.getRect(find
-            .ancestor(of: find.text('Canvas review'), matching: find.byType(QuietRow))
+            .ancestor(of: find.text('Canvas review'), matching: find.byType(MarkRow))
             .first);
         final tab = tester.getRect(find.byType(QuietTabBar));
         // ignore: avoid_print

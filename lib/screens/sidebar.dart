@@ -615,6 +615,8 @@ child: PhoneAgentPage(
                 widget.onOpenSession(s.id, s.title, s.profile),
           ),
           onNew: widget.onNewSession,
+          onNewAgent: () => showCreateAgentDialog(context, client),
+          pinHost: client.baseUrl,
           onOpenAgent: widget.onAgent,
           onOpenLead: widget.onOpenLead,
           onAllAgents: () => widget.onMobileHome(MobileHome.agents),
@@ -666,6 +668,7 @@ child: PhoneAgentPage(
         ],
         onOpenAgent: widget.onAgent,
         onOpenLead: widget.onOpenLead,
+        onBack: () => widget.onMobileHome(MobileHome.home),
         onOpenSession: (s) => widget.onOpenSession(s.id, s.title, s.profile),
       );
 

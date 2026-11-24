@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:snippet/mochi.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/lead/lead_state.dart';
 import 'package:snippet/screens/mobile_home/quiet_home.dart';
@@ -49,11 +48,9 @@ void main() {
         ),
       ),
     ));
-    final faces = find.byType(AgentMochi);
-    await tester.tap(faces.at(0));
-    await tester.tap(find.text('Ask Lead what is next'));
-    await tester.tap(faces.at(1));
-    expect(opened, ['lead-session', 'lead-session', 'snippet']);
+    await tester.tap(find.text('lead'));
+    await tester.tap(find.text('snippet'));
+    expect(opened, ['lead-session', 'snippet']);
     sem.dispose();
     debugDefaultTargetPlatformOverride = null;
   });

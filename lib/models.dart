@@ -1474,6 +1474,9 @@ class CoordinationAgent {
 
   bool get available => status == 'active';
 
+  /// One line on what the agent is for; empty when none is set.
+  String get role => (_raw['role'] as String?)?.trim() ?? '';
+
   /// True for Lead, the coordinator.
   ///
   /// It is not a peer agent: it has its own pinned chat, and it does not take
