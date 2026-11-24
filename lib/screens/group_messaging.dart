@@ -1,4 +1,6 @@
 import 'group_rail.dart';
+import '../goal_models.dart';
+import 'mobile_home/mission_phone.dart';
 import '../composer/desktop_composer.dart' show DeskIconButton;
 import 'agent_transcript_head.dart';
 import '../quiet.dart' show QuietHand;
@@ -1005,6 +1007,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   final GlobalKey _inputFieldKey = GlobalKey();
 
   Map<String, CoordinationAgent> _agents = const {};
+  GoalDetail? _mission;
 
   /// The `@query` under the cursor, when the completion list should show.
   ({int start, String query})? _mention;
@@ -1040,6 +1043,11 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   @override
   void initState() {
     super.initState();
+    if (kMobile) {
+      missionForGroup(widget.client, widget.group.id).then((m) {
+        if (mounted && m != null && m.plan.isNotEmpty) setState(() => _mission = m);
+      });
+    }
     _kit.start();
     _loadAgents();
     _thread = Swr<List<CoordinationEvent>>(
@@ -1331,6 +1339,18 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                           left: 0,
                           right: 0,
                           child: _header(),
+                        ),
+                      if (!hideChrome && _mission != null)
+                        Positioned(
+                          top: StageBar.height,
+                          left: 0,
+                          right: 0,
+                          child: MissionBar(
+                              detail: _mission!,
+                              onTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                      builder: (_) =>
+                                          MissionPage(detail: _mission!)))),
                         ),
                     ],
                   ),
