@@ -37,9 +37,13 @@ class ChatCard extends StatelessWidget {
     required this.children,
     this.maxWidth,
     this.dimmed = false,
+    this.border,
   });
 
   final List<Widget> children;
+
+  /// A 1 point outline, used by the amber needs-you card.
+  final Color? border;
 
   /// Defaults to 460 on phones and the full transcript width on desktop.
   final double? maxWidth;
@@ -47,7 +51,7 @@ class ChatCard extends StatelessWidget {
   /// Resolved cards recede.
   final bool dimmed;
 
-  static double get pad => 16;
+  static double get pad => kMobile ? 14 : 16;
 
   @override
   Widget build(BuildContext context) => Align(
@@ -56,13 +60,14 @@ class ChatCard extends StatelessWidget {
         heightFactor: 1,
         child: ConstrainedBox(
           constraints: BoxConstraints(
-              maxWidth: maxWidth ?? (kMobile ? 460 : double.infinity)),
+              maxWidth: maxWidth ?? double.infinity),
           child: Container(
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 // A surface step, not an outline, sets the card apart.
-                color: AppColors.surface2,
-                borderRadius: BorderRadius.circular(R.of(16)),
+                color: kMobile ? AppColors.surface1 : AppColors.surface2,
+                borderRadius: BorderRadius.circular(kMobile ? 12 : R.of(16)),
+                border: border == null ? null : Border.all(color: border!),
               ),
               // Own Material so row hovers paint inside the rounded clip.
               child: Material(
@@ -107,7 +112,7 @@ class ChatCardHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = ChatCard.pad;
-    final size = large ? (kMobile ? 17.0 : 14.0) : (kMobile ? 15.0 : 13.0);
+    final size = large ? (kMobile ? 15.0 : 14.0) : (kMobile ? 15.0 : 13.0);
     return Padding(
       padding: EdgeInsets.fromLTRB(p, p, p, padBottom ? S.s8 : 0),
       child: Column(

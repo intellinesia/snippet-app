@@ -174,14 +174,25 @@ class _ThreadCard extends StatelessWidget {
     final head = title?.trim() ?? '';
     final stat = status?.trim() ?? '';
     final agent = agentId?.trim() ?? '';
-    final meta = sans(12, height: 16 / 12, color: AppColors.fg2);
+    final meta = sans(kMobile ? 11.5 : 12,
+        height: 16 / 12,
+        weight: kMobile ? W.label : null,
+        color: AppColors.fg2);
     final label = stat.isEmpty ? kind : '$kind · $stat';
     final lead = agent.isNotEmpty
         ? AgentMochi(agent, size: 16)
         : AppIcon(icon, size: 16, color: AppColors.fg2);
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: S.s8),
+      margin: EdgeInsets.symmetric(vertical: kMobile ? 6 : 0),
+      padding: kMobile
+          ? const EdgeInsets.all(14)
+          : EdgeInsets.symmetric(vertical: S.s8),
+      decoration: kMobile
+          ? BoxDecoration(
+              color: AppColors.surface1,
+              borderRadius: BorderRadius.circular(12))
+          : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -200,8 +211,8 @@ class _ThreadCard extends StatelessWidget {
               child: Text(head,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(kMobile ? 16 : 13,
-                      height: kMobile ? 22 / 16 : 18 / 13,
+                  style: sans(kMobile ? 15 : 13,
+                      height: kMobile ? 22 / 15 : 18 / 13,
                       weight: W.strong,
                       color: AppColors.fg1)),
             ),
@@ -243,8 +254,9 @@ class _PreviewBodyState extends State<_PreviewBody> {
     final body = widget.body.trim();
     final plain = plainPreview(body);
     final long = body.length > 110 || '\n'.allMatches(body).length > 1;
-    final style = sans(kMobile ? 14 : 12.5,
-        height: kMobile ? 20 / 14 : 1.4, color: AppColors.fg1);
+    final style = sans(kMobile ? 13.5 : 12.5,
+        height: kMobile ? 20 / 13.5 : 1.4,
+        color: kMobile ? AppColors.fg2 : AppColors.fg1);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -257,7 +269,9 @@ class _PreviewBodyState extends State<_PreviewBody> {
             child: _open || !long
                 ? CardMarkdownBody(body: body, collapsible: false)
                 : Text(plain,
-                    maxLines: 2, overflow: TextOverflow.ellipsis, style: style),
+                    maxLines: kMobile ? 3 : 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: style),
           ),
         ),
         if (long)

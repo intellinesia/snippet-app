@@ -292,7 +292,7 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
       );
     }
 
-    final maxWidth = kMobile ? 420.0 : 400.0;
+    final maxWidth = kMobile ? double.infinity : 400.0;
     final revLabel = _effectiveRev != null ? ', revision $_effectiveRev' : '';
     final liveLabel = widget.canvasRef.isLive ? ', live' : '';
     return Semantics(
@@ -306,7 +306,7 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
           child: Container(
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
-              color: AppColors.surface2,
+              color: kMobile ? AppColors.surface1 : AppColors.surface2,
               borderRadius: BorderRadius.circular(R.of(14)),
               border: Border.all(color: AppColors.border),
             ),

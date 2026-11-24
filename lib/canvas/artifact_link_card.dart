@@ -154,11 +154,11 @@ class _ArtifactLinkCardState extends State<ArtifactLinkCard> {
         alignment: Alignment.centerLeft,
         heightFactor: 1,
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: kMobile ? 420 : 400),
+          constraints: BoxConstraints(maxWidth: kMobile ? double.infinity : 400),
           child: Container(
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
-              color: AppColors.surface2,
+              color: kMobile ? AppColors.surface1 : AppColors.surface2,
               borderRadius: BorderRadius.circular(R.of(14)),
               border: Border.all(color: AppColors.border),
             ),
@@ -210,13 +210,23 @@ class _ArtifactLinkCardState extends State<ArtifactLinkCard> {
                         if (card != null) ...[
                           SizedBox(width: S.s8),
                           Container(
-                            constraints: const BoxConstraints(
-                                minHeight: 44, minWidth: 44),
+                            constraints: BoxConstraints(
+                                minHeight: kMobile ? 48 : 44,
+                                minWidth: kMobile ? 84 : 44),
                             alignment: Alignment.center,
                             padding: EdgeInsets.symmetric(horizontal: S.s8),
+                            decoration: kMobile
+                                ? BoxDecoration(
+                                    color: AppColors.surface2,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: AppColors.border))
+                                : null,
                             child: Text('Open',
-                                style: sans(13,
-                                    weight: W.label, color: AppColors.accent)),
+                                style: sans(kMobile ? 14 : 13,
+                                    weight: W.label,
+                                    color: kMobile
+                                        ? AppColors.fg1
+                                        : AppColors.accent)),
                           ),
                         ],
                       ],

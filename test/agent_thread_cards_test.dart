@@ -387,18 +387,18 @@ void main() {
     expect(find.text('Started working on it.'), findsOneWidget);
     expect(find.text('XDR+ISE demo: fix TTS acronyms'), findsOneWidget);
     expect(find.textContaining('Task in review'), findsOneWidget);
-    expect(find.text('Approve'), findsOneWidget);
+    expect(find.text('Accept'), findsOneWidget);
     expect(find.text('Send back'), findsOneWidget);
     expect(client.getTaskCalls['t-100'], 1);
 
-    await t.tap(find.text('Approve'));
+    await t.tap(find.text('Accept'));
     await t.pump();
     await t.pump(const Duration(milliseconds: 100));
 
     expect(client.verdicts, hasLength(1));
     expect(client.verdicts.single.taskId, 't-100');
     expect(client.verdicts.single.verdict, 'approve');
-    expect(find.text('Approve'), findsNothing);
+    expect(find.text('Accept'), findsNothing);
     expect(find.text('Send back'), findsNothing);
     expect(find.textContaining('Task \u00b7 Done'), findsOneWidget);
     await t.pumpWidget(const SizedBox());

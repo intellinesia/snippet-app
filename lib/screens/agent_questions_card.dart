@@ -4,6 +4,7 @@ import '../api.dart';
 import '../chat/chat_card.dart';
 import '../chat/decided_card.dart';
 import '../models.dart';
+import '../platform.dart';
 import '../session_quick_send.dart';
 import '../theme.dart';
 import '../transcript_card.dart';
@@ -496,43 +497,62 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
     final showActions = !(closed && _error == null);
     final canNext = interactive && _draft(q, step) != null;
     final canSend = interactive && _allAnswered;
-    return ChatCard(children: [
-      ChatCardHeader(
-        eyebrow:
-            qs.length > 1 ? ChatCardSteps(index: step, total: qs.length) : null,
-        title: _questionText(q),
-        subtitle: subtitle,
-        trailing: closed ? const ChatCardPill('Closed') : null,
-      ),
-      _inputFor(q, step, interactive: interactive),
-      if (_error != null)
-        ChatCardBody(
-          child: Text(_error!,
-              style: sans(TranscriptCard.metaSize, color: AppColors.danger)),
-        ),
-      if (showActions)
-        ChatCardActions(
-          buttons: [
-            if (step > 0)
-              ChatCardButton('Back',
-                  kind: ChatCardButtonKind.secondary,
-                  onTap: interactive
-                      ? () => setState(() => _step = step - 1)
-                      : null),
-            if (last)
-              ChatCardButton('Send',
-                  busy: _sending, onTap: canSend ? _send : null)
-            else
-              ChatCardButton('Next',
-                  onTap:
-                      canNext ? () => setState(() => _step = step + 1) : null),
-          ],
-          link: 'Skip',
-          onLink: interactive ? _skip : null,
-        )
-      else
-        SizedBox(height: S.s2),
-    ]);
+    return ChatCard(
+        border: kMobile && !closed ? AppColors.run : null,
+        children: [
+          if (kMobile && !closed)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+              child: Row(children: [
+                Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                        color: AppColors.run, shape: BoxShape.circle)),
+                const SizedBox(width: 8),
+                Text('Needs you',
+                    style: sans(12, weight: W.label, color: AppColors.run)),
+              ]),
+            ),
+          ChatCardHeader(
+            eyebrow: qs.length > 1
+                ? ChatCardSteps(index: step, total: qs.length)
+                : null,
+            title: _questionText(q),
+            subtitle: subtitle,
+            trailing: closed ? const ChatCardPill('Closed') : null,
+          ),
+          _inputFor(q, step, interactive: interactive),
+          if (_error != null)
+            ChatCardBody(
+              child: Text(_error!,
+                  style:
+                      sans(TranscriptCard.metaSize, color: AppColors.danger)),
+            ),
+          if (showActions)
+            ChatCardActions(
+              buttons: [
+                if (step > 0)
+                  ChatCardButton('Back',
+                      kind: ChatCardButtonKind.secondary,
+                      onTap: interactive
+                          ? () => setState(() => _step = step - 1)
+                          : null),
+                if (last)
+                  ChatCardButton('Send',
+                      busy: _sending, onTap: canSend ? _send : null)
+                else
+                  ChatCardButton('Next',
+                      onTap: canNext
+                          ? () => setState(() => _step = step + 1)
+                          : null),
+              ],
+              link: 'Skip',
+              onLink: interactive ? _skip : null,
+            )
+          else
+            SizedBox(height: S.s2),
+        ]);
   }
 
   Widget _resolved(List<Map<String, dynamic>> qs, Map<String, dynamic>? answers,
@@ -598,6 +618,78 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
       case 'confirm':
         final multi = kind == 'multi_choice';
         final choices = _choicesFor(q);
+        bool isSel(_QChoice c) => multi
+            ? (_multi[key]?.contains(c.value) ?? false)
+            : _single[key] == c.value;
+        if (kMobile) {
+          // Phone spec CH-04: two-column tiles, 134 high, state under the label.
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+            child: LayoutBuilder(builder: (_, box) {
+              final tileW = (box.maxWidth - 10) / 2;
+              return Wrap(spacing: 10, runSpacing: 10, children: [
+                for (final c in choices)
+                  SizedBox(
+                    width: choices.length == 1 ? box.maxWidth : tileW,
+                    child: Semantics(
+                      button: true,
+                      selected: isSel(c),
+                      label: c.label,
+                      excludeSemantics: true,
+                      child: Material(
+                        color: AppColors.surface2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          side: BorderSide(
+                              color:
+                                  isSel(c) ? AppColors.fg1 : AppColors.border),
+                        ),
+                        child: InkWell(
+                          customBorder: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          onTap: interactive ? () => _pick(i, c, multi) : null,
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(minHeight: 134),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    height: 76,
+                                    decoration: BoxDecoration(
+                                        color: AppColors.bg,
+                                        borderRadius: BorderRadius.circular(6)),
+                                    alignment: Alignment.center,
+                                    child: AppIcon(
+                                        isSel(c) ? 'check' : 'circle',
+                                        size: 20,
+                                        color: AppColors.fg3),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(c.label,
+                                      style: sans(12.5,
+                                          weight: W.label,
+                                          color: AppColors.fg1)),
+                                  Text(isSel(c) ? 'Selected' : 'Tap to pick',
+                                      style: sans(11, color: AppColors.fg3)),
+                                  if (c.recommended)
+                                    Text('Recommended',
+                                        style: sans(11,
+                                            weight: W.label,
+                                            color: AppColors.fg2)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ]);
+            }),
+          );
+        }
         return Padding(
           padding: EdgeInsets.only(bottom: S.s12),
           child: Column(
@@ -611,9 +703,7 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
                   detail: c.description.isEmpty ? null : c.description,
                   recommended: c.recommended,
                   multi: multi,
-                  selected: multi
-                      ? (_multi[key]?.contains(c.value) ?? false)
-                      : _single[key] == c.value,
+                  selected: isSel(c),
                   onTap: interactive ? () => _pick(i, c, multi) : null,
                 ),
               ],

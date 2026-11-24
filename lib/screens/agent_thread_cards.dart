@@ -313,11 +313,11 @@ Widget _chatCardShell({
   final cleanTitle = title?.trim() ?? '';
   final cleanBody = body?.trim() ?? '';
   return Container(
+    width: double.infinity,
     padding: EdgeInsets.all(S.of(14)),
     decoration: BoxDecoration(
-      color: AppColors.surface2,
-      borderRadius:
-          BorderRadius.circular(kMobile ? ChatColors.radius : R.of(8)),
+      color: kMobile ? AppColors.surface1 : AppColors.surface2,
+      borderRadius: BorderRadius.circular(kMobile ? 12 : R.of(8)),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -380,11 +380,13 @@ Widget _chatPill({
   final pill = Opacity(
     opacity: disabled ? 0.5 : 1,
     child: Container(
-      height: kMobile ? 36 : 30,
+      height: kMobile ? 48 : 30,
+      alignment: Alignment.center,
       padding: EdgeInsets.symmetric(horizontal: kMobile ? S.s16 : S.s12),
       decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(R.pill),
+        color: kMobile && !primary ? AppColors.surface2 : bg,
+        borderRadius: BorderRadius.circular(kMobile ? 10 : R.pill),
+        border: kMobile && !primary ? Border.all(color: AppColors.border) : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -792,21 +794,24 @@ class _TaskThreadCardState extends State<_TaskThreadCard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (inReview)
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                  Row(
                     children: [
-                      _chatPill(
-                        label: 'Approve',
-                        primary: true,
-                        disabled: _busy,
-                        onTap: () => _submitVerdict('approve'),
+                      Expanded(
+                        child: _chatPill(
+                          label: kMobile ? 'Accept' : 'Approve',
+                          primary: true,
+                          disabled: _busy,
+                          onTap: () => _submitVerdict('approve'),
+                        ),
                       ),
-                      _chatPill(
-                        label: 'Send back',
-                        primary: false,
-                        disabled: _busy,
-                        onTap: _promptSendBack,
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _chatPill(
+                          label: 'Send back',
+                          primary: false,
+                          disabled: _busy,
+                          onTap: _promptSendBack,
+                        ),
                       ),
                     ],
                   ),
