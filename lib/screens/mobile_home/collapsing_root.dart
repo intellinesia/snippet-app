@@ -14,8 +14,12 @@ class CollapsingRoot extends StatefulWidget {
       {super.key,
       required this.title,
       required this.child,
-      this.actions = const []});
+      this.actions = const [],
+      this.leading});
   final String title;
+
+  /// Optional back target before the bar title (pushed tab roots).
+  final Widget? leading;
   final List<Widget> actions;
   final Widget child;
 
@@ -47,8 +51,9 @@ class _CollapsingRootState extends State<CollapsingRoot> {
                 bottom: BorderSide(
                     color: _collapsed ? AppColors.border : Colors.transparent)),
           ),
-          padding: const EdgeInsets.only(left: 16, right: 4),
+          padding: EdgeInsets.only(left: widget.leading == null ? 16 : 0, right: 4),
           child: Row(children: [
+            if (widget.leading != null) widget.leading!,
             Expanded(
               child: AnimatedOpacity(
                 duration: d,

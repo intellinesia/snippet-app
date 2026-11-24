@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../toast_avoid.dart';
+import '../tap_detector.dart';
+import 'mobile_home/collapsing_root.dart';
 import '../api.dart';
 import '../canvas/artifact_cards.dart';
 import '../canvas/artifact_link_card.dart';
@@ -156,13 +158,91 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
         : filterArtifactCards(all, query: _query, kind: _kind);
     // At large text the label no longer fits beside the title.
     final compact = MediaQuery.textScalerOf(context).scale(10) >= 15;
+    final searchW = ToastAvoid(
+        child: Padding(
+      padding: EdgeInsets.symmetric(horizontal: S.s16),
+      child: Container(
+        height: 44,
+        padding: EdgeInsets.symmetric(horizontal: S.s12),
+        decoration: BoxDecoration(
+          color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(R.md),
+        ),
+        child: Row(
+          children: [
+            AppIcon('search', size: 16, color: AppColors.fg3),
+            SizedBox(width: S.s8),
+            Expanded(
+              child: Semantics(
+                textField: true,
+                label: 'Search artifacts',
+                child: TextField(
+                  onChanged: (v) => setState(() => _query = v),
+                  style: sans(13, color: AppColors.fg1),
+                  cursorColor: AppColors.fg1,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    border: InputBorder.none,
+                    hintText: 'Search artifacts',
+                    hintStyle: sans(13, color: AppColors.fg3),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ));
+    final chipsW = ToastAvoid(
+        child: SizedBox(
+      height: kTapTarget + S.s8,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s4),
+        children: [
+          for (final (kind, label) in _kinds)
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: S.s4),
+              child: Semantics(
+                button: true,
+                selected: _kind == kind,
+                label: 'Show $label',
+                excludeSemantics: true,
+                child: Material(
+                  color:
+                      _kind == kind ? AppColors.surface3 : Colors.transparent,
+                  borderRadius: BorderRadius.circular(R.chip),
+                  child: InkWell(
+                    onTap: () => setState(() => _kind = kind),
+                    borderRadius: BorderRadius.circular(R.chip),
+                    child: Container(
+                      constraints: BoxConstraints(
+                          minHeight: kTapTarget, minWidth: kTapTarget),
+                      padding: EdgeInsets.symmetric(horizontal: S.s12),
+                      alignment: Alignment.center,
+                      child: Text(label,
+                          style: sans(13,
+                              weight: _kind == kind ? W.label : W.body,
+                              color: _kind == kind
+                                  ? AppColors.fg1
+                                  : AppColors.fg2)),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    ));
+    if (kMobile) return _phone(shown, searchW, chipsW);
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ToastAvoid(child: Padding(
+            ToastAvoid(
+                child: Padding(
               padding: EdgeInsets.fromLTRB(S.s16, S.s16, S.s16, S.s8),
               child: Row(
                 children: [
@@ -179,8 +259,7 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
                     child: Text('Artifacts',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style:
-                            sans(22, weight: W.title, color: AppColors.fg1)),
+                        style: sans(22, weight: W.title, color: AppColors.fg1)),
                   ),
                   Semantics(
                     button: true,
@@ -224,86 +303,75 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
                 ],
               ),
             )),
-            ToastAvoid(child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: S.s16),
-              child: Container(
-                height: 44,
-                padding: EdgeInsets.symmetric(horizontal: S.s12),
-                decoration: BoxDecoration(
-                  color: AppColors.surface2,
-                  borderRadius: BorderRadius.circular(R.md),
-                ),
-                child: Row(
-                  children: [
-                    AppIcon('search', size: 16, color: AppColors.fg3),
-                    SizedBox(width: S.s8),
-                    Expanded(
-                      child: Semantics(
-                        textField: true,
-                        label: 'Search artifacts',
-                        child: TextField(
-                          onChanged: (v) => setState(() => _query = v),
-                          style: sans(13, color: AppColors.fg1),
-                          cursorColor: AppColors.fg1,
-                          decoration: InputDecoration(
-                            isDense: true,
-                            border: InputBorder.none,
-                            hintText: 'Search artifacts',
-                            hintStyle: sans(13, color: AppColors.fg3),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            )),
-            ToastAvoid(child: SizedBox(
-              height: kTapTarget + S.s8,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s4),
-                children: [
-                  for (final (kind, label) in _kinds)
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: S.s4),
-                      child: Semantics(
-                        button: true,
-                        selected: _kind == kind,
-                        label: 'Show $label',
-                        excludeSemantics: true,
-                        child: Material(
-                          color: _kind == kind
-                              ? AppColors.surface3
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(R.chip),
-                          child: InkWell(
-                            onTap: () => setState(() => _kind = kind),
-                            borderRadius: BorderRadius.circular(R.chip),
-                            child: Container(
-                              constraints: BoxConstraints(
-                                  minHeight: kTapTarget, minWidth: kTapTarget),
-                              padding:
-                                  EdgeInsets.symmetric(horizontal: S.s12),
-                              alignment: Alignment.center,
-                              child: Text(label,
-                                  style: sans(13,
-                                      weight: _kind == kind
-                                          ? W.label
-                                          : W.body,
-                                      color: _kind == kind
-                                          ? AppColors.fg1
-                                          : AppColors.fg2)),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            )),
+            searchW,
+            chipsW,
             Expanded(child: _body(shown)),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Phone: the tab-root pattern, a pinned bar over a list that starts with
+  /// the 28/500 title, search and filter chips.
+  Widget _phone(List<ArtifactCard> shown, Widget searchW, Widget chipsW) {
+    final head = [const LargeTitle('Artifacts'), searchW, chipsW];
+    final Widget list;
+    if (_error != null || _all == null || shown.isEmpty) {
+      list = ListView(
+          children: [...head, SizedBox(height: 280, child: _body(shown))]);
+    } else {
+      list = ListView.builder(
+        padding: EdgeInsets.only(bottom: S.s24),
+        itemCount: shown.length + 1,
+        itemBuilder: (_, i) => i == 0
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch, children: head)
+            : Padding(
+                padding: EdgeInsets.symmetric(horizontal: S.s8),
+                child: _row(shown[i - 1])),
+      );
+    }
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      body: SafeArea(
+        child: CollapsingRoot(
+          title: 'Artifacts',
+          leading: Navigator.of(context).canPop()
+              ? Semantics(
+                  button: true,
+                  label: 'Back',
+                  excludeSemantics: true,
+                  child: TapDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => Navigator.of(context).maybePop(),
+                    child: SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: Center(
+                            child: AppIcon('chevron-left',
+                                size: 20, color: AppColors.fg1))),
+                  ),
+                )
+              : null,
+          actions: [
+            Semantics(
+              button: true,
+              label: 'New canvas',
+              excludeSemantics: true,
+              child: TapDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _creating ? null : _newCanvas,
+                child: SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: Center(
+                        child:
+                            AppIcon('plus', size: 20, color: AppColors.fg2))),
+              ),
+            ),
+          ],
+          child: list,
         ),
       ),
     );
