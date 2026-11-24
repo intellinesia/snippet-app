@@ -1,4 +1,5 @@
 import '../../chat/agent_cluster.dart';
+import '../../toast_avoid.dart';
 import 'package:flutter/material.dart';
 
 import '../../crew_status.dart';
@@ -35,7 +36,7 @@ class QuietPlaceHeader extends StatelessWidget {
   final String? tagline;
 
   @override
-  Widget build(BuildContext context) => Padding(
+  Widget build(BuildContext context) => ToastAvoid(child: Padding(
         padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s12, S.s4),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(mainAxisAlignment: MainAxisAlignment.end, children: [
@@ -58,7 +59,7 @@ class QuietPlaceHeader extends StatelessWidget {
               child: Text(tagline!, style: sans(13, color: AppColors.fg3)),
             ),
         ]),
-      );
+      ));
 }
 
 class _IconTap extends StatelessWidget {

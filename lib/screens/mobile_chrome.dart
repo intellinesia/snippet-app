@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../toast_avoid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -188,7 +189,10 @@ class MobileHomeHeader extends StatelessWidget {
   final List<Widget> trailing;
 
   @override
-  Widget build(BuildContext context) => Padding(
+  Widget build(BuildContext context) =>
+      ToastAvoid(child: Builder(builder: _bar));
+
+  Widget _bar(BuildContext context) => Padding(
         padding: EdgeInsets.fromLTRB(M.gutter, S.s6, M.gutter, S.s6),
         child: SizedBox(
           height: 44,
@@ -255,7 +259,10 @@ class MobileMissionBar extends StatelessWidget {
   final DaemonClient? client;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      ToastAvoid(child: Builder(builder: _bar));
+
+  Widget _bar(BuildContext context) {
     final c = client;
     return SizedBox(
       height: 60,
@@ -360,7 +367,10 @@ class MobileBackBar extends StatelessWidget {
   final List<Widget> trailing;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      ToastAvoid(child: Builder(builder: _bar));
+
+  Widget _bar(BuildContext context) {
     final pill = onTitleTap != null || subtitle != null || subtitleView != null;
     // iOS has no system back for these pages, so only Android loses the button,
     // and only when nothing on the right would leave the bar lopsided.

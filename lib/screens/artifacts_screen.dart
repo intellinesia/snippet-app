@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../toast_avoid.dart';
 import '../api.dart';
 import '../canvas/artifact_cards.dart';
 import '../canvas/artifact_link_card.dart';
@@ -153,13 +154,15 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
     final shown = all == null
         ? const <ArtifactCard>[]
         : filterArtifactCards(all, query: _query, kind: _kind);
+    // At large text the label no longer fits beside the title.
+    final compact = MediaQuery.textScalerOf(context).scale(10) >= 15;
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
+            ToastAvoid(child: Padding(
               padding: EdgeInsets.fromLTRB(S.s16, S.s16, S.s16, S.s8),
               child: Row(
                 children: [
@@ -174,6 +177,8 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
                     ),
                   Expanded(
                     child: Text('Artifacts',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style:
                             sans(22, weight: W.title, color: AppColors.fg1)),
                   ),
@@ -183,26 +188,42 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
                     excludeSemantics: true,
                     child: SizedBox(
                       height: kTapTarget,
-                      child: FilledButton.icon(
-                        onPressed: _creating ? null : _newCanvas,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.accent,
-                          foregroundColor: AppColors.accentFg,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(R.sm),
-                          ),
-                        ),
-                        icon: AppIcon('plus',
-                            size: 16, color: AppColors.accentFg),
-                        label: Text('New canvas',
-                            style: sans(13,
-                                weight: W.label, color: AppColors.accentFg)),
-                      ),
+                      width: compact ? kTapTarget : null,
+                      child: compact
+                          ? FilledButton(
+                              onPressed: _creating ? null : _newCanvas,
+                              style: FilledButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                backgroundColor: AppColors.accent,
+                                foregroundColor: AppColors.accentFg,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(R.sm),
+                                ),
+                              ),
+                              child: AppIcon('plus',
+                                  size: 18, color: AppColors.accentFg),
+                            )
+                          : FilledButton.icon(
+                              onPressed: _creating ? null : _newCanvas,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.accent,
+                                foregroundColor: AppColors.accentFg,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(R.sm),
+                                ),
+                              ),
+                              icon: AppIcon('plus',
+                                  size: 16, color: AppColors.accentFg),
+                              label: Text('New canvas',
+                                  style: sans(13,
+                                      weight: W.label,
+                                      color: AppColors.accentFg)),
+                            ),
                     ),
                   ),
                 ],
               ),
-            ),
+            )),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: S.s16),
               child: Container(

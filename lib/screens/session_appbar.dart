@@ -331,7 +331,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       _ => status,
     };
     final (fg, _) = toneColors(live ? Tone.run : Tone.neutral);
-    return Container(
+    return ToastAvoid(child: Container(
       height: kMobile ? M.appBarHeight : 44,
       padding: EdgeInsets.symmetric(horizontal: S.s6),
       color: kMobile ? AppColors.pageBg : AppColors.bg,
@@ -369,7 +369,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
           ]),
         ),
       ]),
-    );
+    ));
   }
 
   void _openPullRequests() {

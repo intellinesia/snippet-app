@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../toast_avoid.dart';
 import 'dart:convert';
 import 'dart:math' as math;
 
@@ -1229,7 +1230,7 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
       if (a != null) _artifactKindLabel(a.kind),
       if (v != null) 'v${v.n}',
     ].join(' \u00b7 ');
-    return Container(
+    return ToastAvoid(child: Container(
       color: AppColors.bg,
       padding: EdgeInsets.fromLTRB(S.s8, S.s6, S.s8, S.s4),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -1268,7 +1269,7 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
                 onTap: () => _more(anchor)),
           ),
         ]),
-      ]),
+      ])),
     );
   }
 

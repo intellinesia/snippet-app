@@ -8,6 +8,7 @@ import 'macos_notch.dart';
 import 'notification_sync.dart';
 import 'notifications.dart';
 import 'theme.dart';
+import 'toast_avoid.dart';
 import 'platform.dart';
 import 'notification_card.dart';
 import 'notification_text.dart';
@@ -34,10 +35,6 @@ class _NotificationPopoversState extends State<NotificationPopovers> {
 
   // Slides over the header strip on phones so the 28px page title stays clear.
   static double get _anchorTop => kMobile ? S.s4 : 44 + S.s8;
-
-  // Phone toasts end left of the header's search and settings targets.
-  static double get _toastRight =>
-      kMobile ? S.s12 + 2 * kPhoneTarget + S.s8 : S.s12;
 
   Duration _life(Map<String, dynamic> p) {
     final base = kMobile ? 4 : 7;
@@ -216,6 +213,20 @@ class _NotificationPopoversState extends State<NotificationPopovers> {
     );
   }
 
+  // Phone toasts sit below any registered top bar (see toast_avoid.dart).
+  Widget _toastPos({required Widget child}) => ValueListenableBuilder<double>(
+        valueListenable: toastTopInset,
+        child: child,
+        builder: (context, inset, child) {
+          final safe = MediaQuery.paddingOf(context).top;
+          final top = kMobile && inset > 0
+              ? (inset + S.s4 - safe).clamp(_anchorTop, double.infinity)
+              : _anchorTop;
+          return Positioned(
+              top: top, left: S.s12, right: S.s12, child: child!);
+        },
+      );
+
   Widget _buildContent(BuildContext context) {
     _pending.removeWhere(suppressVisibleNotification);
     final items = _ordered;
@@ -224,10 +235,7 @@ class _NotificationPopoversState extends State<NotificationPopovers> {
     return Stack(children: [
       widget.child,
       if (call != null)
-        Positioned(
-            top: _anchorTop,
-            left: S.s12,
-            right: S.s12,
+        _toastPos(
             child: SafeArea(
                 child: Align(
               alignment: kMobile ? Alignment.topCenter : Alignment.topRight,
@@ -240,10 +248,7 @@ class _NotificationPopoversState extends State<NotificationPopovers> {
               ),
             )))
       else
-        Positioned(
-            top: _anchorTop,
-            left: S.s12,
-            right: _toastRight,
+        _toastPos(
             child: SafeArea(
                 child: Align(
               alignment: kMobile ? Alignment.topCenter : Alignment.topRight,

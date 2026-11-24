@@ -10,6 +10,7 @@ import '../api.dart';
 import '../media_views.dart' show DaemonScope;
 import '../platform.dart';
 import '../theme.dart';
+import '../toast_avoid.dart';
 import '../widgets.dart';
 import 'canvas_client.dart';
 import 'canvas_minimap.dart';
@@ -1872,7 +1873,7 @@ class _CanvasScreenState extends State<CanvasScreen>
   }
 
   Widget _topStatusBar(int openPins) {
-    return Row(
+    return ToastAvoid(child: Row(
       children: [
         Expanded(
           child: Align(
@@ -1923,7 +1924,7 @@ class _CanvasScreenState extends State<CanvasScreen>
           ),
         ),
       ],
-    );
+    ));
   }
 
   Widget _buildToolbar({required bool isPhone}) {
