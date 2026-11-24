@@ -119,7 +119,7 @@ class GlassTopFrame extends StatelessWidget {
         right: 0,
         bottom: -(24 - fade),
         child: IgnorePointer(
-          child: Column(children: [
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Expanded(child: ColoredBox(color: bg)),
             Container(
               height: 24,
