@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'platform.dart';
 import 'glass.dart';
 import 'morph_sheet.dart' show showSpringSheet;
+import 'app_dialog.dart';
 import 'app_popover.dart';
 import 'theme.dart';
 import 'widgets.dart';
@@ -63,76 +64,89 @@ class _AppFieldState extends State<AppField> {
   @override
   Widget build(BuildContext context) {
     Theme.of(context); // Rebuild on theme change
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      if (widget.label != null) ...[
-        Text(widget.label!,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (widget.label != null) ...[
+          Text(
+            widget.label!,
             style: kMobile
                 ? sans(12, color: AppColors.fg4)
-                : sans(12, weight: W.label, color: AppColors.fg2)),
-        SizedBox(height: kMobile ? 6 : 7),
-      ],
-      AnimatedContainer(
-        duration: Motion.quick,
-        padding:
-            EdgeInsets.symmetric(horizontal: kMobile ? S.of(14) : S.of(11)),
-        constraints: BoxConstraints(minHeight: kMobile ? 48 : 34),
-        decoration: BoxDecoration(
-          color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(kMobile ? 16 : R.md),
-          border: Border.all(
+                : sans(12, weight: W.label, color: AppColors.fg2),
+          ),
+          SizedBox(height: kMobile ? 6 : 7),
+        ],
+        AnimatedContainer(
+          duration: Motion.quick,
+          padding: EdgeInsets.symmetric(
+            horizontal: kMobile ? S.of(14) : S.of(11),
+          ),
+          constraints: BoxConstraints(minHeight: kMobile ? 48 : 34),
+          decoration: BoxDecoration(
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.circular(kMobile ? 16 : R.md),
+            border: Border.all(
               color: _focus.hasFocus
                   ? AppColors.accentLine
                   : (kMobile
-                      ? AppColors.fg1.withValues(alpha: 0.08)
-                      : AppColors.lineStrong)),
-        ),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-          if (widget.icon != null) ...[
-            AppIcon(widget.icon!, size: 16, color: AppColors.fg3),
-            SizedBox(width: S.s8)
-          ],
-          Expanded(
-            child: TextField(
-              controller: widget.controller,
-              focusNode: _focus,
-              enabled: widget.enabled,
-              obscureText: widget.obscure,
-              minLines: widget.minLines,
-              maxLines: widget.maxLines,
-              autofocus: widget.autofocus,
-              keyboardType: widget.keyboardType,
-              onSubmitted: widget.onSubmitted,
-              cursorColor: AppColors.accent,
-              style: kMobile
-                  ? sans(15, color: AppColors.fg1)
-                  : widget.mono
-                      ? mono(13, color: AppColors.fg1)
-                      : sans(13, color: AppColors.fg1),
-              decoration: InputDecoration(
-                isCollapsed: true,
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: kMobile ? S.s8 : S.s8),
-                border: InputBorder.none,
-                hintText: widget.hint,
-                hintStyle: kMobile
-                    ? sans(15, color: AppColors.fg4)
-                    : widget.mono
-                        ? mono(13, color: AppColors.fg4)
-                        : sans(13, color: AppColors.fg4),
-              ),
+                        ? AppColors.fg1.withValues(alpha: 0.08)
+                        : AppColors.lineStrong),
             ),
           ),
-          if (widget.rightSlot != null) widget.rightSlot!,
-        ]),
-      ),
-      if (widget.helper != null) ...[
-        SizedBox(height: S.of(7)),
-        Text(widget.helper!,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (widget.icon != null) ...[
+                AppIcon(widget.icon!, size: 16, color: AppColors.fg3),
+                SizedBox(width: S.s8),
+              ],
+              Expanded(
+                child: TextField(
+                  controller: widget.controller,
+                  focusNode: _focus,
+                  enabled: widget.enabled,
+                  obscureText: widget.obscure,
+                  minLines: widget.minLines,
+                  maxLines: widget.maxLines,
+                  autofocus: widget.autofocus,
+                  keyboardType: widget.keyboardType,
+                  onSubmitted: widget.onSubmitted,
+                  cursorColor: AppColors.accent,
+                  style: kMobile
+                      ? sans(15, color: AppColors.fg1)
+                      : widget.mono
+                      ? mono(13, color: AppColors.fg1)
+                      : sans(13, color: AppColors.fg1),
+                  decoration: InputDecoration(
+                    isCollapsed: true,
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: kMobile ? S.s8 : S.s8,
+                    ),
+                    border: InputBorder.none,
+                    hintText: widget.hint,
+                    hintStyle: kMobile
+                        ? sans(15, color: AppColors.fg4)
+                        : widget.mono
+                        ? mono(13, color: AppColors.fg4)
+                        : sans(13, color: AppColors.fg4),
+                  ),
+                ),
+              ),
+              if (widget.rightSlot != null) widget.rightSlot!,
+            ],
+          ),
+        ),
+        if (widget.helper != null) ...[
+          SizedBox(height: S.of(7)),
+          Text(
+            widget.helper!,
             style: kMobile
                 ? sans(12, height: 17 / 12, color: AppColors.fg4)
-                : sans(11, height: 1.4, color: AppColors.fg3)),
+                : sans(11, height: 1.4, color: AppColors.fg3),
+          ),
+        ],
       ],
-    ]);
+    );
   }
 }
 
@@ -155,24 +169,36 @@ class _DialogActions extends StatelessWidget {
   Widget build(BuildContext context) {
     final variant = danger ? BtnVariant.danger : BtnVariant.primary;
     if (kMobile) {
-      return Row(children: [
-        Expanded(
-          child: Btn('Cancel',
-              full: true, variant: BtnVariant.secondary, onTap: onCancel),
-        ),
-        SizedBox(width: S.s8),
-        Expanded(
-          child:
-              Btn(confirmLabel, full: true, variant: variant, onTap: onConfirm),
-        ),
-      ]);
+      return Row(
+        children: [
+          Expanded(
+            child: Btn(
+              'Cancel',
+              full: true,
+              variant: BtnVariant.secondary,
+              onTap: onCancel,
+            ),
+          ),
+          SizedBox(width: S.s8),
+          Expanded(
+            child: Btn(
+              confirmLabel,
+              full: true,
+              variant: variant,
+              onTap: onConfirm,
+            ),
+          ),
+        ],
+      );
     }
-    return Row(children: [
-      const Spacer(),
-      Btn('Cancel', variant: BtnVariant.ghost, small: true, onTap: onCancel),
-      SizedBox(width: S.s8),
-      Btn(confirmLabel, variant: variant, small: true, onTap: onConfirm),
-    ]);
+    return Row(
+      children: [
+        const Spacer(),
+        Btn('Cancel', variant: BtnVariant.ghost, small: true, onTap: onCancel),
+        SizedBox(width: S.s8),
+        Btn(confirmLabel, variant: variant, small: true, onTap: onConfirm),
+      ],
+    );
   }
 }
 
@@ -184,79 +210,102 @@ Future<bool> confirmAction(
   required String body,
   String confirmLabel = 'Delete',
   bool danger = true,
+  String? typedName,
 }) async {
+  if (kMobile) {
+    return showConfirmDialog(
+      context,
+      title: title,
+      body: body,
+      confirmLabel: confirmLabel,
+      typedName: typedName,
+    );
+  }
   Widget content(BuildContext ctx) => Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: EdgeInsets.zero,
-            child: Text(body, style: TS.ui()),
-          ),
-          SizedBox(height: kMobile ? S.s20 : 18),
-          _DialogActions(
-            confirmLabel: confirmLabel,
-            danger: danger,
-            onCancel: () => Navigator.pop(ctx, false),
-            onConfirm: () => Navigator.pop(ctx, true),
-          ),
-        ],
-      );
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Padding(
+        padding: EdgeInsets.zero,
+        child: Text(body, style: TS.ui()),
+      ),
+      SizedBox(height: kMobile ? S.s20 : 18),
+      _DialogActions(
+        confirmLabel: confirmLabel,
+        danger: danger,
+        onCancel: () => Navigator.pop(ctx, false),
+        onConfirm: () => Navigator.pop(ctx, true),
+      ),
+    ],
+  );
   final bool? result;
   if (kMobile) {
-    result = await showAppSheet<bool>(context,
-        title: title, child: Builder(builder: content));
+    result = await showAppSheet<bool>(
+      context,
+      title: title,
+      child: Builder(builder: content),
+    );
   } else {
-    result = await showPointPopover<bool>(context,
-        point: lastPointerDown,
-        width: 320,
-        maxHeight: 220,
-        child: Padding(
-          padding: EdgeInsets.all(S.s12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(title,
-                  style: sans(13, weight: FontWeight.w500, color: AppColors.fg1)),
-              SizedBox(height: S.s4),
-              Builder(builder: content),
-            ],
-          ),
-        ));
+    result = await showPointPopover<bool>(
+      context,
+      point: lastPointerDown,
+      width: 320,
+      maxHeight: 220,
+      child: Padding(
+        padding: EdgeInsets.all(S.s12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              title,
+              style: sans(13, weight: FontWeight.w500, color: AppColors.fg1),
+            ),
+            SizedBox(height: S.s4),
+            Builder(builder: content),
+          ],
+        ),
+      ),
+    );
   }
   return result == true;
 }
 
 /// A single-field text prompt (rename, etc.): a dialog on desktop, a bottom
 /// sheet on phones. Returns the trimmed text on save, or null if cancelled.
-Future<String?> promptText(BuildContext context,
-    {required String title,
-    String initial = '',
-    String? hint,
-    String saveLabel = 'Save',
-    int minLines = 1,
-    int maxLines = 1,
-    bool anchored = false,
-    Offset? point}) {
+Future<String?> promptText(
+  BuildContext context, {
+  required String title,
+  String initial = '',
+  String? hint,
+  String saveLabel = 'Save',
+  int minLines = 1,
+  int maxLines = 1,
+  bool anchored = false,
+  Offset? point,
+}) {
   final at = point ?? (anchored ? null : lastPointerDown);
   if (!kMobile) {
-    return _showInlinePrompt(context,
-        title: title,
-        initial: initial,
-        hint: hint,
-        point: at,
-        saveLabel: saveLabel,
-        minLines: minLines,
-        maxLines: maxLines);
-  }
-  final field = _TextPromptSheet(
+    return _showInlinePrompt(
+      context,
+      title: title,
       initial: initial,
       hint: hint,
+      point: at,
       saveLabel: saveLabel,
       minLines: minLines,
-      maxLines: maxLines);
-  return showAppSheet<String>(context, title: title, child: field);
+      maxLines: maxLines,
+    );
+  }
+  return showPromptDialog(
+    context,
+    title: title,
+    initial: initial,
+    hint: hint,
+    verb: saveLabel,
+    minLines: minLines,
+    maxLines: maxLines,
+  );
 }
 
 Offset? _rawPointerDown;
@@ -305,37 +354,43 @@ void trackPointer() {
 /// ones stay anchored over an untouched window.
 Widget popoverBackdrop(Animation<double> animation, Widget child) {
   if (!kMobile) return child;
-  return Stack(children: [
-    Positioned.fill(
-      child: IgnorePointer(
-        child: AnimatedBuilder(
-          animation: animation,
-          builder: (_, __) {
-            final t = animation.value;
-            final scrim = ColoredBox(
-                color: AppColors.glassScrim
-                    .withValues(alpha: AppColors.glassScrim.a * t));
-            if (!Glass.effectiveEnabled || t < 0.001) return scrim;
-            return BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 16 * t, sigmaY: 16 * t),
-              child: scrim,
-            );
-          },
+  return Stack(
+    children: [
+      Positioned.fill(
+        child: IgnorePointer(
+          child: AnimatedBuilder(
+            animation: animation,
+            builder: (_, __) {
+              final t = animation.value;
+              final scrim = ColoredBox(
+                color: AppColors.glassScrim.withValues(
+                  alpha: AppColors.glassScrim.a * t,
+                ),
+              );
+              if (!Glass.effectiveEnabled || t < 0.001) return scrim;
+              return BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 16 * t, sigmaY: 16 * t),
+                child: scrim,
+              );
+            },
+          ),
         ),
       ),
-    ),
-    child,
-  ]);
+      child,
+    ],
+  );
 }
 
-Future<T?> showPointPopover<T>(BuildContext context,
-    {required Offset? point,
-    required double width,
-    required double maxHeight,
-    required Widget child}) {
-  final overlay = Overlay.of(context, rootOverlay: true)
-      .context
-      .findRenderObject() as RenderBox?;
+Future<T?> showPointPopover<T>(
+  BuildContext context, {
+  required Offset? point,
+  required double width,
+  required double maxHeight,
+  required Widget child,
+}) {
+  final overlay =
+      Overlay.of(context, rootOverlay: true).context.findRenderObject()
+          as RenderBox?;
   final box = context.findRenderObject() as RenderBox?;
   if (overlay == null) return Future.value();
   final screen = overlay.size;
@@ -347,11 +402,13 @@ Future<T?> showPointPopover<T>(BuildContext context,
       : point != null
       ? overlay.globalToLocal(point)
       : box != null && box.attached
-          ? box.localToGlobal(Offset(0, box.size.height + 6), ancestor: overlay)
-          : screen.center(Offset.zero);
+      ? box.localToGlobal(Offset(0, box.size.height + 6), ancestor: overlay)
+      : screen.center(Offset.zero);
   final w = width.clamp(200.0, screen.width - 16);
-  final left = (at.dx - w / 2 + (point != null ? w / 2 - 24 : 0))
-      .clamp(8.0, screen.width - w - 8);
+  final left = (at.dx - w / 2 + (point != null ? w / 2 - 24 : 0)).clamp(
+    8.0,
+    screen.width - w - 8,
+  );
   final below = (screen.height - at.dy - 18).clamp(0.0, screen.height);
   final above = (at.dy - 18).clamp(0.0, screen.height);
   final placeAbove = below < maxHeight && above > below;
@@ -360,31 +417,40 @@ Future<T?> showPointPopover<T>(BuildContext context,
   final availH = (placeAbove ? above : below).clamp(80.0, maxHeight);
   final top = placeAbove
       ? null
-      : (at.dy + 10).clamp(8.0, (screen.height - availH - 8).clamp(8.0, screen.height));
+      : (at.dy + 10).clamp(
+          8.0,
+          (screen.height - availH - 8).clamp(8.0, screen.height),
+        );
   final bottom = placeAbove
-      ? (screen.height - at.dy + 10)
-          .clamp(8.0, (screen.height - availH - 8).clamp(8.0, screen.height))
+      ? (screen.height - at.dy + 10).clamp(
+          8.0,
+          (screen.height - availH - 8).clamp(8.0, screen.height),
+        )
       : null;
   final origin = Alignment(
-      (((at.dx - left) / w) * 2 - 1).clamp(-1.0, 1.0), placeAbove ? 1 : -1);
+    (((at.dx - left) / w) * 2 - 1).clamp(-1.0, 1.0),
+    placeAbove ? 1 : -1,
+  );
   return showGeneralDialog<T>(
     context: context,
     barrierDismissible: true,
     barrierLabel: 'Dismiss',
     barrierColor: Colors.transparent,
     transitionDuration: Motion.fast,
-    pageBuilder: (ctx, _, __) => Stack(children: [
-      Positioned(
-        left: left,
-        top: top,
-        bottom: bottom,
-        width: w,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: availH),
-          child: AppPopoverSurface(padding: EdgeInsets.zero, child: child),
+    pageBuilder: (ctx, _, __) => Stack(
+      children: [
+        Positioned(
+          left: left,
+          top: top,
+          bottom: bottom,
+          width: w,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: availH),
+            child: AppPopoverSurface(padding: EdgeInsets.zero, child: child),
+          ),
         ),
-      ),
-    ]),
+      ],
+    ),
     transitionBuilder: (_, animation, __, child) {
       final curve = CurvedAnimation(parent: animation, curve: Motion.enter);
       return popoverBackdrop(
@@ -402,38 +468,45 @@ Future<T?> showPointPopover<T>(BuildContext context,
   );
 }
 
-Future<String?> _showInlinePrompt(BuildContext context,
-    {required String title,
-    required String initial,
-    String? hint,
-    Offset? point,
-    String saveLabel = 'Save',
-    int minLines = 1,
-    int maxLines = 1}) {
-  return showPointPopover<String>(context,
-      point: point,
-      width: maxLines > 1 ? 340 : 300,
-      maxHeight: maxLines > 1 ? 260 : 120,
-      child: Padding(
-        padding: EdgeInsets.all(S.s12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sans(13, color: AppColors.fg3)),
-            SizedBox(height: S.s8),
-            _InlinePromptField(
-                initial: initial,
-                hint: hint,
-                saveLabel: saveLabel,
-                minLines: minLines,
-                maxLines: maxLines),
-          ],
-        ),
-      ));
+Future<String?> _showInlinePrompt(
+  BuildContext context, {
+  required String title,
+  required String initial,
+  String? hint,
+  Offset? point,
+  String saveLabel = 'Save',
+  int minLines = 1,
+  int maxLines = 1,
+}) {
+  return showPointPopover<String>(
+    context,
+    point: point,
+    width: maxLines > 1 ? 340 : 300,
+    maxHeight: maxLines > 1 ? 260 : 120,
+    child: Padding(
+      padding: EdgeInsets.all(S.s12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: sans(13, color: AppColors.fg3),
+          ),
+          SizedBox(height: S.s8),
+          _InlinePromptField(
+            initial: initial,
+            hint: hint,
+            saveLabel: saveLabel,
+            minLines: minLines,
+            maxLines: maxLines,
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _InlinePromptField extends StatefulWidget {
@@ -442,12 +515,13 @@ class _InlinePromptField extends StatefulWidget {
   final String saveLabel;
   final int minLines;
   final int maxLines;
-  const _InlinePromptField(
-      {required this.initial,
-      this.hint,
-      this.saveLabel = 'Save',
-      this.minLines = 1,
-      this.maxLines = 1});
+  const _InlinePromptField({
+    required this.initial,
+    this.hint,
+    this.saveLabel = 'Save',
+    this.minLines = 1,
+    this.maxLines = 1,
+  });
 
   @override
   State<_InlinePromptField> createState() => _InlinePromptFieldState();
@@ -456,8 +530,10 @@ class _InlinePromptField extends StatefulWidget {
 class _InlinePromptFieldState extends State<_InlinePromptField> {
   late final TextEditingController _c =
       TextEditingController(text: widget.initial)
-        ..selection =
-            TextSelection(baseOffset: 0, extentOffset: widget.initial.length);
+        ..selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: widget.initial.length,
+        );
 
   @override
   void dispose() {
@@ -471,124 +547,93 @@ class _InlinePromptFieldState extends State<_InlinePromptField> {
   Widget build(BuildContext context) {
     final multi = widget.maxLines > 1;
     final field = AppField(
-        controller: _c,
-        hint: widget.hint,
-        autofocus: true,
-        minLines: widget.minLines,
-        maxLines: widget.maxLines,
-        onSubmitted: multi ? null : (_) => _done());
+      controller: _c,
+      hint: widget.hint,
+      autofocus: true,
+      minLines: widget.minLines,
+      maxLines: widget.maxLines,
+      onSubmitted: multi ? null : (_) => _done(),
+    );
     final save = Btn(widget.saveLabel, small: true, onTap: _done);
     if (multi) {
-      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        field,
-        SizedBox(height: S.of(10)),
-        Align(alignment: Alignment.centerRight, child: save),
-      ]);
-    }
-    return Row(children: [
-      Expanded(child: field),
-      SizedBox(width: S.s8),
-      save,
-    ]);
-  }
-}
-
-class _TextPromptSheet extends StatefulWidget {
-  final String initial;
-  final String? hint;
-  final String saveLabel;
-  final int minLines;
-  final int maxLines;
-  const _TextPromptSheet({
-    required this.initial,
-    required this.hint,
-    required this.saveLabel,
-    this.minLines = 1,
-    this.maxLines = 1,
-  });
-
-  @override
-  State<_TextPromptSheet> createState() => _TextPromptSheetState();
-}
-
-class _TextPromptSheetState extends State<_TextPromptSheet> {
-  late final TextEditingController _controller =
-      TextEditingController(text: widget.initial);
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _done() => Navigator.pop(context, _controller.text.trim());
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-        mainAxisSize: MainAxisSize.min,
+      return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AppField(
-              controller: _controller,
-              hint: widget.hint,
-              autofocus: true,
-              minLines: widget.minLines,
-              maxLines: widget.maxLines,
-              onSubmitted: (_) => _done()),
-          SizedBox(height: kMobile ? S.s16 : 14),
-          _DialogActions(
-            confirmLabel: widget.saveLabel,
-            onConfirm: _done,
-            onCancel: () => Navigator.pop(context),
-          ),
-        ]);
+          field,
+          SizedBox(height: S.of(10)),
+          Align(alignment: Alignment.centerRight, child: save),
+        ],
+      );
+    }
+    return Row(
+      children: [
+        Expanded(child: field),
+        SizedBox(width: S.s8),
+        save,
+      ],
+    );
   }
 }
 
-Future<T?> showAppSheet<T>(BuildContext context,
-    {required String title,
-    String? subtitle,
-    required Widget child,
-    List<Widget> headerActions = const [],
-    // Desktop dialogs default to a comfortable 460px column rather than phone width.
-    double maxWidth = 460,
-    double maxHeight = 600}) {
+Future<T?> showAppSheet<T>(
+  BuildContext context, {
+  required String title,
+  String? subtitle,
+  required Widget child,
+  List<Widget> headerActions = const [],
+  // Desktop dialogs default to a comfortable 460px column rather than phone width.
+  double maxWidth = 460,
+  double maxHeight = 600,
+}) {
   if (!kMobile) {
-    return showPointPopover<T>(context,
-        point: lastPointerDown,
-        width: maxWidth.clamp(320, 420).toDouble(),
-        maxHeight: maxHeight,
-        child: Builder(
-          builder: (ctx) => SingleChildScrollView(
-            padding: EdgeInsets.all(S.s12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(children: [
+    return showPointPopover<T>(
+      context,
+      point: lastPointerDown,
+      width: maxWidth.clamp(320, 420).toDouble(),
+      maxHeight: maxHeight,
+      child: Builder(
+        builder: (ctx) => SingleChildScrollView(
+          padding: EdgeInsets.all(S.s12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
                   Expanded(
-                    child: Text(title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(13,
-                            weight: FontWeight.w500, color: AppColors.fg1)),
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(
+                        13,
+                        weight: FontWeight.w500,
+                        color: AppColors.fg1,
+                      ),
+                    ),
                   ),
                   ...headerActions,
-                ]),
-                if (subtitle != null && subtitle.isNotEmpty)
-                  Padding(
-                    padding: EdgeInsets.only(top: S.s2),
-                    child: Text(subtitle,
-                        style: sans(12,
-                            weight: FontWeight.w400, color: AppColors.fg3)),
+                ],
+              ),
+              if (subtitle != null && subtitle.isNotEmpty)
+                Padding(
+                  padding: EdgeInsets.only(top: S.s2),
+                  child: Text(
+                    subtitle,
+                    style: sans(
+                      12,
+                      weight: FontWeight.w400,
+                      color: AppColors.fg3,
+                    ),
                   ),
-                SizedBox(height: S.s12),
-                child,
-              ],
-            ),
+                ),
+              SizedBox(height: S.s12),
+              child,
+            ],
           ),
-        ));
+        ),
+      ),
+    );
   }
   return showSpringSheet<T>(
     context,
@@ -602,49 +647,75 @@ Future<T?> showAppSheet<T>(BuildContext context,
         child: AppSheetSurface(
           child: ConstrainedBox(
             constraints: BoxConstraints(maxHeight: limit),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              if (subtitle != null &&
-                  title.isNotEmpty &&
-                  !ShellPanelRoot.inPanel(sheetContext))
-                Padding(
-                  padding: EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s4),
-                  child: Column(children: [
-                    Text(title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: TS.rowTitle()),
-                    if (subtitle.isNotEmpty)
-                      Text(subtitle,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (subtitle != null &&
+                    title.isNotEmpty &&
+                    !ShellPanelRoot.inPanel(sheetContext))
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      M.gutter,
+                      S.s4,
+                      M.gutter,
+                      S.s4,
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
-                          style: TS.meta()),
-                  ]),
-                )
-              else if (title.isNotEmpty &&
-                  !ShellPanelRoot.inPanel(sheetContext))
-                Padding(
-                  padding: EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s8),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(title,
+                          style: TS.rowTitle(),
+                        ),
+                        if (subtitle.isNotEmpty)
+                          Text(
+                            subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TS.meta(),
+                          ),
+                      ],
+                    ),
+                  )
+                else if (title.isNotEmpty &&
+                    !ShellPanelRoot.inPanel(sheetContext))
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      M.gutter,
+                      S.s4,
+                      M.gutter,
+                      S.s8,
+                    ),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TS.sectionTitle()),
+                        style: TS.sectionTitle(),
+                      ),
+                    ),
+                  ),
+                Flexible(
+                  child: SingleChildScrollView(
+                    controller: scroll,
+                    padding: EdgeInsets.fromLTRB(
+                      M.gutter,
+                      S.s4,
+                      M.gutter,
+                      S.s12 + media.padding.bottom,
+                    ),
+                    child: SurfaceScope(
+                      group: kMobile ? Colors.transparent : AppColors.overlay,
+                      child: child,
+                    ),
                   ),
                 ),
-              Flexible(
-                child: SingleChildScrollView(
-                  controller: scroll,
-                  padding: EdgeInsets.fromLTRB(
-                      M.gutter, S.s4, M.gutter, S.s12 + media.padding.bottom),
-                  child: SurfaceScope(
-                      group: kMobile ? Colors.transparent : AppColors.overlay,
-                      child: child),
-                ),
-              ),
-            ]),
+              ],
+            ),
           ),
         ),
       );
@@ -672,86 +743,96 @@ Future<T?> showAnchoredPanel<T>(
   Color? borderColor,
 }) {
   final box = anchor.findRenderObject() as RenderBox?;
-  final overlay = Overlay.of(anchor, rootOverlay: true)
-      .context
-      .findRenderObject() as RenderBox?;
+  final overlay =
+      Overlay.of(anchor, rootOverlay: true).context.findRenderObject()
+          as RenderBox?;
   if (box == null || overlay == null) {
     return showAppSheet<T>(anchor, title: '', child: child);
   }
   final origin = box.localToGlobal(Offset.zero, ancestor: overlay);
   final screen = overlay.size;
   final w = width.clamp(200.0, screen.width - 16);
-  final left = (alignRight ? origin.dx + box.size.width - w : origin.dx)
-      .clamp(8.0, screen.width - w - 8);
+  final left = (alignRight ? origin.dx + box.size.width - w : origin.dx).clamp(
+    8.0,
+    screen.width - w - 8,
+  );
   final top = origin.dy + box.size.height + 6;
   final bottom = screen.height - origin.dy + 6;
-  final room = (above ? origin.dy - 18 : screen.height - top - 12)
-      .clamp(160.0, maxHeight);
+  final room = (above ? origin.dy - 18 : screen.height - top - 12).clamp(
+    160.0,
+    maxHeight,
+  );
   final grow = Alignment(
-      ((origin.dx + box.size.width / 2 - left) / w * 2 - 1).clamp(-1.0, 1.0),
-      above ? 1 : -1);
-  return trackMenuTrigger<T?>(origin & box.size, () => showGeneralDialog<T>(
-    context: anchor,
-    barrierDismissible: true,
-    barrierLabel: 'Dismiss',
-    barrierColor: Colors.transparent,
-    transitionDuration: Motion.fast,
-    pageBuilder: (ctx, _, __) => Stack(children: [
-      Positioned(
-        left: left,
-        top: above ? null : top,
-        bottom: above ? bottom : null,
-        width: w,
-        child: kMobile
-            ? Glass(
-                radius: BorderRadius.circular(R.of(16)),
-                tint: AppColors.surface2.withValues(alpha: 0.7),
-                blur: 28,
-                child: Material(
-                  type: MaterialType.transparency,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxHeight: room),
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.all(S.s6),
-                      child: child,
+    ((origin.dx + box.size.width / 2 - left) / w * 2 - 1).clamp(-1.0, 1.0),
+    above ? 1 : -1,
+  );
+  return trackMenuTrigger<T?>(
+    origin & box.size,
+    () => showGeneralDialog<T>(
+      context: anchor,
+      barrierDismissible: true,
+      barrierLabel: 'Dismiss',
+      barrierColor: Colors.transparent,
+      transitionDuration: Motion.fast,
+      pageBuilder: (ctx, _, __) => Stack(
+        children: [
+          Positioned(
+            left: left,
+            top: above ? null : top,
+            bottom: above ? bottom : null,
+            width: w,
+            child: kMobile
+                ? Glass(
+                    radius: BorderRadius.circular(R.of(16)),
+                    tint: AppColors.surface2.withValues(alpha: 0.7),
+                    blur: 28,
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(maxHeight: room),
+                        child: SingleChildScrollView(
+                          padding: EdgeInsets.all(S.s6),
+                          child: child,
+                        ),
+                      ),
+                    ),
+                  )
+                : Material(
+                    color: AppColors.surface2,
+                    elevation: 10,
+                    shadowColor: Colors.black.withValues(alpha: 0.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(R.of(12)),
+                      side: BorderSide(color: borderColor ?? AppColors.line),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: room),
+                      child: SingleChildScrollView(
+                        padding: EdgeInsets.all(S.s8),
+                        child: child,
+                      ),
                     ),
                   ),
-                ),
-              )
-            : Material(
-                color: AppColors.surface2,
-                elevation: 10,
-                shadowColor: Colors.black.withValues(alpha: 0.5),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(R.of(12)),
-                  side: BorderSide(color: borderColor ?? AppColors.line),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxHeight: room),
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.all(S.s8),
-                    child: child,
-                  ),
-                ),
-              ),
-      ),
-    ]),
-    transitionBuilder: (_, animation, __, child) {
-      final curve = CurvedAnimation(parent: animation, curve: Motion.enter);
-      return popoverBackdrop(
-        curve,
-        FadeTransition(
-          opacity: curve,
-          child: ScaleTransition(
-            scale: Tween(begin: 0.97, end: 1.0).animate(curve),
-            alignment: grow,
-            child: child,
           ),
-        ),
-      );
-    },
-  ));
+        ],
+      ),
+      transitionBuilder: (_, animation, __, child) {
+        final curve = CurvedAnimation(parent: animation, curve: Motion.enter);
+        return popoverBackdrop(
+          curve,
+          FadeTransition(
+            opacity: curve,
+            child: ScaleTransition(
+              scale: Tween(begin: 0.97, end: 1.0).animate(curve),
+              alignment: grow,
+              child: child,
+            ),
+          ),
+        );
+      },
+    ),
+  );
 }
 
 /// A form beside its trigger on desktop (no dialog), a sheet on phones.
@@ -778,39 +859,49 @@ Future<T?> showSidePopover<T>(
       minimum: EdgeInsets.all(S.s12),
       child: Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
-        child: LayoutBuilder(builder: (context, constraints) {
-          final origin = (context.findRenderObject() as RenderBox?)
-                  ?.localToGlobal(Offset.zero) ??
-              Offset.zero;
-          return CustomSingleChildLayout(
-            delegate: _SidePopoverLayout(anchor.shift(-origin), width),
-            child: KeyedSubtree(
-              key: popoverKey,
-              child: AppPopoverSurface(
-                padding: EdgeInsets.zero,
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.all(S.s16),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(title,
-                          style:
-                              sans(13, weight: FontWeight.w500, color: AppColors.fg1)),
-                      SizedBox(height: S.s12),
-                      child,
-                    ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final origin =
+                (context.findRenderObject() as RenderBox?)?.localToGlobal(
+                  Offset.zero,
+                ) ??
+                Offset.zero;
+            return CustomSingleChildLayout(
+              delegate: _SidePopoverLayout(anchor.shift(-origin), width),
+              child: KeyedSubtree(
+                key: popoverKey,
+                child: AppPopoverSurface(
+                  padding: EdgeInsets.zero,
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(S.s16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          title,
+                          style: sans(
+                            13,
+                            weight: FontWeight.w500,
+                            color: AppColors.fg1,
+                          ),
+                        ),
+                        SizedBox(height: S.s12),
+                        child,
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        }),
+            );
+          },
+        ),
       ),
     ),
     transitionBuilder: (_, anim, __, child) => FadeTransition(
-        opacity: CurvedAnimation(parent: anim, curve: Motion.enter),
-        child: child),
+      opacity: CurvedAnimation(parent: anim, curve: Motion.enter),
+      child: child,
+    ),
   );
 }
 
@@ -848,12 +939,13 @@ class _SidePopoverLayout extends SingleChildLayoutDelegate {
 /// Input container: an inset well that reads against any popover, brighter
 /// edge while a field inside has focus.
 class FieldWell extends StatefulWidget {
-  const FieldWell(
-      {super.key,
-      required this.child,
-      this.padding = EdgeInsets.zero,
-      this.minHeight = 0,
-      this.alignment});
+  const FieldWell({
+    super.key,
+    required this.child,
+    this.padding = EdgeInsets.zero,
+    this.minHeight = 0,
+    this.alignment,
+  });
   final Widget child;
   final EdgeInsets padding;
   final double minHeight;
@@ -868,21 +960,22 @@ class _FieldWellState extends State<FieldWell> {
 
   @override
   Widget build(BuildContext context) => Focus(
-        canRequestFocus: false,
-        skipTraversal: true,
-        onFocusChange: (f) => setState(() => _focused = f),
-        child: AnimatedContainer(
-          duration: Motion.quick,
-          constraints: BoxConstraints(minHeight: widget.minHeight),
-          alignment: widget.alignment,
-          padding: widget.padding,
-          decoration: BoxDecoration(
-            color: AppColors.surface1,
-            borderRadius: BorderRadius.circular(R.of(14)),
-            border: Border.all(
-                color: _focused ? AppColors.fg4 : AppColors.lineStrong),
-          ),
-          child: widget.child,
+    canRequestFocus: false,
+    skipTraversal: true,
+    onFocusChange: (f) => setState(() => _focused = f),
+    child: AnimatedContainer(
+      duration: Motion.quick,
+      constraints: BoxConstraints(minHeight: widget.minHeight),
+      alignment: widget.alignment,
+      padding: widget.padding,
+      decoration: BoxDecoration(
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(R.of(14)),
+        border: Border.all(
+          color: _focused ? AppColors.fg4 : AppColors.lineStrong,
         ),
-      );
+      ),
+      child: widget.child,
+    ),
+  );
 }
