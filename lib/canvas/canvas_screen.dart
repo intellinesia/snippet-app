@@ -37,6 +37,23 @@ String canvasLoadMessage(Object e) => e is TimeoutException
         ? 'Could not reach the daemon. Check the connection and retry.'
         : '$e';
 
+/// Title for the top bar: the frame under the viewport centre, the only
+/// visible frame, else [fallback] (the canvas title) when several compete.
+String canvasBarTitle(
+    List<CanvasFrame> frames, Rect world, String fallback) {
+  final visible = [
+    for (final f in frames)
+      if (f.bounds.overlaps(world)) f
+  ];
+  CanvasFrame? pick;
+  for (final f in visible) {
+    if (f.bounds.contains(world.center)) pick = f;
+  }
+  pick ??= visible.length == 1 ? visible.first : null;
+  final t = pick?.title.trim() ?? '';
+  return t.isEmpty ? fallback : t;
+}
+
 class CanvasScreen extends StatefulWidget {
   const CanvasScreen({
     super.key,
@@ -1899,11 +1916,17 @@ class _CanvasScreenState extends State<CanvasScreen>
               AppIcon('arrow-left', size: 16, color: AppColors.fg1),
               SizedBox(width: S.s6),
               Flexible(
-                child: Text(
-                  _topTitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(13, weight: W.label, color: AppColors.fg1),
+                child: ListenableBuilder(
+                  listenable: _viewport,
+                  builder: (_, __) => Text(
+                    _snapshot == null || _viewportSize.isEmpty
+                        ? _topTitle
+                        : canvasBarTitle(_snapshot!.frames,
+                            _viewport.worldViewport(_viewportSize), _topTitle),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13, weight: W.label, color: AppColors.fg1),
+                  ),
                 ),
               ),
               if (_snapshot != null) ...[

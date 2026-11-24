@@ -9,8 +9,9 @@ import 'package:snippet/canvas/artifact_cards.dart';
 import 'package:snippet/canvas/artifact_link_card.dart';
 import 'package:snippet/canvas/canvas_card_client.dart';
 import 'package:snippet/canvas/canvas_models.dart'
-    show CanvasRevEvent, CanvasSnapshot, canvasCount;
-import 'package:snippet/canvas/canvas_screen.dart' show canvasLoadMessage;
+    show CanvasFrame, CanvasRevEvent, CanvasSnapshot, canvasCount;
+import 'package:snippet/canvas/canvas_screen.dart'
+    show canvasBarTitle, canvasLoadMessage;
 import 'package:snippet/canvas/canvas_link.dart';
 import 'package:snippet/canvas/canvas_link_card.dart';
 import 'package:snippet/chat/group_post.dart';
@@ -108,6 +109,7 @@ class _TestCanvasCardClient implements CanvasCardClient {
 
 void main() {
   canvasLiteTests();
+  canvasPinBodyTests();
   group('canvas: link parser and formatter', () {
     test('parses and formats canvas/frame without el or rev', () {
       final ref = parseCanvasRef('canvas:design-1/hero-frame');
@@ -625,5 +627,24 @@ void canvasLiteTests() {
   test('load failures read as real messages', () {
     expect(canvasLoadMessage(TimeoutException('x')), contains('too long'));
     expect(canvasLoadMessage('boom'), 'boom');
+  });
+}
+
+void canvasPinBodyTests() {
+  test('bar title follows the frame under the viewport centre', () {
+    const a = CanvasFrame(
+        id: 'a', title: 'CH-01_phone_chat', x: 0, y: 0, w: 400, h: 800, rev: 1);
+    const b = CanvasFrame(
+        id: 'b', title: 'SE-03', x: 600, y: 0, w: 1200, h: 800, rev: 1);
+    const frames = [a, b];
+    // Centre inside SE-03 while the phone frame is also partly visible.
+    expect(canvasBarTitle(frames, const Rect.fromLTWH(300, 0, 1000, 800), 'Board'),
+        'SE-03');
+    // Several visible, centre in a gap: canvas title.
+    expect(canvasBarTitle(frames, const Rect.fromLTWH(100, 0, 800, 800), 'Board'),
+        'Board');
+    // Nothing visible: canvas title.
+    expect(canvasBarTitle(frames, const Rect.fromLTWH(5000, 0, 100, 100), 'Board'),
+        'Board');
   });
 }

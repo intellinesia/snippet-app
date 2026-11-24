@@ -2561,6 +2561,14 @@ class DaemonClient {
   /// Canvas endpoints (`/canvas`, thumbnails, layout rects, hit, pins, ops, revert).
   /// Every call takes an optional [canvasId]; without it the daemon uses the
   /// workspace canvas.
+  /// The canvas id also rides in the JSON body: the service reads it there.
+  static Map<String, dynamic> _canvasBody(
+          Map<String, dynamic> body, String? canvasId) =>
+      {
+        ...body,
+        if (canvasId != null && canvasId.isNotEmpty) 'canvas_id': canvasId,
+      };
+
   static Map<String, String>? _canvasQuery(String? canvasId,
       [Map<String, String> extra = const {}]) {
     final q = <String, String>{
@@ -2622,7 +2630,8 @@ class DaemonClient {
     final r = await _post(
       _uri('/canvas/hit', _canvasQuery(canvasId)),
       headers: _json,
-      body: jsonEncode({'frame_id': frameId, 'x': x, 'y': y}),
+      body: jsonEncode(
+          _canvasBody({'frame_id': frameId, 'x': x, 'y': y}, canvasId)),
     );
     if (r.statusCode != 200) throw _err('hit test canvas', r);
     final d = jsonDecode(r.body);
@@ -2640,7 +2649,7 @@ class DaemonClient {
     final r = await _post(
       _uri('/canvas/pins', _canvasQuery(canvasId)),
       headers: _json,
-      body: jsonEncode(body),
+      body: jsonEncode(_canvasBody(body, canvasId)),
     );
     if (r.statusCode != 200 && r.statusCode != 201) {
       throw _err('create canvas pin', r);
@@ -2655,7 +2664,7 @@ class DaemonClient {
     final r = await _patch(
       _uri('/canvas/pins/${Uri.encodeComponent(id)}', _canvasQuery(canvasId)),
       headers: _json,
-      body: jsonEncode(body),
+      body: jsonEncode(_canvasBody(body, canvasId)),
     );
     if (r.statusCode != 200) throw _err('update canvas pin', r);
     final d = jsonDecode(r.body);
@@ -2674,7 +2683,7 @@ class DaemonClient {
     final r = await _post(
       _uri('/canvas/revert', _canvasQuery(canvasId)),
       headers: _json,
-      body: jsonEncode({'batch_id': batchId}),
+      body: jsonEncode(_canvasBody({'batch_id': batchId}, canvasId)),
     );
     if (r.statusCode != 200) throw _err('revert canvas batch', r);
     final d = jsonDecode(r.body);
