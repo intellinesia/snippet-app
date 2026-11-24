@@ -28,13 +28,13 @@ void main() {
         final c = _C();
         await hmPump(t, AutonomyPhonePage(client: c), w, s, h: 1200);
         await t.pump(const Duration(milliseconds: 100));
-        expect(t.takeException(), isNull);
+        hmExpectTargets(t);
         final seg = t.getSize(find.byKey(const ValueKey('autonomy-seg')));
         expect(seg.width, closeTo(w - 32, 0.6));
         expect(seg.height, greaterThanOrEqualTo(48));
         for (final m in ['ask', 'plan', 'act']) {
           expect(t.getSize(find.byKey(ValueKey('seg-$m'))).height,
-              greaterThanOrEqualTo(44));
+              greaterThanOrEqualTo(48));
         }
         for (final k in ['Shell', 'Web']) {
           expect(t.getSize(find.byKey(ValueKey('override-$k'))).height,

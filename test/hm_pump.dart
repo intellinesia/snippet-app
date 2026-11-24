@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:snippet/screens/mobile_home/agents_home.dart' show StateChip;
+import 'package:snippet/tap_detector.dart';
 import 'package:snippet/theme.dart';
 
 const hmWidths = [360.0, 393.0, 430.0];
@@ -30,3 +32,17 @@ void hmSpec(String name, Future<void> Function(WidgetTester) body) =>
         debugDefaultTargetPlatformOverride = null;
       }
     });
+
+/// Every tap target is at least [min] high (44 for chips by spec) and nothing threw.
+void hmExpectTargets(WidgetTester t, {double min = 48}) {
+  expect(t.takeException(), isNull);
+  final bad = <String>[];
+  for (final e in find.byType(TapDetector).evaluate()) {
+    final rb = e.renderObject;
+    if (rb is! RenderBox || !rb.hasSize) continue;
+    final h = rb.size.height;
+    final chip = e.findAncestorWidgetOfExactType<StateChip>() != null;
+    if (h < (chip ? 44 : min) - 0.01) bad.add('${rb.size} ${(e.widget as TapDetector).key}');
+  }
+  expect(bad, isEmpty, reason: 'targets under $min: $bad');
+}

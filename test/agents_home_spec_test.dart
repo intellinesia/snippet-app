@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/api.dart';
+import 'hm_pump.dart' show hmExpectTargets;
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/mobile_home/agents_home.dart';
 import 'package:snippet/screens/mobile_home/all_agents_phone.dart';
@@ -11,6 +12,13 @@ import 'package:snippet/theme.dart';
 
 class _Client extends DaemonClient {
   _Client() : super('http://127.0.0.1:9', 'tok');
+  @override
+  Future<ServerConfig> getConfig({bool force = false}) async =>
+      ServerConfig.fromJson({
+        'profiles': [
+          {'name': 'quiet', 'provider': 'claude-code', 'model': 'claude-opus-4-1'}
+        ]
+      });
 }
 
 CoordinationAgent _agent(String id, {bool lead = false}) =>
@@ -19,6 +27,7 @@ CoordinationAgent _agent(String id, {bool lead = false}) =>
       'display_name': 'Agent $id with a long name',
       'handle': id,
       'status': 'active',
+      if (id == 'a1') 'profile': 'quiet',
       if (lead) 'kind': 'lead',
     });
 
@@ -40,6 +49,7 @@ final _agents = [
 ];
 final _sessions = [
   for (var i = 1; i <= 5; i++) _session('s$i', 'a$i', 'running'),
+  _session('f1', 'a8', 'idle'),
   _session('q1', 'a6', 'waiting_for_input',
       attention: {'type': 'question', 'text': 'Should I ship the build?'}),
   _session('q2', 'a7', 'waiting_for_input',
@@ -106,7 +116,7 @@ void main() {
             ),
             w,
             scale);
-        expect(t.takeException(), isNull);
+        hmExpectTargets(t);
         final content = w - 32;
         final cards = find.byType(AgentCard);
         expect(cards, findsNWidgets(4));
@@ -130,6 +140,8 @@ void main() {
         final foot = t.getSize(find.byKey(const ValueKey('home-footer')));
         expect(foot.width, closeTo(content, 0.6));
         expect(foot.height, greaterThanOrEqualTo(50));
+        expect(find.text('All agents'), findsOneWidget);
+        expect(find.text('1 finished today'), findsOneWidget);
         final search = t.getSize(find.bySemanticsLabel('Search'));
         final settings = t.getSize(find.bySemanticsLabel('Settings'));
         expect(search, const Size(48, 48));
@@ -165,7 +177,8 @@ void main() {
             ),
             w,
             scale);
-        expect(t.takeException(), isNull);
+        hmExpectTargets(t);
+        expect(find.textContaining('opus'), findsWidgets);
         expect(t.getSize(find.bySemanticsLabel('Back')), const Size(48, 48));
         expect(t.getSize(find.bySemanticsLabel('Search')), const Size(48, 48));
         expect(find.text('All 10'), findsOneWidget);

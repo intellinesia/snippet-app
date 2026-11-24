@@ -53,7 +53,7 @@ void main() {
         await hmPump(t, PhoneWakePage(client: _C(), owner: 'ada', name: 'Ada'), w, s,
             h: 1600);
         await t.pump(const Duration(milliseconds: 200));
-        expect(t.takeException(), isNull);
+        hmExpectTargets(t);
         final card = t.getSize(find.byKey(const ValueKey('rule-w1')));
         expect(card.width, closeTo(w - 32, 0.6));
         expect(card.height, greaterThanOrEqualTo(88));
@@ -80,7 +80,7 @@ void main() {
         await hmPump(t, PhoneReachPage(client: _C(), agentId: 'ada', name: 'Ada'), w, s,
             h: 900);
         await t.pump(const Duration(milliseconds: 200));
-        expect(t.takeException(), isNull);
+        hmExpectTargets(t);
         expect(find.byType(SpecSwitch), findsNWidgets(3));
         for (final sw in find.byType(SpecSwitch).evaluate()) {
           expect(t.getSize(find.byWidget(sw.widget)), const Size(48, 48));

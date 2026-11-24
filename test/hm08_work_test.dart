@@ -42,7 +42,7 @@ void main() {
             AgentWorkPage(client: _C(), agentId: 'sashy', agentName: 'Sashy'), w, s,
             h: 1200);
         await t.pump(const Duration(milliseconds: 200));
-        expect(t.takeException(), isNull);
+        hmExpectTargets(t);
         for (var i = 0; i < 2; i++) {
           final z = t.getSize(find.byKey(ValueKey('tab-$i')));
           expect(z.width, closeTo(w / 2, 0.6));

@@ -36,7 +36,7 @@ void main() {
         await hmPump(t, GroupInfoPanel(client: _C(), group: group), w, s,
             h: 1400);
         await t.pump(const Duration(milliseconds: 200));
-        expect(t.takeException(), isNull);
+        hmExpectTargets(t);
         expect(find.text('Group info'), findsOneWidget);
         expect(find.text('Add member'), findsOneWidget);
         expect(find.text('3 members - created 21 Nov'), findsOneWidget);

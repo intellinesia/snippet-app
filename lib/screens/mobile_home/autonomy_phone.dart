@@ -68,75 +68,96 @@ class _AutonomyPhonePageState extends State<AutonomyPhonePage> {
         child: Column(children: [
           const PushedBar(title: 'Autonomy', subtitle: 'Lead'),
           Expanded(
-            child: ListView(padding: const EdgeInsets.only(top: 16, bottom: 24), children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: kGutter),
-                child: Container(
-                  key: const ValueKey('autonomy-seg'),
-                  constraints: const BoxConstraints(minHeight: 48),
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                      color: AppColors.surface2,
-                      borderRadius: BorderRadius.circular(12)),
-                  child: Row(children: [
-                    for (final m in _modes)
-                      Expanded(
-                        child: Semantics(
-                          button: true,
-                          selected: m == _mode,
-                          label: '${m[0].toUpperCase()}${m.substring(1)}',
-                          excludeSemantics: true,
-                          child: TapDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: () => _set(m),
-                            child: Container(
-                              key: ValueKey('seg-$m'),
-                              constraints: const BoxConstraints(minHeight: 44),
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                  color: m == _mode ? AppColors.surface3 : null,
-                                  borderRadius: BorderRadius.circular(22)),
-                              child: Text('${m[0].toUpperCase()}${m.substring(1)}',
-                                  style: sans(15,
-                                      weight: FontWeight.w500,
-                                      color: m == _mode ? AppColors.fg1 : AppColors.fg2)),
+            child: ListView(
+                padding: const EdgeInsets.only(top: 16, bottom: 24),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: kGutter),
+                    child: Container(
+                      key: const ValueKey('autonomy-seg'),
+                      constraints: const BoxConstraints(minHeight: 48),
+                      decoration: BoxDecoration(
+                          color: AppColors.surface2,
+                          borderRadius: BorderRadius.circular(12)),
+                      child: Row(children: [
+                        for (final m in _modes)
+                          Expanded(
+                            child: Semantics(
+                              button: true,
+                              selected: m == _mode,
+                              label: '${m[0].toUpperCase()}${m.substring(1)}',
+                              excludeSemantics: true,
+                              child: TapDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () => _set(m),
+                                child: SizedBox(
+                                    key: ValueKey('seg-$m'),
+                                    height: 48,
+                                    child: Padding(
+                                        padding: const EdgeInsets.all(2),
+                                        child: Container(
+                                          alignment: Alignment.center,
+                                          decoration: BoxDecoration(
+                                              color: m == _mode
+                                                  ? AppColors.surface3
+                                                  : null,
+                                              borderRadius:
+                                                  BorderRadius.circular(22)),
+                                          child: Text(
+                                              '${m[0].toUpperCase()}${m.substring(1)}',
+                                              style: sans(15,
+                                                  weight: FontWeight.w500,
+                                                  color: m == _mode
+                                                      ? AppColors.fg1
+                                                      : AppColors.fg2)),
+                                        ))),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                  ]),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(kGutter, 8, kGutter, 0),
-                child: Text(_explain[_mode]!, style: sans(13, color: AppColors.fg3)),
-              ),
-              if (overrides.isNotEmpty) ...[
-                const HomeLabel('Per-tool overrides', top: 24),
-                for (final e in overrides.entries)
-                  Semantics(
-                    label: '${e.key}, ${e.value}',
-                    excludeSemantics: true,
-                    child: Container(
-                      key: ValueKey('override-${e.key}'),
-                      constraints: const BoxConstraints(minHeight: 48),
-                      padding: const EdgeInsets.symmetric(horizontal: kGutter),
-                      child: Row(children: [
-                        Expanded(child: Text(e.key, style: sans(15, color: AppColors.fg1))),
-                        Text('${e.value}'.replaceFirstMapped(RegExp(r'^.'), (m) => m[0]!.toUpperCase()),
-                            style: sans(13, weight: FontWeight.w500, color: AppColors.fg2)),
-                        const SizedBox(width: 6),
-                        AppIcon('chevron-right', size: 16, color: AppColors.fg3),
                       ]),
                     ),
                   ),
-              ],
-              if (summary != null)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(kGutter, 24, kGutter, 0),
-                  child: Text(summary, style: sans(12, color: AppColors.fg3)),
-                ),
-            ]),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(kGutter, 8, kGutter, 0),
+                    child: Text(_explain[_mode]!,
+                        style: sans(13, color: AppColors.fg3)),
+                  ),
+                  if (overrides.isNotEmpty) ...[
+                    const HomeLabel('Per-tool overrides', top: 24),
+                    for (final e in overrides.entries)
+                      Semantics(
+                        label: '${e.key}, ${e.value}',
+                        excludeSemantics: true,
+                        child: Container(
+                          key: ValueKey('override-${e.key}'),
+                          constraints: const BoxConstraints(minHeight: 48),
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: kGutter),
+                          child: Row(children: [
+                            Expanded(
+                                child: Text(e.key,
+                                    style: sans(15, color: AppColors.fg1))),
+                            Text(
+                                '${e.value}'.replaceFirstMapped(
+                                    RegExp(r'^.'), (m) => m[0]!.toUpperCase()),
+                                style: sans(13,
+                                    weight: FontWeight.w500,
+                                    color: AppColors.fg2)),
+                            const SizedBox(width: 6),
+                            AppIcon('chevron-right',
+                                size: 16, color: AppColors.fg3),
+                          ]),
+                        ),
+                      ),
+                  ],
+                  if (summary != null)
+                    Padding(
+                      padding:
+                          const EdgeInsets.fromLTRB(kGutter, 24, kGutter, 0),
+                      child:
+                          Text(summary, style: sans(12, color: AppColors.fg3)),
+                    ),
+                ]),
           ),
         ]),
       ),

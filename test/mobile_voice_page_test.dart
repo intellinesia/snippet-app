@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'hm_pump.dart' show hmExpectTargets;
 import 'package:snippet/screens/mobile_home/agents_home.dart' show BarIcon;
 import 'package:snippet/ambient/capture.dart';
 import 'package:snippet/ambient/controller.dart';
@@ -280,6 +281,7 @@ void main() {
           await tester.pump(const Duration(milliseconds: 300));
           final circles =
               tester.getSize(find.byKey(const ValueKey('ambient-circles')));
+          hmExpectTargets(tester);
           expect(circles, const Size(180, 180));
           final card = tester.getSize(find.byKey(const ValueKey('last-heard')));
           expect(card.width, closeTo(w - 32, 0.6));

@@ -26,7 +26,7 @@ void main() {
       hmSpec('HM-13 at $w x $s', (t) async {
         final d = _detail();
         await hmPump(t, Column(children: [MissionBar(detail: d, onTap: () {})]), w, s, h: 900);
-        expect(t.takeException(), isNull);
+        hmExpectTargets(t);
         final bar = t.getSize(find.byKey(const ValueKey('mission-bar')));
         expect(bar.width, w);
         expect(bar.height, greaterThanOrEqualTo(48));
@@ -36,7 +36,7 @@ void main() {
         expect(find.text('2 of 5'), findsOneWidget);
         expect(find.text('Blocked: Step 3'), findsOneWidget);
         await hmPump(t, MissionPage(detail: d), w, s, h: 1800);
-        expect(t.takeException(), isNull);
+        hmExpectTargets(t);
         final bt = t.getSize(find.byKey(const ValueKey('board-track')));
         expect(find.text('40 percent'), findsOneWidget);
         expect(bt.height, 6);

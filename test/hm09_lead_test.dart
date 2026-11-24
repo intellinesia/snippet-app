@@ -26,7 +26,7 @@ void main() {
             w,
             s,
             h: 1800);
-        expect(t.takeException(), isNull);
+        hmExpectTargets(t);
         final home = t.getSize(find.byKey(const ValueKey('lead-card')));
         expect(home.width, closeTo(w - 32, 0.6));
         expect(home.height, greaterThanOrEqualTo(72));

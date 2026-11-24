@@ -19,7 +19,7 @@ void main() {
     for (final s in hmScales) {
       hmSpec('HM-11 at $w x $s', (t) async {
         await hmPump(t, PhoneCreateAgentPage(client: _C()), w, s, h: 900);
-        expect(t.takeException(), isNull);
+        hmExpectTargets(t);
         final field = t.getSize(find.byType(TextField).first.evaluate().isEmpty
             ? find.byType(Scaffold)
             : find.ancestor(

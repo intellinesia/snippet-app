@@ -8,6 +8,7 @@ import 'package:snippet/screens/group_messaging.dart';
 import 'package:snippet/screens/mobile_home/mission_phone.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/theme.dart';
+import 'hm_pump.dart';
 
 class _C extends DaemonClient {
   _C() : super('https://daemon.invalid', 'tok');
@@ -89,6 +90,7 @@ void main() {
         for (var i = 0; i < 10; i++) {
           await t.pump(const Duration(milliseconds: 80));
         }
+        hmExpectTargets(t);
         final bar = t.getRect(find.byKey(const ValueKey('mission-bar')));
         final msg = t.getRect(find.textContaining('First message').first);
         // ignore: avoid_print

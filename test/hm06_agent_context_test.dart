@@ -31,7 +31,7 @@ void main() {
             AgentContextPage(client: _C(), agent: agent, sessions: sessions), w, s,
             h: 1200);
         await t.pump(const Duration(milliseconds: 200));
-        expect(t.takeException(), isNull);
+        hmExpectTargets(t);
         final tabW = w / 4;
         for (var i = 0; i < 4; i++) {
           final z = t.getSize(find.byKey(ValueKey('tab-$i')));
