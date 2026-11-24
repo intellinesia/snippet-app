@@ -296,7 +296,7 @@ void main() {
 
       await t.enterText(find.byType(TextField), 'Looks good to merge');
       await t.pump();
-      await t.tap(find.byType(ComposerMorphButton));
+      await t.tap(find.byType(ComposerSendButton));
       await _pumpFrames(t);
 
       expect(client.sent.length, 1);

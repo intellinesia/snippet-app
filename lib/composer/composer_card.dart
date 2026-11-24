@@ -44,7 +44,7 @@ class ComposerCard extends StatelessWidget {
 
   /// The draft's type in the pill; one 22px line fills the 40px slot.
   static TextStyle get fieldStyle =>
-      sans(C7.field, height: 22 / C7.field, color: AppColors.fg1);
+      sans(C7.field, height: C7.line / C7.field, color: AppColors.fg1);
 
   static InputDecoration decoration(String hint,
           {TextStyle? style, Color? hintColor}) =>
@@ -55,7 +55,7 @@ class ComposerCard extends StatelessWidget {
         hintText: hint,
         hintMaxLines: 1,
         hintStyle: (style ?? TS.body()).copyWith(
-            color: hintColor ?? (kMobile ? AppColors.fg2 : AppColors.fg3),
+            color: hintColor ?? AppColors.fg3,
             overflow: TextOverflow.ellipsis),
       );
 
@@ -143,7 +143,7 @@ class ComposerIconButton extends StatelessWidget {
         child: SizedBox.square(
           dimension: C7.btn,
           child: Center(
-              child: AppIcon(icon, size: 22, color: color ?? AppColors.fg2)),
+              child: AppIcon(icon, size: kMobile ? 20 : 22, color: color ?? AppColors.fg2)),
         ),
       ),
     );
@@ -167,19 +167,19 @@ class ComposerSendButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fill = !enabled
-        ? (kMobile ? C7.rowHi : AppColors.fg1.withValues(alpha: 0.07))
+        ? (kMobile ? AppColors.surface2 : AppColors.fg1.withValues(alpha: 0.07))
         : stop
             ? (kMobile ? AppColors.fg1 : AppColors.fg1.withValues(alpha: 0.11))
             : AppColors.accentFill;
     final ink = !enabled
-        ? AppColors.fg4
+        ? (kMobile ? AppColors.fg3 : AppColors.fg4)
         : stop
             ? (kMobile ? AppColors.bg : AppColors.fg1)
             : AppColors.accentFg;
     final ShapeBorder shape = kMobile
         ? const CircleBorder()
         : RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.of(6)));
-    return Material(
+    final button = Material(
       color: fill,
       shape: shape,
       child: InkWell(
@@ -191,7 +191,7 @@ class ComposerSendButton extends StatelessWidget {
               }
             : onTap,
         child: SizedBox.square(
-          dimension: kMobile ? C7.btn : 28,
+          dimension: kMobile ? 44 : 28,
           child: Center(
             child: sending
                 ? Spinner(size: 16, color: ink)
@@ -200,6 +200,19 @@ class ComposerSendButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+    if (!kMobile) return button;
+    // A 44 circle inside a 48 target; always visible, announced when off.
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: stop
+          ? 'Stop'
+          : enabled
+              ? 'Send'
+              : 'Send, unavailable',
+      excludeSemantics: true,
+      child: SizedBox.square(dimension: 48, child: Center(child: button)),
     );
   }
 }

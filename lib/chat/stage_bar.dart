@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../glass.dart';
+import '../mochi.dart';
 import '../quiet.dart' show QuietHand;
 import '../widgets.dart' show ProviderLogo, providerLogoAsset;
 import '../platform.dart';
@@ -54,7 +55,7 @@ class StageBar extends StatelessWidget {
   /// Phone only: false when the host already floats it on [GlassTopFrame].
   final bool framed;
 
-  static const double phoneHeight = 76;
+  static const double phoneHeight = 56;
 
   // Desktop leaves headroom above the cast: the characters' crowns rise past their box.
   static double get height => kMobile ? phoneHeight : ChatHeader.overlap + 24;
@@ -70,77 +71,88 @@ class StageBar extends StatelessWidget {
     final grow = MediaQuery.textScalerOf(context).scale(36) - 36;
     final h = phoneHeight + (grow > 0 ? grow : 0);
     final sub = (subtitle ?? '').trim();
+    final avatar = members.isEmpty
+        ? null
+        : ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: AgentMochi(members.first.agentId, size: 32));
     final body = SizedBox(
       width: double.infinity,
       height: h,
-      child: Padding(
-        padding: EdgeInsets.only(top: S.s8),
-        child: Stack(alignment: Alignment.topCenter, children: [
-          // One quiet header: name, then one meta line with the provider mark.
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 64),
-            child: Semantics(
-              button: onTap != null,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onTap,
-                child: ConstrainedBox(
-                  constraints:
-                      const BoxConstraints(minHeight: 44, minWidth: 44),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const SizedBox(height: 4),
-                      Text(title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style:
-                              sans(17, weight: W.label, color: AppColors.fg1)),
-                      if (sub.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Row(mainAxisSize: MainAxisSize.min, children: [
-                            if (subtitleHand) ...[
-                              const QuietHand(size: 14),
-                              const SizedBox(width: 5),
-                            ],
-                            if (subtitleProvider != null &&
-                                providerLogoAsset(subtitleProvider) !=
-                                    null) ...[
-                              ProviderLogo(subtitleProvider,
-                                  size: 12, color: AppColors.fg2),
-                              const SizedBox(width: 5),
-                            ],
-                            Flexible(
-                              child: Text(sub,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: sans(13, color: AppColors.fg2)),
-                            ),
-                          ]),
+      child: Row(children: [
+        // Spec B header: back 48 at x0, avatar 32 at x56, title at x96.
+        if (onBack != null)
+          RoundBtn(
+              icon: 'chevron-left',
+              tooltip: 'Back',
+              size: 48,
+              iconSize: 20,
+              onTap: onBack!)
+        else
+          const SizedBox(width: 16),
+        if (avatar != null) ...[
+          SizedBox(width: onBack != null ? 8 : 24),
+          avatar,
+          const SizedBox(width: 8),
+        ] else
+          const SizedBox(width: 8),
+        Expanded(
+          child: Semantics(
+            button: onTap != null,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onTap,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(16, weight: W.label, color: AppColors.fg1)),
+                    if (sub.isNotEmpty)
+                      Row(mainAxisSize: MainAxisSize.min, children: [
+                        if (subtitleHand) ...[
+                          const QuietHand(size: 14),
+                          const SizedBox(width: 5),
+                        ],
+                        if (subtitleProvider != null &&
+                            providerLogoAsset(subtitleProvider) != null) ...[
+                          ProviderLogo(subtitleProvider,
+                              size: 12, color: AppColors.fg3),
+                          const SizedBox(width: 5),
+                        ],
+                        Flexible(
+                          child: Text(sub,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: sans(12.5, color: AppColors.fg3)),
                         ),
-                      if (below != null) ...[const SizedBox(height: 6), below!],
-                    ],
-                  ),
+                      ]),
+                    if (below != null) ...[const SizedBox(height: 6), below!],
+                  ],
                 ),
               ),
             ),
           ),
-          if (onBack != null)
-            Positioned(
-              left: M.gutter,
-              top: 0,
-              child: RoundBtn(
-                  icon: 'chevron-left',
-                  tooltip: 'Back',
-                  size: 44,
-                  iconSize: 20,
-                  onTap: onBack!),
-            ),
-          if (trailing != null)
-            Positioned(right: M.gutter, top: 0, child: trailing!),
-        ]),
-      ),
+        ),
+        if (trailing != null)
+          Padding(
+              padding: const EdgeInsets.only(right: 13.5), child: trailing!)
+        else if (onTap != null)
+          Padding(
+            padding: const EdgeInsets.only(right: 13.5),
+            child: RoundBtn(
+                icon: 'more-horizontal',
+                tooltip: 'More',
+                size: 48,
+                iconSize: 20,
+                onTap: onTap!),
+          ),
+      ]),
     );
     return framed ? GlassTopFrame(child: body) : body;
   }

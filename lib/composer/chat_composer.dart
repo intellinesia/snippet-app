@@ -136,7 +136,7 @@ class ChatComposer extends StatelessWidget {
             // Geist's ascent never nudges the baseline off the icons' centre.
             strutStyle: StrutStyle(
                 fontSize: C7.field,
-                height: 22 / C7.field,
+                height: C7.line / C7.field,
                 forceStrutHeight: true,
                 leading: 0),
             textAlignVertical: TextAlignVertical.center,
@@ -153,30 +153,21 @@ class ChatComposer extends StatelessWidget {
   /// One button that is mic, send or stop, with a bare mic beside stop so
   /// voice stays one tap away while the agent runs.
   Widget _phoneAction() {
-    final action = hasDraft()
-        ? ComposerAction.send
-        : running && onStop != null
-            ? ComposerAction.stop
-            : kCanRecord
-                ? ComposerAction.mic
-                : ComposerAction.send;
+    final stop = running && onStop != null && !hasDraft();
+    final on = stop || canSend();
     void mic() => unawaited(voice.toggleRecording());
-    final morph = ComposerMorphButton(
-      action: action,
-      enabled: action != ComposerAction.send || canSend(),
-      busy: sending,
-      onTap: switch (action) {
-        ComposerAction.stop => onStop,
-        ComposerAction.mic => mic,
-        ComposerAction.send => canSend() ? onSend : null,
-      },
-      onLongPress: running && canSend() ? onSteer : null,
-    );
-    if (action != ComposerAction.stop || !kCanRecord) return morph;
+    // Phone spec: a voice icon and a separate send circle, both always there.
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      ComposerBareButton('mic', label: 'Record', onTap: mic),
-      const SizedBox(width: 4),
-      morph,
+      if (kCanRecord) ComposerBareButton('mic', label: 'Record', onTap: mic, size: 20),
+      GestureDetector(
+        onLongPress: running && canSend() ? onSteer : null,
+        child: ComposerSendButton(
+          enabled: on,
+          sending: sending,
+          stop: stop,
+          onTap: stop ? onStop : (canSend() ? onSend : null),
+        ),
+      ),
     ]);
   }
 
@@ -255,7 +246,7 @@ class ChatComposer extends StatelessWidget {
                 S.s8,
                 kMobile ? M.gutter : S.s20,
                 kMobile
-                    ? S.of(10) + (keyboard > 0 ? S.s8 : mq.padding.bottom)
+                    ? 8 + (keyboard > 0 ? 0 : mq.padding.bottom)
                     : 18),
             child: ListenableBuilder(
               listenable: Listenable.merge([voice, input, listen]),

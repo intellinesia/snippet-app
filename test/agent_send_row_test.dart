@@ -101,7 +101,7 @@ void main() {
     }
     await t.enterText(find.byType(TextField), 'hello there');
     await t.pump();
-    await t.tap(find.byType(ComposerMorphButton));
+    await t.tap(find.byType(ComposerSendButton));
     await t.pump(const Duration(milliseconds: 50));
     final bubble = find.text('hello there', findRichText: true);
     expect(bubble, findsOneWidget);

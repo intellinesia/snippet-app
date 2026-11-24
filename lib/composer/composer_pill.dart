@@ -14,12 +14,14 @@ abstract final class C7 {
   static Color get row => AppColors.surface3;
   static Color get rowHi =>
       Color.alphaBlend(AppColors.fg1.withValues(alpha: 0.07), AppColors.surface3);
-  static const double pill = 52;
-  static const double pillRadius = 26;
+  static double get pill => kMobile ? 56 : 52;
+  static double get pillRadius => kMobile ? 24 : 26;
   static double get btn => kMobile ? 48 : 40;
   static const double ends = 20;
   static const double inner = 4;
-  static double get field => kMobile ? 17 : 16;
+  static double get field => kMobile ? 15 : 16;
+  // Phone spec: 15 on a 21 line; desktop keeps 22.
+  static double get line => kMobile ? 21 : 22;
   static const SpringDescription morph =
       SpringDescription(mass: 1, stiffness: 700, damping: 46);
   static const SpringDescription tray =
@@ -223,10 +225,10 @@ class ComposerPillSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(minHeight: C7.pill),
+      constraints: BoxConstraints(minHeight: C7.pill),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: C7.row,
+        color: kMobile ? AppColors.surface1 : C7.row,
         borderRadius: BorderRadius.circular(C7.pillRadius),
         border: highlight
             ? Border.all(color: AppColors.accent, width: 1.5)
