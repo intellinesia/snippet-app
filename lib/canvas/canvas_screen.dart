@@ -1106,7 +1106,19 @@ class _CanvasScreenState extends State<CanvasScreen>
       builder: (context, constraints) {
         final size = constraints.biggest;
         if (size != _viewportSize) {
+          final previous = _viewportSize;
           _viewportSize = size;
+          // A side panel opening or closing resizes the canvas from the right:
+          // move by half the change so the content stays centred in what is visible.
+          if (_didInitialFit && !previous.isEmpty && !size.isEmpty) {
+            final shift = Offset(
+              (size.width - previous.width) / 2,
+              (size.height - previous.height) / 2,
+            );
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _viewport.panBy(shift);
+            });
+          }
           if (!_didInitialFit && _snapshot != null && !size.isEmpty) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted && !_didInitialFit) _fitInitialTarget();
