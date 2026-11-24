@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:snippet/screens/mobile_home/agents_home.dart' show BarIcon;
 import 'package:snippet/ambient/capture.dart';
 import 'package:snippet/ambient/controller.dart';
 import 'package:snippet/ambient/voice.dart';
@@ -116,14 +117,13 @@ void main() {
       expect(find.byType(MobileVoicePage), findsOneWidget);
       expect(find.text('Off'), findsOneWidget);
       expect(find.text('Listening'), findsNothing);
-      expect(find.byType(AgentMochi), findsOneWidget);
-      expect(find.byTooltip('Close'), findsOneWidget);
-      expect(find.byTooltip('Chat'), findsOneWidget);
+      expect(find.byKey(const ValueKey('ambient-circles')), findsOneWidget);
+      expect(find.byType(BarIcon).first, findsOneWidget);
       expect(find.byTooltip('End'), findsOneWidget);
       expect(find.byTooltip('Mute'), findsNothing);
       expect(find.byTooltip('Unmute'), findsNothing);
 
-      await tester.tap(find.byTooltip('Close'));
+      await tester.tap(find.byType(BarIcon).first);
       await tester.pumpAndSettle();
 
       expect(find.byType(MobileVoicePage), findsNothing);
@@ -183,9 +183,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.text('Active'), findsOneWidget);
+      expect(find.textContaining('Active'), findsOneWidget);
       expect(find.text('Listening'), findsOneWidget);
-      expect(find.text('\u201CCheck the build status\u201D'), findsOneWidget);
+      expect(find.text('Check the build status'), findsOneWidget);
       expect(find.text('Checking the latest build now.'), findsOneWidget);
       expect(find.byTooltip('Mute'), findsOneWidget);
 
@@ -196,16 +196,19 @@ void main() {
 
       controller.status = const AmbientStatus(running: true, speaking: true);
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
       expect(find.text('Hearing you'), findsOneWidget);
 
       controller.stateNotifier.value =
           const AmbientStateEvent(mode: 'active', sub: 'thinking');
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
       expect(find.text('Thinking'), findsOneWidget);
 
       controller.stateNotifier.value =
           const AmbientStateEvent(mode: 'active', sub: 'speaking');
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
       expect(find.text('Speaking'), findsOneWidget);
 
       await tester.tap(find.byTooltip('End'));
@@ -242,7 +245,7 @@ void main() {
 
       expect(find.byType(MobileVoicePage), findsOneWidget);
 
-      await tester.tap(find.byTooltip('Close'));
+      await tester.tap(find.byType(BarIcon).first);
       await tester.pumpAndSettle();
 
       expect(find.byType(MobileVoicePage), findsNothing);
@@ -251,4 +254,48 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     }
   });
+
+  for (final w in [360.0, 393.0, 430.0]) {
+    for (final scale in [1.0, 1.35, 2.0]) {
+      testWidgets('ambient circles and card at $w x $scale', (tester) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = Size(w, 1400);
+        final controller = _FakeAmbientController(
+            status: const AmbientStatus(running: true), supportsMute: true);
+        try {
+          await tester.pumpWidget(MaterialApp(
+            theme: buildAppTheme(),
+            builder: (c, ch) => MediaQuery(
+                data: MediaQuery.of(c)
+                    .copyWith(textScaler: TextScaler.linear(scale)),
+                child: ch!),
+            home: MobileVoicePage(
+              controller: controller,
+              initialSettings:
+                  const AmbientSettings(enabled: true, mode: 'active'),
+              initialEvents: const [],
+            ),
+          ));
+          await tester.pump(const Duration(milliseconds: 300));
+          final circles =
+              tester.getSize(find.byKey(const ValueKey('ambient-circles')));
+          expect(circles, const Size(180, 180));
+          final card = tester.getSize(find.byKey(const ValueKey('last-heard')));
+          expect(card.width, closeTo(w - 32, 0.6));
+          expect(card.height, greaterThanOrEqualTo(116));
+          final mute = tester.getSize(find.byTooltip('Mute'));
+          final end = tester.getSize(find.byTooltip('End'));
+          expect(mute.width, greaterThanOrEqualTo(56));
+          expect(end.height, greaterThanOrEqualTo(56));
+          // ignore: avoid_print
+          print('HM10 ambient w=$w s=$scale circles=$circles card=$card mute=$mute');
+        } finally {
+          controller.dispose();
+          tester.view.reset();
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+    }
+  }
 }

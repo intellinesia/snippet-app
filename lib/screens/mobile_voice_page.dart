@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,12 +9,11 @@ import '../ambient/controller.dart';
 import '../ambient/voice.dart';
 import '../api.dart';
 import '../media_views.dart';
-import '../mochi.dart';
 import '../models.dart';
 import '../swr.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import 'mobile_chrome.dart';
+import 'mobile_home/agents_home.dart' show PushedBar;
 import '../chat_scene.dart' show SceneBackdrop;
 import '../tap_detector.dart';
 
@@ -100,16 +98,12 @@ class MobileVoicePage extends StatefulWidget {
 }
 
 class _MobileVoicePageState extends State<MobileVoicePage>
-    with SingleTickerProviderStateMixin {
+{
   late final AmbientModel _m = AmbientModel(
     widget.client,
     ambient: widget.controller,
     initialSettings: widget.initialSettings,
   )..addListener(_changed);
-  late final AnimationController _pulse = AnimationController(
-    vsync: this,
-    duration: const Duration(seconds: 2),
-  );
   late List<AmbientEvent> _recent = widget.initialEvents != null
       ? filterAmbientEvents(widget.initialEvents!)
       : const [];
@@ -157,7 +151,6 @@ class _MobileVoicePageState extends State<MobileVoicePage>
     LiveCaptionFeed.instance.lastFinal.removeListener(_feedChanged);
     _tick?.cancel();
     _recentLive?.dispose();
-    _pulse.dispose();
     _m.removeListener(_changed);
     _m.dispose();
     super.dispose();
@@ -244,149 +237,105 @@ class _MobileVoicePageState extends State<MobileVoicePage>
             busy: _m.busy,
             liveOverride: live,
           );
-          final shouldPulse = !reduce &&
-              live &&
-              (statusText == 'Listening' ||
-                  statusText == 'Hearing you' ||
-                  statusText == 'In conversation');
-          if (shouldPulse && !_pulse.isAnimating) _pulse.repeat();
-          if (!shouldPulse && _pulse.isAnimating) {
-            _pulse.stop();
-            _pulse.value = 0;
-          }
+          // Static at rest: a state change cross-fades, nothing pulses.
+          const shouldPulse = false;
           _syncClock(live);
           final modeLabel = ambientModeLabel(_m.settings);
-          final recent = _recent
-              .where((e) => e.text.trim().isNotEmpty)
-              .take(3)
-              .toList();
 
+          final device = _m.settings?.listeningDevice;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
-                child: Row(
-                  children: [
-                    RoundBtn(
-                      icon: 'chevron-down',
-                      tooltip: 'Close',
-                      size: 44,
-                      iconSize: 20,
-                      onTap: _pop,
-                    ),
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('Lead',
-                              style: sans(15, weight: W.label)),
-                          if (live)
-                            Text(modeLabel,
-                                style: sans(12, color: AppColors.fg3)),
-                        ],
-                      ),
-                    ),
-                    SizedBox(width: S.s40),
-                  ],
-                ),
-              ),
+              PushedBar(
+                  title: 'Lead ambient', onBack: _pop),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: EdgeInsets.fromLTRB(S.s24, S.s40, S.s24, S.s24),
+                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       _avatar(live, shouldPulse),
-                      SizedBox(height: S.s20),
-                      if (live) ...[
-                        Text(_elapsed(),
-                            style: mono(15, color: AppColors.fg2)),
-                        SizedBox(height: S.s2),
-                      ],
-                      Text(
-                        statusText,
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style:
-                            sans(13, color: live ? AppColors.ok : AppColors.fg3),
-                      ),
-                      SizedBox(height: S.s16),
-                      _LevelBars(
-                        animation: _pulse,
-                        active: shouldPulse,
-                        color: live ? AppColors.ok : AppColors.border,
-                      ),
-                      if (heard.isNotEmpty) ...[
-                        SizedBox(height: S.s20),
-                        Text(
-                          '“$heard”',
+                      const SizedBox(height: 16),
+                      AnimatedSwitcher(
+                        duration: reduce
+                            ? Duration.zero
+                            : const Duration(milliseconds: 200),
+                        child: Text(
+                          statusText,
+                          key: ValueKey(statusText),
                           textAlign: TextAlign.center,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(20, color: heardColor, height: 1.35),
+                          style: sans(15,
+                              weight: FontWeight.w500, color: AppColors.fg1),
                         ),
-                      ],
-                      if (reply.isNotEmpty) ...[
-                        SizedBox(height: S.s12),
-                        Text(
-                          reply,
-                          textAlign: TextAlign.center,
-                          maxLines: 4,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(15, color: AppColors.fg3),
+                      ),
+                      if (device != null && device.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text('Mic $device',
+                              style: sans(12, color: AppColors.fg3)),
                         ),
-                      ],
-                      if (recent.isNotEmpty) ...[
-                        SizedBox(height: S.s32),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text('Recent',
-                              style: sans(12, color: AppColors.fg4)),
+                      if (live)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text('$modeLabel \u00b7 ${_elapsed()}',
+                              style: sans(12, color: AppColors.fg3)),
                         ),
-                        SizedBox(height: S.s6),
-                        for (final e in recent) _recentRow(e),
-                      ],
+                      const SizedBox(height: 24),
+                      Container(
+                        key: const ValueKey('last-heard'),
+                        constraints: const BoxConstraints(minHeight: 116),
+                        padding: const EdgeInsets.all(14),
+                        alignment: Alignment.topLeft,
+                        decoration: BoxDecoration(
+                            color: AppColors.surface1,
+                            borderRadius: BorderRadius.circular(12)),
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Last heard',
+                                  style: sans(12,
+                                      weight: FontWeight.w500,
+                                      color: AppColors.fg3)),
+                              const SizedBox(height: 6),
+                              Text(heard.isEmpty ? 'Nothing yet' : heard,
+                                  maxLines: 4,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: sans(15, color: heardColor)),
+                              if (reply.isNotEmpty) ...[
+                                const SizedBox(height: 6),
+                                Text(reply,
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: sans(13, color: AppColors.fg3)),
+                              ],
+                            ]),
+                      ),
                     ],
                   ),
                 ),
               ),
               Padding(
-                padding: EdgeInsets.fromLTRB(S.s16, 0, S.s16, S.s32),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (_m.ambient.supportsMute)
+                    if (_m.ambient.supportsMute) ...[
                       _VoiceCircleBtn(
                         icon: _m.ambient.muted ? 'mic-off' : 'mic',
-                        fill: _m.ambient.muted
-                            ? AppColors.fg1
-                            : AppColors.surface2,
-                        iconColor:
-                            _m.ambient.muted ? AppColors.bg : AppColors.fg1,
+                        fill: AppColors.surface2,
+                        iconColor: AppColors.fg1,
                         tooltip: _m.ambient.muted ? 'Unmute' : 'Mute',
                         onTap: () => _m.ambient.toggleMute(),
-                      )
-                    else
-                      const SizedBox(width: 56),
-                    SizedBox(width: S.of(28)),
+                      ),
+                      const SizedBox(width: 40),
+                    ],
                     _VoiceCircleBtn(
                       icon: 'phone-off',
-                      fill: AppColors.danger,
-                      iconColor: Colors.white,
-                      tooltip: 'End',
-                      size: 68,
-                      onTap: _end,
-                    ),
-                    SizedBox(width: S.of(28)),
-                    _VoiceCircleBtn(
-                      icon: 'message-square',
                       fill: AppColors.surface2,
                       iconColor: AppColors.fg1,
-                      tooltip: 'Chat',
-                      onTap: widget.onChat ?? _pop,
+                      tooltip: 'End',
+                      onTap: _end,
                     ),
                   ],
                 ),
@@ -399,126 +348,21 @@ class _MobileVoicePageState extends State<MobileVoicePage>
   }
 
   Widget _avatar(bool live, bool shouldPulse) {
-    final ring = live
-        ? AppColors.ok.withValues(alpha: 0.22)
-        : AppColors.border;
-    Widget circle(double d, double alpha) => Container(
-          width: d,
-          height: d,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: ring.withValues(alpha: ring.a * alpha)),
-          ),
-        );
+    Widget disc(double d, Color c) => Container(
+        width: d,
+        height: d,
+        decoration: BoxDecoration(color: c, shape: BoxShape.circle));
     return SizedBox(
-      width: 196,
-      height: 196,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          circle(196, 0.5),
-          circle(164, 1),
-          AnimatedBuilder(
-            animation: _pulse,
-            builder: (_, child) {
-              final wave = 0.5 - 0.5 * math.cos(2 * math.pi * _pulse.value);
-              final scale = shouldPulse ? 1.0 + 0.04 * wave : 1.0;
-              return Transform.scale(scale: scale, child: child);
-            },
-            child: Container(
-              width: 132,
-              height: 132,
-              decoration: avatarDecoration(132,
-                  color: live ? AppColors.okBg : AppColors.surface1),
-              alignment: Alignment.center,
-              child: Container(
-                width: 96,
-                height: 96,
-                decoration: avatarDecoration(96, color: AppColors.surface2),
-                alignment: Alignment.center,
-                child: const AgentMochi('lead', size: 48),
-              ),
-            ),
-          ),
-        ],
-      ),
+      key: const ValueKey('ambient-circles'),
+      width: 180,
+      height: 180,
+      child: Stack(alignment: Alignment.center, children: [
+        disc(180, AppColors.surface2),
+        disc(140.4, AppColors.surface3),
+        disc(93.6, AppColors.fg3),
+        disc(54, AppColors.fg1),
+      ]),
     );
-  }
-
-  Widget _recentRow(AmbientEvent e) {
-    final t = e.startedAt.toLocal();
-    final hm =
-        '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: S.of(10)),
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.border)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 48,
-            child: Text(hm, style: mono(12, color: AppColors.fg4)),
-          ),
-          Expanded(
-            child: Text(
-              e.text.trim(),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: sans(14, color: AppColors.fg2),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LevelBars extends StatelessWidget {
-  const _LevelBars({
-    required this.animation,
-    required this.active,
-    required this.color,
-  });
-
-  final Animation<double> animation;
-  final bool active;
-  final Color color;
-
-  static const _n = 21;
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-        height: 28,
-        child: AnimatedBuilder(
-          animation: animation,
-          builder: (_, __) => Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              for (var i = 0; i < _n; i++)
-                Container(
-                  width: 3,
-                  height: _height(i),
-                  margin: EdgeInsets.symmetric(horizontal: S.s2),
-                  decoration: BoxDecoration(
-                    color: color.withValues(
-                        alpha: color.a * (active ? 0.85 : 0.6)),
-                    borderRadius: BorderRadius.circular(R.of(2)),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      );
-
-  double _height(int i) {
-    final centre = 1 - (i - _n ~/ 2).abs() / (_n / 2);
-    if (!active) return 3 + 3 * centre;
-    final phase = 2 * math.pi * (animation.value * 2 + i * 0.37);
-    final wave = 0.5 + 0.5 * math.sin(phase) * math.cos(phase * 0.6 + i);
-    return 4 + (10 + 14 * centre) * wave;
   }
 }
 
@@ -529,10 +373,9 @@ class _VoiceCircleBtn extends StatelessWidget {
     required this.iconColor,
     required this.tooltip,
     required this.onTap,
-    this.size = 56,
   });
 
-  final double size;
+  static const double size = 56;
   final String icon;
   final Color fill;
   final Color iconColor;
@@ -540,7 +383,13 @@ class _VoiceCircleBtn extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Tooltip(
+  Widget build(BuildContext context) => Column(mainAxisSize: MainAxisSize.min, children: [
+        _btn(context),
+        const SizedBox(height: 6),
+        Text(tooltip, style: sans(11, color: AppColors.fg2)),
+      ]);
+
+  Widget _btn(BuildContext context) => Tooltip(
         message: tooltip,
         child: Semantics(
           button: true,
