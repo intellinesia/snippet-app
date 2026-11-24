@@ -644,7 +644,11 @@ void main() {
       expect(find.text('Groups'), findsOneWidget);
       expect(find.text('scrapper bois'), findsOneWidget);
       expect(find.byKey(const ValueKey('group-unread-gc-1')), findsOneWidget);
-      expect(find.text('3'), findsOneWidget);
+      expect(
+          find.descendant(
+              of: find.byKey(const ValueKey('group-unread-gc-1')),
+              matching: find.text('3')),
+          findsOneWidget);
     });
 
     testWidgets(

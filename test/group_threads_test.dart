@@ -284,7 +284,7 @@ void main() {
       expect(find.textContaining(' and you'), findsOneWidget);
       expect(find.byType(GroupPostHeader), findsOneWidget);
       expect(find.byType(CappedProse), findsNWidgets(2));
-      expect(find.byType(ChatBubble), findsOneWidget);
+      expect(find.text('Thanks @argon'), findsOneWidget);
       expect(find.textContaining('Read by Argon and Fable'), findsOneWidget);
 
       client.presence.handle({
