@@ -86,6 +86,7 @@ class CanvasOutlineRail extends StatefulWidget {
     required this.layersLoading,
     required this.onSelectFrame,
     required this.onSelectElement,
+    this.onCollapse,
   });
 
   final List<CanvasFrame> frames;
@@ -95,6 +96,9 @@ class CanvasOutlineRail extends StatefulWidget {
   final bool layersLoading;
   final ValueChanged<CanvasFrame> onSelectFrame;
   final ValueChanged<CanvasElementRect> onSelectElement;
+
+  /// Hides the rail back to the icon strip.
+  final VoidCallback? onCollapse;
 
   @override
   State<CanvasOutlineRail> createState() => _CanvasOutlineRailState();
@@ -136,38 +140,65 @@ class _CanvasOutlineRailState extends State<CanvasOutlineRail> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: EdgeInsets.fromLTRB(S.s12, S.s12, S.s12, S.s8),
-            child: Container(
-              height: 44,
-              padding: EdgeInsets.symmetric(horizontal: S.s12),
-              decoration: BoxDecoration(
-                color: AppColors.surface2,
-                borderRadius: BorderRadius.circular(R.md),
-              ),
-              child: Row(
-                children: [
-                  AppIcon('search', size: 16, color: AppColors.fg3),
-                  SizedBox(width: S.s8),
-                  Expanded(
-                    child: Semantics(
-                      textField: true,
-                      label: 'Find a frame or element',
-                      child: TextField(
-                        controller: _controller,
-                        onChanged: (v) => setState(() => _query = v),
-                        style: sans(13, color: AppColors.fg1),
-                        cursorColor: AppColors.fg1,
-                        decoration: InputDecoration(
-                          isDense: true,
-                          border: InputBorder.none,
-                          hintText: 'Find a frame or element',
-                          hintStyle: sans(13, color: AppColors.fg3),
+            padding: EdgeInsets.fromLTRB(S.s12, S.s12, S.s4, S.s8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 44,
+                    padding: EdgeInsets.symmetric(horizontal: S.s12),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface2,
+                      borderRadius: BorderRadius.circular(R.md),
+                    ),
+                    child: Row(
+                      children: [
+                        AppIcon('search', size: 16, color: AppColors.fg3),
+                        SizedBox(width: S.s8),
+                        Expanded(
+                          child: Semantics(
+                            textField: true,
+                            label: 'Find a frame or element',
+                            child: TextField(
+                              controller: _controller,
+                              onChanged: (v) => setState(() => _query = v),
+                              style: sans(13, color: AppColors.fg1),
+                              cursorColor: AppColors.fg1,
+                              decoration: InputDecoration(
+                                isDense: true,
+                                border: InputBorder.none,
+                                hintText: 'Find a frame or element',
+                                hintStyle: sans(13, color: AppColors.fg3),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (widget.onCollapse != null)
+                  Semantics(
+                    button: true,
+                    label: 'Hide outline',
+                    excludeSemantics: true,
+                    child: Tooltip(
+                      message: 'Hide outline',
+                      child: InkWell(
+                        onTap: widget.onCollapse,
+                        borderRadius: BorderRadius.circular(R.sm),
+                        child: SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: Center(
+                            child: AppIcon('panel-left',
+                                size: 18, color: AppColors.fg2),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ],
-              ),
+              ],
             ),
           ),
           Expanded(

@@ -237,11 +237,21 @@ class _CanvasScreenState extends State<CanvasScreen>
     super.dispose();
   }
 
-  bool _isDesktopPanelLayout(BuildContext context) =>
-      !kMobile && MediaQuery.sizeOf(context).width >= 900;
+  /// Width this screen is laid out in. It can be a narrow shell pane, so
+  /// layout follows it rather than the window.
+  double _contentWidth = 1200;
+  bool? _outlineOpen;
 
+  /// Docked side panels (pins, steps) need room beside the canvas.
+  bool _isDesktopPanelLayout(BuildContext context) =>
+      !kMobile && _contentWidth >= 900;
+
+  /// Below this the canvas drops the rails and uses the phone dock.
   bool _isPhoneLayout(BuildContext context) =>
-      kMobile || MediaQuery.sizeOf(context).width < 900;
+      kMobile || _contentWidth < _kWideMin;
+
+  static const double _kWideMin = 560;
+  static const double _kOutlineMinCanvas = 480;
 
   void _onAnimTick() {
     final from = _animFrom;
@@ -1381,7 +1391,14 @@ class _CanvasScreenState extends State<CanvasScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, c) {
+          _contentWidth = c.maxWidth.isFinite ? c.maxWidth : 1200;
+          return _buildBody(context);
+        },
+      );
+
+  Widget _buildBody(BuildContext context) {
     final isPhone = _isPhoneLayout(context);
     final isDesktopPanel = _isDesktopPanelLayout(context);
     final dpr = MediaQuery.devicePixelRatioOf(context);
@@ -1476,8 +1493,28 @@ class _CanvasScreenState extends State<CanvasScreen>
             else
               Positioned(
                 top: S.s16,
+                left: S.s16,
                 right: S.s16,
-                child: _desktopStatusPill(openPins),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Flexible(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: _buildToolbar(isPhone: false),
+                      ),
+                    ),
+                    SizedBox(width: S.s8),
+                    Flexible(
+                      flex: 0,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: _desktopStatusPill(openPins),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             if (_previewRev != null)
               Positioned(
@@ -1494,11 +1531,6 @@ class _CanvasScreenState extends State<CanvasScreen>
                 child: _buildToolbar(isPhone: true),
               )
             else ...[
-              Positioned(
-                top: S.s16,
-                left: S.s16,
-                child: _buildToolbar(isPhone: false),
-              ),
               Positioned(
                 top: 88,
                 left: S.s16,
@@ -1538,20 +1570,69 @@ class _CanvasScreenState extends State<CanvasScreen>
         autofocus: true,
         child: Scaffold(
           backgroundColor: AppColors.bg,
-          body: SafeArea(
-            child: Row(
-              children: [
-                if (isDesktopPanel) _buildOutlineRail(),
-                Expanded(child: canvasArea),
-                if (isDesktopPanel && _panelMode != _SidePanelMode.none)
-                  _buildDesktopSidePanel(),
-              ],
-            ),
-          ),
+          body: SafeArea(child: _buildShellBody(canvasArea, isPhone, isDesktopPanel)),
         ),
       ),
     );
   }
+
+  Widget _buildShellBody(Widget canvasArea, bool isPhone, bool isDesktopPanel) {
+    final panel = isDesktopPanel && _panelMode != _SidePanelMode.none
+        ? _buildDesktopSidePanel()
+        : null;
+    if (isPhone) {
+      return Row(children: [Expanded(child: canvasArea), if (panel != null) panel]);
+    }
+    final open = _outlineOpen ?? (_contentWidth >= 900);
+    final room = _contentWidth - 248 - (panel != null ? 340 : 0);
+    final inline = open && room >= _kOutlineMinCanvas;
+    final overlay = open && !inline;
+    return Stack(
+      children: [
+        Row(
+          children: [
+            if (inline)
+              _buildOutlineRail()
+            else
+              _outlineStrip(),
+            Expanded(child: canvasArea),
+            if (panel != null) panel,
+          ],
+        ),
+        if (overlay)
+          Positioned(left: 0, top: 0, bottom: 0, child: _buildOutlineRail()),
+      ],
+    );
+  }
+
+  Widget _outlineStrip() => Container(
+        width: 48,
+        decoration: BoxDecoration(
+          color: AppColors.surface1,
+          border: Border(right: BorderSide(color: AppColors.border)),
+        ),
+        alignment: Alignment.topCenter,
+        padding: EdgeInsets.only(top: S.s4),
+        child: Semantics(
+          button: true,
+          label: 'Show outline',
+          excludeSemantics: true,
+          child: Tooltip(
+            message: 'Show outline',
+            child: InkWell(
+              onTap: () => setState(() => _outlineOpen = true),
+              borderRadius: BorderRadius.circular(R.sm),
+              child: SizedBox(
+                width: 44,
+                height: 44,
+                child: Center(
+                  child: AppIcon('panel-left', size: 18, color: AppColors.fg2),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
 
   List<CanvasRailTool> _railTools() {
     const hint = 'Frames, text and shapes are made by agents. Ask in chat.';
@@ -1586,6 +1667,7 @@ class _CanvasScreenState extends State<CanvasScreen>
       selectedElementId: _selectedElement?.id,
       layers: id == null ? null : _layouts[id],
       layersLoading: id != null && _inFlightLayouts.containsKey(id),
+      onCollapse: () => setState(() => _outlineOpen = false),
       onSelectFrame: (frame) {
         setState(() {
           _selectedFrameId = frame.id;
@@ -1823,7 +1905,23 @@ class _CanvasScreenState extends State<CanvasScreen>
   }
 
   Widget _buildToolbar({required bool isPhone}) {
-    const btnSize = 44.0;
+    final items = <_ToolbarItem>[
+      if (!isPhone && widget.onClose == null)
+        _ToolbarItem('arrow-left', 'Back', () => Navigator.of(context).maybePop(),
+            showLabel: false),
+      if (isPhone) ...[
+        _ToolbarItem('layers', 'Select',
+            () => setState(() => _tool = CanvasTool.select),
+            active: _tool == CanvasTool.select, showLabel: false),
+        _ToolbarItem(
+            'pin', 'Pin', () => setState(() => _tool = CanvasTool.pin),
+            active: _tool == CanvasTool.pin, showLabel: false),
+      ],
+      _ToolbarItem('expand', 'Fit', _fitToContent, showLabel: !isPhone),
+      _ToolbarItem('history', 'Steps', _openStepsPanel,
+          active: _panelMode == _SidePanelMode.steps, showLabel: !isPhone),
+      _ToolbarItem('share', 'Share', _copyShareLink, showLabel: !isPhone),
+    ];
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: isPhone ? S.s8 : S.s6,
@@ -1834,65 +1932,109 @@ class _CanvasScreenState extends State<CanvasScreen>
         borderRadius: BorderRadius.circular(R.md),
         border: Border.all(color: AppColors.border),
       ),
-      child: Row(
-        mainAxisSize: isPhone ? MainAxisSize.max : MainAxisSize.min,
-        mainAxisAlignment:
-            isPhone ? MainAxisAlignment.spaceEvenly : MainAxisAlignment.start,
-        children: [
-          if (!isPhone && widget.onClose == null) ...[
-            _ToolbarButton(
-              icon: 'arrow-left',
-              label: 'Back',
-              showLabel: false,
-              minSize: btnSize,
-              onTap: () => Navigator.of(context).maybePop(),
-            ),
-            _ToolbarDivider(),
-          ],
-          if (isPhone) ...[
-            _ToolbarButton(
-              icon: 'layers',
-              label: 'Select',
-              active: _tool == CanvasTool.select,
-              showLabel: false,
-              minSize: btnSize,
-              onTap: () => setState(() => _tool = CanvasTool.select),
-            ),
-            _ToolbarButton(
-              icon: 'pin',
-              label: 'Pin',
-              active: _tool == CanvasTool.pin,
-              showLabel: false,
-              minSize: btnSize,
-              onTap: () => setState(() => _tool = CanvasTool.pin),
-            ),
-          ],
-          _ToolbarButton(
-            icon: 'expand',
-            label: 'Fit',
-            showLabel: !isPhone,
-            minSize: btnSize,
-            onTap: _fitToContent,
-          ),
-          _ToolbarButton(
-            icon: 'history',
-            label: 'Steps',
-            active: _panelMode == _SidePanelMode.steps,
-            showLabel: !isPhone,
-            minSize: btnSize,
-            onTap: _openStepsPanel,
-          ),
-          _ToolbarButton(
-            icon: 'share',
-            label: 'Share',
-            showLabel: !isPhone,
-            minSize: btnSize,
-            onTap: _copyShareLink,
-          ),
-        ],
-      ),
+      child: _OverflowToolbar(items: items, spread: isPhone),
     );
   }
+}
+
+class _ToolbarItem {
+  const _ToolbarItem(this.icon, this.label, this.onTap,
+      {this.active = false, this.showLabel = true});
+  final String icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool active;
+  final bool showLabel;
+
+  double get width => showLabel ? 44 + label.length * 7.0 : 44;
+}
+
+/// Toolbar buttons that fit; the rest move into a "..." menu instead of
+/// being clipped.
+class _OverflowToolbar extends StatelessWidget {
+  const _OverflowToolbar({required this.items, required this.spread});
+
+  final List<_ToolbarItem> items;
+  final bool spread;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, c) {
+          // Container padding is outside this box, so maxWidth is the room.
+          final avail = c.maxWidth.isFinite ? c.maxWidth : double.infinity;
+          var total = 0.0;
+          for (final i in items) {
+            total += i.width;
+          }
+          var shown = items.length;
+          if (total > avail) {
+            var used = 44.0;
+            shown = 0;
+            for (final i in items) {
+              if (used + i.width > avail) break;
+              used += i.width;
+              shown++;
+            }
+            if (shown == 0) shown = 1;
+          }
+          final hidden = items.sublist(shown);
+          return Row(
+            mainAxisSize: spread && hidden.isEmpty
+                ? MainAxisSize.max
+                : MainAxisSize.min,
+            mainAxisAlignment: spread && hidden.isEmpty
+                ? MainAxisAlignment.spaceEvenly
+                : MainAxisAlignment.start,
+            children: [
+              for (final i in items.take(shown))
+                _ToolbarButton(
+                  icon: i.icon,
+                  label: i.label,
+                  active: i.active,
+                  showLabel: i.showLabel,
+                  minSize: 44,
+                  onTap: i.onTap,
+                ),
+              if (hidden.isNotEmpty)
+                Semantics(
+                  button: true,
+                  label: 'More canvas actions',
+                  excludeSemantics: true,
+                  child: PopupMenuButton<int>(
+                    tooltip: 'More',
+                    color: AppColors.surface2,
+                    constraints: const BoxConstraints(minWidth: 160),
+                    onSelected: (n) => hidden[n].onTap(),
+                    itemBuilder: (_) => [
+                      for (var n = 0; n < hidden.length; n++)
+                        PopupMenuItem<int>(
+                          value: n,
+                          height: 44,
+                          child: Row(
+                            children: [
+                              AppIcon(hidden[n].icon,
+                                  size: 16, color: AppColors.fg2),
+                              SizedBox(width: S.s12),
+                              Text(hidden[n].label,
+                                  style: sans(13, color: AppColors.fg1)),
+                            ],
+                          ),
+                        ),
+                    ],
+                    child: SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: Center(
+                        child: AppIcon('ellipsis',
+                            size: 18, color: AppColors.fg2),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
+      );
 }
 
 class _ThumbFetchJob {
@@ -2015,14 +2157,4 @@ class _ToolbarButton extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ToolbarDivider extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Container(
-        width: 1,
-        height: 18,
-        margin: EdgeInsets.symmetric(horizontal: S.s4),
-        color: AppColors.border,
-      );
 }
