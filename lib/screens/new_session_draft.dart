@@ -10,6 +10,7 @@ import '../models.dart';
 import '../theme.dart';
 import '../tap_detector.dart';
 import '../widgets.dart';
+import 'new_session_picker.dart';
 import 'spec_bar.dart';
 
 /// `sheet` is the new-session dialog body; `hero` is the empty-state composer
@@ -209,6 +210,24 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
   int _sessionsIn(String path) => _pool.where((s) => s.folder == path).length;
 
   Future<void> _pickFolder() async {
+    if (kMobile || _phone) {
+      final picked = await showFolderBrowserSheet(
+        context,
+        client: widget.client,
+        startPath: _existing?.path ?? _folder,
+        initialMode: _isRepo && _wt == _Wt.fresh
+            ? WorkspaceMode.worktree
+            : WorkspaceMode.folder,
+        initialExisting: _existing,
+        recentFolders: _recentFolders,
+        rowMinHeight: 56,
+        showWorkspaceChoice: false,
+        phone: true,
+      );
+      if (picked != null && mounted) _setFolder(picked.folder);
+      if (mounted) _focus.requestFocus();
+      return;
+    }
     final anchor = _folderKey.currentContext;
     final choice = await _showFolderQuick(
       context,

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -184,40 +186,14 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
   }
 
   Future<void> _openFolderSheet() async {
-    Widget browser() => _FolderBrowserSheet(
-          client: widget.client,
-          startPath: _existing?.path ?? _folder ?? widget.startPath,
-          homePath: _homePath,
-          initialMode: _mode,
-          initialExisting: _existing,
-        );
-    final result = kMobile
-        ? await showModalBottomSheet<_FolderPickResult>(
-            context: context,
-            backgroundColor: Colors.transparent,
-            barrierColor: AppColors.scrim,
-            isScrollControlled: true,
-            useSafeArea: false,
-            sheetAnimationStyle: sheetMotion,
-            builder: (_) => browser(),
-          )
-        : await showDialog<_FolderPickResult>(
-            context: context,
-            barrierColor: AppColors.modalScrim,
-            builder: (_) => ModalGlass(
-              child: Dialog(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                insetPadding:
-                    EdgeInsets.symmetric(horizontal: S.s40, vertical: S.s24),
-                child: ConstrainedBox(
-                  constraints:
-                      const BoxConstraints(maxWidth: 580, maxHeight: 620),
-                  child: browser(),
-                ),
-              ),
-            ),
-          );
+    final result = await showFolderBrowserSheet(
+      context,
+      client: widget.client,
+      startPath: _existing?.path ?? _folder ?? widget.startPath,
+      homePath: _homePath,
+      initialMode: _mode,
+      initialExisting: _existing,
+    );
     if (result == null || !mounted) return;
     setState(() {
       _folder = result.folder;
@@ -703,12 +679,70 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
       );
 }
 
-typedef _FolderPickResult = ({
+typedef FolderPickResult = ({
   String folder,
   WorkspaceMode mode,
   Worktree? existing,
   String? homePath,
 });
+
+Future<FolderPickResult?> showFolderBrowserSheet(
+  BuildContext context, {
+  required DaemonClient client,
+  String? startPath,
+  String? homePath,
+  WorkspaceMode initialMode = WorkspaceMode.folder,
+  Worktree? initialExisting,
+  List<String> recentFolders = const [],
+  double rowMinHeight = 52,
+  bool showWorkspaceChoice = true,
+  bool? phone,
+}) {
+  final isPhone = phone ?? kMobile;
+  final safeTop = math.max(
+    MediaQuery.paddingOf(context).top,
+    MediaQuery.viewPaddingOf(context).top,
+  );
+  Widget browser() => _FolderBrowserSheet(
+        client: client,
+        startPath: startPath,
+        homePath: homePath,
+        initialMode: initialMode,
+        initialExisting: initialExisting,
+        recentFolders: recentFolders,
+        rowMinHeight: rowMinHeight,
+        showWorkspaceChoice: showWorkspaceChoice,
+        forcePhone: isPhone,
+        topInset: safeTop,
+      );
+  return isPhone
+      ? showModalBottomSheet<FolderPickResult>(
+          context: context,
+          backgroundColor: Colors.transparent,
+          barrierColor: AppColors.scrim,
+          isScrollControlled: true,
+          useSafeArea: false,
+          sheetAnimationStyle: sheetMotion,
+          builder: (_) => browser(),
+        )
+      : showDialog<FolderPickResult>(
+          context: context,
+          barrierColor: AppColors.modalScrim,
+          builder: (_) => ModalGlass(
+            child: Dialog(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              insetPadding:
+                  EdgeInsets.symmetric(horizontal: S.s40, vertical: S.s24),
+              child: ConstrainedBox(
+                constraints:
+                    const BoxConstraints(maxWidth: 580, maxHeight: 620),
+                child: browser(),
+              ),
+            ),
+          ),
+        );
+}
 
 class _FolderBrowserSheet extends StatefulWidget {
   const _FolderBrowserSheet({
@@ -717,6 +751,11 @@ class _FolderBrowserSheet extends StatefulWidget {
     this.homePath,
     required this.initialMode,
     this.initialExisting,
+    this.recentFolders = const [],
+    this.rowMinHeight = 52,
+    this.showWorkspaceChoice = true,
+    this.forcePhone = false,
+    this.topInset = 0,
   });
 
   final DaemonClient client;
@@ -724,6 +763,11 @@ class _FolderBrowserSheet extends StatefulWidget {
   final String? homePath;
   final WorkspaceMode initialMode;
   final Worktree? initialExisting;
+  final List<String> recentFolders;
+  final double rowMinHeight;
+  final bool showWorkspaceChoice;
+  final bool forcePhone;
+  final double topInset;
 
   @override
   State<_FolderBrowserSheet> createState() => _FolderBrowserSheetState();
@@ -966,7 +1010,7 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
-    if (kMobile) return _mobileBuild(media);
+    if (kMobile || widget.forcePhone) return _mobileBuild(media);
     final limit = (media.size.height * 0.84).clamp(320.0, 680.0);
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1044,15 +1088,19 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
   }
 
   String get _selectLabel {
-    if (_existing != null ||
-        (_repo != null && _mode == WorkspaceMode.worktree)) {
+    if (widget.showWorkspaceChoice &&
+        (_existing != null ||
+            (_repo != null && _mode == WorkspaceMode.worktree))) {
       return _confirmLabel;
     }
     return 'Select ${_here.isEmpty ? 'folder' : lastPathSegment(_here, ifEmpty: _here)}';
   }
 
   Widget _mobileBuild(MediaQueryData media) {
-    final height = media.size.height - (media.padding.top + 16);
+    final topInset = widget.topInset > 0
+        ? widget.topInset
+        : math.max(media.padding.top, media.viewPadding.top);
+    final height = media.size.height - (topInset + 16);
     final dirs = _dirs;
     final hasParent = _here.isNotEmpty && _here != '/';
     final parent = hasParent
@@ -1068,7 +1116,7 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
           splashFactory: NoSplash.splashFactory,
           highlightColor: AppColors.surface2,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 52),
+            constraints: BoxConstraints(minHeight: widget.rowMinHeight),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 28, 8),
               child: Row(children: [
@@ -1135,11 +1183,11 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
     }
     return Material(
       type: MaterialType.transparency,
-      child: AppSheetSurface(
-        expand: true,
-        color: AppColors.surface1,
-        child: SizedBox(
-          height: height,
+      child: SizedBox(
+        height: height,
+        child: AppSheetSurface(
+          expand: true,
+          color: AppColors.surface1,
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             SizedBox(
@@ -1172,8 +1220,54 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
                     overflow: TextOverflow.ellipsis,
                     style: sans(12, color: AppColors.fg3)),
               ),
+            if (widget.recentFolders.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(children: [
+                    for (var i = 0; i < widget.recentFolders.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 8),
+                      Material(
+                        color: widget.recentFolders[i] == _here
+                            ? AppColors.surface3
+                            : AppColors.surface2,
+                        borderRadius: BorderRadius.circular(22),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(22),
+                          splashFactory: NoSplash.splashFactory,
+                          onTap: _busy == null
+                              ? () => _go(widget.recentFolders[i])
+                              : null,
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(minHeight: 44),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 10),
+                              child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    AppIcon('folder',
+                                        size: 16, color: AppColors.fg2),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      lastPathSegment(widget.recentFolders[i],
+                                          ifEmpty: widget.recentFolders[i]),
+                                      maxLines: 1,
+                                      style: sans(13, color: AppColors.fg2),
+                                    ),
+                                  ]),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ]),
+                ),
+              ),
             Expanded(child: list),
-            if (_repo != null) _workspaceChoice(),
+            if (widget.showWorkspaceChoice && _repo != null) _workspaceChoice(),
             Padding(
               padding:
                   EdgeInsets.fromLTRB(16, 12, 16, 16 + media.padding.bottom),
