@@ -45,7 +45,6 @@ Widget _rail(DaemonClient client, String status, {bool mc = false}) => MaterialA
           resumeMode: 'ask',
           onModel: () {},
           onWakes: () {},
-          onGoal: () {},
           onCycleResume: () {},
         ),
       ),

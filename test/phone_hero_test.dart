@@ -43,7 +43,12 @@ SessionInfo _running() => _session('s2', 'moss', {
       'running': true,
       'running_since': _sec(
           DateTime.now().subtract(const Duration(minutes: 11, seconds: 5))),
-      'plan': {'done': 3, 'total': 6, 'current': 'Health checks'},
+      'lanes': {
+        'running': 1,
+        'items': [
+          {'id': 'lane-1', 'title': 'Health checks'},
+        ],
+      },
     });
 
 Widget _host(
@@ -165,7 +170,7 @@ void main() {
     expect(calls, ['review:new', 'merge:new']);
   });
 
-  testWidgets('running step and next wake lines', (tester) async {
+  testWidgets('running lane and next wake lines', (tester) async {
     final opened = <String>[];
     await tester.pumpWidget(_host([
       _running(),
@@ -180,7 +185,7 @@ void main() {
       }),
     ], opened: opened));
     expect(find.text('Moss · Staging deploy'), findsOneWidget);
-    expect(find.textContaining('Plan 4 of 6 · Health checks'), findsOneWidget);
+    expect(find.text('1 lane'), findsOneWidget);
     expect(find.text('11m'), findsOneWidget);
     expect(find.text('Next: Sol, X check-in, 17:00'), findsOneWidget);
     expect(find.text('in 9 h'), findsOneWidget);

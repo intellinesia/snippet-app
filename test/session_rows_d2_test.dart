@@ -11,12 +11,6 @@ void main() {
       'status': 'running',
       'last_active': 1700000000,
       'running': true,
-      'plan': {
-        'done': 2,
-        'total': 5,
-        'current': 'Wire PR cache',
-        'step_started_at': 1700000100,
-      },
       'lanes': {
         'running': 2,
         'items': [
@@ -44,10 +38,6 @@ void main() {
         'url': 'https://github.com/org/repo/pull/280',
       },
     });
-    expect(full.plan?.done, 2);
-    expect(full.plan?.total, 5);
-    expect(full.plan?.current, 'Wire PR cache');
-    expect(full.plan?.stepStartedAt, 1700000100);
     expect(full.lanes?.running, 2);
     expect(full.lanes?.items.length, 2);
     expect(full.lanes?.items.first.activity, 'Reading diffs');

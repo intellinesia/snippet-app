@@ -450,11 +450,6 @@ void main() {
               'status': 'running',
               'running': true,
               'worker_agent_id': 'snippet',
-              'plan': {
-                'done': 1,
-                'total': 4,
-                'current': 'Design merged Wakes page (phone + desktop)'
-              },
             }),
             _managed('m1', 'snippet', status: 'running'),
           ],
@@ -462,7 +457,6 @@ void main() {
       tester.view.physicalSize = const Size(360, 740) * 3;
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.textContaining('is working'), findsOneWidget);
-      expect(find.text('1 of 4 done'), findsOneWidget);
       expect(find.text('Last result'), findsNothing);
       expect(tester.takeException(), isNull);
       final top = tester.getTopLeft(find.textContaining('is working')).dy;

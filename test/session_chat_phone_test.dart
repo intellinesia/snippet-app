@@ -22,7 +22,6 @@ class FakeClient extends DaemonClient {
           'title': 'Header test',
           'status': 'running',
           'agent_id': 'rook',
-          'plan': {'done': 3, 'total': 5, 'current': 'Run the goldens'},
         }),
       ];
 
@@ -122,7 +121,7 @@ void main() {
       ],
     });
     expect(find.text('Needs you - proj'), findsOneWidget);
-    expect(find.text('Rook asks · plan 4/5'), findsOneWidget);
+    expect(find.text('Rook asks'), findsOneWidget);
     expect(find.text('waiting 2 min'), findsOneWidget);
     expect(find.text('Allow once'), findsOneWidget);
     expect(find.text('Deny'), findsOneWidget);
