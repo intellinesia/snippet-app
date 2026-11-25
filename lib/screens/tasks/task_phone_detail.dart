@@ -283,7 +283,9 @@ class _TaskPhoneDetailState extends State<TaskPhoneDetail> {
         ),
       ]);
 
-  Widget _navRow(String text, VoidCallback onTap, {Key? key}) => Semantics(
+  Widget _navRow(String text, VoidCallback onTap,
+          {Key? key, double minHeight = 56, String? icon}) =>
+      Semantics(
         button: true,
         label: text,
         excludeSemantics: true,
@@ -292,10 +294,14 @@ class _TaskPhoneDetailState extends State<TaskPhoneDetail> {
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 56),
+            constraints: BoxConstraints(minHeight: minHeight),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(children: [
+                if (icon != null) ...[
+                  AppIcon(icon, size: 16, color: AppColors.fg1),
+                  const SizedBox(width: 12),
+                ],
                 Expanded(
                   child: Text(text,
                       maxLines: 2,
@@ -374,7 +380,7 @@ class _TaskPhoneDetailState extends State<TaskPhoneDetail> {
           ),
           if (briefLong && !briefOpen)
             _navRow('More', () => setState(() => briefOpen = true),
-                key: const ValueKey('brief-more')),
+                minHeight: 48, key: const ValueKey('brief-more')),
         ],
         if (entries.isNotEmpty) ...[
           _label('Activity'),
@@ -421,7 +427,7 @@ class _TaskPhoneDetailState extends State<TaskPhoneDetail> {
           for (final b in links.blockedBy)
             _navRow('Blocked by ${titles[b] ?? b}',
                 () => openTaskPhoneDetail(context, widget.client, b),
-                key: ValueKey('blocked-$b')),
+                icon: 'x', key: ValueKey('blocked-$b')),
           if (t.goalId != null && (t.goalTitle ?? '').isNotEmpty)
             _navRow('Goal: ${t.goalTitle}',
                 () => openGoalPhonePage(context, widget.client, t.goalId!),
