@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show ValueListenable;
-import '../quiet.dart' show QuietHand;
 
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../chat/agent_cluster.dart';
 import '../crew_status.dart';
 import '../models.dart';
 import '../pins.dart';
@@ -45,13 +45,13 @@ Future<bool?> showCreateAgentDialog(
         ? Navigator.of(context).push<bool>(MaterialPageRoute(
             builder: (_) => PhoneCreateAgentPage(client: client)))
         : showSidePopover<bool>(context,
-        anchorContext: anchorContext,
-        title: 'New agent',
-        popoverKey: const ValueKey('create-agent-popover'),
-        child: CreateAgentForm(
-            client: client,
-            initialPrompt: initialPrompt,
-            initialCharacter: initialCharacter));
+            anchorContext: anchorContext,
+            title: 'New agent',
+            popoverKey: const ValueKey('create-agent-popover'),
+            child: CreateAgentForm(
+                client: client,
+                initialPrompt: initialPrompt,
+                initialCharacter: initialCharacter));
 
 class AgentsSidebarPanel extends StatefulWidget {
   const AgentsSidebarPanel({
@@ -541,6 +541,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
         }
         return a.name.compareTo(b.name);
       });
+    final offlineHost = error == null ? null : hostOf(widget.client.baseUrl);
     Widget agentTile(CoordinationAgent a,
             {CrewEntry? crew, AgentGroup? group}) =>
         ValueListenableBuilder<String?>(
@@ -559,6 +560,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                   onOpen: () => widget.onOpenAgent?.call(a),
                   onDelete: () => _deleteAgent(a),
                   onChanged: refresh,
+                  offlineHost: offlineHost,
                 ));
 
     String agentName(String id) {
@@ -571,12 +573,55 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
       return id;
     }
 
+    String groupMemberLine(GroupSummary g) {
+      final names = [for (final id in g.agentIds) agentName(id)];
+      if (names.isEmpty) return 'Just you';
+      return '${names.join(', ')} and you';
+    }
+
     Widget groupTile(GroupSummary g) {
       final pinned = _isPinnedGroup(g);
+      if (!kMobile) {
+        final needsCount = [
+          for (final a in agents)
+            if (g.agentIds.contains(a.id)) a.needsYou
+        ].fold<int>(0, (sum, n) => sum + n);
+        final running = g.replying.isNotEmpty;
+        final kind = offlineHost != null
+            ? AgentRowStatusKind.offline
+            : needsCount > 0
+                ? AgentRowStatusKind.needsYou
+                : running
+                    ? AgentRowStatusKind.running
+                    : AgentRowStatusKind.idle;
+        final memberCount =
+            g.members.length + (g.members.any((m) => m.isHuman) ? 0 : 1);
+        return ValueListenableBuilder<String?>(
+          key: ValueKey('group-row-${g.id}'),
+          valueListenable: openGroupTab,
+          builder: (_, open, __) => AgentRowShell(
+            selected: open == g.id,
+            onTap: () => _openGroup(g),
+            onLongPress: () => _groupActions(g),
+            onSecondaryTapUp: (d) => _groupActions(g, point: d.globalPosition),
+            avatar: g.agentIds.isEmpty
+                ? Center(
+                    child: AppIcon('users', size: 14, color: AppColors.fg3))
+                : AgentCluster(ids: g.agentIds, size: 28, count: memberCount),
+            name: g.title.trim().isEmpty ? 'Group' : g.title.trim(),
+            pinned: pinned,
+            time: agentRowAgo(DateTime.tryParse(g.lastEventAt ?? g.createdAt)),
+            preview: groupMemberLine(g),
+            needs: needsCount > 0,
+            statusKind: kind,
+            needsCount: needsCount,
+            unread: g.unread > 0,
+            offlineHost: offlineHost,
+          ),
+        );
+      }
       return GestureDetector(
         key: ValueKey('group-row-${g.id}'),
-        onSecondaryTapUp:
-            kMobile ? null : (d) => _groupActions(g, point: d.globalPosition),
         child: GroupRow(
           group: g,
           pinned: pinned,
@@ -607,7 +652,9 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                 ? const _EmptySearch()
                 : kMobile
                     ? null
-                    : _EmptyTeam();
+                    : _EmptyTeam(
+                        onTap: busy ? null : () => _openCreateAgent(context),
+                      );
 
     if (widget.embedded && !kMobile) {
       return ListenableBuilder(
@@ -649,13 +696,12 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
           Widget nested(List<SessionInfo> list) => Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  SizedBox(height: S.s2),
                   for (final s in list)
                     _NestedSession(
                         key: ValueKey('nested-${s.id}'),
                         session: s,
-                        onTap: () => widget.onOpenSession?.call(s)),
-                  SizedBox(height: S.s4),
+                        onTap: () => widget.onOpenSession?.call(s),
+                        active: s.running),
                 ],
               );
           List<SessionInfo> liveOf(Iterable<String> ids) {
@@ -698,11 +744,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                 at: latest(e.at, live),
                 pinnedAt: e.pinnedAt,
                 i: ranked.length,
-                nest: c != null && c.state != CrewState.standingBy
-                    ? (liveOf([item.id]).isEmpty
-                        ? null
-                        : nested(liveOf([item.id])))
-                    : nestFor(openAgentTab, item.id, () => liveOf([item.id])),
+                nest: nestFor(openAgentTab, item.id, () => liveOf([item.id])),
               ));
             } else {
               // Groups sit in the same list, ranked by their last event.
@@ -711,8 +753,8 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                 at: e.at,
                 pinnedAt: e.pinnedAt,
                 i: ranked.length,
-                nest: nestFor(openGroupTab, item.id,
-                    () => liveOf(item.agentIds)),
+                nest:
+                    nestFor(openGroupTab, item.id, () => liveOf(item.agentIds)),
               ));
             }
           }
@@ -737,20 +779,34 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
             if (b.at == null) return -1;
             return b.at!.compareTo(a.at!);
           });
-          final leadRow = !kMobile && mc != null && onOpenMc != null && q.isEmpty
-              ? AgentRowShell(
-                  key: const ValueKey('agents-lead-row'),
-                  avatar: AgentMochi('lead', size: 28),
-                  name: 'Lead',
-                  preview: '',
-                  onTap: onOpenMc,
-                  stateIcon: sessionNeedsYou(mc)
-                      ? const QuietHand(size: 14)
-                      : mc.running
-                          ? Spinner(size: 12, color: AppColors.fg2)
-                          : null,
-                )
-              : null;
+          final leadNeeds = mc != null && sessionNeedsYou(mc);
+          final leadRunning =
+              mc != null && (mc.running || mc.status == 'running');
+          final leadKind = offlineHost != null
+              ? AgentRowStatusKind.offline
+              : leadNeeds
+                  ? AgentRowStatusKind.needsYou
+                  : leadRunning
+                      ? AgentRowStatusKind.running
+                      : AgentRowStatusKind.idle;
+          final leadRow =
+              !kMobile && mc != null && onOpenMc != null && q.isEmpty
+                  ? AgentRowShell(
+                      key: const ValueKey('agents-lead-row'),
+                      avatar: const AgentMochi('lead', size: 28),
+                      name: 'Lead',
+                      preview: leadRunning ? 'Running' : 'Idle',
+                      time: mc.lastActive <= 0
+                          ? ''
+                          : agentRowAgo(DateTime.fromMillisecondsSinceEpoch(
+                              mc.lastActive * 1000)),
+                      onTap: onOpenMc,
+                      needs: leadNeeds,
+                      statusKind: leadKind,
+                      needsCount: leadNeeds ? 1 : 0,
+                      offlineHost: offlineHost,
+                    )
+                  : null;
           final agentRows = [
             if (leadRow != null) leadRow,
             for (final r in ranked) ...[
@@ -1028,15 +1084,24 @@ class _EmptySearch extends StatelessWidget {
 }
 
 class _EmptyTeam extends StatelessWidget {
+  const _EmptyTeam({this.onTap});
+
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.fromLTRB(kMobile ? 0 : S.s20,
-            kMobile ? S.s8 : S.s24, kMobile ? 0 : S.s20, S.s20),
-        child: Text(
-          'No agents yet.\n\nBuild one and it appears here, along with the '
-          'sessions it is working in.',
-          style: sans(12, color: AppColors.fg3, height: 1.5),
-        ),
+        padding: EdgeInsets.fromLTRB(kMobile ? 0 : S.s8, kMobile ? S.s8 : S.s20,
+            kMobile ? 0 : S.s8, S.s20),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('No agents yet',
+              style: sans(13, weight: FontWeight.w400, color: AppColors.fg3)),
+          SizedBox(height: S.of(10)),
+          Btn('New agent',
+              small: true,
+              variant: BtnVariant.surface,
+              disabled: onTap == null,
+              onTap: onTap),
+        ]),
       );
 }
 
@@ -1315,35 +1380,73 @@ class _DashedCircle extends CustomPainter {
   bool shouldRepaint(_DashedCircle old) => old.color != color;
 }
 
-/// A live session nested under its selected agent or group: 28 tall, indented.
-class _NestedSession extends StatelessWidget {
-  const _NestedSession({super.key, required this.session, required this.onTap});
+/// A live session nested under its selected agent or group: 26 tall, indented.
+class _NestedSession extends StatefulWidget {
+  const _NestedSession(
+      {super.key,
+      required this.session,
+      required this.onTap,
+      this.active = false});
+
   final SessionInfo session;
   final VoidCallback onTap;
+  final bool active;
+
+  @override
+  State<_NestedSession> createState() => _NestedSessionState();
+}
+
+class _NestedSessionState extends State<_NestedSession> {
+  bool _hover = false;
 
   @override
   Widget build(BuildContext context) {
-    final asks = session.status == 'waiting_for_input';
+    final session = widget.session;
     final title =
         session.title.trim().isEmpty ? 'Session' : session.title.trim();
-    return HoverSurface(
-      radius: R.of(8),
-      onTap: onTap,
-      child: SizedBox(
-        height: 28,
-        child: Padding(
-          padding: EdgeInsets.only(left: S.of(36), right: S.s8),
+    final time = session.lastActive <= 0
+        ? ''
+        : agentRowAgo(
+            DateTime.fromMillisecondsSinceEpoch(session.lastActive * 1000));
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: reduceMotion(context)
+              ? Duration.zero
+              : const Duration(milliseconds: 150),
+          height: 26,
+          decoration: BoxDecoration(
+            color: _hover ? AppColors.hoverPlate : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          padding: const EdgeInsets.only(left: 36, right: 10),
           child: Row(children: [
+            AppIcon('chat', size: 12, color: AppColors.fg3),
+            const SizedBox(width: 6),
             Expanded(
               child: Text(title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(13, color: AppColors.fg2)),
+                  style: sans(12,
+                      weight: widget.active ? FontWeight.w500 : FontWeight.w400,
+                      height: 16 / 12,
+                      color: widget.active ? AppColors.fg1 : AppColors.fg2)),
             ),
-            if (asks)
-              const QuietHand(size: 14)
-            else if (session.running)
-              Spinner(size: 12, color: AppColors.fg2),
+            if (time.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              Text(time,
+                  maxLines: 1,
+                  style: sans(11,
+                      weight: FontWeight.w400,
+                      height: 16 / 11,
+                      color: AppColors.fg3,
+                      tabular: true)),
+            ],
           ]),
         ),
       ),

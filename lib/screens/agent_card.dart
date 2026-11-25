@@ -14,9 +14,9 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'package:flutter/gestures.dart'
     show PointerDeviceKind, kMiddleMouseButton;
+import 'package:flutter/services.dart';
 import '../desktop_look.dart' show Tactile;
 import '../mochi.dart';
-import '../quiet.dart' show QuietHand;
 import '../settings_form.dart' show Grouped;
 import 'agent_wake_panel.dart';
 import 'agent_appearance.dart';
@@ -168,6 +168,9 @@ class AgentCard extends StatefulWidget {
   /// Desktop: draw the row on the selected surface.
   final bool selected;
 
+  /// Desktop: the host label when a failed refresh leaves cached rows offline.
+  final String? offlineHost;
+
   const AgentCard({
     super.key,
     required this.client,
@@ -181,6 +184,7 @@ class AgentCard extends StatefulWidget {
     this.crew,
     this.group,
     this.selected = false,
+    this.offlineHost,
   });
 
   @override
@@ -383,17 +387,7 @@ class _AgentCardState extends State<AgentCard> {
     final name =
         agent.displayName.trim().isEmpty ? agent.id : agent.displayName;
     final working = _count({TaskStatus.inProgress}, {'in_progress'});
-    final blocked =
-        _count({TaskStatus.blocked, TaskStatus.failed}, {'blocked', 'failed'});
     final last = agent.lastMessage;
-    final (String, Color)? summary = !agent.available
-        ? ('Paused', AppColors.fg3)
-        : blocked > 0
-            ? ('$blocked blocked', AppColors.danger)
-            : null;
-    final summaryText = summary?.$1 ?? '';
-    final summaryColor = summary?.$2 ?? AppColors.fg4;
-    const metaSize = 12.0;
     if (kMobile) {
       final presence = widget.client.presence.presenceForAgentId(agent.id);
       final crew = widget.crew;
@@ -512,7 +506,7 @@ class _AgentCardState extends State<AgentCard> {
             : working > 0);
     final presence = widget.client.presence.presenceForAgentId(agent.id);
     final group = widget.group ?? agentGroupFor(agent, presence: presence);
-    final needs = group == AgentGroup.needsYou;
+    final needs = group == AgentGroup.needsYou || agent.needsYou > 0;
     final crew = widget.crew;
     final lead = crew?.lead;
     final at =
@@ -523,9 +517,24 @@ class _AgentCardState extends State<AgentCard> {
     final detail = agent.presence?.detail.trim() ?? '';
     var line2 = _phoneLine(agent, crew, presence);
     if (kMobile && ring && crew == null && detail.isNotEmpty) line2 = detail;
+    final running = !needs &&
+        agent.available &&
+        (crew?.state == CrewState.working ||
+            ring ||
+            (presence?.active ?? false) ||
+            (agent.presence?.live ?? false) ||
+            agent.tasksIn({'in_progress'}) > 0);
+    final offline = widget.offlineHost?.trim().isNotEmpty ?? false;
+    final statusKind = offline
+        ? AgentRowStatusKind.offline
+        : needs
+            ? AgentRowStatusKind.needsYou
+            : running
+                ? AgentRowStatusKind.running
+                : AgentRowStatusKind.idle;
+    if (!agent.available) line2 = 'Wakes when you send';
     return AgentRowShell(
       selected: widget.selected,
-      dim: !agent.available,
       onTap: widget.onOpen,
       onLongPress: () {
         holdHaptic();
@@ -533,66 +542,33 @@ class _AgentCardState extends State<AgentCard> {
       },
       onSecondaryTapUp: (d) => _actions(d.globalPosition),
       avatar: AgentMochi(agent.id, size: 28),
-      tint: kMobile ? null : agentTintFor(agent.id),
-      dot: !agent.available
-          ? null
-          : needs
-              ? AppColors.accent
-              : null,
-      dotKey: ring && !needs ? const ValueKey('agent-working') : null,
-      working: !needs &&
-          agent.available &&
-          ((presence?.active ?? false) ||
-              (agent.presence?.live ?? false) ||
-              agent.tasksIn({'in_progress'}) > 0),
+      working: running,
       name: name,
       pinned: _isPinned,
       time: time,
       timeDetail: kMobile ? agentRowClock(at) : '',
       preview: line2,
-      needs: needs || (last?.unread ?? false),
-      stateIcon: !agent.available
-          ? AppIcon('moon', size: 14, color: AppColors.fg3)
-          : needs
-              ? const QuietHand(size: 14)
-              : ring
-                  ? Spinner(size: 12, color: AppColors.fg2)
-                  : null,
-      trailing: !kMobile
-          ? null
-          : needs && agent.needsYou > 0
-              ? Container(
-                  key: const ValueKey('agent-needs-count'),
-                  constraints: const BoxConstraints(minWidth: 16),
-                  height: 16,
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                      color: AppColors.accentBg,
-                      borderRadius: BorderRadius.circular(R.of(3))),
-                  child: Text('${agent.needsYou}',
-                      style: sans(10.5,
-                          weight: FontWeight.w600,
-                          color: AppColors.accent,
-                          tabular: true)),
-                )
-              : blocked > 0 || !agent.available
-                  ? Text(summaryText,
-                      style: sans(metaSize, color: summaryColor, tabular: true))
-                  : (last?.unread ?? false)
-                      ? Container(
-                          key: const ValueKey('agent-unread'),
-                          width: 7,
-                          height: 7,
-                          decoration: BoxDecoration(
-                              color: AppColors.accent, shape: BoxShape.circle))
-                      : null,
+      needs: needs,
+      statusKind: statusKind,
+      needsCount: agent.needsYou > 0 ? agent.needsYou : (needs ? 1 : 0),
+      unread: last?.unread ?? false,
+      offlineHost: widget.offlineHost,
     );
   }
 }
 
-/// Desktop sidebar row for an agent or Lead: 28 px rounded-square
-/// avatar with a status dot, name and time, one preview line.
+enum AgentRowStatusKind {
+  running,
+  error,
+  rateLimited,
+  offline,
+  paused,
+  needsYou,
+  idle,
+}
+
+/// Desktop sidebar row for an agent or Lead: a 28 px portrait, name and time,
+/// and one status line at a 40 px pitch.
 class AgentRowShell extends StatefulWidget {
   const AgentRowShell({
     super.key,
@@ -616,6 +592,10 @@ class AgentRowShell extends StatefulWidget {
     this.wideAvatar = false,
     this.tint,
     this.avatarFor,
+    this.statusKind,
+    this.needsCount = 0,
+    this.unread = false,
+    this.offlineHost,
   });
 
   /// Draws the whole 28x22 slot, given the row's backdrop colour for rings.
@@ -652,15 +632,282 @@ class AgentRowShell extends StatefulWidget {
   final VoidCallback? onLongPress;
   final GestureTapUpCallback? onSecondaryTapUp;
 
+  /// The row's one explicit state. Null falls back to the legacy booleans so
+  /// older callers keep their meaning.
+  final AgentRowStatusKind? statusKind;
+  final int needsCount;
+  final bool unread;
+  final String? offlineHost;
+
   @override
   State<AgentRowShell> createState() => _AgentRowShellState();
 }
 
 class _AgentRowShellState extends State<AgentRowShell> {
   bool _hover = false;
+  late final FocusNode _focusNode;
 
   @override
-  Widget build(BuildContext context) {
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode(debugLabel: 'agent-row-${widget.name}')
+      ..addListener(_focusChanged);
+  }
+
+  @override
+  void dispose() {
+    _focusNode
+      ..removeListener(_focusChanged)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _focusChanged() {
+    if (mounted) setState(() {});
+  }
+
+  AgentRowStatusKind get _kind =>
+      widget.statusKind ??
+      (widget.needs
+          ? AgentRowStatusKind.needsYou
+          : widget.working
+              ? AgentRowStatusKind.running
+              : AgentRowStatusKind.idle);
+
+  void _open({bool newTab = false}) {
+    if (newTab) {
+      middleClickOpen = true;
+      widget.onTap();
+      middleClickOpen = false;
+    } else {
+      widget.onTap();
+    }
+  }
+
+  KeyEventResult _keyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event.logicalKey != LogicalKeyboardKey.enter &&
+        event.logicalKey != LogicalKeyboardKey.numpadEnter) {
+      return KeyEventResult.ignored;
+    }
+    final keys = HardwareKeyboard.instance;
+    _open(newTab: keys.isMetaPressed || keys.isControlPressed);
+    return KeyEventResult.handled;
+  }
+
+  String get _statusText {
+    final text = widget.preview.trim();
+    return switch (_kind) {
+      AgentRowStatusKind.offline =>
+        'Offline - ${widget.offlineHost?.trim().isNotEmpty == true ? widget.offlineHost!.trim() : 'host'}',
+      AgentRowStatusKind.error => text.isEmpty ? 'Error' : text,
+      AgentRowStatusKind.rateLimited => text.isEmpty ? 'Rate limited' : text,
+      AgentRowStatusKind.paused => text.isEmpty ? 'Paused by you' : text,
+      AgentRowStatusKind.running => text.isEmpty ? 'Running' : text,
+      AgentRowStatusKind.needsYou => text,
+      AgentRowStatusKind.idle => text.isEmpty ? 'Idle' : text,
+    };
+  }
+
+  Widget _desktopRow(BuildContext context) {
+    final focused = _focusNode.hasFocus;
+    final fill = focused
+        ? AppColors.surface3
+        : widget.selected
+            ? AppColors.surface2
+            : _hover
+                ? AppColors.hoverPlate
+                : Colors.transparent;
+    final still = reduceMotion(context);
+    final kind = _kind;
+    final offline = kind == AgentRowStatusKind.offline;
+    final strongName = widget.selected || widget.unread;
+    final nameColor = offline
+        ? AppColors.fg3
+        : strongName
+            ? AppColors.fg1
+            : AppColors.fg2;
+    final needs = kind == AgentRowStatusKind.needsYou;
+    final needsCount = widget.needsCount > 0
+        ? widget.needsCount
+        : widget.needs
+            ? 1
+            : 0;
+    final statusStyle = switch (kind) {
+      AgentRowStatusKind.needsYou => sans(12,
+          weight: FontWeight.w500, height: 16 / 12, color: AppColors.fg2),
+      AgentRowStatusKind.error || AgentRowStatusKind.rateLimited => sans(12,
+          weight: FontWeight.w400, height: 16 / 12, color: AppColors.fg2),
+      _ => sans(12,
+          weight: FontWeight.w400, height: 16 / 12, color: AppColors.fg3),
+    };
+
+    Widget avatar = widget.avatar;
+    if (offline) {
+      avatar = ColorFiltered(
+        colorFilter: ColorFilter.mode(
+            Colors.black.withValues(alpha: 0.6), BlendMode.srcATop),
+        child: avatar,
+      );
+    }
+
+    final statusChildren = <Widget>[];
+    if (needs) {
+      statusChildren.addAll([
+        Container(
+          key: const ValueKey('agent-needs-dot'),
+          width: 6,
+          height: 6,
+          decoration:
+              BoxDecoration(color: AppColors.run, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            needsCount == 1 ? '1 needs you' : '$needsCount need you',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: statusStyle,
+          ),
+        ),
+      ]);
+    } else {
+      if (kind == AgentRowStatusKind.error ||
+          kind == AgentRowStatusKind.rateLimited) {
+        statusChildren.addAll([
+          AppIcon('x', size: 10, color: AppColors.fg2),
+          const SizedBox(width: 5),
+        ]);
+      } else if (kind == AgentRowStatusKind.paused) {
+        statusChildren.addAll([
+          AppIcon('pause', size: 10, color: AppColors.fg3),
+          const SizedBox(width: 5),
+        ]);
+      }
+      statusChildren.add(
+        Expanded(
+          child: Text(_statusText,
+              maxLines: 1, overflow: TextOverflow.ellipsis, style: statusStyle),
+        ),
+      );
+      if (kind == AgentRowStatusKind.running) {
+        statusChildren.addAll([
+          const SizedBox(width: 6),
+          Spinner(size: 11, color: AppColors.fg3),
+        ]);
+      }
+      if (widget.unread) {
+        statusChildren.addAll([
+          const SizedBox(width: 6),
+          Container(
+            key: const ValueKey('agent-unread'),
+            width: 6,
+            height: 6,
+            decoration:
+                BoxDecoration(color: AppColors.fg1, shape: BoxShape.circle),
+          ),
+        ]);
+      }
+    }
+
+    final row = AnimatedContainer(
+      duration: still ? Duration.zero : const Duration(milliseconds: 150),
+      curve: const Cubic(0.23, 1, 0.32, 1),
+      height: 40,
+      clipBehavior: Clip.antiAlias,
+      decoration:
+          BoxDecoration(color: fill, borderRadius: BorderRadius.circular(8)),
+      child: Stack(clipBehavior: Clip.none, children: [
+        if (focused)
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 2,
+            child: ColoredBox(color: AppColors.fg1),
+          ),
+        Positioned(
+          left: 8,
+          top: 6,
+          width: 28,
+          height: 28,
+          child: avatar,
+        ),
+        Positioned(
+          left: 44,
+          right: 10,
+          top: 2,
+          height: 17,
+          child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+            Flexible(
+              child: Text(widget.name,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(13,
+                      weight: strongName ? FontWeight.w500 : FontWeight.w400,
+                      height: 17 / 13,
+                      color: nameColor)),
+            ),
+            if (widget.time.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              Text(widget.time,
+                  maxLines: 1,
+                  style: sans(11,
+                      weight: FontWeight.w400,
+                      height: 16 / 11,
+                      color: AppColors.fg3,
+                      tabular: true)),
+            ],
+            if (widget.selected) ...[
+              const SizedBox(width: 4),
+              AppIcon('chevron-right', size: 12, color: AppColors.fg2),
+            ],
+          ]),
+        ),
+        Positioned(
+          left: 44,
+          right: 10,
+          top: 21,
+          height: 16,
+          child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: statusChildren),
+        ),
+      ]),
+    );
+
+    return Tooltip(
+      message: widget.name,
+      waitDuration: const Duration(milliseconds: 600),
+      child: Focus(
+        focusNode: _focusNode,
+        onKeyEvent: _keyEvent,
+        child: MouseRegion(
+          onEnter: (_) => setState(() => _hover = true),
+          onExit: (_) => setState(() => _hover = false),
+          cursor: SystemMouseCursors.click,
+          child: Listener(
+            onPointerDown: (e) {
+              if (e.kind == PointerDeviceKind.mouse &&
+                  e.buttons & kMiddleMouseButton != 0) {
+                _open(newTab: true);
+              }
+            },
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _open,
+              onLongPress: widget.onLongPress,
+              onSecondaryTapUp: widget.onSecondaryTapUp,
+              child: row,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _legacyRow(BuildContext context) {
     final fill = widget.selected
         ? AppColors.surface3
         : _hover
@@ -771,12 +1018,7 @@ class _AgentRowShellState extends State<AgentRowShell> {
                                       color: widget.needs
                                           ? AppColors.fg1
                                           : AppColors.fg2)
-                                  : sans(14,
-                                      color: widget.needs ||
-                                              widget.selected ||
-                                              _hover
-                                          ? AppColors.fg1
-                                          : AppColors.fg1)),
+                                  : sans(14, color: AppColors.fg1)),
                         ),
                         if (widget.pinned) ...[
                           const SizedBox(width: 6),
@@ -823,6 +1065,10 @@ class _AgentRowShellState extends State<AgentRowShell> {
       ),
     );
   }
+
+  @override
+  Widget build(BuildContext context) =>
+      kMobile ? _legacyRow(context) : _desktopRow(context);
 }
 
 /// A short accent arc turning round an avatar while its agent works.
