@@ -7,6 +7,7 @@ import '../../theme.dart';
 import '../../widgets.dart';
 import '../mobile_home/collapsing_root.dart';
 import 'task_phone.dart';
+import 'task_phone_board.dart';
 
 enum TaskScope { all, mine, agents }
 
@@ -53,6 +54,7 @@ const kDoneVisible = 5;
 class _PhoneTasksRootState extends State<PhoneTasksRoot> {
   TaskScope _scope = TaskScope.all;
   bool _doneOpen = false;
+  bool _board = false;
 
   bool _in(TaskItem t, TaskScope s) => switch (s) {
         TaskScope.all => true,
@@ -130,10 +132,29 @@ class _PhoneTasksRootState extends State<PhoneTasksRoot> {
       }
     }
 
+    final trailing = [
+      ...widget.actions,
+      BarIcon(_board ? 'list' : 'kanban', 'Board view',
+          () => setState(() => _board = !_board),
+          toggled: _board),
+      BarIcon('plus', 'New task', widget.onNew),
+    ];
+    if (_board) {
+      return PhoneTaskBoard(
+        title: widget.title,
+        tasks: [for (final t in all) t],
+        sessions: widget.sessions,
+        agentNames: widget.agentNames,
+        onOpen: widget.onOpen,
+        leading: widget.leading,
+        actions: trailing,
+        stateBody: widget.stateBody,
+      );
+    }
     return CollapsingRoot(
       title: widget.title,
       leading: widget.leading,
-      actions: widget.actions,
+      actions: trailing,
       child: PullToRefresh(
         onRefresh: widget.onRefresh,
         child: ListView(

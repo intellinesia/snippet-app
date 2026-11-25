@@ -169,13 +169,15 @@ class _RingPainter extends CustomPainter {
 
 /// A 48 x 48 trailing bar icon, 20 in fg2.
 class BarIcon extends StatelessWidget {
-  const BarIcon(this.icon, this.label, this.onTap, {super.key});
+  const BarIcon(this.icon, this.label, this.onTap, {super.key, this.toggled});
+  final bool? toggled;
   final String icon;
   final String label;
   final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
+        toggled: toggled,
         label: label,
         excludeSemantics: true,
         child: TapDetector(

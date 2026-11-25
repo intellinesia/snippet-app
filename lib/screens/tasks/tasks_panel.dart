@@ -619,10 +619,7 @@ class TasksPanelState extends State<TasksPanel> {
         leading: nav != null && nav.canPop()
             ? BarIcon('chevron-left', 'Back', () => nav.maybePop())
             : null,
-        actions: [
-          BarIcon('plus', 'New task', create),
-          ...widget.trailing,
-        ],
+        actions: widget.trailing,
       ),
     );
   }
