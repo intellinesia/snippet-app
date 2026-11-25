@@ -9,6 +9,7 @@ import 'package:snippet/notification_card.dart';
 import 'package:snippet/notification_popovers.dart';
 import 'package:snippet/notification_sync.dart';
 import 'package:snippet/screens/desktop_shell.dart';
+import 'package:snippet/screens/shell_frame.dart';
 import 'package:snippet/theme.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -41,21 +42,22 @@ void main() {
       // Desktop never renders in-app toasts (asks sit on the composer).
       expect(find.byType(NotificationMessageCard), findsNothing);
       final out = <String, Rect>{};
+      const chrome = kShellTitleRowHeight + kShellTabStripHeight;
       // Every window-bar control (tab strip, back/forward, pane header tools).
       for (final e in find.byType(Tooltip).evaluate()) {
         final f = find.byWidget(e.widget);
         final r = tester.getRect(f);
-        if (r.top < 66 && r.width > 0) {
+        if (r.top < chrome && r.width > 0) {
           out['${(e.widget as Tooltip).message}'] = r;
         }
       }
       expect(out, isNotEmpty);
       // ignore: avoid_print
       print('DESKTOP ${size.width.toInt()} toasts=0 chrome=$out');
-      // Anchor for the call card, the one overlay desktop can show: top 66
-      // (34 title row + 32 tab strip).
+      // Anchor for the call card, the one overlay desktop can show: chrome
+      // (kShellTitleRowHeight + kShellTabStripHeight).
       for (final e in out.entries) {
-        expect(e.value.bottom, lessThanOrEqualTo(66), reason: e.key);
+        expect(e.value.bottom, lessThanOrEqualTo(chrome), reason: e.key);
       }
       foregroundNotifications.drain();
       await tester.pumpWidget(const SizedBox.shrink());
