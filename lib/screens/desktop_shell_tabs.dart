@@ -1027,12 +1027,12 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     return null;
   }
 
-  /// Sessions carrying attention (waiting on input, in review, or flagged),
-  /// for the Lead tab badge.
-  int get _mcAttentionCount => [
-        for (final s in _sessions ?? const <SessionInfo>[])
-          if (sessionNeedsYou(s)) s,
-      ].length;
+  /// Waiting sessions plus daemon-reported agent asks, deduplicated by agent,
+  /// for the Lead tab badge and the status bar.
+  int get _mcAttentionCount => shellNeedsYouCount(
+        _sessions ?? const <SessionInfo>[],
+        _coordinationAgents,
+      );
 
   String? _folderForTab(_ShellTab t) {
     if (t.isLead || t.isBoard || t.isReadout || t.isSettings || t.isHome) {

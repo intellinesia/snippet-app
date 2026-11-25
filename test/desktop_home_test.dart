@@ -3,11 +3,13 @@ import 'package:snippet/crew_status.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/desktop_home.dart';
 
-CoordinationAgent _agent(String id, {String status = 'active'}) =>
+CoordinationAgent _agent(String id,
+        {String status = 'active', int needsYou = 0}) =>
     CoordinationAgent.fromJson({
       'id': id,
       'display_name': id == 'sleep' ? 'Sleepy' : id,
       'status': status,
+      'needs_you': needsYou,
     });
 
 SessionInfo _session(String id, String agent,
@@ -44,6 +46,27 @@ void main() {
     expect(sections.available.map((e) => e.agent.id), ['idle', 'sleep']);
     expect(sections.groupAsks, isEmpty);
     expect(sections.needsCount, 1);
+  });
+
+  test('desktop opt-in buckets daemon-reported agent needs without duplicates',
+      () {
+    final agents = [
+      _agent('flagged', needsYou: 2),
+      _agent('both', needsYou: 1),
+      _agent('plain'),
+    ];
+    final sessions = [_session('ask', 'both', waiting: true)];
+
+    final defaultCrew = deriveCrew(agents, sessions);
+    expect(defaultCrew[0].state, CrewState.standingBy);
+
+    final sections = deriveHomeSections(
+      deriveCrew(agents, sessions, includeAgentNeedsYou: true),
+      const [],
+    );
+
+    expect(sections.needs.map((e) => e.agent.id), ['flagged', 'both']);
+    expect(sections.needsCount, 2);
   });
 
   test('a direct ask without a backing session can surface as its group ask',

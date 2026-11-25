@@ -95,11 +95,12 @@ String? crewOwner(SessionInfo s) {
   return id;
 }
 
-/// Status comes only from sessions: any waiting -> needs you, else any running
-/// -> working, else standing by. Nothing is read from the agent itself.
+/// Status comes only from sessions by default: any waiting -> needs you, else
+/// any running -> working, else standing by. Desktop surfaces that mirror the
+/// sidebar can opt into the daemon's agent-level open-ask count.
 List<CrewEntry> deriveCrew(
     List<CoordinationAgent> agents, List<SessionInfo> sessions,
-    {PresenceStore? presence}) {
+    {PresenceStore? presence, bool includeAgentNeedsYou = false}) {
   final by = <String, List<SessionInfo>>{};
   for (final s in sessions) {
     final id = crewOwner(s);
@@ -113,9 +114,10 @@ List<CrewEntry> deriveCrew(
     final running = ss.where((s) => s.running).firstOrNull;
     final p = presence?.presenceForAgent(a.id, ss);
     final waitingOnUser = p != null && p.state == 'waiting' && p.detail == 'user';
+    final agentNeedsYou = includeAgentNeedsYou && a.needsYou > 0;
     out.add(CrewEntry(
       agent: a,
-      state: asking != null || waitingOnUser
+      state: asking != null || waitingOnUser || agentNeedsYou
           ? CrewState.needsYou
           : running != null
               ? CrewState.working

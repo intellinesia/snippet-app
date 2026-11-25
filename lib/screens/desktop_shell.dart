@@ -59,7 +59,7 @@ import '../desktop_pick.dart' show PickedLocalFile;
 import 'session.dart';
 import 'mission_board_panel.dart';
 import 'pull_requests.dart';
-import 'session_list_row.dart' show sessionNeedsYou;
+import 'session_list_row.dart' show sessionNeedsYou, shellNeedsYouCount;
 import 'artifact_viewer.dart' show SessionDeliverables;
 import 'wakes_screen.dart';
 import 'workspace_tab.dart';
@@ -448,6 +448,7 @@ class _DesktopShellState extends State<DesktopShell>
   bool _agentPanelHidden = false;
 
   CoordinationAgent? _mcAgent;
+  List<CoordinationAgent> _coordinationAgents = const [];
 
   CoordinationAgent? get _activeAgent =>
       _activeTab?.readout?.agent ??
@@ -1278,6 +1279,8 @@ class _DesktopShellState extends State<DesktopShell>
         _active = resolved;
         _client = DaemonClient(resolved.url, resolved.token);
         _sessions = null;
+        _coordinationAgents = const [];
+        _mcAgent = null;
         _liveStatus.clear();
       });
       // AFTER setState: setClient notifies, which re-enters via
@@ -1352,14 +1355,22 @@ class _DesktopShellState extends State<DesktopShell>
   Future<void> _loadSessions() async {
     final c = _client;
     if (c == null) {
-      setState(() => _sessions = <SessionInfo>[]);
+      setState(() {
+        _sessions = <SessionInfo>[];
+        _coordinationAgents = const [];
+        _mcAgent = null;
+      });
       return;
     }
     _loadTabProviders(c);
     final statusRevision = _liveStatus.revision;
     unawaited(c.coordinationAgents().then((all) {
+      if (!mounted || !identical(c, _client)) return;
       final mc = all.where((a) => a.id == 'lead').firstOrNull;
-      if (mounted && mc != null) setState(() => _mcAgent = mc);
+      setState(() {
+        _coordinationAgents = all;
+        _mcAgent = mc;
+      });
     }, onError: (_) {}));
     setState(() => _sessionsLoading = true);
     try {
@@ -1600,6 +1611,8 @@ class _DesktopShellState extends State<DesktopShell>
       _active = inst;
       _client = DaemonClient(inst.url, inst.token);
       _sessions = null;
+      _coordinationAgents = const [];
+      _mcAgent = null;
       _liveStatus.clear();
       _usageItems = const [];
     });

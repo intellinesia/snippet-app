@@ -1,11 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:snippet/models.dart';
+import 'package:snippet/screens/session_list_row.dart';
 import 'package:snippet/screens/shell_frame.dart';
 import 'package:snippet/screens/shell_status_bar.dart';
 import 'package:snippet/theme.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('shell needs-you count adds agent flags without double-counting', () {
+    CoordinationAgent agent(String id, int needsYou) =>
+        CoordinationAgent.fromJson({
+          'id': id,
+          'display_name': id,
+          'needs_you': needsYou,
+        });
+    SessionInfo waiting(String id, String agentId) => SessionInfo.fromJson({
+          'id': id,
+          'title': id,
+          'agent_id': agentId,
+          'status': 'waiting_for_input',
+        });
+
+    final count = shellNeedsYouCount(
+      [waiting('s1', 'a'), waiting('s2', 'c')],
+      [agent('a', 1), agent('b', 2), agent('c', 0)],
+    );
+
+    expect(count, 3);
+  });
 
   Future<void> pumpBar(WidgetTester tester, ShellStatusBar bar) async {
     tester.view.devicePixelRatio = 1;

@@ -122,7 +122,7 @@ class SidebarSectionHeader extends StatelessWidget {
                         : sans(12,
                             weight: FontWeight.w500, color: AppColors.fg2)),
               ),
-              if (count != null && collapsed) ...[
+              if (count != null) ...[
                 const SizedBox(width: 4),
                 Text('$count', style: sans(11, color: AppColors.fg3)),
               ],

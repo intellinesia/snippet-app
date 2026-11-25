@@ -228,7 +228,7 @@ class _DesktopHomeState extends State<DesktopHome> {
   Widget build(BuildContext context) {
     // Keep Lead's dedicated session so Lead moves into Working when active.
     final sessions = widget.sessions ?? const <SessionInfo>[];
-    final crew = deriveCrew(_agents, sessions);
+    final crew = deriveCrew(_agents, sessions, includeAgentNeedsYou: true);
     final sections = deriveHomeSections(crew, _groups);
     final recent = recentHomeSessions(sessions);
     final empty = crew.isEmpty && recent.isEmpty;
