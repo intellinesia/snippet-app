@@ -18,6 +18,8 @@ import '../transcript.dart'
     show LaneControlButton, LaneWho, laneAgentName, laneElapsed;
 import 'session.dart';
 import '../tap_detector.dart';
+import 'lanes_phone.dart';
+import 'spec_bar.dart';
 
 /// A focused view of delegated work. The session owns the live state; this
 /// screen polls the getter so progress continues updating while it is open.
@@ -77,8 +79,9 @@ class _LanesScreenState extends State<LanesScreen> {
         bottom: false,
         child: Column(children: [
           if (kMobile)
-            LanesHeader(
-              subtitle: widget.sessionTitle,
+            SpecBar(
+              title: 'Lanes',
+              subtitle: lanesSubtitle(lanes),
               onBack: widget.onClose ?? () => Navigator.pop(context),
             )
           else
@@ -304,6 +307,13 @@ class _AgentLanesView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final groups = _groups();
+    if (kMobile) {
+      return LanesListPhone(
+        groups: [for (final g in groups) (g.id, g.name, g.lanes)],
+        onOpen: (l) => openLaneView(context, l,
+            client: client, sessionId: sessionId, liveLanes: liveLanes),
+      );
+    }
     final foot = _footnote(groups);
     return ListView(
       padding: const EdgeInsets.fromLTRB(Grouped.gutter, 8, Grouped.gutter, 32),
@@ -569,7 +579,8 @@ void openLaneView(BuildContext context, LaneInfo lane,
   final daemon = client ?? DaemonScope.maybeOf(context);
   final live = liveLanes ?? () => [lane];
   final transcript = lane.transcript;
-  Widget screen() => daemon != null &&
+  Widget screen() => !kMobile &&
+          daemon != null &&
           transcript != null &&
           transcript.isNotEmpty
       ? LaneTranscriptScreen(client: daemon, laneId: lane.id, liveLanes: live)
@@ -1026,6 +1037,51 @@ class _LaneDetailScreenState extends State<LaneDetailScreen> {
         .liveLanes()
         .where((lane) => lane.id == widget.laneId)
         .firstOrNull;
+    if (kMobile && lane != null) {
+      final c = widget.client ?? DaemonScope.maybeOf(context);
+      final session = widget.sessionId ?? lane.trimmedIn;
+      final transcript = lane.transcript;
+      return Scaffold(
+        body: SafeArea(
+          bottom: false,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            SpecBar(
+                title: lane.title.trim().isEmpty ? 'Lane' : lane.title.trim(),
+                subtitle: [
+                  laneAgentName(lane.agent ?? ''),
+                  laneElapsed(lane)
+                ].where((e) => e.isNotEmpty).join(' ')),
+            Expanded(
+              child: SingleChildScrollView(
+                child: LaneDetailPhone(
+                  lane: lane,
+                  onOpenTranscript: c != null &&
+                          transcript != null &&
+                          transcript.isNotEmpty
+                      ? () => Navigator.of(context).push(AppPageRoute<void>(
+                          builder: (_) => LaneTranscriptScreen(
+                              client: c,
+                              laneId: lane.id,
+                              liveLanes: widget.liveLanes)))
+                      : null,
+                  onStop: c != null && session != null
+                      ? () async {
+                          try {
+                            await c.cancelLane(session, lane.id);
+                          } catch (e) {
+                            if (context.mounted) {
+                              toast(context, '$e', danger: true);
+                            }
+                          }
+                        }
+                      : null,
+                ),
+              ),
+            ),
+          ]),
+        ),
+      );
+    }
     return Scaffold(
       body: SafeArea(
           bottom: false,
