@@ -4,11 +4,15 @@ import '../models.dart';
 import '../motion_routes.dart';
 import '../settings_form.dart';
 import '../theme.dart';
+import '../tap_detector.dart';
 import '../widgets.dart';
+import 'spec_bar.dart';
 
 /// A page one level down from the session's Actions: back circle, title, rows.
 Future<void> pushActionsSubPage(BuildContext context,
     {required String title,
+    String? subtitle,
+    bool padded = true,
     required Widget Function(BuildContext context, VoidCallback back) body}) {
   return Navigator.of(context).push<void>(AppPageRoute<void>(
     builder: (page) => Material(
@@ -17,27 +21,13 @@ Future<void> pushActionsSubPage(BuildContext context,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                  Grouped.gutter, 8, Grouped.gutter, 8),
-              child: Row(children: [
-                GroupedCircleButton(
-                    icon: 'chevron-left',
-                    tooltip: 'Back',
-                    onTap: () => Navigator.of(page).pop()),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Grouped.pageTitleStyle()),
-                ),
-              ]),
-            ),
+            SpecBar(title: title, subtitle: subtitle),
             Expanded(
               child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(
-                    Grouped.gutter, 8, Grouped.gutter, S.of(28)),
+                padding: padded
+                    ? EdgeInsets.fromLTRB(
+                        Grouped.gutter, 8, Grouped.gutter, S.of(28))
+                    : EdgeInsets.only(bottom: S.of(28)),
                 child: body(page, () => Navigator.of(page).pop()),
               ),
             ),
@@ -108,7 +98,15 @@ class LaneSub extends StatelessWidget {
           ]);
 }
 
-/// Set a goal, or read and cancel or resume the one that is running.
+/// One success criterion on the goal page.
+class GoalCriterion {
+  const GoalCriterion(this.label, this.done);
+  final String label;
+  final bool done;
+}
+
+/// SE-03 goal page: Goal text box and, only when the caller has a goal record
+/// (criteria != null), the Success criteria list.
 class SessionGoalPage extends StatefulWidget {
   const SessionGoalPage({
     super.key,
@@ -117,6 +115,9 @@ class SessionGoalPage extends StatefulWidget {
     required this.onCancel,
     required this.onResume,
     required this.onDone,
+    this.criteria,
+    this.onToggleCriterion,
+    this.onAddCriterion,
   });
 
   final VoidCallback onDone;
@@ -124,74 +125,149 @@ class SessionGoalPage extends StatefulWidget {
   final ValueChanged<String> onSet;
   final VoidCallback onCancel;
   final VoidCallback onResume;
+  final List<GoalCriterion>? criteria;
+  final ValueChanged<int>? onToggleCriterion;
+  final ValueChanged<String>? onAddCriterion;
 
   @override
   State<SessionGoalPage> createState() => _SessionGoalPageState();
 }
 
 class _SessionGoalPageState extends State<SessionGoalPage> {
-  final _ctl = TextEditingController();
-
-  @override
-  void dispose() {
-    _ctl.dispose();
-    super.dispose();
+  Future<void> _edit() async {
+    final t = await promptText(context,
+        title: 'Goal',
+        initial: widget.goal?.text ?? '',
+        hint: 'What should the agent work toward?',
+        saveLabel: 'Set goal',
+        minLines: 3,
+        maxLines: 6);
+    if (t == null || t.trim().isEmpty) return;
+    widget.onSet(t.trim());
   }
+
+  Future<void> _add() async {
+    final t = await promptText(context,
+        title: 'Add criterion', saveLabel: 'Add', hint: 'What counts as done?');
+    if (t == null || t.trim().isEmpty) return;
+    widget.onAddCriterion?.call(t.trim());
+  }
+
+  Widget _row(Widget child, {VoidCallback? onTap, String? label}) => Semantics(
+        button: onTap != null,
+        label: label,
+        child: ExcludeSemantics(
+          child: TapDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: child),
+          ),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
     final goal = widget.goal;
-    if (goal != null) {
-      return SettingsGroup(
-        header: goal.paused ? 'Paused' : 'Working',
-        children: [
-          Padding(
-            padding: EdgeInsets.all(Grouped.padX),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(goal.text, style: Grouped.titleStyle()),
-                const SizedBox(height: 14),
-                Btn(goal.paused ? 'Resume goal' : 'Cancel goal',
-                    small: true, variant: BtnVariant.secondary, onTap: () {
-                  goal.paused ? widget.onResume() : widget.onCancel();
-                  widget.onDone();
-                }),
-              ],
+    final text = goal?.text.trim() ?? '';
+    final criteria = widget.criteria;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const SpecLabel('Goal', top: 24),
+      Semantics(
+        button: true,
+        label: text.isEmpty ? 'Goal, set a goal' : 'Goal, $text',
+        child: ExcludeSemantics(
+          child: TapDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _edit,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              constraints: const BoxConstraints(minHeight: 92),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                  color: AppColors.surface2,
+                  borderRadius: BorderRadius.circular(10)),
+              child: Text(text.isEmpty ? 'What should the agent work toward?' : text,
+                  style: sans(15,
+                      color: text.isEmpty ? AppColors.fg3 : AppColors.fg1)),
             ),
           ),
-        ],
-      );
-    }
-    return SettingsGroup(
-      footer: 'The agent works toward it on its own until it is done.',
-      children: [
-        Padding(
-          padding: EdgeInsets.all(Grouped.padX),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              AppField(
-                  controller: _ctl,
-                  hint: 'What should the agent work toward?',
-                  minLines: 2,
-                  maxLines: 4),
-              const SizedBox(height: 12),
-              Btn('Set goal', full: true, onTap: () {
-                final t = _ctl.text.trim();
-                if (t.isEmpty) return;
-                widget.onSet(t);
-                widget.onDone();
-              }),
-            ],
-          ),
         ),
+      ),
+      if (goal != null)
+        _row(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(goal.paused ? 'Resume goal' : 'Cancel goal',
+                  style: sans(14, weight: W.label, color: AppColors.fg2)),
+            ),
+          ),
+          label: goal.paused ? 'Resume goal' : 'Cancel goal',
+          onTap: () {
+            goal.paused ? widget.onResume() : widget.onCancel();
+            widget.onDone();
+          },
+        ),
+      if (criteria != null) ...[
+        const SpecLabel('Success criteria'),
+        for (var i = 0; i < criteria.length; i++)
+          _row(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(children: [
+                Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                      color: criteria[i].done ? AppColors.fg1 : null,
+                      borderRadius: BorderRadius.circular(5),
+                      border: criteria[i].done
+                          ? null
+                          : Border.all(color: AppColors.fg3, width: 1.5)),
+                  child: criteria[i].done
+                      ? Center(
+                          child: AppIcon('check', size: 14, color: AppColors.bg))
+                      : null,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: Text(criteria[i].label,
+                        style: sans(15,
+                            color: criteria[i].done
+                                ? AppColors.fg1
+                                : AppColors.fg2))),
+              ]),
+            ),
+            label: '${criteria[i].label}, ${criteria[i].done ? 'done' : 'open'}',
+            onTap: widget.onToggleCriterion == null
+                ? null
+                : () => widget.onToggleCriterion!(i),
+          ),
+        if (widget.onAddCriterion != null)
+          _row(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(children: [
+                AppIcon('plus', size: 20, color: AppColors.fg2),
+                const SizedBox(width: 12),
+                Text('Add criterion',
+                    style: sans(15, color: AppColors.fg2)),
+              ]),
+            ),
+            label: 'Add criterion',
+            onTap: _add,
+          ),
       ],
-    );
+    ]);
   }
 }
 
-/// Auto-settle and cold-resume mode, kept in step with the panel behind it.
+/// Auto-settle and cold-resume mode, kept in step with the panel behind it,
+/// then Effort chips when the caller can set one. Approvals stay hidden until
+/// the daemon exposes a per-session approval mode.
 class SessionBehaviourPage extends StatefulWidget {
   const SessionBehaviourPage({
     super.key,
@@ -199,12 +275,16 @@ class SessionBehaviourPage extends StatefulWidget {
     required this.resume,
     required this.onAuto,
     required this.onResume,
+    this.effort,
+    this.onEffort,
   });
 
   final bool? auto;
   final String? resume;
   final ValueChanged<bool>? onAuto;
   final ValueChanged<String>? onResume;
+  final String? effort;
+  final ValueChanged<String>? onEffort;
 
   @override
   State<SessionBehaviourPage> createState() => _SessionBehaviourPageState();
@@ -213,41 +293,64 @@ class SessionBehaviourPage extends StatefulWidget {
 class _SessionBehaviourPageState extends State<SessionBehaviourPage> {
   late bool? _auto = widget.auto;
   late String? _resume = widget.resume;
+  late String? _effort = widget.effort;
+
+  static const _efforts = [
+    ('low', 'Low'),
+    ('medium', 'Medium'),
+    ('high', 'High'),
+    ('max', 'Max')
+  ];
 
   @override
   Widget build(BuildContext context) {
     final auto = _auto;
     final resume = _resume;
-    return SettingsGroup(children: [
-      if (auto != null && widget.onAuto != null)
-        SettingsRow(
-          icon: 'archive',
-          label: 'Auto-settle',
-          sub: 'Save memory and park this chat after 12 hours idle',
-          trailing: SettingsSwitch(
-              value: auto,
-              onChanged: (v) {
-                setState(() => _auto = v);
-                widget.onAuto!(v);
-              }),
-          onTap: () {
-            setState(() => _auto = !auto);
-            widget.onAuto!(!auto);
-          },
-        ),
-      if (resume != null && widget.onResume != null)
-        SettingsPickerRow<String>(
-          icon: 'clock',
-          label: 'Cold resume',
-          detail: 'How a cold session picks up its history',
-          value: sessionResumeLabel(resume),
-          items: const [('ask', 'Ask'), ('lean', 'Lean'), ('full', 'Full')],
-          selected: resume,
-          onSelected: (m) {
-            setState(() => _resume = m);
-            widget.onResume!(m);
-          },
-        ),
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(Grouped.gutter, 8, Grouped.gutter, 0),
+        child: SettingsGroup(children: [
+          if (auto != null && widget.onAuto != null)
+            SettingsRow(
+              icon: 'archive',
+              label: 'Auto-settle',
+              sub: 'Save memory and park this chat after 12 hours idle',
+              trailing: SettingsSwitch(
+                  value: auto,
+                  onChanged: (v) {
+                    setState(() => _auto = v);
+                    widget.onAuto!(v);
+                  }),
+              onTap: () {
+                setState(() => _auto = !auto);
+                widget.onAuto!(!auto);
+              },
+            ),
+          if (resume != null && widget.onResume != null)
+            SettingsPickerRow<String>(
+              icon: 'clock',
+              label: 'Cold resume',
+              detail: 'How a cold session picks up its history',
+              value: sessionResumeLabel(resume),
+              items: const [('ask', 'Ask'), ('lean', 'Lean'), ('full', 'Full')],
+              selected: resume,
+              onSelected: (m) {
+                setState(() => _resume = m);
+                widget.onResume!(m);
+              },
+            ),
+        ]),
+      ),
+      if (widget.onEffort != null) ...[
+        const SpecLabel('Effort'),
+        SpecChipWrap(chips: [
+          for (final e in _efforts)
+            SpecChip(e.$2, _effort == e.$1, () {
+              setState(() => _effort = e.$1);
+              widget.onEffort!(e.$1);
+            }),
+        ]),
+      ],
     ]);
   }
 }

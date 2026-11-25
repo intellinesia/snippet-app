@@ -1296,7 +1296,10 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
   void _drill(BuildContext context, String title,
       Widget Function(BuildContext, VoidCallback) body) {
     if (kMobile) {
-      pushActionsSubPage(context, title: title, body: body);
+      pushActionsSubPage(context,
+          title: title,
+          padded: !(title == 'Goal' || title == 'Set a goal' || title == 'Behaviour'),
+          body: body);
     } else {
       setState(() => _sub = (title: title, body: body));
     }
