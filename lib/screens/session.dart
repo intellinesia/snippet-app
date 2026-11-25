@@ -48,6 +48,7 @@ import '../panel.dart';
 import '../settings_form.dart';
 import '../share_inbound.dart';
 import '../widgets.dart';
+import '../wire_frames.dart';
 import '../plain_text.dart';
 import '../turn_changes_card.dart';
 import 'artifact_viewer.dart';
@@ -706,6 +707,8 @@ class _SessionScreenState extends State<SessionScreen>
   Timer? _connectionWatchdog;
   int _reconnectAttempt = 0;
   int _lastAttachRevision = 0;
+  bool _noResume = false;
+  final PackedFrameAssembler _packed = PackedFrameAssembler();
   bool _closed = false;
   // A message can silently die on a socket that looks alive (dropped network, no
   // onError/onDone) — it sits in _pending, shown as "sending", forever. Guard:
