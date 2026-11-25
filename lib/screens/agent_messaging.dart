@@ -1102,7 +1102,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         child: child!,
       ),
       child: _kit.dropTarget(Material(
-        color: kMobile ? AppColors.pageCanvas : Colors.transparent,
+        color: kMobile ? AppColors.pageCanvas : AppColors.panelBg,
         child: _chrome(
             SafeArea(
               top: !hideChrome,

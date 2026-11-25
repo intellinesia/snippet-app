@@ -224,7 +224,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       // Desktop: session views opened from + live in the session's inner strip.
       (!kMobile &&
           (t.isReadout || t.isWorkspace || t.isPrs) &&
-          t.groupSessionKey != null);
+          t.groupSessionKey != null &&
+          t.readout?.request?.purpose != ShellPanelPurpose.conversation);
 
   List<_ShellTab> get _mainTabs => [
         for (final t in _tabs)

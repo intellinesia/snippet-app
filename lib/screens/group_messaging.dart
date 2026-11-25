@@ -1,10 +1,9 @@
-import 'group_rail.dart';
 import '../composer/desktop_composer.dart' show DeskIconButton;
 import 'agent_transcript_head.dart';
 import '../quiet.dart' show QuietHand;
 import 'dart:async';
 
-import '../chat/chat_info.dart' show showGroupInfo;
+import '../chat/chat_info.dart' show GroupInfoPanel, showGroupInfo;
 import '../motion_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -185,10 +184,14 @@ Future<void> openGroupThread(
     maxHeight: 720,
     title: group.title.trim().isEmpty ? 'Group' : group.title.trim(),
     iconAgentIds: group.agentIds,
-    sidePanel: (ctx, closeTab) => GroupRail(
-      key: ValueKey('group-rail-${group.id}'),
+    sidePanel: (ctx, closeTab) => GroupInfoPanel(
+      key: ValueKey('group-info-${group.id}'),
       client: client,
       group: group,
+      docked: true,
+      onOpenTasks: () =>
+          openTasksPage(ctx, client, agentIds: group.agentIds.toSet()),
+      onClose: closeTab,
     ),
     builder: (_, close) => GroupThreadScreen(
       client: client,
@@ -1354,7 +1357,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     // Desktop: the tab, bar and panel carry the identity; no stage.
     final hideChrome = widget.embedded || !kMobile;
     return _kit.dropTarget(Material(
-      color: kMobile ? AppColors.pageCanvas : Colors.transparent,
+      color: kMobile ? AppColors.pageCanvas : AppColors.panelBg,
       child: _chrome(
           SafeArea(
             top: !hideChrome,
