@@ -28,6 +28,7 @@ Future<void> _pump(WidgetTester t, Size size, double scale,
   t.view.devicePixelRatio = 1;
   addTearDown(t.view.reset);
   TopZone.reset();
+  TopZone.register('page', 96);
   if (topBar != null) TopZone.register('attention', topBar);
   await t.pumpWidget(MaterialApp(
     theme: buildAppTheme(),

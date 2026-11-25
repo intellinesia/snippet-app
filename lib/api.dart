@@ -10,6 +10,7 @@ import 'package:http/io_client.dart';
 import 'package:web_socket_channel/io.dart' as ws_io;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import 'attention_state.dart';
 import 'response_cache.dart';
 import 'presence.dart';
 import 'swr.dart';
@@ -1585,6 +1586,7 @@ class DaemonClient {
         .map((e) => CoordinationAgent.fromJson(e as Map<String, dynamic>))
         .toList();
     rememberAgentCharacters(agents.map((a) => (a.id, a.character)));
+    phoneNeedsYou.value = agents.fold<int>(0, (n, a) => n + a.needsYou);
     return agents;
   }
 

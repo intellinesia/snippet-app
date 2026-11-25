@@ -5,7 +5,6 @@ import 'package:snippet/notification_inbox.dart';
 import 'package:flutter_test/flutter_test.dart' hide testWidgets;
 import 'package:flutter_test/flutter_test.dart' as ft show testWidgets;
 import 'package:snippet/notification_popovers.dart';
-import 'package:snippet/widgets.dart' show AppIcon;
 import 'package:snippet/notification_sync.dart';
 import 'package:snippet/notifications.dart';
 

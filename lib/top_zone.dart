@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'toast_avoid.dart';
+
 /// Phone top zone (spec 3 rule G): page bar, then the attention bar, then
 /// floating layers. Bars register their bottom edge here; banners and the
 /// toast read one number from it.
@@ -14,26 +16,16 @@ class TopZone {
   /// Gap between the lowest bar and a floating layer.
   static const gap = 8.0;
 
-  static final _bars = <Object, double>{};
-  static final ValueNotifier<double> lowestBar = ValueNotifier(0);
+  /// The one registry: shared with the toast (ToastBands in toast_avoid.dart).
+  static ValueNotifier<double> get lowestBar => ToastBands.bottom;
 
   /// Pages that own the needs-you surface themselves (chat, session, viewers).
   static final ValueNotifier<int> attentionHolds = ValueNotifier(0);
 
-  static void register(Object key, double bottom) {
-    if (_bars[key] == bottom) return;
-    _bars[key] = bottom;
-    _publish();
-  }
+  static void register(Object key, double bottom) =>
+      ToastBands.report(key, bottom);
 
-  static void unregister(Object key) {
-    if (_bars.remove(key) != null) _publish();
-  }
-
-  static void _publish() {
-    final next = _bars.values.fold<double>(0, math.max);
-    if (next != lowestBar.value) lowestBar.value = next;
-  }
+  static void unregister(Object key) => ToastBands.report(key, null);
 
   /// Bottom of the status bar plus the page bar.
   static double pageBarBottom(BuildContext context) =>
@@ -41,12 +33,13 @@ class TopZone {
 
   /// Top edge of the first floating layer: lowest registered bar plus 8.
   static double floatTop(BuildContext context) =>
-      math.max(lowestBar.value, pageBarBottom(context)) + gap;
+      math.max(lowestBar.value, MediaQuery.paddingOf(context).top) + gap;
 
   @visibleForTesting
   static void reset() {
-    _bars.clear();
-    lowestBar.value = 0;
+    for (final k in ['page', 'attention', 'attention-bar']) {
+      ToastBands.report(k, null);
+    }
     attentionHolds.value = 0;
   }
 }
