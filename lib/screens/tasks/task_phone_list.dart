@@ -280,10 +280,17 @@ class _FoldRow extends StatelessWidget {
 /// One task row: glyph column x16..36, text at x52, owner avatar at the end.
 class PhoneTaskCard extends StatelessWidget {
   const PhoneTaskCard(
-      {super.key, required this.task, required this.owner, required this.onTap});
+      {super.key,
+      required this.task,
+      required this.owner,
+      required this.onTap,
+      this.showPriority = true});
   final TaskItem task;
   final String? owner;
   final VoidCallback onTap;
+
+  /// False where the source has no priority (a goal's task list).
+  final bool showPriority;
 
   @override
   Widget build(BuildContext context) {
@@ -293,7 +300,7 @@ class PhoneTaskCard extends StatelessWidget {
     final time = shortAgo(task.updatedAt);
     final rest = [
       if (owner != null) owner!,
-      priorityWord(task.priority),
+      if (showPriority) priorityWord(task.priority),
       if (time.isNotEmpty) time,
     ].join(' - ');
     final big = MediaQuery.textScalerOf(context).scale(10) > 13.5;
@@ -312,7 +319,7 @@ class PhoneTaskCard extends StatelessWidget {
     return Semantics(
       button: true,
       label: '${task.title}, ${word ?? task.status.label}, '
-          '${owner == null ? '' : '$owner, '}${priorityWord(task.priority)} priority',
+          '${owner == null ? '' : '$owner, '}${showPriority ? '${priorityWord(task.priority)} priority' : ''}',
       excludeSemantics: true,
       child: TapDetector(
         behavior: HitTestBehavior.opaque,

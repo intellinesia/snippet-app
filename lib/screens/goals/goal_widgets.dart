@@ -7,6 +7,7 @@ import '../../platform.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
 import 'goal_detail_screen.dart';
+import 'goal_phone_page.dart';
 
 Tone attentionTone(GoalAttention a) => switch (a) {
       GoalAttention.stalled => Tone.danger,
@@ -95,50 +96,7 @@ class GoalRow extends StatelessWidget {
 /// Open a goal: a sheet on a phone, a drawer panel on desktop.
 Future<void> openGoalDetail(
     BuildContext context, DaemonClient client, String goalId) {
-  if (kMobile) {
-    return showModalBottomSheet<void>(
-      sheetAnimationStyle: sheetMotion,
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: false,
-      backgroundColor: Colors.transparent,
-      barrierColor: AppColors.scrim,
-      builder: (sheet) {
-        final media = MediaQuery.of(sheet);
-        return SafeArea(
-          top: false,
-          child: SizedBox(
-            height: (media.size.height - statusBarInset(sheet)) * 0.9,
-            child: Material(
-              color: AppColors.bg,
-              clipBehavior: Clip.antiAlias,
-              borderRadius:
-                  BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
-              child: Column(children: [
-                SizedBox(height: S.s8),
-                Container(
-                  width: 30,
-                  height: 3,
-                  decoration: BoxDecoration(
-                    color: AppColors.border2,
-                    borderRadius: BorderRadius.circular(R.pill),
-                  ),
-                ),
-                SizedBox(height: S.s4),
-                Expanded(
-                  child: GoalDetailScreen(
-                    client: client,
-                    goalId: goalId,
-                    onClose: () => Navigator.of(sheet).pop(),
-                  ),
-                ),
-              ]),
-            ),
-          ),
-        );
-      },
-    );
-  }
+  if (kMobile) return openGoalPhonePage(context, client, goalId);
   return presentScreen<void>(
     context,
     style: PanelStyle.drawer,

@@ -14,6 +14,7 @@ import '../../widgets.dart';
 import '../agent_messaging.dart' show openAgentThread;
 import '../artifact_viewer.dart' show openArtifact;
 import '../session.dart' show SessionScreen;
+import '../goals/goal_phone_page.dart' show openGoalPhonePage;
 import 'task_phone.dart';
 
 /// Push the phone task detail page (TK-01 detail): a page, not a sheet.
@@ -414,12 +415,17 @@ class _TaskPhoneDetailState extends State<TaskPhoneDetail> {
           for (final a in results) _result(t, a, owner?.name),
         ],
         if (t.sessionId.isNotEmpty ||
-            links.blockedBy.isNotEmpty) ...[
+            links.blockedBy.isNotEmpty ||
+            t.goalId != null) ...[
           const SizedBox(height: 8),
           for (final b in links.blockedBy)
             _navRow('Blocked by ${titles[b] ?? b}',
                 () => openTaskPhoneDetail(context, widget.client, b),
                 key: ValueKey('blocked-$b')),
+          if (t.goalId != null && (t.goalTitle ?? '').isNotEmpty)
+            _navRow('Goal: ${t.goalTitle}',
+                () => openGoalPhonePage(context, widget.client, t.goalId!),
+                key: const ValueKey('goal-row')),
           if (t.sessionId.isNotEmpty)
             _navRow('Session: ${_sessionTitle()}', _openSession,
                 key: const ValueKey('session-row')),
