@@ -118,8 +118,11 @@ class SoftLane extends StatelessWidget {
     final head = first && name != null;
     final ink = muted ? AppColors.fg2 : AppColors.fg1;
     return LayoutBuilder(builder: (_, box) {
+      // MSG-02/03: body width is column minus 40. [share] is retained for
+      // source compatibility with the older soft-bubble lane, but the locked
+      // desktop measure is not proportional.
       final max = box.maxWidth.isFinite
-          ? ((box.maxWidth - kPostBodyInset) * share)
+          ? (box.maxWidth - kPostBodyInset)
               .clamp(0.0, double.infinity)
               .toDouble()
           : 640.0;
@@ -390,24 +393,20 @@ class SentMeta extends StatelessWidget {
   Widget build(BuildContext context) {
     final meta = sans(11, color: AppColors.fg3, tabular: true);
     final s = state ?? (read != null ? SendState.read : SendState.sent);
-    // Without a delivery report the sent line is the time alone.
-    final mark = state != null || read != null || delivered;
     final children = <Widget>[
-      if (mark) ...[
-        switch (s) {
-          SendState.sending => SizedBox.square(
-              dimension: 11,
-              child: CircularProgressIndicator(
-                  strokeWidth: 1.4,
-                  strokeCap: StrokeCap.round,
-                  color: AppColors.fg3)),
-          SendState.sent => Icon(PhIcons.check, size: 13, color: AppColors.fg3),
-          SendState.read =>
-            Icon(PhIcons.checkCircle, size: 13, color: AppColors.fg2),
-          SendState.failed => Icon(PhIcons.x, size: 13, color: AppColors.fg2),
-        },
-        const SizedBox(width: 4),
-      ],
+      switch (s) {
+        SendState.sending => SizedBox.square(
+            dimension: 11,
+            child: CircularProgressIndicator(
+                strokeWidth: 1.4,
+                strokeCap: StrokeCap.round,
+                color: AppColors.fg3)),
+        SendState.sent => Icon(PhIcons.check, size: 13, color: AppColors.fg3),
+        SendState.read =>
+          Icon(PhIcons.checkCircle, size: 13, color: AppColors.fg2),
+        SendState.failed => Icon(PhIcons.x, size: 13, color: AppColors.fg2),
+      },
+      const SizedBox(width: 4),
       switch (s) {
         SendState.sending => Text('Sending', style: meta),
         SendState.sent => Text(time, style: meta),
@@ -422,7 +421,7 @@ class SentMeta extends StatelessWidget {
       if (selected) ...[
         const SizedBox(width: 8),
         Text('Selected',
-            style: sans(11, weight: FontWeight.w500, color: AppColors.fg2)),
+            style: sans(11, weight: FontWeight.w500, color: AppColors.fg1)),
       ],
     ];
     return Padding(

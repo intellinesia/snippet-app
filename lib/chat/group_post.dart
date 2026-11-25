@@ -31,7 +31,8 @@ class GroupPostHeader extends StatelessWidget {
   /// The face column: posts below it indent by this much.
   static const double face = 24;
 
-  /// Prose sits flush at the 16 gutter; the face does not take a column.
+  /// Kept as a constant for the existing screen contract. Transcript rows
+  /// built with [SoftLane] get the x+36 desktop column intrinsically.
   static const double indent = 0;
 
   @override
@@ -164,7 +165,7 @@ class _CappedProseState extends State<CappedProse> {
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: ChatButton(
-              label: _open ? 'Show less' : 'Show more',
+              label: _open ? 'Show less' : 'Show more (8+ lines)',
               onTap: () => setState(() => _open = !_open),
             ),
           ),

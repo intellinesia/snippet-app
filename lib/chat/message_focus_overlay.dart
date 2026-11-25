@@ -227,8 +227,7 @@ class MessageFocusOverlay extends StatelessWidget {
     final hasActions = actionCount > 0;
     final actionsHeight = actionCount == 0
         ? 0.0
-        : actionCount * _rowHeight +
-            (kMobile ? (actionCount - 1) * 1.0 : 8.0);
+        : actionCount * _rowHeight + (kMobile ? (actionCount - 1) * 1.0 : 8.0);
 
     final barSection = hasReactions ? _barHeight + _gap : 0.0;
     final cardSection = hasActions ? _gap + actionsHeight : 0.0;
@@ -291,9 +290,7 @@ class MessageFocusOverlay extends StatelessWidget {
           final curveT = animation.status == AnimationStatus.reverse
               ? Motion.exit.transform(t)
               : _springCurve.transform(raw);
-          final barOpacity = calm
-              ? t
-              : const Interval(0.0, 0.72).transform(t);
+          final barOpacity = calm ? t : const Interval(0.0, 0.72).transform(t);
           final bubbleScale = calm ? 1.0 : 0.96 + 0.04 * curveT;
           final barScale = calm ? 1.0 : 0.84 + 0.16 * curveT;
 
@@ -593,7 +590,8 @@ class _ActionsCard extends StatelessWidget {
                 icon: PhIcons.arrowElbowUpLeft,
                 onTap: onReply,
               ),
-            if (showReply && showCopy) Container(height: 1, color: dividerColor),
+            if (showReply && showCopy)
+              Container(height: 1, color: dividerColor),
             if (showCopy)
               _ActionRow(
                 label: 'Copy',

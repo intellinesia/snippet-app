@@ -171,10 +171,10 @@ class QuotedReplyLine extends StatelessWidget {
             ),
           ] else ...[
             if (author != null) ...[
-              Text(author!,
+              Text('Replying to $author:',
                   maxLines: 1,
-                  style: sans(12,
-                      weight: FontWeight.w500, color: AppColors.fg2)),
+                  style:
+                      sans(12, weight: FontWeight.w500, color: AppColors.fg2)),
               const SizedBox(width: 6),
             ],
             Flexible(
@@ -191,19 +191,21 @@ class QuotedReplyLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final maxW = mine ? (kMobile ? 280.0 : 440.0) : 460.0;
-    final row = !kMobile ? _desk(maxW) : Container(
-      constraints: BoxConstraints(maxWidth: maxW),
-      padding: EdgeInsets.only(left: S.s8, top: S.s2, bottom: S.s2),
-      decoration: BoxDecoration(
-        border: Border(left: BorderSide(color: AppColors.fg4, width: 2)),
-      ),
-      child: Text(
-        text,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: sans(12, height: 1.35, color: AppColors.fg3),
-      ),
-    );
+    final row = !kMobile
+        ? _desk(maxW)
+        : Container(
+            constraints: BoxConstraints(maxWidth: maxW),
+            padding: EdgeInsets.only(left: S.s8, top: S.s2, bottom: S.s2),
+            decoration: BoxDecoration(
+              border: Border(left: BorderSide(color: AppColors.fg4, width: 2)),
+            ),
+            child: Text(
+              text,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: sans(12, height: 1.35, color: AppColors.fg3),
+            ),
+          );
     if (onTap == null || (deleted && !kMobile)) return row;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -340,6 +342,13 @@ class MessageReactionChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (reactions.isEmpty) return const SizedBox.shrink();
+    if (!kMobile) {
+      return DeskReactionRow(
+        reactions: reactions,
+        onReact: onReact,
+        alignment: mine ? WrapAlignment.end : WrapAlignment.start,
+      );
+    }
     final total = reactions.fold<int>(0, (n, r) => n + r.count);
     final active = reactions.any((r) => r.mine);
     final fill = active ? AppColors.accentBg : AppColors.surface2;
@@ -631,8 +640,8 @@ class _SplitMenuEntryState extends State<_SplitMenuEntry> {
                       width: 28,
                       height: 28,
                       child: Center(
-                          child: AppIcon('plus',
-                              size: 14, color: AppColors.fg4))),
+                          child:
+                              AppIcon('plus', size: 14, color: AppColors.fg4))),
                 ),
               ),
             ]),
@@ -1176,7 +1185,8 @@ class DeskReactionChip extends StatelessWidget {
         more = 0;
 
   /// The "+3" pill, 24 x 40, standing in for chips past the cap.
-  const DeskReactionChip.more({super.key, required this.more, required this.onTap})
+  const DeskReactionChip.more(
+      {super.key, required this.more, required this.onTap})
       : group = null,
         _add = false;
 
@@ -1219,8 +1229,7 @@ class DeskReactionChip extends StatelessWidget {
       else
         Text(g.name, style: _emojiStyle(13)),
       const SizedBox(width: 4),
-      Text('${g.count}',
-          style: sans(12, tabular: true, color: AppColors.fg2)),
+      Text('${g.count}', style: sans(12, tabular: true, color: AppColors.fg2)),
     ]);
   }
 

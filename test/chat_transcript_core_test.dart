@@ -151,7 +151,7 @@ void main() {
               style: const TextStyle(fontSize: 13, height: 19 / 13))),
     );
     await t.pump();
-    final more = find.widgetWithText(ChatButton, 'Show more');
+    final more = find.widgetWithText(ChatButton, 'Show more (8+ lines)');
     expect(more, findsOneWidget);
     expect(t.getSize(more).height, 28);
     expect(t.getSize(find.text(long)).height, greaterThan(kPostClampHeight));
@@ -198,7 +198,7 @@ void main() {
       ]),
     );
     expect(t.getSize(find.byType(QuotedReplyLine).first).height, 34);
-    expect(find.text('You'), findsOneWidget);
+    expect(find.text('Replying to You:'), findsOneWidget);
     expect(find.text('Original message deleted'), findsOneWidget);
     expect(find.text('m9'), findsNothing);
   });

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../envelope.dart';
+import '../mochi.dart';
 import '../phosphor_icons.dart';
 import '../platform.dart';
 import '../tap_detector.dart';
@@ -11,7 +12,7 @@ import 'signal_row.dart' show showSignalDetails;
 /// A daemon envelope shown as one muted line: icon, summary, full note.
 class SystemNotice {
   const SystemNotice(this.icon, this.summary, this.detail,
-      {this.kind = '', this.rows = const []});
+      {this.kind = '', this.rows = const [], this.memberId, this.progress});
   final String icon;
   final String summary;
   final String detail;
@@ -21,6 +22,12 @@ class SystemNotice {
 
   /// Labelled detail rows for the desktop block, such as ("Last said", ...).
   final List<(String, String)> rows;
+
+  /// A member named by the notice, for MSG-14's 18px avatar.
+  final String? memberId;
+
+  /// MSG-18 compaction progress in the 4px track, when this is one.
+  final double? progress;
 }
 
 String _plain(String text) =>
@@ -197,7 +204,8 @@ SystemNotice? _parseSingleNotice(String text) {
         ('Note', envelopeBody(text).trim()),
     ],
   ];
-  return SystemNotice(n.icon, n.summary, n.detail, kind: kind, rows: rows);
+  return SystemNotice(n.icon, n.summary, n.detail,
+      kind: kind, rows: rows, memberId: n.memberId, progress: n.progress);
 }
 
 SystemNotice? _parseNoticeBody(String text, String kind) {
@@ -272,10 +280,18 @@ SystemNotice? _parseNoticeBody(String text, String kind) {
           'archive',
           attr == 'save'
               ? 'Saving notes before compacting'
-              : 'Summarising before compacting',
-          note);
+              : 'Compacting context…',
+          note,
+          progress: 0.45);
     case 'compacted':
-      return SystemNotice('archive', 'Conversation compacted', _plain(text));
+      final before = f('before').isNotEmpty ? f('before') : f('tokens_before');
+      final after = f('after').isNotEmpty ? f('after') : f('tokens_after');
+      final count = before.isNotEmpty && after.isNotEmpty
+          ? ' $before → $after tokens'
+          : '';
+      return SystemNotice('archive', 'Context compacted$count',
+          before.isNotEmpty || after.isNotEmpty ? note : _plain(text),
+          progress: 1);
     case 'lean_continuation':
       return SystemNotice('history', 'Continued in lean mode',
           note.isNotEmpty ? note : _plain(text));
@@ -286,9 +302,22 @@ SystemNotice? _parseNoticeBody(String text, String kind) {
           from.isEmpty ? 'Handed over' : 'Handed over by $from',
           _joinParts([f('handoff_note'), note]));
     case 'group_added':
+    case 'group_removed':
+    case 'member_added':
+    case 'member_removed':
       final title = f('title');
-      return SystemNotice('users',
-          title.isEmpty ? 'Added to a group' : 'Added to $title', note);
+      final member = f('member').isNotEmpty ? f('member') : f('agent');
+      final removed = kind.contains('removed');
+      final action = removed ? 'left' : 'joined';
+      return SystemNotice(
+          'users',
+          member.isNotEmpty && title.isNotEmpty
+              ? '$member $action $title'
+              : title.isEmpty
+                  ? (removed ? 'Member removed' : 'Added to a group')
+                  : 'Added to $title',
+          note,
+          memberId: member.isEmpty ? null : member);
     case 'reaction':
       final from = f('from');
       return SystemNotice(
@@ -308,8 +337,13 @@ SystemNotice? _parseNoticeBody(String text, String kind) {
           name.isEmpty ? 'Watch triggered' : 'Watch: $name',
           note.isNotEmpty ? note : _plain(text));
     case 'routing':
-      return SystemNotice('transfer', 'Model route switched',
-          note.isNotEmpty ? note : _plain(text));
+      final body = (note.isNotEmpty ? note : _plain(text))
+          .replaceAll(RegExp(r'\s+'), ' ')
+          .trim();
+      return SystemNotice(
+          'transfer',
+          body.isEmpty ? 'Model route switched' : 'Model route switched: $body',
+          '');
     case 'review_due':
       return SystemNotice(
           'eye', 'Review due', note.isNotEmpty ? note : _plain(text));
@@ -366,6 +400,8 @@ SystemNotice? parseSystemNotice(String raw) {
     _joinParts([for (final n in notices) n.detail]),
     kind: notices.first.kind,
     rows: [for (final n in notices) ...n.rows],
+    memberId: notices.first.memberId,
+    progress: notices.first.progress,
   );
 }
 
@@ -374,7 +410,8 @@ SystemNotice? parseSystemNotice(String raw) {
 IconData _deskIcon(SystemNotice n) => switch (n.kind) {
       'session_stopped' => PhIcons.stop,
       'routing' => PhIcons.arrowRight,
-      'group_added' => PhIcons.userPlus,
+      'group_added' || 'member_added' => PhIcons.userPlus,
+      'group_removed' || 'member_removed' => PhIcons.user,
       'wake' || 'automated_wake' => PhIcons.clock,
       'watch' || 'file_watch' => PhIcons.eye,
       'rewind' => PhIcons.clockCounterClockwise,
@@ -476,10 +513,37 @@ class _SystemNoticeLineState extends State<SystemNoticeLine> {
             child: Icon(_deskIcon(notice), size: 14, color: AppColors.fg3),
           ),
           const SizedBox(width: 1),
+          if (notice.memberId != null) ...[
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: AgentMochi(notice.memberId!, size: 18),
+            ),
+          ],
           Expanded(
             child: Text(notice.summary,
                 style: sans(12, height: 17 / 12, color: AppColors.fg2)),
           ),
+          if (notice.progress != null) ...[
+            const SizedBox(width: 8),
+            Padding(
+              padding: const EdgeInsets.only(top: 7, right: 7),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: SizedBox(
+                  width: 92,
+                  height: 4,
+                  child: Stack(children: [
+                    Positioned.fill(
+                        child: ColoredBox(color: AppColors.surface2)),
+                    FractionallySizedBox(
+                      widthFactor: notice.progress!.clamp(0.0, 1.0),
+                      child: ColoredBox(color: AppColors.fg3),
+                    ),
+                  ]),
+                ),
+              ),
+            ),
+          ],
           if (interactive) ...[
             const SizedBox(width: 8),
             Padding(
