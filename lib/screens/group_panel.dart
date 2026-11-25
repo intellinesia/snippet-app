@@ -47,7 +47,7 @@ class GroupPanelHero extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: EdgeInsets.fromLTRB(S.s12, S.s4, S.s12, S.s12),
         child: Row(children: [
-          AgentCluster(ids: group.agentIds, size: 52),
+          AgentCluster(ids: group.agentIds, size: 40),
           SizedBox(width: S.s12),
           Expanded(
             child: Column(
@@ -56,9 +56,9 @@ class GroupPanelHero extends StatelessWidget {
                 Text(title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(17, weight: W.strong, color: AppColors.fg1)),
+                    style: sans(14, weight: W.label, color: AppColors.fg1)),
                 SizedBox(height: S.s2),
-                Text(_sub, style: sans(12.5, color: AppColors.fg3)),
+                Text(_sub, style: sans(12, color: AppColors.fg3)),
               ],
             ),
           ),

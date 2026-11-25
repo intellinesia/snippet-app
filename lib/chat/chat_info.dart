@@ -1745,15 +1745,34 @@ class _MemberRowState extends State<_MemberRow> {
   Widget build(BuildContext context) => MouseRegion(
         onEnter: (_) => setState(() => _hover = true),
         onExit: (_) => setState(() => _hover = false),
-        child: PanelRow(
-          minHeight: 44,
-          leading: SizedBox.square(
-              dimension: 24, child: Center(child: widget.avatar)),
-          label: widget.name,
-          sub: widget.role,
-          trailing: _hover && widget.onRemove != null
-              ? PanelBarButton('x', 'Remove from group', widget.onRemove)
-              : widget.status,
+        child: SizedBox(
+          height: 28,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: S.s8),
+            child: Row(children: [
+              SizedBox.square(
+                  dimension: 24, child: Center(child: widget.avatar)),
+              SizedBox(width: S.s8),
+              Expanded(
+                child: Text(widget.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13,
+                        weight: FontWeight.w500, color: AppColors.fg1)),
+              ),
+              if ((widget.role ?? '').isNotEmpty) ...[
+                SizedBox(width: S.s8),
+                Text(widget.role!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(11, color: AppColors.fg3)),
+              ],
+              SizedBox(width: S.s8),
+              _hover && widget.onRemove != null
+                  ? PanelBarButton('x', 'Remove from group', widget.onRemove)
+                  : (widget.status ?? const SizedBox.shrink()),
+            ]),
+          ),
         ),
       );
 }
