@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/canvas/canvas_screen.dart';
-import 'package:snippet/notification_card.dart';
+import 'package:snippet/notification_banner.dart';
+import 'package:snippet/top_zone.dart';
 import 'package:snippet/notification_popovers.dart';
 import 'package:snippet/notification_sync.dart';
 import 'package:snippet/theme.dart';
@@ -42,40 +43,15 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pump(const Duration(milliseconds: 600));
       expect(find.byType(SnackBar), findsNothing);
-      final toast = tester.getRect(find.byType(NotificationMessageCard));
-      final targets = <String, Rect>{};
-      for (final l in ['Fit', 'Steps', 'Share', 'Select']) {
-        for (final e in find.bySemanticsLabel(l).evaluate()) {
-          targets[l] = tester.getRect(find.byWidget(e.widget));
-        }
-      }
-      for (final e in find.byType(Tooltip).evaluate()) {
-        final m = (e.widget as Tooltip).message ?? '';
-        if (m.startsWith('Pins,') || m.startsWith('Back from canvas')) {
-          targets[m.split(',').first] = tester.getRect(find.byWidget(e.widget));
-        }
-      }
-      // ignore: avoid_print
-      print('CANVASNOTICE ${scale}x toast=$toast targets=$targets');
-      // The canvas paint area is clipped to start below the toast band.
-      final paint = find.descendant(
-          of: find.byType(CanvasScreen), matching: find.byType(CustomPaint));
-      final clip = find.ancestor(of: paint.first, matching: find.byType(ClipRect));
-      expect(clip, findsWidgets);
-      final clipRect = tester.getRect(clip.first);
-      // ignore: avoid_print
-      print('CANVASCLIP ${scale}x clip=$clipRect toast=$toast');
-      expect(clipRect.top, greaterThanOrEqualTo(toast.bottom - 0.5));
-      expect(toast.top, lessThan(16));
-      expect(toast.bottom, lessThan(852 / 2));
-      expect(targets, isNotEmpty);
-      for (final e in targets.entries) {
-        expect(toast.overlaps(e.value), isFalse, reason: e.key);
-      }
+      // NT-01: notices are floating banners under the top bars, x16 wide.
+      final toast = tester.getRect(find.byType(NotificationBanner));
+      expect(toast.left, 16);
+      expect(toast.width, 393 - 32);
+      expect(toast.top, TopZone.floatTop(tester.element(find.byType(Scaffold).first)));
       // Auto-dismiss kept.
       await tester.pump(const Duration(seconds: 6));
       await tester.pumpAndSettle();
-      expect(find.byType(NotificationMessageCard), findsNothing);
+      expect(find.byType(NotificationBanner), findsNothing);
       sem.dispose();
       debugDefaultTargetPlatformOverride = null;
     });

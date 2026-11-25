@@ -13,6 +13,7 @@ import 'platform.dart';
 import 'notification_text.dart';
 import 'notification_stack.dart';
 import 'notification_banner.dart';
+import 'notification_card.dart';
 import 'top_zone.dart';
 import 'screens/phone_tool_bar.dart' show PhoneBar;
 import 'session_quick_send.dart' show resolveInstanceForPayload;
@@ -37,6 +38,7 @@ class _NotificationPopoversState extends State<NotificationPopovers>
   bool _pointer = false;
   bool _cardHold = false;
   bool _background = false;
+  Map<String, dynamic>? _expandedPayload;
   late final OverlayEntry _contentEntry;
 
   bool get _held => _pointer || _cardHold || _background;
@@ -93,6 +95,10 @@ class _NotificationPopoversState extends State<NotificationPopovers>
     if (!_pending.any((p) => identical(p, payload))) return;
     if (feedback) HapticFeedback.lightImpact();
     setState(() {
+      if (identical(_expandedPayload, payload)) {
+        _expandedPayload = null;
+        _cardHold = false;
+      }
       _pending.removeWhere((p) => identical(p, payload));
       _afterChange();
     });
@@ -209,6 +215,16 @@ class _NotificationPopoversState extends State<NotificationPopovers>
   }
 
   Widget _card(Map<String, dynamic> payload, bool reducedMotion) {
+    if (identical(payload, _expandedPayload)) {
+      return NotificationMessageCard(
+        key: ObjectKey(payload),
+        payload: payload,
+        onOpen: () => _remove(payload, open: true, feedback: true),
+        onDismiss: () => _remove(payload, feedback: true),
+        onHold: (hold) => _setHold(card: hold),
+        onSent: () => _remove(payload),
+      );
+    }
     return Dismissible(
       key: ObjectKey(payload),
       direction: DismissDirection.horizontal,
@@ -217,7 +233,17 @@ class _NotificationPopoversState extends State<NotificationPopovers>
       onDismissed: (_) => _remove(payload, feedback: true),
       child: NotificationBanner(
         payload: payload,
-        onTap: () => _remove(payload, open: true, feedback: true),
+        onTap: () {
+          // Needs-you and message banners expand in place; others open.
+          if (cardActionFor(payload) case CardAction.approval ||
+                CardAction.answer ||
+                CardAction.reply) {
+            HapticFeedback.selectionClick();
+            setState(() => _expandedPayload = payload);
+          } else {
+            _remove(payload, open: true, feedback: true);
+          }
+        },
         onDismiss: () => _remove(payload, feedback: true),
       ),
     );
