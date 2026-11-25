@@ -8,7 +8,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-
 import '../theme.dart';
 import '../tool_activity.dart';
 import '../transcript.dart';
@@ -85,8 +84,9 @@ String _phraseText(LedgerKind kind, String tool, List<ToolStep> steps) {
   switch (kind) {
     case LedgerKind.search:
       final paths = {for (final s in steps) _pathArg(s)}..remove(null);
-      if (n == 1 && paths.length == 1)
+      if (n == 1 && paths.length == 1) {
         return 'searched ${_base(paths.single!)}';
+      }
       if (n == 1) return 'searched the code';
       return 'searched $n places';
     case LedgerKind.read:
@@ -223,7 +223,10 @@ class _LedgerLineState extends State<LedgerLine> {
     final phrases = ledgerPhrases(widget.steps);
     final bad = widget.steps.any(_stepFailed);
     final took = widget.took ?? stepsDuration(widget.steps);
-    final base = sans(13, height: 1.45, color: AppColors.fg3, tabular: true);
+    final base = sans(kMobile ? 13 : 12,
+        height: kMobile ? 1.45 : 17 / 12,
+        color: kMobile ? AppColors.fg3 : AppColors.fg2,
+        tabular: true);
     final spans = <InlineSpan>[];
     for (var i = 0; i < phrases.length; i++) {
       final p = phrases[i];
@@ -247,6 +250,107 @@ class _LedgerLineState extends State<LedgerLine> {
       ));
     }
     final shown = _shown < phrases.length ? phrases[_shown] : null;
+    if (!kMobile) {
+      // Desktop TC-01/02: one s1 surface, a state icon at x+14, the sentence
+      // at x+32, mono duration at the right and expansion behind one hairline.
+      final lifted = _phrase != null && !widget.open;
+      return Container(
+        decoration: BoxDecoration(
+          color: lifted ? AppColors.surface2 : AppColors.surface1,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TapDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: widget.onTap,
+              child: SizedBox(
+                height: 30,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 0, 4, 0),
+                  child: Row(children: [
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: Center(
+                        child: AppIcon(bad ? 'x' : 'check',
+                            size: bad ? 14 : 13,
+                            color: bad ? AppColors.fg1 : AppColors.fg3),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text.rich(
+                        TextSpan(children: spans),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: base,
+                      ),
+                    ),
+                    if (took != null) ...[
+                      const SizedBox(width: 10),
+                      Text(formatWorkDuration(took),
+                          style: mono(11, color: AppColors.fg3)),
+                    ],
+                    const SizedBox(width: 4),
+                    SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: Center(
+                        child: AnimatedRotation(
+                          turns: widget.open ? 0.25 : 0,
+                          duration: const Duration(milliseconds: 160),
+                          child: AppIcon('chevron-right',
+                              size: 12, color: AppColors.fg3),
+                        ),
+                      ),
+                    ),
+                  ]),
+                ),
+              ),
+            ),
+            SpringExpand(
+              open: widget.open,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(height: 1, color: AppColors.line),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+                    child: LedgerGantt(
+                        steps: widget.steps, rows: widget.rows, total: took),
+                  ),
+                ],
+              ),
+            ),
+            SpringExpand(
+              open: _phrase != null && !widget.open,
+              child: shown == null
+                  ? const SizedBox.shrink()
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Container(height: 1, color: AppColors.line),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+                          child: LedgerGantt(
+                            steps: [
+                              for (final k in shown.indices) widget.steps[k]
+                            ],
+                            rows: [
+                              for (final k in shown.indices) widget.rows[k]
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ],
+        ),
+      );
+    }
     // Finished run: the live strip's card settles into its done state.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -422,7 +526,8 @@ class _LedgerPopover extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: AppColors.surface2,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: overlayShadow,
         ),
         child: Padding(
           padding: const EdgeInsets.all(6),
@@ -455,7 +560,7 @@ class _PopRow extends StatelessWidget {
     final meta = stepChip(step)?.text ?? stepDuration(step);
     final target = stepTarget(step);
     return SizedBox(
-      height: 28,
+      height: 24,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 6),
         child: Row(children: [
@@ -467,11 +572,11 @@ class _PopRow extends StatelessWidget {
                 maxLines: 1,
                 softWrap: false,
                 overflow: TextOverflow.ellipsis,
-                style: mono(12, color: bad ? AppColors.fg1 : AppColors.fg2)),
+                style: mono(11.5, color: bad ? AppColors.fg1 : AppColors.fg1)),
           ),
           if (meta != null) ...[
             const SizedBox(width: 12),
-            Text(meta, style: sans(12, color: AppColors.fg3)),
+            Text(meta, style: mono(11, color: AppColors.fg3)),
           ],
         ]),
       ),
@@ -621,8 +726,7 @@ class _LedgerGanttState extends State<LedgerGantt> {
       final line = Padding(
         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
         child: Row(children: [
-          AppIcon(_iconFor(_kindOf(s).$1),
-              size: 14, color: AppColors.fg2),
+          AppIcon(_iconFor(_kindOf(s).$1), size: 14, color: AppColors.fg2),
           const SizedBox(width: 10),
           Expanded(
             child: Text.rich(
@@ -643,8 +747,7 @@ class _LedgerGanttState extends State<LedgerGantt> {
             width: 44,
             child: Text(took(s),
                 textAlign: TextAlign.right,
-                style: mono(11.5,
-                    color: AppColors.fg3)),
+                style: mono(11.5, color: AppColors.fg3)),
           ),
         ]),
       );
@@ -780,14 +883,6 @@ class _LedgerStripState extends State<LedgerStrip> {
 
   int get _now => DateTime.now().millisecondsSinceEpoch;
 
-  /// Seconds each step took, the running one up to now; equal when unstamped.
-  List<double> _weights() => [
-        for (final s in widget.steps)
-          s.startMs == null
-              ? 1.0
-              : (((s.endMs ?? _now) - s.startMs!) / 1000).clamp(0.4, 1e6),
-      ];
-
   Duration? _elapsed() {
     int? first;
     for (final s in widget.steps) {
@@ -849,8 +944,9 @@ class _LedgerStripState extends State<LedgerStrip> {
           constraints: const BoxConstraints(maxHeight: 340),
           decoration: BoxDecoration(
             color: AppColors.surface2,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(color: AppColors.line),
+            boxShadow: overlayShadow,
           ),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Padding(
@@ -924,29 +1020,37 @@ class _LedgerStripState extends State<LedgerStrip> {
     final strip = Container(
       key: const ValueKey('ledger-strip'),
       constraints: BoxConstraints(minHeight: kMobile ? 48 : 28),
-      padding: const EdgeInsets.only(left: 0, right: 3),
+      padding: EdgeInsets.only(left: kMobile ? 0 : 10, right: 3),
+      decoration: kMobile
+          ? null
+          : BoxDecoration(
+              color: AppColors.surface1,
+              borderRadius: BorderRadius.circular(8),
+            ),
       child: Row(children: [
         SizedBox(
-          width: 16,
-          height: 16,
+          width: kMobile ? 16 : 14,
+          height: kMobile ? 16 : 14,
           child: Center(child: RunSpinner(size: 12, color: AppColors.fg2)),
         ),
         const SizedBox(width: 8),
         Text(label,
             maxLines: 1,
             softWrap: false,
-            style: sans(13, weight: W.label, color: AppColors.fg1)),
+            style: sans(kMobile ? 13 : 12,
+                weight: kMobile ? W.label : W.body, color: AppColors.fg1)),
         const SizedBox(width: 10),
         Expanded(
           child: Text(target,
               maxLines: 1,
               softWrap: false,
               overflow: TextOverflow.ellipsis,
-              style: mono(12, color: AppColors.fg3)),
+              style: mono(kMobile ? 12 : 12, color: AppColors.fg2)),
         ),
         const SizedBox(width: 10),
         if (el != null) ...[
-          Text(_clock(el), style: mono(12, color: AppColors.fg3)),
+          Text(_clock(el),
+              style: mono(kMobile ? 12 : 11, color: AppColors.fg3)),
           const SizedBox(width: 8),
         ],
         // Keyed so toggling the progress bar or clock before it never remounts _portal.
@@ -1000,7 +1104,7 @@ class _LedgerStripState extends State<LedgerStrip> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(children: [
-              AppIcon('alert-triangle', size: 14, color: AppColors.fg1),
+              AppIcon('x', size: 14, color: AppColors.fg1),
               const SizedBox(width: 10),
               Text(_failLabel(fail),
                   style: sans(13, weight: W.label, color: AppColors.fg1)),
@@ -1036,17 +1140,19 @@ class _LedgerStripState extends State<LedgerStrip> {
                   onTap: () => setState(() => _dismissedFail = failAt)),
             ]),
           ),
-          if (_tail(fail).isNotEmpty)
-            Container(
-              margin: const EdgeInsets.only(top: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.surface2,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(_tail(fail).join('\n'),
-                  style: mono(12, color: AppColors.fg3)),
+          Container(
+            margin: const EdgeInsets.only(top: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(8),
             ),
+            child: Text(
+                _tail(fail).isEmpty ? 'no output' : _tail(fail).join('\n'),
+                style: mono(12,
+                    color:
+                        _tail(fail).isEmpty ? AppColors.fg3 : AppColors.fg1)),
+          ),
           const SizedBox(height: 6),
         ],
         strip,
