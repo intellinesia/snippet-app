@@ -11,6 +11,7 @@ import '../screens/artifact_viewer.dart';
 import '../tap_detector.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'desktop_rich_cards.dart';
 
 enum SharedArtifactKind { file, image, apk, link }
 
@@ -187,6 +188,61 @@ class _SharedArtifactLineState extends State<SharedArtifactLine> {
       _ => _pill('Open', _open),
     };
     final meta = _meta;
+    if (!kMobile) {
+      return TapDetector(
+        onTap: _open,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 420),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+              width: 36,
+              height: 36,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.surface2,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: AppIcon(icon, size: 16, color: iconColor),
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(widget.title.isEmpty ? 'Artifact' : widget.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(13,
+                          weight: FontWeight.w500,
+                          height: 18 / 13,
+                          color: AppColors.fg1)),
+                  if (meta.isNotEmpty)
+                    Text(meta,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(12, height: 17 / 12, color: AppColors.fg3)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (kind == SharedArtifactKind.apk)
+              DesktopRichButton(_android ? 'Install' : 'Download',
+                  variant: DesktopRichButtonVariant.primary, onTap: _download)
+            else if (kind != SharedArtifactKind.image)
+              DesktopRichButton('Open',
+                  variant: DesktopRichButtonVariant.ghost, onTap: _open)
+            else
+              AppIcon('chevron-down', size: 14, color: AppColors.fg3),
+          ]),
+        ),
+      );
+    }
     return TapDetector(
       onTap: _open,
       child: Container(
@@ -204,7 +260,8 @@ class _SharedArtifactLineState extends State<SharedArtifactLine> {
               widget.title.isEmpty ? 'Artifact' : widget.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: sans(kMobile ? 14 : 13, weight: W.label, color: AppColors.fg1),
+              style: sans(kMobile ? 14 : 13,
+                  weight: W.label, color: AppColors.fg1),
             ),
           ),
           if (meta.isNotEmpty) ...[

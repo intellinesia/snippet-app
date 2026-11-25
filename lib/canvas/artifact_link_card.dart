@@ -6,6 +6,7 @@ import '../platform.dart';
 import '../screens/artifact_viewer.dart' show openArtifact;
 import '../theme.dart';
 import '../widgets.dart' show AppIcon;
+import '../chat/desktop_rich_cards.dart';
 import 'artifact_cards.dart';
 import 'canvas_link.dart';
 import 'canvas_link_card.dart';
@@ -154,12 +155,13 @@ class _ArtifactLinkCardState extends State<ArtifactLinkCard> {
         alignment: Alignment.centerLeft,
         heightFactor: 1,
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: kMobile ? double.infinity : 400),
+          constraints:
+              BoxConstraints(maxWidth: kMobile ? double.infinity : 400),
           child: Container(
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
-              color: kMobile ? AppColors.surface1 : AppColors.surface2,
-              borderRadius: BorderRadius.circular(R.of(14)),
+              color: AppColors.surface1,
+              borderRadius: BorderRadius.circular(kMobile ? R.of(14) : 8),
               border: Border.all(color: AppColors.border),
             ),
             child: Material(
@@ -209,25 +211,24 @@ class _ArtifactLinkCardState extends State<ArtifactLinkCard> {
                         ),
                         if (card != null) ...[
                           SizedBox(width: S.s8),
-                          Container(
-                            constraints: BoxConstraints(
-                                minHeight: kMobile ? 48 : 44,
-                                minWidth: kMobile ? 84 : 44),
-                            alignment: Alignment.center,
-                            padding: EdgeInsets.symmetric(horizontal: S.s8),
-                            decoration: kMobile
-                                ? BoxDecoration(
-                                    color: AppColors.surface2,
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: AppColors.border))
-                                : null,
-                            child: Text('Open',
-                                style: sans(kMobile ? 14 : 13,
-                                    weight: W.label,
-                                    color: kMobile
-                                        ? AppColors.fg1
-                                        : AppColors.accent)),
-                          ),
+                          if (kMobile)
+                            Container(
+                              constraints: const BoxConstraints(
+                                  minHeight: 48, minWidth: 84),
+                              alignment: Alignment.center,
+                              padding: EdgeInsets.symmetric(horizontal: S.s8),
+                              decoration: BoxDecoration(
+                                  color: AppColors.surface2,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: AppColors.border)),
+                              child: Text('Open',
+                                  style: sans(14,
+                                      weight: W.label, color: AppColors.fg1)),
+                            )
+                          else
+                            DesktopRichButton('Open',
+                                variant: DesktopRichButtonVariant.ghost,
+                                onTap: _open),
                         ],
                       ],
                     );

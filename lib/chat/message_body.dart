@@ -12,6 +12,7 @@ import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'chat_style.dart';
+import 'desktop_rich_cards.dart';
 
 final _standaloneUrlRe =
     RegExp(r'^(?:<(https?://[^\s<>]+)>|(https?://[^\s<>]+))$');
@@ -26,8 +27,10 @@ String _decodeSegment(String raw) {
   }
 }
 
-String _humaniseSlug(String raw) =>
-    raw.replaceAll(RegExp(r'[-_]+'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+String _humaniseSlug(String raw) => raw
+    .replaceAll(RegExp(r'[-_]+'), ' ')
+    .replaceAll(RegExp(r'\s+'), ' ')
+    .trim();
 
 /// Host and human-readable title derived from a standalone link URL.
 ({String host, String title}) describeLinkUrl(Uri uri) {
@@ -216,65 +219,19 @@ class _DraftCardState extends State<_DraftCard> {
   @override
   Widget build(BuildContext context) {
     Theme.of(context);
-    if (kMobile) return _dismissed ? const SizedBox.shrink() : _phone();
+    if (_dismissed) return const SizedBox.shrink();
+    if (kMobile) return _phone();
     return Padding(
       padding: EdgeInsets.symmetric(vertical: S.s4),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(R.lg),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(S.s12, S.s6, S.s8, S.s6),
-              child: Row(
-                children: [
-                  Text('Draft',
-                      style: sans(11, weight: W.label, color: AppColors.fg3)),
-                  const Spacer(),
-                  Builder(
-                    builder: (btnCtx) => Material(
-                      type: MaterialType.transparency,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(R.sm),
-                        onTap: () {
-                          Clipboard.setData(ClipboardData(text: text));
-                          toast(btnCtx, 'Copied');
-                        },
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: S.s6, vertical: S.of(3)),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              AppIcon('copy', size: 12, color: AppColors.fg3),
-                              SizedBox(width: S.s4),
-                              Text('Copy',
-                                  style: sans(11,
-                                      weight: W.label, color: AppColors.fg2)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(height: 1, color: AppColors.border),
-            Padding(
-              padding: EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.of(10)),
-              child: Text(
-                text,
-                style: chatText(mine: mine).copyWith(color: AppColors.fg1),
-              ),
-            ),
-          ],
-        ),
+      child: DesktopDraftBlock(
+        text: text,
+        onUse: () {
+          if (!DraftSink.use(text)) {
+            Clipboard.setData(ClipboardData(text: text));
+            toast(context, 'Copied');
+          }
+        },
+        onDismiss: () => setState(() => _dismissed = true),
       ),
     );
   }
@@ -290,6 +247,17 @@ class _LinkCard extends StatelessWidget {
   Widget build(BuildContext context) {
     Theme.of(context);
     final info = describeLinkUrl(uri);
+    if (!kMobile) {
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: S.s4),
+        child: DesktopLinkPreviewCard(
+          url: url,
+          title: info.title,
+          host: info.host,
+          onTap: () => openMarkdownLink(url, context),
+        ),
+      );
+    }
     final radius = BorderRadius.circular(kMobile ? 10 : R.lg);
     return Container(
       width: kMobile ? double.infinity : null,
@@ -377,121 +345,121 @@ class ChatMessageBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-      final (pasted, text) = splitPastedBlocks(body);
-      final transcripts = audioTranscriptItems(text);
-      final shown = hideAttachmentMarkers(text);
-      final attachments =
-          mine ? parseSentAttachments(body) : const <SentAttachment>[];
-      final images = [
-        for (final a in attachments)
-          if (a.kind == MediaKind.image) a.path
-      ];
-      final audio = [
-        for (final a in attachments)
-          if (a.kind == MediaKind.audio) a.path
-      ];
-      final files = [
-        for (final a in attachments)
-          if (a.kind != MediaKind.image && a.kind != MediaKind.audio) a.path
-      ];
-      final segments =
-          shown.isNotEmpty ? _splitBodySegments(shown) : const <_BodySegment>[];
-      final styleSheet = chatMarkdownStyle(context, mine: mine).copyWith(
-        blockquotePadding: EdgeInsets.zero,
-        blockquoteDecoration: const BoxDecoration(),
+    final (pasted, text) = splitPastedBlocks(body);
+    final transcripts = audioTranscriptItems(text);
+    final shown = hideAttachmentMarkers(text);
+    final attachments =
+        mine ? parseSentAttachments(body) : const <SentAttachment>[];
+    final images = [
+      for (final a in attachments)
+        if (a.kind == MediaKind.image) a.path
+    ];
+    final audio = [
+      for (final a in attachments)
+        if (a.kind == MediaKind.audio) a.path
+    ];
+    final files = [
+      for (final a in attachments)
+        if (a.kind != MediaKind.image && a.kind != MediaKind.audio) a.path
+    ];
+    final segments =
+        shown.isNotEmpty ? _splitBodySegments(shown) : const <_BodySegment>[];
+    final styleSheet = chatMarkdownStyle(context, mine: mine).copyWith(
+      blockquotePadding: EdgeInsets.zero,
+      blockquoteDecoration: const BoxDecoration(),
+    );
+    final builders = <String, MarkdownElementBuilder>{
+      'pre': PreBlockBuilder(),
+      'blockquote': DraftBlockBuilder(mine: mine),
+    };
+    Widget? textWidget;
+    if (segments.length == 1 && segments.first is _MarkdownSegment) {
+      final seg = segments.first as _MarkdownSegment;
+      textWidget = MarkdownBody(
+        data: unwrapCodedLinks(markdown?.call(seg.text) ?? seg.text),
+        selectable: false,
+        extensionSet: md.ExtensionSet.gitHubFlavored,
+        styleSheet: styleSheet,
+        builders: builders,
+        onTapLink: (txt, href, title) => openMarkdownLink(href, context, txt),
       );
-      final builders = <String, MarkdownElementBuilder>{
-        'pre': PreBlockBuilder(),
-        'blockquote': DraftBlockBuilder(mine: mine),
-      };
-      Widget? textWidget;
-      if (segments.length == 1 && segments.first is _MarkdownSegment) {
-        final seg = segments.first as _MarkdownSegment;
-        textWidget = MarkdownBody(
-          data: unwrapCodedLinks(markdown?.call(seg.text) ?? seg.text),
-          selectable: false,
-          extensionSet: md.ExtensionSet.gitHubFlavored,
-          styleSheet: styleSheet,
-          builders: builders,
-          onTapLink: (txt, href, title) =>
-              openMarkdownLink(href, context, txt),
-        );
-      } else if (segments.isNotEmpty) {
-        textWidget = Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (var i = 0; i < segments.length; i++) ...[
-              if (i > 0) SizedBox(height: S.s6),
-              switch (segments[i]) {
-                _MarkdownSegment(:final text) => MarkdownBody(
-                    data: unwrapCodedLinks(markdown?.call(text) ?? text),
-                    selectable: false,
-                    extensionSet: md.ExtensionSet.gitHubFlavored,
-                    styleSheet: styleSheet,
-                    builders: builders,
-                    onTapLink: (txt, href, title) =>
-                        openMarkdownLink(href, context, txt),
-                  ),
-                _LinkSegment(:final url, :final uri) =>
-                  _LinkCard(url: url, uri: uri),
-                _CanvasSegment(:final card) => linkCardFor(card, client),
-              },
-            ],
-          ],
-        );
-      }
-      final styledText = textWidget == null
-          ? null
-          : (kMobile ? textWidget : MessageSelectionArea(child: textWidget));
-      final hasExtras = images.isNotEmpty ||
-          files.isNotEmpty ||
-          audio.isNotEmpty ||
-          pasted.isNotEmpty;
-      if (!hasExtras) return styledText ?? const SizedBox.shrink();
-      final maxWidth =
-          (MediaQuery.sizeOf(context).width - 32).clamp(160.0, 280.0);
-      return Column(
+    } else if (segments.isNotEmpty) {
+      textWidget = Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (images.isNotEmpty) ...[
-            ImageGallery(client: client, paths: images, maxWidth: maxWidth),
-            if (styledText != null ||
-                files.isNotEmpty ||
-                audio.isNotEmpty ||
-                pasted.isNotEmpty)
-              SizedBox(height: S.s6),
-          ],
-          if (files.isNotEmpty) ...[
-            for (var i = 0; i < files.length; i++) ...[
-              if (i > 0) SizedBox(height: S.s6),
-              FileChip(client: client, path: files[i]),
-            ],
-            if (styledText != null || audio.isNotEmpty || pasted.isNotEmpty)
-              SizedBox(height: S.s6),
-          ],
-          for (var i = 0; i < audio.length; i++) ...[
-            VoiceNote(
-              client: client,
-              path: audio[i],
-              ink: mine ? ChatColors.sentTextIn(context) : AppColors.fg1,
-              transcript: i < transcripts.length
-                  ? AudioTranscriptCard(items: [transcripts[i]])
-                  : (transcripts.isEmpty
-                      ? Text('Transcribing…',
-                          style: chatText(mine: mine, context: context))
-                      : null),
-            ),
-            if (styledText != null || pasted.isNotEmpty || i < audio.length - 1)
-              SizedBox(height: S.s6),
-          ],
-          if (styledText != null) styledText,
-          for (final block in pasted) ...[
-            SizedBox(height: S.s6),
-            PastedTextCard(text: block),
+          for (var i = 0; i < segments.length; i++) ...[
+            if (i > 0) SizedBox(height: S.s6),
+            switch (segments[i]) {
+              _MarkdownSegment(:final text) => MarkdownBody(
+                  data: unwrapCodedLinks(markdown?.call(text) ?? text),
+                  selectable: false,
+                  extensionSet: md.ExtensionSet.gitHubFlavored,
+                  styleSheet: styleSheet,
+                  builders: builders,
+                  onTapLink: (txt, href, title) =>
+                      openMarkdownLink(href, context, txt),
+                ),
+              _LinkSegment(:final url, :final uri) =>
+                _LinkCard(url: url, uri: uri),
+              _CanvasSegment(:final card) => linkCardFor(card, client),
+            },
           ],
         ],
       );
     }
+    final styledText = textWidget == null
+        ? null
+        : (kMobile ? textWidget : MessageSelectionArea(child: textWidget));
+    final hasExtras = images.isNotEmpty ||
+        files.isNotEmpty ||
+        audio.isNotEmpty ||
+        pasted.isNotEmpty;
+    if (!hasExtras) return styledText ?? const SizedBox.shrink();
+    final maxWidth = kMobile
+        ? (MediaQuery.sizeOf(context).width - 32).clamp(160.0, 280.0)
+        : (MediaQuery.sizeOf(context).width - 40).clamp(220.0, 420.0);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (images.isNotEmpty) ...[
+          ImageGallery(client: client, paths: images, maxWidth: maxWidth),
+          if (styledText != null ||
+              files.isNotEmpty ||
+              audio.isNotEmpty ||
+              pasted.isNotEmpty)
+            SizedBox(height: S.s6),
+        ],
+        if (files.isNotEmpty) ...[
+          for (var i = 0; i < files.length; i++) ...[
+            if (i > 0) SizedBox(height: S.s6),
+            FileChip(client: client, path: files[i]),
+          ],
+          if (styledText != null || audio.isNotEmpty || pasted.isNotEmpty)
+            SizedBox(height: S.s6),
+        ],
+        for (var i = 0; i < audio.length; i++) ...[
+          VoiceNote(
+            client: client,
+            path: audio[i],
+            ink: mine ? ChatColors.sentTextIn(context) : AppColors.fg1,
+            transcript: i < transcripts.length
+                ? AudioTranscriptCard(items: [transcripts[i]])
+                : (transcripts.isEmpty
+                    ? Text('Transcribing…',
+                        style: chatText(mine: mine, context: context))
+                    : null),
+          ),
+          if (styledText != null || pasted.isNotEmpty || i < audio.length - 1)
+            SizedBox(height: S.s6),
+        ],
+        if (styledText != null) styledText,
+        for (final block in pasted) ...[
+          SizedBox(height: S.s6),
+          PastedTextCard(text: block),
+        ],
+      ],
+    );
+  }
 }
