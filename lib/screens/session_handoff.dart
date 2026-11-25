@@ -180,7 +180,7 @@ class _SessionHandOffPanelState extends State<SessionHandOffPanel> {
         else ...[
           if (widget.list)
             ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 34 * 4.5),
+              constraints: const BoxConstraints(maxHeight: 40 * 4.5),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: SingleChildScrollView(
@@ -209,8 +209,7 @@ class _SessionHandOffPanelState extends State<SessionHandOffPanel> {
           ),
           if (_error != null) ...[
             const SizedBox(height: 8),
-            Text(_error!,
-                style: TS.meta(kMobile ? AppColors.danger : AppColors.fg2)),
+            Text(_error!, style: TS.meta(AppColors.danger)),
           ],
           const SizedBox(height: 12),
           Btn(_pickedName == null ? 'Hand off' : 'Hand to $_pickedName',
@@ -328,12 +327,12 @@ class _SessionHandOffPanelState extends State<SessionHandOffPanel> {
       child: InkWell(
         onTap: _busy ? null : () => setState(() => _selected = a.id),
         child: Container(
-          height: 32,
+          height: 40,
           padding: const EdgeInsets.symmetric(horizontal: 10),
           decoration: selected
               ? BoxDecoration(
-                  border:
-                      Border(left: BorderSide(color: AppColors.fg1, width: 2)))
+                  border: Border.all(
+                      color: AppColors.accent.withValues(alpha: 0.4)))
               : null,
           child: Row(children: [
             AgentMochi(a.id, size: 22, state: state),
@@ -351,7 +350,7 @@ class _SessionHandOffPanelState extends State<SessionHandOffPanel> {
             ],
             if (selected) ...[
               const SizedBox(width: 6),
-              Text('Selected', style: sans(12, color: AppColors.fg2)),
+              AppIcon('check', size: 13, color: AppColors.accent),
             ],
           ]),
         ),

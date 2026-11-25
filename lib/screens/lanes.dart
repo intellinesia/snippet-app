@@ -340,12 +340,12 @@ class _AgentLanesView extends StatelessWidget {
     final canAct = c != null && session != null;
     final failed = lane.status == 'failed';
     final tone = _needs(lane)
-        ? AppColors.run
+        ? AppColors.danger
         : lane.running
             ? AppColors.fg1
             : lane.status == 'cancelled'
                 ? AppColors.fg4
-                : AppColors.fg2;
+                : AppColors.ok;
     final lead = Stack(clipBehavior: Clip.none, children: [
       AgentMochi(group.id.isEmpty ? 'snippet' : group.id,
           size: Grouped.leadCharacter,
@@ -359,8 +359,8 @@ class _AgentLanesView extends StatelessWidget {
         bottom: -1,
         child: Container(
           key: ValueKey('lane-badge-${lane.id}'),
-          width: _needs(lane) ? 10 : 12,
-          height: _needs(lane) ? 10 : 12,
+          width: 12,
+          height: 12,
           decoration: BoxDecoration(
               color: tone,
               shape: BoxShape.circle,
@@ -382,7 +382,7 @@ class _AgentLanesView extends StatelessWidget {
     if (failed) {
       subLines = 2;
       tag = 'Failed';
-      tagColor = AppColors.fg1;
+      tagColor = AppColors.danger;
       rest = _firstSentence(lane.error ?? lane.summary);
       if (canAct) {
         trailing = _RetryPill(client: c, session: session, lane: lane);
@@ -402,7 +402,7 @@ class _AgentLanesView extends StatelessWidget {
       rest = text;
     } else if (tagFinished) {
       tag = 'Completed';
-      tagColor = AppColors.fg2;
+      tagColor = AppColors.ok;
       rest = text;
     } else {
       rest = text;
@@ -513,9 +513,8 @@ class _RetryPillState extends State<_RetryPill> {
                   color: AppColors.accent,
                   borderRadius: BorderRadius.circular(kMobile ? 22 : R.sm)),
               child: Text('Retry',
-                  style: sans(kMobile ? 15 : 12,
-                      weight: kMobile ? FontWeight.w600 : FontWeight.w500,
-                      color: AppColors.accentFg)),
+                  style: sans(kMobile ? 15 : 13,
+                      weight: FontWeight.w600, color: AppColors.accentFg)),
             ),
           ),
         ),
@@ -746,9 +745,7 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
                   indented(Text(error,
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
-                      style: kMobile
-                          ? body.copyWith(color: AppColors.danger)
-                          : body)),
+                      style: body.copyWith(color: AppColors.danger))),
                 if (_controlButton(context) case final ctrl?)
                   indented(
                       Row(children: [
@@ -796,10 +793,7 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
       rows.add((now, ''));
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(lane.title,
-          style: kMobile
-              ? sans(17, weight: W.title, color: AppColors.fg1)
-              : sans(16, weight: FontWeight.w500, color: AppColors.fg1)),
+      Text(lane.title, style: sans(17, weight: W.title, color: AppColors.fg1)),
       SizedBox(height: S.s8),
       Wrap(
           spacing: S.s8,
@@ -855,9 +849,8 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
         child: Row(children: [
           Expanded(
             child: Text(label,
-                style: sans(13,
-                    color:
-                        danger && kMobile ? AppColors.danger : AppColors.fg3)),
+                style:
+                    sans(13, color: danger ? AppColors.danger : AppColors.fg3)),
           ),
           if (copy != null)
             InkWell(
@@ -928,7 +921,7 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
         data: value,
         selectable: true,
         styleSheet: markdownStyle(context).copyWith(
-          p: danger && kMobile ? text.copyWith(color: AppColors.danger) : text,
+          p: danger ? text.copyWith(color: AppColors.danger) : text,
           listBullet: text,
           strong: text.copyWith(
               color: AppColors.fg1, fontWeight: weightFor(W.strong)),
@@ -1051,25 +1044,26 @@ class _LaneDetailScreenState extends State<LaneDetailScreen> {
       return Scaffold(
         body: SafeArea(
           bottom: false,
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             SpecBar(
                 title: lane.title.trim().isEmpty ? 'Lane' : lane.title.trim(),
-                subtitle: [laneAgentName(lane.agent ?? ''), laneElapsed(lane)]
-                    .where((e) => e.isNotEmpty)
-                    .join(' ')),
+                subtitle: [
+                  laneAgentName(lane.agent ?? ''),
+                  laneElapsed(lane)
+                ].where((e) => e.isNotEmpty).join(' ')),
             Expanded(
               child: SingleChildScrollView(
                 child: LaneDetailPhone(
                   lane: lane,
-                  onOpenTranscript:
-                      c != null && transcript != null && transcript.isNotEmpty
-                          ? () => Navigator.of(context).push(AppPageRoute<void>(
-                              builder: (_) => LaneTranscriptScreen(
-                                  client: c,
-                                  laneId: lane.id,
-                                  liveLanes: widget.liveLanes)))
-                          : null,
+                  onOpenTranscript: c != null &&
+                          transcript != null &&
+                          transcript.isNotEmpty
+                      ? () => Navigator.of(context).push(AppPageRoute<void>(
+                          builder: (_) => LaneTranscriptScreen(
+                              client: c,
+                              laneId: lane.id,
+                              liveLanes: widget.liveLanes)))
+                      : null,
                   onStop: c != null && session != null
                       ? () async {
                           try {

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../../mochi.dart';
 import '../../models.dart';
-import '../../platform.dart';
 import '../../theme.dart';
 import 'task_common.dart';
 
@@ -27,19 +26,15 @@ class TaskStatusIcon extends StatelessWidget {
       );
 }
 
-Color statusMarkColor(TaskStatus s) => !kMobile
-    // Desktop reserves amber for the blocked/needs-you dot alone; every other
-    // mark is neutral and the adjacent word carries the state.
-    ? (s == TaskStatus.blocked ? AppColors.run : statusColor(s))
-    : switch (s) {
-        TaskStatus.todo => AppColors.fg4,
-        TaskStatus.inProgress => const Color(0xFFE5B13A),
-        TaskStatus.inReview => AppColors.accent,
-        TaskStatus.blocked => AppColors.danger,
-        TaskStatus.done => AppColors.ok,
-        TaskStatus.failed => AppColors.danger,
-        TaskStatus.cancelled => AppColors.fg4,
-      };
+Color statusMarkColor(TaskStatus s) => switch (s) {
+      TaskStatus.todo => AppColors.fg4,
+      TaskStatus.inProgress => const Color(0xFFE5B13A),
+      TaskStatus.inReview => AppColors.accent,
+      TaskStatus.blocked => AppColors.danger,
+      TaskStatus.done => AppColors.ok,
+      TaskStatus.failed => AppColors.danger,
+      TaskStatus.cancelled => AppColors.fg4,
+    };
 
 class _StatusPainter extends CustomPainter {
   _StatusPainter(this.status, this.color);
@@ -71,13 +66,8 @@ class _StatusPainter extends CustomPainter {
         canvas.drawCircle(c, r, stroke);
         canvas.drawCircle(c, 2, fill);
       case TaskStatus.blocked:
-        if (!kMobile) {
-          canvas.drawCircle(c, 3, fill);
-        } else {
-          canvas.drawCircle(c, r, stroke);
-          canvas.drawLine(
-              c - const Offset(3, 0), c + const Offset(3, 0), stroke);
-        }
+        canvas.drawCircle(c, r, stroke);
+        canvas.drawLine(c - const Offset(3, 0), c + const Offset(3, 0), stroke);
       case TaskStatus.done:
         canvas.drawCircle(c, r + 0.5, fill);
         final tick = Paint()

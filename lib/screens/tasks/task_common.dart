@@ -85,26 +85,15 @@ class TaskFeed {
 
 /// The colour a status is drawn in. In progress and blocked are the two a
 /// person needs to notice.
-Color statusColor(TaskStatus status) => !kMobile
-    // Desktop: neutral greys only; the status word and glyph carry the state.
-    ? switch (status) {
-        TaskStatus.todo => AppColors.fg3,
-        TaskStatus.inProgress || TaskStatus.failed => AppColors.fg1,
-        TaskStatus.inReview ||
-        TaskStatus.blocked ||
-        TaskStatus.done =>
-          AppColors.fg2,
-        TaskStatus.cancelled => AppColors.fg4,
-      }
-    : switch (status) {
-        TaskStatus.todo => AppColors.fg3,
-        TaskStatus.inProgress => AppColors.run,
-        TaskStatus.inReview => AppColors.accent,
-        TaskStatus.blocked => AppColors.run,
-        TaskStatus.done => AppColors.ok,
-        TaskStatus.failed => AppColors.run,
-        TaskStatus.cancelled => AppColors.fg4,
-      };
+Color statusColor(TaskStatus status) => switch (status) {
+      TaskStatus.todo => AppColors.fg3,
+      TaskStatus.inProgress => AppColors.run,
+      TaskStatus.inReview => AppColors.accent,
+      TaskStatus.blocked => AppColors.run,
+      TaskStatus.done => AppColors.ok,
+      TaskStatus.failed => AppColors.run,
+      TaskStatus.cancelled => AppColors.fg4,
+    };
 
 /// The notes for a task, with dependency and replacement ids resolved to the
 /// titles of the tasks in [all].
@@ -151,9 +140,7 @@ Future<void> openTaskDetail(
   return presentScreen<void>(
     context,
     style: PanelStyle.drawer,
-    purpose: ShellPanelPurpose.task,
-    panelId: taskId,
-    originClient: client,
+    purpose: ShellPanelPurpose.task, panelId: taskId, originClient: client,
     maxWidth: 720,
     maxHeight: 820,
     builder: (_, close) =>

@@ -147,8 +147,8 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
 
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
-        padding:
-            EdgeInsets.fromLTRB(kMobile ? 16 : 12, 4, kMobile ? 16 : 12, 20),
+        padding: EdgeInsets.fromLTRB(
+            kMobile ? 16 : 12, 4, kMobile ? 16 : 12, 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -159,7 +159,8 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
               autofocus: true,
             ),
             SizedBox(height: S.s16),
-            Text('Who', style: sans(12, weight: W.label, color: AppColors.fg3)),
+            Text('Who',
+                style: sans(12, weight: W.label, color: AppColors.fg3)),
             SizedBox(height: S.s8),
             SizedBox(
               height: 66,
@@ -192,9 +193,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             ),
             if (_error != null) ...[
               SizedBox(height: S.s8),
-              Text(_error!,
-                  style:
-                      sans(12, color: kMobile ? AppColors.run : AppColors.fg2)),
+              Text(_error!, style: sans(12, color: AppColors.run)),
             ],
             SizedBox(height: S.s12),
             Text(
@@ -205,7 +204,6 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             SizedBox(height: S.s12),
             Btn(
               _busy ? 'Sending…' : 'Send to Lead',
-              small: !kMobile,
               full: true,
               disabled: _busy,
               icon: 'send',

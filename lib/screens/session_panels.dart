@@ -10,6 +10,7 @@ import '../widgets.dart';
 import '../transcript.dart'
     show LaneControlButton, LaneWho, RunSpinner, laneFirstSentence;
 import '../tap_detector.dart';
+import 'compact_btn.dart';
 import 'spec_bar.dart';
 import 'lanes.dart' show laneSections, openLaneView;
 
@@ -151,10 +152,10 @@ class _SessionCheckpointsPanelState extends State<SessionCheckpointsPanel> {
           child: Text(sub,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: sans(12, color: AppColors.fg3))),
+              style: sans(12, color: AppColors.fg4))),
     ]);
     return Container(
-      constraints: const BoxConstraints(minHeight: 32),
+      constraints: const BoxConstraints(minHeight: 36),
       padding: EdgeInsets.fromLTRB(S.s8, S.s2, S.s8, S.s2),
       child: Row(children: [
         Container(
@@ -173,15 +174,9 @@ class _SessionCheckpointsPanelState extends State<SessionCheckpointsPanel> {
         // forking the present lives on the actions sheet's Fork tile.
         if (!latest) ...[
           SizedBox(width: S.s8),
-          Btn('Restore',
-              small: true,
-              variant: BtnVariant.ghost,
-              onTap: () => widget.onRewind(c)),
+          CompactBtn('Restore', onTap: () => widget.onRewind(c)),
           SizedBox(width: S.s4),
-          Btn('Fork',
-              small: true,
-              variant: BtnVariant.ghost,
-              onTap: () => widget.onFork(c)),
+          CompactBtn('Fork', onTap: () => widget.onFork(c)),
         ],
       ]),
     );
@@ -194,8 +189,8 @@ class _SessionCheckpointsPanelState extends State<SessionCheckpointsPanel> {
         constraints: const BoxConstraints(minHeight: 62),
         padding: const EdgeInsets.only(left: 16, right: 16),
         decoration: BoxDecoration(
-            border:
-                Border(bottom: BorderSide(color: AppColors.border, width: 1))),
+            border: Border(
+                bottom: BorderSide(color: AppColors.border, width: 1))),
         child: Row(children: [
           Expanded(
             child: Padding(
@@ -232,7 +227,8 @@ class _SessionCheckpointsPanelState extends State<SessionCheckpointsPanel> {
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(color: AppColors.border)),
                     child: Text('Restore',
-                        style: sans(13, weight: W.label, color: AppColors.fg1)),
+                        style:
+                            sans(13, weight: W.label, color: AppColors.fg1)),
                   ),
                 ),
               ),
@@ -453,7 +449,7 @@ class _DeskLanesState extends State<_DeskLanes> {
                     AppColors.fg3,
                     AppColors.fg1.withValues(alpha: 0.07)
                   )
-                : ('Completed', AppColors.fg2, AppColors.surface2);
+                : ('Completed', AppColors.ok, AppColors.okBg);
     return InkWell(
       splashFactory: NoSplash.splashFactory,
       hoverColor: AppColors.surface3,
@@ -462,8 +458,7 @@ class _DeskLanesState extends State<_DeskLanes> {
           sessionId: widget.sessionId,
           liveLanes: () => widget.lanes),
       child: Container(
-        constraints: const BoxConstraints(minHeight: 32),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           border: Border(
               top: BorderSide(color: AppColors.fg1.withValues(alpha: 0.07))),
@@ -482,10 +477,10 @@ class _DeskLanesState extends State<_DeskLanes> {
                               : 'check',
                       size: 14,
                       color: failed
-                          ? AppColors.fg1
+                          ? AppColors.danger
                           : stopped
                               ? AppColors.fg4
-                              : AppColors.fg2),
+                              : AppColors.ok),
             ),
           ),
           const SizedBox(width: 10),
@@ -607,7 +602,7 @@ class _DeskLanesState extends State<_DeskLanes> {
                 SizedBox(
                   width: 46,
                   child: Text(_at(j.nextRunAt),
-                      style: mono(12, color: AppColors.fg3)),
+                      style: mono(12, color: AppColors.accent)),
                 ),
                 Expanded(
                   child: Text(j.title,
@@ -666,7 +661,8 @@ class _SessionPanelsPageState extends State<SessionPanelsPage> {
           ],
         ),
       ),
-      Expanded(child: [widget.checkpoints, widget.lanes, widget.activity][_i]),
+      Expanded(
+          child: [widget.checkpoints, widget.lanes, widget.activity][_i]),
     ]);
   }
 }

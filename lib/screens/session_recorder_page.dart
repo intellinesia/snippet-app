@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../platform.dart';
 import '../tap_detector.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -69,49 +68,40 @@ class SessionRecorderPage extends StatelessWidget {
         ),
       ]);
 
-  Widget _idle() => !kMobile
-      ? Semantics(
-          container: true,
-          label: 'Record',
-          child: Align(
-              alignment: Alignment.centerLeft,
-              child: Btn('Record',
-                  small: true, variant: BtnVariant.secondary, onTap: onRecord)))
-      : Semantics(
-          container: true,
-          button: true,
-          label: 'Record',
-          child: ExcludeSemantics(
-            child: TapDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onRecord,
-              child: Container(
-                constraints: const BoxConstraints(minHeight: 48),
-                decoration: BoxDecoration(
-                    color: AppColors.surface2,
-                    border: Border.all(color: AppColors.border),
-                    borderRadius: BorderRadius.circular(12)),
-                alignment: Alignment.center,
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border:
-                              Border.all(color: AppColors.fg1, width: 1.5))),
-                  const SizedBox(width: 8),
-                  Text('Record',
-                      style: sans(14, weight: W.label, color: AppColors.fg1)),
-                ]),
-              ),
+  Widget _idle() => Semantics(
+        container: true,
+        button: true,
+        label: 'Record',
+        child: ExcludeSemantics(
+          child: TapDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onRecord,
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 48),
+              decoration: BoxDecoration(
+                  color: AppColors.surface2,
+                  border: Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(12)),
+              alignment: Alignment.center,
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.fg1, width: 1.5))),
+                const SizedBox(width: 8),
+                Text('Record',
+                    style: sans(14, weight: W.label, color: AppColors.fg1)),
+              ]),
             ),
           ),
-        );
+        ),
+      );
 
   Widget _card() => Container(
-        constraints: BoxConstraints(minHeight: kMobile ? 64 : 40),
-        padding: EdgeInsets.only(left: kMobile ? 20 : 12),
+        constraints: const BoxConstraints(minHeight: 64),
+        padding: const EdgeInsets.only(left: 20),
         decoration: BoxDecoration(
             color: AppColors.surface2, borderRadius: BorderRadius.circular(14)),
         child: Row(children: [
@@ -123,13 +113,10 @@ class SessionRecorderPage extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
               child: Text('Recording',
-                  style: sans(kMobile ? 14 : 13,
-                      weight: W.label, color: AppColors.fg1))),
+                  style: sans(14, weight: W.label, color: AppColors.fg1))),
           Text(clockText(elapsed),
-              style: kMobile
-                  ? sans(14,
-                      weight: W.label, color: AppColors.fg1, tabular: true)
-                  : mono(12, color: AppColors.fg1)),
+              style: sans(14,
+                  weight: W.label, color: AppColors.fg1, tabular: true)),
           Semantics(
             container: true,
             button: true,
@@ -139,8 +126,8 @@ class SessionRecorderPage extends StatelessWidget {
                 behavior: HitTestBehavior.opaque,
                 onTap: onStop,
                 child: SizedBox(
-                  width: kMobile ? 64 : 56,
-                  height: kMobile ? 48 : 28,
+                  width: 64,
+                  height: 48,
                   child: Center(
                       child:
                           Text('Stop', style: sans(12, color: AppColors.fg2))),
@@ -160,17 +147,14 @@ class SessionRecorderPage extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             onTap: onOpenSaved == null ? null : () => onOpenSaved!(i),
             child: Container(
-              constraints: BoxConstraints(minHeight: kMobile ? 56 : 32),
-              padding: EdgeInsets.symmetric(
-                  horizontal: kMobile ? 16 : 12, vertical: kMobile ? 8 : 4),
+              constraints: const BoxConstraints(minHeight: 56),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(children: [
                 Expanded(
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(r.date,
-                            style:
-                                sans(kMobile ? 15 : 13, color: AppColors.fg1)),
+                        Text(r.date, style: sans(15, color: AppColors.fg1)),
                         Text(r.session,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -178,9 +162,7 @@ class SessionRecorderPage extends StatelessWidget {
                       ]),
                 ),
                 Text(clockText(r.duration),
-                    style: kMobile
-                        ? sans(12, color: AppColors.fg3, tabular: true)
-                        : mono(12, color: AppColors.fg3)),
+                    style: sans(12, color: AppColors.fg3, tabular: true)),
               ]),
             ),
           ),
@@ -242,14 +224,10 @@ class SessionReplayPage extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
         child: Row(children: [
           Text(clockText(position),
-              style: kMobile
-                  ? sans(12, color: AppColors.fg2, tabular: true)
-                  : mono(11, color: AppColors.fg3)),
+              style: sans(12, color: AppColors.fg2, tabular: true)),
           const Spacer(),
           Text(clockText(total),
-              style: kMobile
-                  ? sans(12, color: AppColors.fg3, tabular: true)
-                  : mono(11, color: AppColors.fg3)),
+              style: sans(12, color: AppColors.fg3, tabular: true)),
         ]),
       ),
       const SizedBox(height: 8),
@@ -265,15 +243,13 @@ class SessionReplayPage extends StatelessWidget {
               behavior: HitTestBehavior.opaque,
               onTap: onToggle,
               child: Container(
-                width: kMobile ? 56 : 28,
-                height: kMobile ? 56 : 28,
+                width: 56,
+                height: 56,
                 decoration:
                     BoxDecoration(color: AppColors.fg1, shape: BoxShape.circle),
                 child: Center(
                     child: AppIcon(playing ? 'pause' : 'play',
-                        size: kMobile ? 24 : 14,
-                        color: AppColors.bg,
-                        filled: true)),
+                        size: 24, color: AppColors.bg, filled: true)),
               ),
             ),
           ),
@@ -293,7 +269,7 @@ class SessionReplayPage extends StatelessWidget {
   }
 
   Widget _eventRow(ReplayEvent e, bool current) => Container(
-        constraints: BoxConstraints(minHeight: kMobile ? 54 : 32),
+        constraints: const BoxConstraints(minHeight: 54),
         margin: const EdgeInsets.symmetric(horizontal: 0),
         decoration: BoxDecoration(color: current ? AppColors.surface2 : null),
         child: Stack(alignment: Alignment.centerLeft, children: [
@@ -304,19 +280,15 @@ class SessionReplayPage extends StatelessWidget {
                 bottom: 4,
                 child: Container(width: 2, color: AppColors.fg1)),
           Padding(
-            padding: kMobile
-                ? const EdgeInsets.fromLTRB(24, 8, 16, 8)
-                : const EdgeInsets.fromLTRB(16, 7, 12, 7),
+            padding: const EdgeInsets.fromLTRB(24, 8, 16, 8),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               SizedBox(
                   width: 52,
                   child: Text(clockText(e.at),
-                      style: kMobile
-                          ? sans(12, color: AppColors.fg3, tabular: true)
-                          : mono(12, color: AppColors.fg3))),
+                      style: sans(12, color: AppColors.fg3, tabular: true))),
               Expanded(
                   child: Text(e.text,
-                      style: sans(kMobile ? 14 : 13,
+                      style: sans(14,
                           weight: current ? W.label : W.body,
                           color: AppColors.fg1))),
             ]),
@@ -362,7 +334,7 @@ class _Scrubber extends StatelessWidget {
               onTapDown: (d) => seekTo(d.localPosition.dx),
               onHorizontalDragUpdate: (d) => seekTo(d.localPosition.dx),
               child: SizedBox(
-                height: kMobile ? 48 : 28,
+                height: 48,
                 child: Stack(alignment: Alignment.centerLeft, children: [
                   Container(
                       height: 4,
@@ -373,13 +345,13 @@ class _Scrubber extends StatelessWidget {
                       width: w * fraction,
                       height: 4,
                       decoration: BoxDecoration(
-                          color: kMobile ? AppColors.fg2 : AppColors.fg1,
+                          color: AppColors.fg2,
                           borderRadius: BorderRadius.circular(2))),
                   Positioned(
-                    left: (w - (kMobile ? 20 : 12)) * fraction,
+                    left: (w - 20) * fraction,
                     child: Container(
-                        width: kMobile ? 20 : 12,
-                        height: kMobile ? 20 : 12,
+                        width: 20,
+                        height: 20,
                         decoration: BoxDecoration(
                             color: AppColors.fg1, shape: BoxShape.circle)),
                   ),

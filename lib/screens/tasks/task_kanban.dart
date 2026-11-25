@@ -13,7 +13,6 @@ import '../../widgets.dart';
 import '../list_search_field.dart';
 import 'task_common.dart';
 import 'task_list.dart' show TaskLoadMore;
-import 'task_rows.dart' show TaskStatusIcon;
 import '../../tap_detector.dart';
 
 /// Desktop task board: four status columns with filter chips and drag/drop.
@@ -56,10 +55,10 @@ enum _KanbanColumn {
       kMobile ? values : const [queued, working, needsYou, done];
 
   Color get dotColor => switch (this) {
-        _KanbanColumn.needsYou => AppColors.run,
-        _KanbanColumn.working => AppColors.fg2,
+        _KanbanColumn.needsYou => kMobile ? AppColors.run : AppColors.accent,
+        _KanbanColumn.working => kMobile ? AppColors.fg2 : AppColors.run,
         _KanbanColumn.queued => AppColors.fg4,
-        _KanbanColumn.done => kMobile ? AppColors.ok : AppColors.fg3,
+        _KanbanColumn.done => AppColors.ok,
       };
 }
 
@@ -263,8 +262,8 @@ class _TaskKanbanState extends State<TaskKanban> {
             textBaseline: TextBaseline.alphabetic,
             children: [
               Text('Tasks',
-                  style: sans(kMobile ? 20 : 16,
-                      weight: FontWeight.w600, color: AppColors.fg1)),
+                  style:
+                      sans(kMobile ? 20 : 16, weight: FontWeight.w600, color: AppColors.fg1)),
               SizedBox(width: S.of(10)),
               if (showCounts)
                 Text(today > 0 ? '$sub · $today done today' : sub,
@@ -283,11 +282,7 @@ class _TaskKanbanState extends State<TaskKanban> {
             ),
           ),
           const Spacer(),
-          Btn('New task',
-              small: true,
-              icon: 'plus',
-              variant: BtnVariant.secondary,
-              onTap: _create),
+          Btn('New task', small: true, icon: 'plus', onTap: _create),
         ]),
       ]),
     );
@@ -372,7 +367,7 @@ class _TaskKanbanState extends State<TaskKanban> {
                 ? (kMobile
                     ? AppColors.surface2.withValues(alpha: 0.45)
                     : AppColors.surface2)
-                : Colors.transparent,
+                : (kMobile ? Colors.transparent : AppColors.surface1),
             borderRadius: BorderRadius.circular(kMobile ? R.lg : R.of(12)),
           ),
           child: Opacity(
@@ -425,8 +420,8 @@ class _TaskKanbanState extends State<TaskKanban> {
               ),
               const SizedBox(width: 8),
               Text(column.title,
-                  style:
-                      sans(12, weight: FontWeight.w500, color: AppColors.fg3)),
+                  style: sans(12.5,
+                      weight: FontWeight.w600, color: AppColors.fg1)),
               const SizedBox(width: 8),
               Text('$count', style: mono(11, color: AppColors.fg4)),
             ]),
@@ -558,34 +553,25 @@ class _TaskCard extends StatefulWidget {
 class _TaskCardState extends State<_TaskCard> {
   bool _hover = false;
 
-  // Desktop status chips are flat neutral plates; the word carries the state.
-  Widget _chip(String label, Color color, TaskStatus status,
-          {bool outline = false}) =>
-      Container(
+  Widget _chip(String label, Color color, {bool outline = false}) => Container(
         height: 20,
         padding: const EdgeInsets.symmetric(horizontal: 7),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: outline ? Colors.transparent : AppColors.surface3,
+          color: outline ? Colors.transparent : color.withValues(alpha: 0.13),
           border: outline ? Border.all(color: AppColors.lineStrong) : null,
           borderRadius: BorderRadius.circular(R.of(5)),
         ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          TaskStatusIcon(status, size: 11),
-          const SizedBox(width: 5),
-          Text(label, style: sans(12, color: color, height: 1.2)),
-        ]),
+        child: Text(label, style: sans(11.5, color: color, height: 1.2)),
       );
 
   Widget _desktop(TaskItem t, bool isAgent, String agentLabel, String age) {
     final status = switch (t.status) {
-      TaskStatus.inReview =>
-        _chip('In review', AppColors.fg2, TaskStatus.inReview),
-      TaskStatus.blocked => _chip('Blocked', AppColors.fg2, TaskStatus.blocked),
-      TaskStatus.failed => _chip('Failed', AppColors.fg1, TaskStatus.failed),
-      TaskStatus.done => _chip('Done', AppColors.fg2, TaskStatus.done),
-      TaskStatus.cancelled =>
-        _chip('Cancelled', AppColors.fg3, TaskStatus.cancelled, outline: true),
+      TaskStatus.inReview => _chip('Ready for review', AppColors.accent),
+      TaskStatus.blocked => _chip('Blocked', AppColors.run),
+      TaskStatus.failed => _chip('Failed', AppColors.danger),
+      TaskStatus.done => _chip('Done', AppColors.ok),
+      TaskStatus.cancelled => _chip('Cancelled', AppColors.fg3, outline: true),
       _ => null,
     };
     final blocked =
@@ -603,11 +589,18 @@ class _TaskCardState extends State<_TaskCard> {
           duration: Motion.fast,
           padding: const EdgeInsets.fromLTRB(12, 11, 12, 10),
           decoration: BoxDecoration(
-            color: hot ? AppColors.surface2 : AppColors.surface1,
+            color: hot ? AppColors.surface3 : AppColors.surface2,
             borderRadius: BorderRadius.circular(R.of(8)),
             border: Border.all(
                 color: hot ? AppColors.lineStrong : Colors.transparent),
-            boxShadow: widget.lifted ? overlayShadow : null,
+            boxShadow: widget.lifted
+                ? const [
+                    BoxShadow(
+                        color: Color(0x66000000),
+                        blurRadius: 18,
+                        offset: Offset(0, 8)),
+                  ]
+                : null,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -658,22 +651,12 @@ class _TaskCardState extends State<_TaskCard> {
                   ),
                 ] else
                   const Spacer(),
-                if (widget.needsYou) ...[
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                        color: AppColors.run, shape: BoxShape.circle),
-                  ),
-                  const SizedBox(width: 6),
-                  Text('Needs you',
-                      style: sans(12,
-                          weight: FontWeight.w500, color: AppColors.fg2)),
-                  if (age.isNotEmpty) const SizedBox(width: 6),
-                ],
                 if (age.isNotEmpty)
                   Text(age,
-                      style: sans(11.5, color: AppColors.fg4, tabular: true)),
+                      style: sans(11.5,
+                          color:
+                              widget.needsYou ? AppColors.run : AppColors.fg4,
+                          tabular: true)),
               ]),
               if (showActions) ...[
                 const SizedBox(height: 10),
