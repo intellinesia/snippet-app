@@ -14,7 +14,8 @@ import '../widgets.dart';
 import 'lead/lead_state.dart' show isDedicatedLeadSession;
 import 'mobile_chrome.dart';
 import '../chat_scene.dart' show SceneBackdrop;
-import '../chat/signal_row.dart' show agentDisplayName, prettyModel, prettyProfile;
+import '../chat/signal_row.dart'
+    show agentDisplayName, prettyModel, prettyProfile;
 import '../tap_detector.dart';
 
 /// New-session composer on phones, with folder browsing tucked into a sheet.
@@ -965,6 +966,7 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
+    if (kMobile) return _mobileBuild(media);
     final limit = (media.size.height * 0.84).clamp(320.0, 680.0);
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1028,6 +1030,172 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
         child: AppSheetSurface(
           color: AppColors.bg,
           child: SizedBox(height: limit, child: content),
+        ),
+      ),
+    );
+  }
+
+  // Spec DL-05: large sheet, header, path line, folder rows, pinned Select.
+  String get _pathLine {
+    final parts = _here.split('/').where((p) => p.isNotEmpty).toList();
+    final t = parts.join(' / ');
+    if (t.length <= 44) return t;
+    return '${t.substring(0, 18)} \u2026 ${t.substring(t.length - 22)}';
+  }
+
+  String get _selectLabel {
+    if (_existing != null ||
+        (_repo != null && _mode == WorkspaceMode.worktree)) {
+      return _confirmLabel;
+    }
+    return 'Select ${_here.isEmpty ? 'folder' : lastPathSegment(_here, ifEmpty: _here)}';
+  }
+
+  Widget _mobileBuild(MediaQueryData media) {
+    final height = media.size.height - (media.padding.top + 16);
+    final dirs = _dirs;
+    final hasParent = _here.isNotEmpty && _here != '/';
+    final parent = hasParent
+        ? (_listing?.parent ??
+            (_here.substring(0, _here.lastIndexOf('/')).isEmpty
+                ? '/'
+                : _here.substring(0, _here.lastIndexOf('/'))))
+        : null;
+    Widget row(String icon, String name, VoidCallback? onTap,
+            {bool last = false}) =>
+        InkWell(
+          onTap: onTap,
+          splashFactory: NoSplash.splashFactory,
+          highlightColor: AppColors.surface2,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 52),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 28, 8),
+              child: Row(children: [
+                SizedBox(
+                    width: 20,
+                    child: AppIcon(icon, size: 20, color: AppColors.fg2)),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 0),
+                    child: Text(name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(15, color: AppColors.fg1)),
+                  ),
+                ),
+                AppIcon('chevron-right', size: 16, color: AppColors.fg3),
+              ]),
+            ),
+          ),
+        );
+    Widget rule() => Container(
+        height: 1,
+        margin: const EdgeInsets.only(left: 44, right: 16),
+        color: AppColors.line);
+    final items = <Widget>[
+      if (parent != null)
+        row('arrow-up', '..', _busy == null ? () => _go(parent) : null),
+      for (final d in dirs) ...[
+        if (parent != null || d != dirs.first) rule(),
+        row('folder', d.name, _busy == null ? () => _go(d.path) : null),
+      ],
+    ];
+    Widget list;
+    if (_error != null) {
+      list = Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        child: Row(children: [
+          Expanded(
+              child: Text("Can't open this folder",
+                  style: sans(13, color: AppColors.fg2))),
+          TextButton(
+              style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+              onPressed: () => _go(widget.startPath),
+              child: Text('Retry',
+                  style:
+                      sans(14, weight: FontWeight.w500, color: AppColors.fg1))),
+        ]),
+      );
+    } else if (_loading && _listing == null) {
+      list = const ListSkeleton(rows: 6, subtitle: false);
+    } else if (dirs.isEmpty) {
+      list = ListView(children: [
+        ...items,
+        Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32),
+            child: Center(
+                child: Text('No folders here',
+                    style: sans(13, color: AppColors.fg2)))),
+      ]);
+    } else {
+      list = PullToRefresh(
+          onRefresh: () async => _go(_here), child: ListView(children: items));
+    }
+    return Material(
+      type: MaterialType.transparency,
+      child: AppSheetSurface(
+        expand: true,
+        color: AppColors.surface1,
+        child: SizedBox(
+          height: height,
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            SizedBox(
+              height: 56,
+              child: Row(children: [
+                const SizedBox(width: 20),
+                Expanded(
+                    child: Text('Choose folder',
+                        style: sans(16,
+                            weight: FontWeight.w500, color: AppColors.fg1))),
+                IconBtn('plus',
+                    size: 48,
+                    iconSize: 20,
+                    tooltip: 'Add here',
+                    onTap:
+                        (_listing == null || _busy != null) ? null : _addMenu),
+                IconBtn('x',
+                    size: 48,
+                    iconSize: 20,
+                    tooltip: 'Close',
+                    onTap: () => Navigator.of(context).pop()),
+                const SizedBox(width: 8),
+              ]),
+            ),
+            if (_here.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                child: Text(_pathLine,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(12, color: AppColors.fg3)),
+              ),
+            Expanded(child: list),
+            if (_repo != null) _workspaceChoice(),
+            Padding(
+              padding:
+                  EdgeInsets.fromLTRB(16, 12, 16, 16 + media.padding.bottom),
+              child: Material(
+                color: AppColors.fg1,
+                borderRadius: BorderRadius.circular(6),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(6),
+                  onTap: (_here.isEmpty || _busy != null) ? null : _confirm,
+                  child: Container(
+                    height: 48,
+                    alignment: Alignment.center,
+                    child: Text(_busy ?? _selectLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(15,
+                            weight: FontWeight.w500, color: AppColors.bg)),
+                  ),
+                ),
+              ),
+            ),
+          ]),
         ),
       ),
     );
