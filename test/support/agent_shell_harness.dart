@@ -120,10 +120,9 @@ Future<void> settle(WidgetTester tester, [int rounds = 6]) async {
   }
 }
 
-/// Mounts the desktop shell at 1440x900 against [daemon] and opens the agent
-/// tab for [agentId] from the agent rail.
-Future<void> openAgentTab(
-    WidgetTester tester, FakeDaemon daemon, String agentId) async {
+/// Mounts the desktop shell against [daemon] without opening a conversation.
+Future<void> mountShell(WidgetTester tester, FakeDaemon daemon,
+    {Size size = const Size(1440, 900)}) async {
   HttpOverrides.global = null;
   final onError = FlutterError.onError;
   FlutterError.onError = (d) {
@@ -139,13 +138,20 @@ Future<void> openAgentTab(
         '[{"name":"Local","url":"${daemon.url}","token":"tok"}]',
   });
   tester.view.devicePixelRatio = 1;
-  tester.view.physicalSize = const Size(1440, 900);
+  tester.view.physicalSize = size;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
       home: const DesktopShell()));
   await settle(tester);
+}
+
+/// Mounts the desktop shell at 1440x900 against [daemon] and opens the agent
+/// tab for [agentId] from the agent rail.
+Future<void> openAgentTab(
+    WidgetTester tester, FakeDaemon daemon, String agentId) async {
+  await mountShell(tester, daemon);
   await tester.tap(find.byKey(const ValueKey('sidebar-mode-agents')));
   await settle(tester);
   await tester.tap(find.byKey(ValueKey('agent-card-$agentId')));
