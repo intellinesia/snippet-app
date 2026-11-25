@@ -1213,9 +1213,8 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
   Future<void> _confirmRewind(Checkpoint c) async {
     final ok = await confirmAction(
       context,
-      title: 'Restore workspace?',
-      body:
-          'This rolls the workspace back to “${c.label.isEmpty ? c.id : c.label}”. Changes after this point are discarded.',
+      title: 'Restore to ${c.label.isEmpty ? c.id : c.label}?',
+      body: 'Later changes in this session are kept as a checkpoint',
       confirmLabel: 'Restore',
       danger: false,
     );

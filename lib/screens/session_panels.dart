@@ -9,7 +9,9 @@ import '../theme.dart';
 import '../widgets.dart';
 import '../transcript.dart'
     show LaneControlButton, LaneWho, RunSpinner, laneFirstSentence;
+import '../tap_detector.dart';
 import 'compact_btn.dart';
+import 'spec_bar.dart';
 import 'lanes.dart' show laneSections, openLaneView;
 
 /// Human-readable checkpoint timestamp ('Today · 3:04 PM').
@@ -139,48 +141,34 @@ class _SessionCheckpointsPanelState extends State<SessionCheckpointsPanel> {
     final title = c.label.trim().isEmpty
         ? 'Checkpoint'
         : c.label.trim().replaceAll(RegExp(r'\s+'), ' ');
-    // Desktop reads title and time on one line, as the drawer mockup does.
-    final text = kMobile
-        ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sans(15, color: AppColors.fg1)),
-            Text(sub,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sans(12, color: AppColors.fg4)),
-          ])
-        : Row(children: [
-            Text(title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sans(13, weight: W.label, color: AppColors.fg1)),
-            SizedBox(width: S.s8),
-            Flexible(
-                child: Text(sub,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(12, color: AppColors.fg4))),
-          ]);
+    if (kMobile) return _phoneRow(c, latest, title, sub);
+    final text = Row(children: [
+      Text(title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: sans(13, weight: W.label, color: AppColors.fg1)),
+      SizedBox(width: S.s8),
+      Flexible(
+          child: Text(sub,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(12, color: AppColors.fg4))),
+    ]);
     return Container(
-      constraints: BoxConstraints(minHeight: kMobile ? 52 : 36),
-      padding: kMobile
-          ? EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.s8)
-          : EdgeInsets.fromLTRB(S.s8, S.s2, S.s8, S.s2),
+      constraints: const BoxConstraints(minHeight: 36),
+      padding: EdgeInsets.fromLTRB(S.s8, S.s2, S.s8, S.s2),
       child: Row(children: [
         Container(
-          width: kMobile ? 32 : 22,
-          height: kMobile ? 32 : 22,
+          width: 22,
+          height: 22,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: AppColors.surface3,
             borderRadius: BorderRadius.circular(R.sm),
           ),
-          child:
-              AppIcon('history', size: kMobile ? 16 : 13, color: AppColors.fg3),
+          child: AppIcon('history', size: 13, color: AppColors.fg3),
         ),
-        SizedBox(width: kMobile ? S.s12 : S.s8),
+        SizedBox(width: S.s8),
         Expanded(child: text),
         // The newest checkpoint is the present state: nothing to restore, and
         // forking the present lives on the actions sheet's Fork tile.
@@ -193,6 +181,61 @@ class _SessionCheckpointsPanelState extends State<SessionCheckpointsPanel> {
       ]),
     );
   }
+
+  /// SE-07 phone row: min 62, title at x16, Restore 88 x 48, hairline x16 to
+  /// the right gutter. Restore asks first (the host confirms before rewinding).
+  Widget _phoneRow(Checkpoint c, bool latest, String title, String sub) =>
+      Container(
+        constraints: const BoxConstraints(minHeight: 62),
+        padding: const EdgeInsets.only(left: 16, right: 16),
+        decoration: BoxDecoration(
+            border: Border(
+                bottom: BorderSide(color: AppColors.border, width: 1))),
+        child: Row(children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(15, color: AppColors.fg1)),
+                    Text(sub,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(12, color: AppColors.fg3)),
+                  ]),
+            ),
+          ),
+          if (!latest) ...[
+            const SizedBox(width: 8),
+            Semantics(
+              button: true,
+              label: 'Restore $title',
+              child: ExcludeSemantics(
+                child: TapDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => widget.onRewind(c),
+                  child: Container(
+                    width: 88,
+                    height: 48,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                        color: AppColors.surface2,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: AppColors.border)),
+                    child: Text('Restore',
+                        style:
+                            sans(13, weight: W.label, color: AppColors.fg1)),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ]),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -213,14 +256,16 @@ class _SessionCheckpointsPanelState extends State<SessionCheckpointsPanel> {
         children: [empty, below],
       );
     }
-    final side = widget.embedded ? 0.0 : (kMobile ? M.gutter : S.s12);
+    final side = widget.embedded || kMobile ? 0.0 : S.s12;
     return ListView(
       shrinkWrap: widget.embedded,
       physics: widget.embedded ? const NeverScrollableScrollPhysics() : null,
       padding: EdgeInsets.fromLTRB(side, S.s12, side, S.s24),
       children: [
         Padding(
-          padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
+          padding: kMobile
+              ? const EdgeInsets.fromLTRB(16, 0, 16, 8)
+              : EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
           child: Row(children: [
             Expanded(
               child: Text('Checkpoints \u00b7 ${cps.length}',
@@ -229,11 +274,14 @@ class _SessionCheckpointsPanelState extends State<SessionCheckpointsPanel> {
             Text('Files roll back too', style: sans(12, color: AppColors.fg4)),
           ]),
         ),
-        CardGroupScope(
-          child: ListGroup(children: [
-            for (var i = 0; i < cps.length; i++) _row(cps[i], i == 0),
-          ]),
-        ),
+        if (kMobile)
+          for (var i = 0; i < cps.length; i++) _row(cps[i], i == 0)
+        else
+          CardGroupScope(
+            child: ListGroup(children: [
+              for (var i = 0; i < cps.length; i++) _row(cps[i], i == 0),
+            ]),
+          ),
         if (widget.below != null) widget.below!,
       ],
     );
@@ -568,5 +616,53 @@ class _DeskLanesState extends State<_DeskLanes> {
         ],
       ],
     );
+  }
+}
+
+/// SE-07 "Session panels" page: bar B, then Checkpoints, Lanes and Activity
+/// chips over the matching body. Bodies are supplied by the host so each
+/// panel keeps its own data wiring.
+class SessionPanelsPage extends StatefulWidget {
+  const SessionPanelsPage({
+    super.key,
+    required this.sessionTitle,
+    required this.checkpoints,
+    required this.lanes,
+    required this.activity,
+    this.initial = 0,
+  });
+  final String sessionTitle;
+  final Widget checkpoints, lanes, activity;
+  final int initial;
+
+  @override
+  State<SessionPanelsPage> createState() => _SessionPanelsPageState();
+}
+
+class _SessionPanelsPageState extends State<SessionPanelsPage> {
+  late int _i = widget.initial;
+
+  @override
+  Widget build(BuildContext context) {
+    const names = ['Checkpoints', 'Lanes', 'Activity'];
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      SpecBar(title: 'Session panels', subtitle: widget.sessionTitle),
+      const SizedBox(height: 12),
+      SizedBox(
+        height: 44,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          children: [
+            for (var i = 0; i < 3; i++) ...[
+              if (i > 0) const SizedBox(width: 8),
+              SpecChip(names[i], _i == i, () => setState(() => _i = i)),
+            ],
+          ],
+        ),
+      ),
+      Expanded(
+          child: [widget.checkpoints, widget.lanes, widget.activity][_i]),
+    ]);
   }
 }
