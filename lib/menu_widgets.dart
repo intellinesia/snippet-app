@@ -121,8 +121,8 @@ class _MenuHeading extends StatelessWidget {
   final String label;
 
   @override
-  Widget build(BuildContext context) =>
-      Text(label.toUpperCase(), style: TS.overline());
+  Widget build(BuildContext context) => Text(label,
+      style: sans(13, weight: FontWeight.w500, color: AppColors.fg3));
 }
 
 /// The row body shared by every phone menu entry: the session Actions row
@@ -157,61 +157,56 @@ class _SheetRowBody extends StatelessWidget {
         (icon == null
             ? null
             : AppIcon(icon!,
-                size: 19,
+                size: 20,
                 color: disabled
                     ? AppColors.fg4
                     : danger
                         ? AppColors.danger
-                        : AppColors.fg3));
-    return ConstrainedBox(
-      constraints: BoxConstraints(minHeight: M.minTarget + 8),
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: S.of(11)),
-        child: Row(children: [
-          if (lead != null) ...[lead, SizedBox(width: S.of(14))],
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TS.rowTitle(disabled
-                        ? AppColors.fg4
-                        : danger
-                            ? AppColors.danger
-                            : null)),
-                if (detail != null) ...[
-                  SizedBox(height: S.s2),
-                  Text(detail!,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TS.meta(disabled ? AppColors.fg4 : AppColors.fg2)),
-                ],
-              ],
-            ),
-          ),
-          if (trailingWidget != null) ...[
-            SizedBox(width: S.s8),
-            trailingWidget!,
-          ],
-          if (trailing != null) ...[
-            SizedBox(width: S.s8),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 140),
-              child: Text(trailing!,
-                  maxLines: 1,
+                        : AppColors.fg1));
+    final reason = trailing;
+    return Semantics(
+      hint: detail,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 56),
+        // Icon at x26, label at x64, trailing text at viewport minus 20.
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(26, 8, 20, 8),
+          child: Row(children: [
+            SizedBox(width: 20, child: lead),
+            const SizedBox(width: 18),
+            Expanded(
+              child: Text(label,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.right,
-                  style: TS.meta()),
+                  style: sans(15,
+                      weight: FontWeight.w400,
+                      color: disabled
+                          ? AppColors.fg3
+                          : danger
+                              ? AppColors.danger
+                              : AppColors.fg1)),
             ),
-          ],
-          if (selected) ...[
-            SizedBox(width: S.of(10)),
-            AppIcon('check', size: 18, color: AppColors.accent),
-          ],
-        ]),
+            if (trailingWidget != null) ...[
+              const SizedBox(width: 8),
+              trailingWidget!,
+            ],
+            if (reason != null) ...[
+              const SizedBox(width: 8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 140),
+                child: Text(reason,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                    style: sans(12, color: AppColors.fg3)),
+              ),
+            ],
+            if (selected) ...[
+              const SizedBox(width: 10),
+              AppIcon('check', size: 18, color: AppColors.fg1),
+            ],
+          ]),
+        ),
       ),
     );
   }
@@ -234,8 +229,7 @@ class SheetGrabHandle extends StatelessWidget {
             width: 36,
             height: 4,
             decoration: BoxDecoration(
-                color: AppColors.lineStrong,
-                borderRadius: BorderRadius.circular(R.pill)),
+                color: AppColors.surface3, borderRadius: BorderRadius.circular(2)),
           ),
         ),
       );
@@ -314,7 +308,7 @@ Future<T?> showAppMenu<T>(
       sheetAnimationStyle: sheetMotion,
       context: context,
       backgroundColor: Colors.transparent,
-      barrierColor: AppColors.glassScrim,
+      barrierColor: AppColors.scrim,
       isScrollControlled: true,
       builder: (sheet) {
         final media = MediaQuery.of(sheet);
@@ -322,12 +316,9 @@ Future<T?> showAppMenu<T>(
           color: color,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-                maxHeight: sheetHeightFactor == null
-                    ? double.infinity
-                    : media.size.height * sheetHeightFactor),
+                maxHeight: media.size.height * (sheetHeightFactor ?? 0.85)),
             child: SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(
-                  M.gutter, 0, M.gutter, media.padding.bottom + S.s12),
+              padding: EdgeInsets.only(bottom: media.padding.bottom),
               child: Material(
                 color: Colors.transparent,
                 child: Column(
@@ -398,10 +389,18 @@ List<Widget> _appMenuSheetEntries<T>(
     BuildContext sheet, List<PopupMenuEntry<T>> items) {
   final out = <Widget>[];
   var prevRow = false;
+  var first = true;
+  Widget hairline() => Container(
+      height: 1,
+      margin: const EdgeInsets.only(left: 64, right: 16),
+      color: AppColors.line);
   for (var i = 0; i < items.length; i++) {
     final entry = items[i];
     if (entry is PopupMenuDivider) {
-      out.add(SizedBox(height: S.s8));
+      out.add(Container(
+          height: 1,
+          margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          color: AppColors.line));
       prevRow = false;
       continue;
     }
@@ -409,26 +408,29 @@ List<Widget> _appMenuSheetEntries<T>(
     if (!entry.enabled) {
       final child = entry.child;
       if (child is _SheetRowBody) {
-        if (prevRow) out.add(Container(height: 1, color: AppColors.line));
+        if (prevRow) out.add(hairline());
         out.add(child);
         prevRow = true;
         continue;
       }
-      final heading = child is _MenuHeading;
       out.add(Padding(
-        padding: heading
-            ? EdgeInsets.only(top: out.isEmpty ? S.s4 : S.s16, bottom: S.s4)
-            : EdgeInsets.symmetric(vertical: S.s4),
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
         child: child,
       ));
       prevRow = false;
       continue;
     }
-    if (prevRow) out.add(Container(height: 1, color: AppColors.line));
+    if (prevRow) out.add(hairline());
     out.add(InkWell(
+      autofocus: first,
       onTap: () => Navigator.pop(sheet, entry.value),
+      splashFactory: NoSplash.splashFactory,
+      hoverColor: Colors.transparent,
+      highlightColor: AppColors.surface2,
+      focusColor: AppColors.surface2,
       child: entry.child,
     ));
+    first = false;
     prevRow = true;
   }
   return out;

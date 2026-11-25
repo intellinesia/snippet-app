@@ -1052,11 +1052,12 @@ ShapeDecoration avatarDecoration(double size,
         {required Color color, BorderSide side = BorderSide.none}) =>
     ShapeDecoration(color: color, shape: avatarBorder(size, side: side));
 
-AnimationStyle get sheetMotion => AnimationStyle(
-      duration: Motion._scaled(320),
-      reverseDuration: Motion._scaled(220),
-      curve: Curves.easeOutCubic,
-      reverseCurve: Curves.easeOutCubic.flipped,
+AnimationStyle get sheetMotion => const AnimationStyle(
+      // Spec G: 200 ms ease-out open and close, no spring.
+      duration: Duration(milliseconds: 200),
+      reverseDuration: Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+      reverseCurve: Curves.easeOut,
     );
 
 /// The only spacing values the app uses.
