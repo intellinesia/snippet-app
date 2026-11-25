@@ -134,4 +134,37 @@ void main() {
     expect(find.text('Align desktop rich cards'), findsOneWidget);
     expect(t.takeException(), isNull);
   });
+
+  desktopTestWidgets(
+      'desktop transcript and notification cards follow locked needs-you form',
+      (t) async {
+    await t.pumpWidget(_shell(Column(mainAxisSize: MainAxisSize.min, children: [
+      const DesktopVoiceTranscriptCard(lines: ['first line', 'second line']),
+      const SizedBox(height: 8),
+      DesktopNotificationMessageCard(
+        name: 'Sashy',
+        time: 'now',
+        title: 'Approve the desktop shell build?',
+        needsYou: true,
+        actionKind: DesktopNotificationActionKind.approval,
+        onApprove: () {},
+        onDeny: () {},
+      ),
+    ])));
+    expect(find.text('Voice transcript'), findsOneWidget);
+    expect(find.text('first line'), findsNothing);
+    await t.tap(find.text('Voice transcript'));
+    await t.pumpAndSettle();
+    expect(find.text('first line'), findsOneWidget);
+    expect(find.text('Copy'), findsOneWidget);
+    expect(find.text('Needs you'), findsOneWidget);
+    expect(find.text('Approve'), findsOneWidget);
+    expect(find.text('Deny'), findsOneWidget);
+    final dots = find.byWidgetPredicate((w) =>
+        w is Container &&
+        w.constraints?.maxWidth == 6 &&
+        w.constraints?.maxHeight == 6);
+    expect(dots, findsAtLeastNWidgets(1));
+    expect(t.takeException(), isNull);
+  });
 }
