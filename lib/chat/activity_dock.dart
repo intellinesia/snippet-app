@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../platform.dart';
 import '../theme.dart';
 import '../tool_activity.dart';
 import '../tool_sheet.dart' show ToolBatch;
@@ -117,7 +118,7 @@ class FailedPill extends StatelessWidget {
                 widthFactor: 1,
                 heightFactor: 1,
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  AppIcon('alert-triangle', size: compact ? 16 : 14, color: AppColors.fg1),
+                  AppIcon('x', size: compact ? 16 : 14, color: AppColors.fg1),
                   const SizedBox(width: 6),
                   Text('$count failed',
                       style: sans(compact ? 11.5 : 14,
@@ -177,6 +178,51 @@ class _ActivityDockState extends State<ActivityDock> {
     final clock = formatWorkDuration(
         Duration(seconds: elapsed.inSeconds < 0 ? 0 : elapsed.inSeconds));
     final step = live.isNotEmpty ? liveStepText(live.last) : '';
+    if (!kMobile) {
+      // XO-01: a floating 28pt s2 pill. It reads its state in words and never
+      // becomes a bar; failure uses x + fg1, not a colour flood.
+      final agent = widget.agentId.isEmpty ? 'Agent' : widget.agentId;
+      final label = failed > 0
+          ? '$failed failed: $agent'
+          : step.isEmpty
+              ? '$agent running $clock'
+              : '$agent running $clock';
+      return Semantics(
+        button: true,
+        label: failed > 0 ? label : 'Running, $step',
+        excludeSemantics: true,
+        child: TapDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => widget.onOpen(failed > 0 ? firstFailure(steps) : null),
+          child: Container(
+            height: 28,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              SizedBox(
+                width: 14,
+                height: 14,
+                child: Center(
+                  child: failed > 0
+                      ? AppIcon('x', size: 13, color: AppColors.fg1)
+                      : Spinner(size: 12, color: AppColors.fg1),
+                ),
+              ),
+              const SizedBox(width: 7),
+              Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(12.5,
+                      color: failed > 0 ? AppColors.fg1 : AppColors.fg2,
+                      tabular: true)),
+            ]),
+          ),
+        ),
+      );
+    }
     // Text first and static: a dot, "Working", the step, the clock. The
     // screen reader hears the state once, not the ticking time.
     return Semantics(
@@ -252,6 +298,40 @@ class ActivityPill extends StatelessWidget {
     final t = took ?? stepsDuration(steps);
     var failed = runFailures(steps);
     if (failed == 0 && steps.any((x) => !x.running && x.failed)) failed = 1;
+    if (!kMobile) {
+      return TapDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => onOpen(null),
+        child: Container(
+          height: 28,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: AppColors.surface2,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            AppIcon(failed > 0 ? 'x' : 'check',
+                size: 13, color: failed > 0 ? AppColors.fg1 : AppColors.fg3),
+            const SizedBox(width: 7),
+            Flexible(
+              child: Text(describeWork(steps).text,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(12.5, color: AppColors.fg2)),
+            ),
+            if (t != null) ...[
+              const SizedBox(width: 8),
+              Text(formatWorkDuration(t),
+                  style: mono(11, color: AppColors.fg3)),
+            ],
+            if (failed > 0) ...[
+              const SizedBox(width: 8),
+              Text('$failed failed', style: sans(12, color: AppColors.fg1)),
+            ],
+          ]),
+        ),
+      );
+    }
     return TapDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => onOpen(null),
@@ -259,8 +339,7 @@ class ActivityPill extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 48),
         padding: const EdgeInsets.fromLTRB(12, 0, 8, 0),
         decoration: BoxDecoration(
-            color: AppColors.surface1,
-            borderRadius: BorderRadius.circular(10)),
+            color: AppColors.surface1, borderRadius: BorderRadius.circular(10)),
         child: Row(children: [
           AppIcon(failed > 0 ? 'alert-triangle' : 'terminal',
               size: 16, color: failed > 0 ? AppColors.fg1 : AppColors.fg2),
