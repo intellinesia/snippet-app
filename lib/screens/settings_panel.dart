@@ -1441,7 +1441,7 @@ Future<void> _showMachineMenu(
 }
 
 /// Shared desktop settings section content used by both [SettingsPanel]
-/// and `DesktopSettingsPage`.
+/// and the settings overlay.
 class SettingsSectionView extends StatefulWidget {
   const SettingsSectionView({
     super.key,
@@ -1457,6 +1457,7 @@ class SettingsSectionView extends StatefulWidget {
     this.onBack,
     this.onClose,
     this.v5Desktop = false,
+    this.chromeless = false,
   });
 
   final DaemonClient client;
@@ -1473,6 +1474,11 @@ class SettingsSectionView extends StatefulWidget {
   /// Desktop: a close circle at the end of a plain page's header.
   final VoidCallback? onClose;
   final bool v5Desktop;
+
+  /// Hosted inside the settings overlay (dialog or sheet): the host draws
+  /// the title, back and close chrome, so the page drops its own header and
+  /// keeps only its optional description plus primary action.
+  final bool chromeless;
 
   /// Pages laid out as one column under a [SettingsHeader].
   static const plainPages = SettingsSectionViewState._plainPages;
@@ -2351,12 +2357,13 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SettingsHeader(
-                title: title,
-                compact: true,
-                onBack: addingMachine ? _closeAddMachine : widget.onBack,
-                actions: [if (action != null) action],
-              ),
+              if (!widget.chromeless)
+                SettingsHeader(
+                  title: title,
+                  compact: true,
+                  onBack: addingMachine ? _closeAddMachine : widget.onBack,
+                  actions: [if (action != null) action],
+                ),
               Expanded(child: _mobileBody(page)),
             ],
           ),
@@ -2367,24 +2374,38 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     if (_plainPages.contains(page)) {
       final action = _pageAction(page);
       final addingMachine = page == SettingsPage.general && _addingMachine;
+      final subtitle = addingMachine
+          ? 'Add another machine running snippet serve.'
+          : _pageSubtitle(page);
       child = SettingsColumn(children: [
-        SettingsHeader(
-          title: addingMachine ? 'Connect a machine' : _pageTitle(page),
-          subtitle: addingMachine
-              ? 'Add another machine running snippet serve.'
-              : _pageSubtitle(page),
-          back: addingMachine
-              ? SettingsBack(widget.v5Desktop ? 'Machines' : 'General',
-                  onTap: _closeAddMachine)
-              : null,
-          actions: [
-            if (action != null) action,
-            // The desktop dialog closes on Esc or a click outside.
-            if (widget.onClose != null && !widget.v5Desktop)
-              GroupedCircleButton(
-                  icon: 'x', tooltip: 'Close', onTap: widget.onClose),
-          ],
-        ),
+        if (!widget.chromeless)
+          SettingsHeader(
+            title: addingMachine ? 'Connect a machine' : _pageTitle(page),
+            subtitle: subtitle,
+            back: addingMachine
+                ? SettingsBack(widget.v5Desktop ? 'Machines' : 'General',
+                    onTap: _closeAddMachine)
+                : null,
+            actions: [
+              if (action != null) action,
+              // The desktop dialog closes on Esc or a click outside.
+              if (widget.onClose != null && !widget.v5Desktop)
+                GroupedCircleButton(
+                    icon: 'x', tooltip: 'Close', onTap: widget.onClose),
+            ],
+          )
+        else if (subtitle.isNotEmpty || action != null)
+          // Inside the overlay the host draws the title; the page keeps its
+          // optional one-line description and primary action (spec D3).
+          Row(children: [
+            Expanded(
+              child: Text(subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(12, weight: W.body, color: AppColors.fg3)),
+            ),
+            if (action != null) ...[SizedBox(width: S.s8), action],
+          ]),
         SizedBox(height: S.s16),
         ..._plainBody(page),
       ]);

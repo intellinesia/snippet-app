@@ -37,21 +37,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         onRefresh: _loadSessions,
       );
     }
-    if (t.isSettings) {
-      return DesktopSettingsContent(
-        key: ValueKey('body-${t.key}'),
-        client: t.client,
-        instances: _instances,
-        active: _active,
-        section: _settingsSectionOf(t),
-        onSelect: (p) => _setSettingsSection(t, p),
-        onRemove: _removeInstance,
-        onRename: _renameInstance,
-        onSelectInstance: _selectInstance,
-        onAdd: _onInstanceAdded,
-        onClose: () => _closeTabAt(t),
-      );
-    }
     if (t.isReadout) {
       final origin = t.readoutOrigin;
       return Container(
@@ -378,10 +363,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   Widget _splitView({required bool topInset}) => ShellSplitView(
         key: const ValueKey('shell-split'),
         sidebarHidden: _sidebarHidden,
-        sidebarWidth: _activeTab?.isSettings == true &&
-                MediaQuery.sizeOf(context).width < 1000
-            ? 56
-            : _sidebarWidth,
+        sidebarWidth: _sidebarWidth,
         onSidebarResize: _resizeSidebar,
         onSidebarResizeEnd: _saveSidebarWidth,
         onSidebarReset: _resetSidebarWidth,
@@ -392,21 +374,16 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           child: KeyedSubtree(
             key: _panelScopeKey,
             child: Swap(
-            stateKey: _activeTab?.isSettings == true
-                ? 'settings'
-                : _effectiveSection,
+            stateKey: _effectiveSection,
             fill: true,
-            child: _activeTab?.isSettings == true
-                ? _settingsSidebar()
-                : _sidebar(topInset: topInset),
+            child: _sidebar(topInset: topInset),
           )),
         ),
         sidebarTop: _sidebarTop(),
         mainHeader: _macWindowBar(),
         leftStripAfter: _sessionStripAdd(),
         leftStripTrailing: _sessionStripTools(),
-        sidebarHeader: _activeTab?.isSettings == true ||
-                _effectiveSection == ShellSection.sessions ||
+        sidebarHeader: _effectiveSection == ShellSection.sessions ||
                 _effectiveSection == ShellSection.tasks
             ? null
             : ShellSectionTabs(
@@ -439,7 +416,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             (_activeTab!.isDraft ||
                 (_activeTab!.isReadout && !_dockedInfo) ||
                 _activeTab!.isPrs ||
-                _activeTab!.isSettings ||
                 (_activeTab!.isBoard && _tabsIn(_Pane.right).isEmpty)),
         panelHostsReadouts: _activeTab != null &&
             (_activeTab!.sessionId != null || _activeAgent != null),
@@ -931,100 +907,24 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         onMenu: onMenu,
       );
 
+  /// Settings is an overlay (spec S0): every entry — gear, shortcut, palette —
+  /// lands on the same dialog. A repeat open while it is up is a no-op.
   void _openShellSettings([SettingsPage? page]) {
-    if (!kMobile) {
-      _openSettingsTab(page);
-      return;
-    }
-    if (page == null && _settingsOpen) return;
+    if (_settingsOpen) return;
     final c = _client;
     if (c == null) return;
-    final inst = _active;
     _settingsOpen = true;
-    Navigator.of(context)
-        .push(PageRouteBuilder<void>(
-          transitionDuration: Motion.base,
-          reverseTransitionDuration: Motion.close,
-          pageBuilder: (ctx, a1, a2) => DesktopSettingsPage(
-            client: c,
-            instances: _instances,
-            active: inst,
-            onRemove: _removeInstance,
-            onRename: _renameInstance,
-            onSelect: _selectInstance,
-            onAdd: _onInstanceAdded,
-            onBack: () => Navigator.of(ctx).maybePop(),
-            initialSection: page,
-            fullPage: true,
-            navWidth: _sidebarWidth,
-          ),
-          transitionsBuilder: (ctx, anim, a2, child) {
-            final t = CurvedAnimation(
-                parent: anim, curve: Motion.enter, reverseCurve: Motion.exit);
-            return FadeTransition(
-              opacity: t,
-              child: SlideTransition(
-                position: Tween(begin: const Offset(0.015, 0), end: Offset.zero)
-                    .animate(t),
-                child: child,
-              ),
-            );
-          },
-        ))
-        .whenComplete(() => _settingsOpen = false);
-  }
-
-  void _openSettingsTab(SettingsPage? page) {
-    final c = _client;
-    final url = _active?.url;
-    if (c == null || url == null) return;
-    final current = _activeTab;
-    if (current != null && !current.isSettings) {
-      _preSettingsKey = _groupRootKey[_Pane.left] ?? current.key;
-    }
-    final existing = _tabs.indexWhere((t) => t.isSettings);
-    if (existing >= 0) {
-      if (page != null) _setSettingsSection(_tabs[existing], page);
-      _openMainTab(null, existing);
-      return;
-    }
-    final p = page ?? SettingsPage.general;
-    _openMainTab(
-        _ShellTab.settings(
-          client: c,
-          instanceUrl: url,
-          section: p.name,
-          title: settingsPageLabel(p),
-          icon: settingsPageIcon(p),
-        ),
-        -1);
-  }
-
-  SettingsPage _settingsSectionOf(_ShellTab t) =>
-      SettingsPage.values.asNameMap()[t.settingsSection] ??
-      SettingsPage.general;
-
-  void _setSettingsSection(_ShellTab t, SettingsPage page) => _setState(() {
-        t
-          ..settingsSection = page.name
-          ..title = settingsPageLabel(page)
-          ..settingsIcon = settingsPageIcon(page);
-      });
-
-  void _leaveSettings() {
-    final i = _tabs.indexWhere((t) => t.key == _preSettingsKey && !t.isSettings);
-    final fallback = _tabs.indexWhere((t) => !t.isSettings && !_isAuxiliary(t));
-    final target = i >= 0 ? i : fallback;
-    if (target >= 0) _openMainTab(null, target);
-  }
-
-  Widget _settingsSidebar() {
-    final t = _activeTab!;
-    return DesktopSettingsNav(
-      section: _settingsSectionOf(t),
-      onSelect: (p) => _setSettingsSection(t, p),
-      onBack: _leaveSettings,
-    );
+    showSettings(
+      context,
+      client: c,
+      instances: _instances,
+      active: _active,
+      onRemove: _removeInstance,
+      onRename: _renameInstance,
+      onSelect: _selectInstance,
+      onAdd: _onInstanceAdded,
+      page: page,
+    ).whenComplete(() => _settingsOpen = false);
   }
 
   Widget _tabStrip(VoidCallback? onMenu) => CardTabStrip(
@@ -1151,7 +1051,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           const SizedBox(width: 9),
         ]),
       ),
-      if (_activeTab?.isSettings != true)
       Padding(
         // Right 9 puts the 16 px icons on the 16 px content edge.
         padding: const EdgeInsets.fromLTRB(16, 0, 9, 6),
