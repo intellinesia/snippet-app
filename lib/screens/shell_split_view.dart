@@ -24,6 +24,7 @@ class ShellSplitView extends StatefulWidget {
     this.sidebarHeader,
     this.sidebarTop,
     this.mainHeader,
+    this.statusBar,
     this.leftTakeover,
     this.leftStripAfter,
     this.leftStripTrailing,
@@ -65,6 +66,7 @@ class ShellSplitView extends StatefulWidget {
   final Widget? sidebarHeader;
   final Widget? sidebarTop;
   final Widget? mainHeader;
+  final Widget? statusBar;
 
   /// Shown over the left pane's body (its tabs stay alive underneath).
   final Widget? leftTakeover;
@@ -350,8 +352,49 @@ class _ShellSplitViewState extends State<ShellSplitView>
                             .any((r) => r.pane == ShellPane.right)))));
     final showLeft = !(widget.leftCollapsed && widget.leftTabs.isNotEmpty);
 
-    return Expanded(
-      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    final panes = Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (showLeft)
+          Expanded(
+            child: _dropOn(
+              ShellPane.left,
+              _paneView(ShellPane.left, roundRight: !showRight),
+            ),
+          )
+        else
+          Expanded(
+            child: CollapsedPaneStub(
+              pane: ShellPane.left,
+              onExpand: () => widget.onExpandPane(ShellPane.left),
+            ),
+          ),
+        _rightReveal(
+          showRight,
+          () => Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              PaneResizeHandle(
+                joinBaseline: showLeft,
+                onResize: widget.onPaneResize,
+              ),
+              SizedBox(
+                width: widget.paneWidth.clamp(kPaneMinWidth, double.infinity),
+                child: _dropOn(
+                  ShellPane.right,
+                  _paneView(ShellPane.right, roundRight: true),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    final body = Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
         if (!widget.sidebarHidden)
           SizedBox(
             width: widget.sidebarWidth,
@@ -382,83 +425,43 @@ class _ShellSplitViewState extends State<ShellSplitView>
             ]),
           ),
         Expanded(
-          // Window tabs sit on the window colour, matching the sidebar.
           child: ColoredBox(
-              color: kMobile ? Colors.transparent : AppColors.windowChrome,
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (widget.mainHeader != null)
-                      Padding(
-                          padding: EdgeInsets.only(top: kMobile ? 0 : 8),
-                          child: widget.mainHeader!),
-                    Expanded(
-                      child: _panel(
-                          top: widget.mainHeader == null ? 8 : 0,
-                          Row(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                if (showLeft)
-                                  Expanded(
-                                    child: _dropOn(
-                                      ShellPane.left,
-                                      _paneView(ShellPane.left,
-                                          roundRight: !showRight),
-                                    ),
-                                  )
-                                else
-                                  Expanded(
-                                    child: CollapsedPaneStub(
-                                      pane: ShellPane.left,
-                                      onExpand: () =>
-                                          widget.onExpandPane(ShellPane.left),
-                                    ),
-                                  ),
-                                _rightReveal(
-                                    showRight,
-                                    () => Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.stretch,
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              PaneResizeHandle(
-                                                joinBaseline: showLeft,
-                                                onResize: widget.onPaneResize,
-                                              ),
-                                              SizedBox(
-                                                width: widget.paneWidth.clamp(
-                                                    kPaneMinWidth,
-                                                    double.infinity),
-                                                child: _dropOn(
-                                                  ShellPane.right,
-                                                  _paneView(ShellPane.right,
-                                                      roundRight: true),
-                                                ),
-                                              ),
-                                            ])),
-                              ])),
-                    ),
-                  ])),
+            color: kMobile ? Colors.transparent : AppColors.panelFill,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (widget.mainHeader != null) widget.mainHeader!,
+                Expanded(child: _panel(panes)),
+              ],
+            ),
+          ),
         ),
-      ]),
+      ],
+    );
+
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: body),
+          if (widget.statusBar != null)
+            Container(
+              height: 22,
+              foregroundDecoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: AppColors.line),
+                ),
+              ),
+              child: widget.statusBar!,
+            ),
+        ],
+      ),
     );
   }
 
-  Widget _panel(Widget child, {double top = 8}) {
+  Widget _panel(Widget child) {
     if (kMobile) return child;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(widget.sidebarHidden ? 8 : 0, top, 8, 8),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: AppColors.panelFill,
-          borderRadius: BorderRadius.circular(R.of(12)),
-          // Hairline outline lifts the card off the window, as in the reference.
-          border: Border.all(color: AppColors.panelOutline, width: 0.5),
-        ),
-        child: ClipRRect(
-            borderRadius: BorderRadius.circular(R.of(12)), child: child),
-      ),
-    );
+    return ColoredBox(color: AppColors.panelFill, child: child);
   }
 }
 
@@ -489,7 +492,7 @@ class _SidebarResizeHandleState extends State<_SidebarResizeHandle> {
         width: 1,
         height: double.infinity,
         child: ColoredBox(
-          color: _hover ? AppColors.border2 : Colors.transparent,
+          color: _hover ? AppColors.border2 : AppColors.line,
         ),
       ),
     );

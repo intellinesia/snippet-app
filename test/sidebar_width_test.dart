@@ -42,6 +42,13 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   }
 
+  test('sidebarWidthFor uses the compact width below 1100', () {
+    expect(sidebarWidthFor(1440), 240);
+    expect(sidebarWidthFor(1100), 240);
+    expect(sidebarWidthFor(1099), 232);
+    expect(sidebarWidthFor(1024), 232);
+  });
+
   testWidgets('reads persisted sidebar_width at startup and clamps it',
       (tester) async {
     await mountShell(tester, prefs: {'sidebar_width': 350.0});
@@ -90,7 +97,7 @@ void main() {
       expect(prefs.getDouble(kSidebarWidthPref), kSidebarMinWidth);
     });
 
-    // Double-click resets to default (kSidebarWidth = 248) and persists.
+    // Double-click resets to default (kSidebarWidth = 240) and persists.
     final handleCenter = tester.getCenter(handleFinder);
     await tester.tapAt(handleCenter);
     await tester.pump(const Duration(milliseconds: 50));
