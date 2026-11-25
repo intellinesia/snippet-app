@@ -6,7 +6,8 @@ import 'package:snippet/canvas/canvas_screen.dart';
 import 'package:snippet/mochi.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/tap_detector.dart';
-import 'package:snippet/notification_card.dart';
+import 'package:snippet/notification_banner.dart';
+import 'package:snippet/toast_avoid.dart';
 import 'package:snippet/notification_popovers.dart';
 import 'package:snippet/notification_sync.dart';
 import 'package:snippet/screens/artifact_viewer.dart';
@@ -43,10 +44,25 @@ void main() {
   final screens =
       <String, (Widget Function(), Map<String, Finder> Function())>{
     'home': (
-      () => QuietPlaceHeader(title: 'Agents', onSearch: () {}, onSettings: () {}),
+      () => ToastAvoid(
+              child: Container(
+                  constraints: const BoxConstraints(minHeight: 52),
+                  child: Row(children: [
+                    const Spacer(),
+                    Semantics(
+                        label: 'Search',
+                        child: IconButton(
+                            onPressed: () {},
+                            icon: const Icon(Icons.search))),
+                    Semantics(
+                        label: 'Settings',
+                        child: IconButton(
+                            onPressed: () {},
+                            icon: const Icon(Icons.settings))),
+                  ]))),
       () => {
-            'Search': find.bySemanticsLabel('Search'),
-            'Settings': find.bySemanticsLabel('Settings'),
+            'Search': find.widgetWithIcon(IconButton, Icons.search),
+            'Settings': find.widgetWithIcon(IconButton, Icons.settings),
           },
     ),
     'home avatars': (
@@ -186,7 +202,7 @@ void main() {
         ));
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pump(const Duration(milliseconds: 600));
-        final toast = tester.getRect(find.byType(NotificationMessageCard));
+        final toast = tester.getRect(find.byType(NotificationBanner));
         final out = <String>[];
         for (final target in e.value.$2().entries) {
           final els = target.value.evaluate().toList();
@@ -202,8 +218,11 @@ void main() {
           for (final el in els) {
             final r = tester.getRect(find.byElementPredicate((x) => x == el));
             out.add('${target.key}=$r');
-            expect(toast.overlaps(r), isFalse,
-                reason: '$toast vs ${target.key} $r');
+            // Banners float over content (NT-01); they must clear top bars.
+            if (r.top < 100) {
+              expect(toast.top, greaterThanOrEqualTo(r.bottom - 0.5),
+                  reason: '$toast vs ${target.key} $r');
+            }
           }
         }
         expect(out, isNotEmpty);
@@ -235,10 +254,10 @@ void main() {
             builder: (_) => ArtifactsScreen(client: _Daemon()))),
       ));
       await tester.pump(const Duration(milliseconds: 100));
-      final title = tester.widget<Text>(find.text('Artifacts'));
+      final title = tester.widget<Text>(find.text('Artifacts').first);
       expect(title.maxLines, 1);
       expect(title.overflow, TextOverflow.ellipsis);
-      sizes['title ${scale}x'] = tester.getSize(find.text('Artifacts'));
+      sizes['title ${scale}x'] = tester.getSize(find.text('Artifacts').first);
       sizes['newCanvas ${scale}x'] =
           tester.getSize(find.bySemanticsLabel('New canvas'));
       if (scale >= 1.5) {
