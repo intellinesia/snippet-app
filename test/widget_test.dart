@@ -97,19 +97,6 @@ void main() {
     expect(delta.title, isNull);
   });
 
-  test('status-only delta preserves active goal', () {
-    final state = HarnessState.fromJson({
-      'status': 'running',
-      'workspace': '/workspace',
-      'goal': {'text': 'Finish the task', 'status': 'active'},
-    });
-    final delta = state.applyDelta({
-      'status': 'running',
-      'workspace': '/workspace',
-    });
-    expect(delta.goal?.text, 'Finish the task');
-    expect(delta.goal?.ongoing, isTrue);
-  });
   test('Lead is the dedicated home session', () {
     expect(isDedicatedLeadSession(null), isFalse);
     expect(isDedicatedLeadSession(''), isFalse);

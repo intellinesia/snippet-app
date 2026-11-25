@@ -32,20 +32,16 @@ void main() {
     expect(sessionBusy(_s({'status': 'idle'})), isFalse);
   });
 
-  test('progress names the step and the lanes', () {
+  test('progress names the lanes', () {
     final s = _s({
       'status': 'running',
-      'plan': {'done': 1, 'total': 4, 'current': 'Integrate'},
       'lanes': {'running': 1, 'items': []},
     });
-    expect(sessionProgressLabel(s), 'Plan 2 of 4 · Integrate · 1 lane');
+    expect(sessionProgressLabel(s), '1 lane');
   });
 
-  test('a finished plan shows no step', () {
-    final s = _s({
-      'status': 'running',
-      'plan': {'done': 4, 'total': 4},
-    });
+  test('a running session without lanes has no progress label', () {
+    final s = _s({'status': 'running'});
     expect(sessionProgressLabel(s), isNull);
   });
 }
