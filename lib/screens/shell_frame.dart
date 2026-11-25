@@ -180,7 +180,10 @@ class ShellTabStripFrame extends StatelessWidget {
     return Container(
       key: const ValueKey('shell-tab-strip'),
       height: kShellTabStripHeight,
-      decoration: BoxDecoration(border: Border(bottom: shellHairline())),
+      decoration: BoxDecoration(
+        color: AppColors.bg,
+        border: Border(bottom: shellHairline()),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
