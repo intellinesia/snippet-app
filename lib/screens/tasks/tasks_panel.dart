@@ -14,6 +14,8 @@ import 'create_task_form.dart';
 import 'task_common.dart';
 import 'task_detail_screen.dart';
 import 'task_list.dart';
+import 'task_phone.dart';
+import 'task_phone_list.dart';
 import 'task_rows.dart';
 import 'task_view.dart';
 import 'package:flutter/services.dart';
@@ -27,26 +29,7 @@ Future<void> openTasksPage(BuildContext context, DaemonClient client,
     builder: (page) => Material(
       color: AppColors.paneBg,
       child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            MobileBackBar(
-              title: 'Tasks',
-              onBack: () => Navigator.of(page).pop(),
-              trailing: [
-                newTaskPill(() => panel.currentState?.create()),
-              ],
-            ),
-            Expanded(
-              child: TasksPanel(
-                key: panel,
-                client: client,
-                phoneHeader: false,
-                agentIds: agentIds,
-              ),
-            ),
-          ],
-        ),
+        child: TasksPanel(key: panel, client: client, agentIds: agentIds),
       ),
     ),
   ));
@@ -131,6 +114,7 @@ class TasksPanelState extends State<TasksPanel> {
   String? _selectedTaskId;
   bool _creatingTask = false;
   Map<String, String> _sessionFolders = const {};
+  Map<String, SessionInfo> _sessions = const {};
   Map<String, String> _agentNames = const {};
   Set<String>? _agentTaskIds;
 
@@ -186,6 +170,7 @@ class TasksPanelState extends State<TasksPanel> {
     try {
       final sessions = await widget.client.sessions();
       if (!mounted) return;
+      setState(() => _sessions = {for (final x in sessions) x.id: x});
       setState(() => _sessionFolders = {
             for (final s in sessions)
               s.id: s.projectFolder.split('/').where((p) => p.isNotEmpty).last,
@@ -606,7 +591,44 @@ class TasksPanelState extends State<TasksPanel> {
     );
   }
 
+  Widget _phoneRoot() {
+    Widget? state;
+    if (_feed.loading) {
+      state = const AppLoading(label: 'Loading tasks');
+    } else if (_feed.error != null) {
+      state = EmptyState(
+        icon: 'alert-circle',
+        title: "Couldn't load tasks",
+        body: 'Check the connection and try again.',
+        action: StateButton('Retry', onTap: _feed.refresh),
+      );
+    }
+    final nav = Navigator.maybeOf(context);
+    return ColoredBox(
+      color: AppColors.bg,
+      child: PhoneTasksRoot(
+        tasks: _tasks,
+        sessions: _sessions,
+        agentNames: _agentNames,
+        onOpen: _open,
+        onNew: create,
+        onRefresh: _feed.refresh,
+        stateBody: state,
+        hasMore: _feed.hasMore,
+        onLoadMore: _feed.loadMore,
+        leading: nav != null && nav.canPop()
+            ? BarIcon('chevron-left', 'Back', () => nav.maybePop())
+            : null,
+        actions: [
+          BarIcon('plus', 'New task', create),
+          ...widget.trailing,
+        ],
+      ),
+    );
+  }
+
   Widget _stacked() {
+    if (kMobile) return _phoneRoot();
     if (!kMobile && _selectedTaskId != null) {
       return ColoredBox(
         color: kMobile ? AppColors.pageBg : Colors.transparent,
