@@ -97,17 +97,15 @@ class TaskGlyph extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Widget g;
-    if (taskWaitsOnUser(status)) {
-      g = AppIcon('hand', size: size, color: AppColors.run);
-    } else {
-      g = switch (status) {
-        TaskStatus.inProgress => _Ring(size: size),
-        TaskStatus.done => AppIcon('check', size: size, color: AppColors.fg3),
-        TaskStatus.cancelled => AppIcon('x', size: size, color: AppColors.fg3),
-        _ => AppIcon('circle', size: size, color: AppColors.fg3),
-      };
-    }
+    final Widget g = switch (status) {
+      TaskStatus.inReview || TaskStatus.blocked =>
+        AppIcon('hand', size: size, color: AppColors.run),
+      TaskStatus.failed || TaskStatus.cancelled =>
+        AppIcon('x', size: size, color: AppColors.fg3),
+      TaskStatus.inProgress => _Ring(size: size),
+      TaskStatus.done => AppIcon('check', size: size, color: AppColors.fg3),
+      TaskStatus.todo => AppIcon('circle', size: size, color: AppColors.fg3),
+    };
     return ExcludeSemantics(
         child: SizedBox(width: size, height: size, child: g));
   }

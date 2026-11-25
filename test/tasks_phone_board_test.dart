@@ -82,7 +82,7 @@ void main() {
           expect(find.text('Needs you'), findsNothing);
           expect(find.byIcon(Icons.drag_handle), findsNothing);
           // back to the list
-          await tester.tap(find.bySemanticsLabel('Board view'));
+          await tester.tap(find.bySemanticsLabel('List view'));
           await tester.pump();
           expect(find.byKey(const ValueKey('chip-all')), findsOneWidget);
         } finally {

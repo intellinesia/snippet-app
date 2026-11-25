@@ -134,7 +134,7 @@ class _PhoneTasksRootState extends State<PhoneTasksRoot> {
 
     final trailing = [
       ...widget.actions,
-      BarIcon(_board ? 'list' : 'kanban', 'Board view',
+      BarIcon(_board ? 'list' : 'kanban', _board ? 'List view' : 'Board view',
           () => setState(() => _board = !_board),
           toggled: _board),
       BarIcon('plus', 'New task', widget.onNew),
@@ -308,7 +308,7 @@ class PhoneTaskCard extends StatelessWidget {
       TextSpan(children: [
         if (word != null)
           TextSpan(
-              text: '$word - ',
+              text: rest.isEmpty ? word : '$word - ',
               style: sans(12.5, weight: W.label, color: AppColors.fg2)),
         TextSpan(text: rest),
       ]),

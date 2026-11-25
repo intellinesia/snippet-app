@@ -36,6 +36,7 @@ import '../shell_panel.dart' show ShellPanelPurpose;
 import '../quiet.dart' show QuietOfflineBanner, QuietPlace, QuietHand;
 import 'mobile_home/quiet_home.dart';
 import 'mobile_home/quiet_lists.dart';
+import 'tasks/tasks_panel.dart' show TasksPanel;
 import 'mobile_chrome.dart';
 import 'mobile_session_home.dart';
 import 'phone_hero.dart';
@@ -691,8 +692,8 @@ child: PhoneAgentPage(
         if (client == null) {
           return _mobileUnavailable('Add a machine to see its tasks.');
         }
-        return QuietTasksScreen(
-            key: const ValueKey('quiet-tasks'), client: client);
+        return TasksPanel(
+            key: const ValueKey('phone-tasks'), client: client);
 
       case MobileHome.agents:
         final client = widget.client;
