@@ -177,7 +177,7 @@ class _SectionBtnState extends State<_SectionBtn> {
     final enabled = widget.enabled && widget.onTap != null;
     final radius = BorderRadius.circular(R.of(6));
     final fill = _focus
-        ? AppColors.surface3
+        ? AppColors.sidebarFocus
         : _hover && enabled
             ? AppColors.hoverPlate
             : Colors.transparent;

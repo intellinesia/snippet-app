@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:snippet/screens/shell_frame.dart';
 import 'package:snippet/screens/shell_status_bar.dart';
 import 'package:snippet/theme.dart';
 
@@ -118,9 +119,11 @@ void main() {
         home: Scaffold(
           body: Column(children: [
             const SizedBox(height: 50),
-            ShellStatusBar(
-              usage: const [ShellUsageItem(label: 'Claude', usedPercent: 42)],
-              onOpenUsage: () => opened++,
+            ShellStatusBarFrame(
+              child: ShellStatusBar(
+                usage: const [ShellUsageItem(label: 'Claude', usedPercent: 42)],
+                onOpenUsage: () => opened++,
+              ),
             ),
           ]),
         ),

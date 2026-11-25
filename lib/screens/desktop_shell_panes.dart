@@ -386,25 +386,21 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     return path.substring(root.length + 1);
   }
 
-  Widget _splitView({required bool topInset}) {
-    final windowW = MediaQuery.sizeOf(context).width;
-    final responsiveSidebarWidth = sidebarWidthFor(windowW);
-    return ShellSplitView(
-      key: const ValueKey('shell-split'),
-      sidebarHidden: _sidebarHidden,
-      sidebarWidth: _activeTab?.isSettings == true && windowW < 1000
-          ? 56
-          : (_sidebarWidth == kSidebarWidth
-              ? responsiveSidebarWidth
-              : _sidebarWidth),
-      onSidebarResize: _resizeSidebar,
-      onSidebarResizeEnd: _saveSidebarWidth,
-      onSidebarReset: _resetSidebarWidth,
-      sidebar: ShellPanelScope(
-        open: _openShellPanel,
-        client: _client,
-        sessionId: _activeTab?.sessionId,
-        child: KeyedSubtree(
+  Widget _splitView({required bool topInset}) => ShellSplitView(
+        key: const ValueKey('shell-split'),
+        sidebarHidden: _sidebarHidden,
+        sidebarWidth: _activeTab?.isSettings == true &&
+                MediaQuery.sizeOf(context).width < 1000
+            ? 56
+            : _sidebarWidth,
+        onSidebarResize: _resizeSidebar,
+        onSidebarResizeEnd: _saveSidebarWidth,
+        onSidebarReset: _resetSidebarWidth,
+        sidebar: ShellPanelScope(
+          open: _openShellPanel,
+          client: _client,
+          sessionId: _activeTab?.sessionId,
+          child: KeyedSubtree(
             key: _panelScopeKey,
             child: Swap(
               stateKey: _activeTab?.isSettings == true
@@ -414,83 +410,84 @@ extension _DesktopShellPanesExt on _DesktopShellState {
               child: _activeTab?.isSettings == true
                   ? _settingsSidebar()
                   : _sidebar(topInset: topInset),
-            )),
-      ),
-      sidebarTop: _sidebarTop(),
-      mainHeader: _macWindowBar(),
-      statusBar: _shellStatusBar(),
-      leftStripAfter: _sessionStripAdd(),
-      leftStripTrailing: _sessionStripTools(),
-      sidebarHeader: _activeTab?.isSettings == true ||
-              _effectiveSection == ShellSection.sessions ||
-              _effectiveSection == ShellSection.tasks
-          ? null
-          : ShellSectionTabs(
-              section: _effectiveSection,
-              onSelect: (s) => _setState(() => _section = s),
-              hidden: _hiddenSections,
             ),
-      paneWidth: _paneWidth,
-      leftCollapsed: _leftCollapsed,
-      rightCollapsed: _rightCollapsed,
-      leftTabs: _tabsIn(_Pane.left),
-      rightTabs: _tabsIn(_Pane.right),
-      readouts: _rightTabs,
-      activeKey: _activeKey,
-      focusedPane: _focusedPane,
-      statusForTab: _statusForTab,
-      canCloseTab: (t) => _canCloseTab(t) || t.isTerminal,
-      tabBodyBuilder: (t, primary, visible) =>
-          _tabBody(t, primary: primary, visible: visible),
-      readoutBodyBuilder: (r) {
-        final tab = _activeTab;
-        final controls = tab == null ? null : _macSessionControls[tab.key];
-        final s = tab == null ? null : _macSessionStatuses[tab.key]?.state;
-        return _rightTabBody(r, s, controls);
-      },
-      fallbackBuilder: _paneFallback,
-      // The canvas takes the inspector's place while it has content.
-      rightPanel: _tabsIn(_Pane.right).isEmpty ? _sessionSidePanel() : null,
-      hideRight: _activeTab != null &&
-          (_activeTab!.isHome ||
-              _activeTab!.isDraft ||
-              (_activeTab!.isReadout && !_dockedInfo) ||
-              _activeTab!.isPrs ||
-              _activeTab!.isSettings ||
-              (_activeTab!.isBoard && _tabsIn(_Pane.right).isEmpty)),
-      panelHostsReadouts: _activeTab != null &&
-          (_activeTab!.sessionId != null || _activeAgent != null),
-      onPaneResize: (delta) => _setState(() {
-        final max = MediaQuery.sizeOf(context).width * 0.72;
-        _paneWidth = (_paneWidth - delta).clamp(kPaneMinWidth, max);
-      }),
-      onExpandPane: (p) => _setState(() {
-        if (p == _Pane.left) {
-          _leftCollapsed = false;
-        } else {
-          _rightCollapsed = false;
-        }
-      }),
-      onMoveTab: _moveTo,
-      onMoveReadout: _moveReadout,
-      onActivateTab: _activateIn,
-      onActivateReadout: (p, r) => _setState(() => _activeKey[p] = r.key),
-      onDismissTab: (p, t) {
-        if (t.isTerminal) {
-          _hideTabView(p, t);
-        } else {
-          _closePaneTab(t);
-        }
-      },
-      onCloseReadout: (r) => _closeRightTab(r.key),
-      hostFor: kMobile ? null : _innerTabHost,
-      hostInset: (host, width) => sessionRailCollapsed.value ||
-              _inboxSession(host.sessionId) ||
-              width < kSessionRailMinColumn
-          ? 0
-          : sessionRailOuterWidth(width),
-    );
-  }
+          ),
+        ),
+        sidebarTop: _sidebarTop(),
+        mainHeader: kMobile ? _macWindowBar() : _tabStripBand(),
+        sidebarFooter: kMobile ? null : _sidebarFooter(),
+        statusBar: kMobile ? null : _statusBarBand(),
+        leftStripAfter: _sessionStripAdd(),
+        leftStripTrailing: _sessionStripTools(),
+        sidebarHeader: _activeTab?.isSettings == true ||
+                _effectiveSection == ShellSection.sessions ||
+                _effectiveSection == ShellSection.tasks
+            ? null
+            : ShellSectionTabs(
+                section: _effectiveSection,
+                onSelect: (s) => _setState(() => _section = s),
+                hidden: _hiddenSections,
+              ),
+        paneWidth: _paneWidth,
+        leftCollapsed: _leftCollapsed,
+        rightCollapsed: _rightCollapsed,
+        leftTabs: _tabsIn(_Pane.left),
+        rightTabs: _tabsIn(_Pane.right),
+        readouts: _rightTabs,
+        activeKey: _activeKey,
+        focusedPane: _focusedPane,
+        statusForTab: _statusForTab,
+        canCloseTab: (t) => _canCloseTab(t) || t.isTerminal,
+        tabBodyBuilder: (t, primary, visible) =>
+            _tabBody(t, primary: primary, visible: visible),
+        readoutBodyBuilder: (r) {
+          final tab = _activeTab;
+          final controls = tab == null ? null : _macSessionControls[tab.key];
+          final s = tab == null ? null : _macSessionStatuses[tab.key]?.state;
+          return _rightTabBody(r, s, controls);
+        },
+        fallbackBuilder: _paneFallback,
+        // The canvas takes the inspector's place while it has content.
+        rightPanel: _tabsIn(_Pane.right).isEmpty ? _sessionSidePanel() : null,
+        hideRight: _activeTab != null &&
+            (_activeTab!.isHome ||
+                _activeTab!.isDraft ||
+                (_activeTab!.isReadout && !_dockedInfo) ||
+                _activeTab!.isPrs ||
+                _activeTab!.isSettings ||
+                (_activeTab!.isBoard && _tabsIn(_Pane.right).isEmpty)),
+        panelHostsReadouts: _activeTab != null &&
+            (_activeTab!.sessionId != null || _activeAgent != null),
+        onPaneResize: (delta) => _setState(() {
+          final max = MediaQuery.sizeOf(context).width * 0.72;
+          _paneWidth = (_paneWidth - delta).clamp(kPaneMinWidth, max);
+        }),
+        onExpandPane: (p) => _setState(() {
+          if (p == _Pane.left) {
+            _leftCollapsed = false;
+          } else {
+            _rightCollapsed = false;
+          }
+        }),
+        onMoveTab: _moveTo,
+        onMoveReadout: _moveReadout,
+        onActivateTab: _activateIn,
+        onActivateReadout: (p, r) => _setState(() => _activeKey[p] = r.key),
+        onDismissTab: (p, t) {
+          if (t.isTerminal) {
+            _hideTabView(p, t);
+          } else {
+            _closePaneTab(t);
+          }
+        },
+        onCloseReadout: (r) => _closeRightTab(r.key),
+        hostFor: kMobile ? null : _innerTabHost,
+        hostInset: (host, width) => sessionRailCollapsed.value ||
+                _inboxSession(host.sessionId) ||
+                width < kSessionRailMinColumn
+            ? 0
+            : sessionRailOuterWidth(width),
+      );
 
   String? get _lastUsedProjectFolder {
     final recent = (_sessions ?? const <SessionInfo>[]).toList()
@@ -535,28 +532,31 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     } catch (_) {}
   }
 
-  Widget _shellStatusBar() {
+  /// Full-width status band; the frame owns its height, fill and hairline.
+  Widget _statusBarBand() {
     final hostsOnline =
         _instances.where((i) => _health[i.url] ?? i.url == _active?.url).length;
     final daemonDown = _client != null && _sessionsError != null;
     return Builder(builder: (barContext) {
-      return ShellStatusBar(
-        usage: _usageItems,
-        needsYouCount: _mcAttentionCount,
-        connected: _sessionsError == null,
-        daemonDown: daemonDown,
-        hostsOnline: hostsOnline,
-        hostsTotal: _instances.length,
-        rightPanelEnabled: _activeTab?.isHome != true,
-        onOpenUsage: _client == null
-            ? null
-            : () => showUsagePopover(barContext, _client!),
-        onRefreshUsage: _client == null ? null : _refreshUsage,
-        onOpenNeedsYou: _openHomeTab,
-        onOpenTerminal: _client == null ? null : _newGlobalShell,
-        onOpenHosts: () => _openShellSettings(SettingsPage.general),
-        onToggleRightPanel: _togglePanel,
-        onRetry: _loadSessions,
+      return ShellStatusBarFrame(
+        child: ShellStatusBar(
+          usage: _usageItems,
+          needsYouCount: _mcAttentionCount,
+          connected: _sessionsError == null,
+          daemonDown: daemonDown,
+          hostsOnline: hostsOnline,
+          hostsTotal: _instances.length,
+          rightPanelEnabled: _activeTab?.isHome != true,
+          onOpenUsage: _client == null
+              ? null
+              : () => showUsagePopover(barContext, _client!),
+          onRefreshUsage: _client == null ? null : _refreshUsage,
+          onOpenNeedsYou: _openHomeTab,
+          onOpenTerminal: _client == null ? null : _newGlobalShell,
+          onOpenHosts: () => _openShellSettings(SettingsPage.general),
+          onToggleRightPanel: _togglePanel,
+          onRetry: _loadSessions,
+        ),
       );
     });
   }
@@ -1237,54 +1237,63 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   }
 
   Widget _sidebarTop() {
-    return Container(
-      height: 34,
-      padding: const EdgeInsets.only(right: 6),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.line)),
-      ),
-      child: LayoutBuilder(builder: (context, box) {
-        final toggleX = (box.maxWidth - 84).clamp(0.0, 138.0).toDouble();
-        return Row(children: [
-          const SizedBox(width: 70),
-          SizedBox(
-            width: (toggleX - 70).clamp(0.0, 68.0).toDouble(),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Snippet',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(12, weight: W.label, color: AppColors.fg2)),
-            ),
-          ),
+    if (!kMobile) {
+      return ShellTitleRow(
+        onToggleSidebar: _toggleSidebar,
+        canNavigateBack: _canNavigateBack,
+        canNavigateForward: _canNavigateForward,
+        onNavigateBack: _navigateBack,
+        onNavigateForward: _navigateForward,
+        reserveWindowControls: kMacOS,
+      );
+    }
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      SizedBox(
+        // Centred at 26, level with the traffic lights and the pane bar.
+        height: kMobile ? 44 : 52,
+        child: Row(children: [
+          if (kMacOS) const SizedBox(width: 80) else SizedBox(width: S.of(14)),
+          const Spacer(),
           _TbBtn(
               icon: 'sidebar',
               tooltip: kMacOS ? 'Hide sidebar (⌘B)' : 'Hide sidebar (Ctrl+B)',
               onTap: _toggleSidebar),
-          const Spacer(),
-          _TbBtn(
-              icon: 'chevron-left',
-              tooltip: 'Back',
-              iconSize: 13,
-              onTap: _canNavigateBack ? _navigateBack : null),
-          _TbBtn(
-              icon: 'chevron-right',
-              tooltip: 'Forward',
-              iconSize: 13,
-              onTap: _canNavigateForward ? _navigateForward : null),
-        ]);
-      }),
-    );
+          // 9 + half the 28 px button's spare 12 = 15, the row content edge.
+          const SizedBox(width: 9),
+        ]),
+      ),
+      if (_activeTab?.isSettings != true)
+        Padding(
+          // Right 9 puts the 16 px icons on the 16 px content edge.
+          padding: const EdgeInsets.fromLTRB(16, 0, 9, 6),
+          child: SidebarBrand(trailing: [
+            _TbBtn(
+                icon: 'search',
+                tooltip: kMacOS ? 'Search (⌘K)' : 'Search (Ctrl+K)',
+                onTap: _openCommandPalette),
+            Builder(
+              builder: (ctx) => _TbBtn(
+                  icon: 'edit',
+                  tooltip: 'New session',
+                  onTap: () => _showNewMenu(ctx)),
+            ),
+          ]),
+        ),
+    ]);
   }
 
   Widget _sidebarFooter() {
+    final needsYou = [
+      for (final s in _sessions ?? const <SessionInfo>[])
+        if (sessionNeedsYou(s)) s
+    ].isNotEmpty;
+    return ShellFooterFrame(child: _sidebarFooterRow(needsYou));
+  }
+
+  Widget _sidebarFooterRow(bool needsYou) {
     final runningTab = _openRunningSessionTab;
-    return Container(
-      height: 30,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.line)),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 9),
       child: Row(children: [
         _FooterBtn(
             icon: 'settings', tooltip: 'Settings', onTap: _openShellSettings),
@@ -1311,6 +1320,40 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     );
   }
 
+  /// Desktop centre band: the tab strip, with the title-row cluster over its
+  /// left edge while the sidebar is hidden.
+  Widget _tabStripBand() => ShellTabStripFrame(
+        leading: _sidebarHidden
+            ? ShellCollapsedNavCluster(
+                onToggleSidebar: _toggleSidebar,
+                canNavigateBack: _canNavigateBack,
+                canNavigateForward: _canNavigateForward,
+                onNavigateBack: _navigateBack,
+                onNavigateForward: _navigateForward,
+                reserveWindowControls: kMacOS,
+              )
+            : const SizedBox(width: 8),
+        tabs: _mainTabsRow(),
+        trailing: _windowBarTools(),
+      );
+
+  List<Widget> _windowBarTools() => [
+        ListenableBuilder(
+            listenable: sessionBarTools,
+            builder: (_, __) =>
+                sessionBarTools.of(_activeTab?.sessionId) ??
+                const SizedBox.shrink()),
+        if (_activeTab?.readout?.agent != null) _agentBarTools(_activeTab!),
+        if (_activeTab?.readout == null && _activeAgent?.isLead == true)
+          IconBtn('sidebar',
+              size: 28,
+              iconSize: 15,
+              active: !_panelHidden,
+              tooltip: _panelHidden ? 'Show Lead panel' : 'Hide Lead panel',
+              onTap: _togglePanel),
+        if (_groupBarTools(_activeTab) case final w?) w,
+      ];
+
   Widget _macWindowBar() => MacWindowBar(
         sidebarHidden: _sidebarHidden,
         onToggleSidebar: _toggleSidebar,
@@ -1319,22 +1362,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         onNavigateBack: _navigateBack,
         onNavigateForward: _navigateForward,
         tabsRow: _mainTabsRow(),
-        tools: [
-          ListenableBuilder(
-              listenable: sessionBarTools,
-              builder: (_, __) =>
-                  sessionBarTools.of(_activeTab?.sessionId) ??
-                  const SizedBox.shrink()),
-          if (_activeTab?.readout?.agent != null) _agentBarTools(_activeTab!),
-          if (_activeTab?.readout == null && _activeAgent?.isLead == true)
-            IconBtn('sidebar',
-                size: 30,
-                iconSize: 15,
-                active: !_panelHidden,
-                tooltip: _panelHidden ? 'Show Lead panel' : 'Hide Lead panel',
-                onTap: _togglePanel),
-          if (_groupBarTools(_activeTab) case final w?) w,
-        ],
+        tools: _windowBarTools(),
         reserveWindowControls: kMacOS,
       );
 }
@@ -1342,14 +1370,10 @@ extension _DesktopShellPanesExt on _DesktopShellState {
 /// Compact 28 px title-row icon button.
 class _TbBtn extends StatefulWidget {
   const _TbBtn(
-      {required this.icon,
-      required this.tooltip,
-      required this.onTap,
-      this.iconSize = 14});
+      {required this.icon, required this.tooltip, required this.onTap});
   final String icon;
   final String tooltip;
   final VoidCallback? onTap;
-  final double iconSize;
 
   @override
   State<_TbBtn> createState() => _TbBtnState();
@@ -1380,7 +1404,7 @@ class _TbBtnState extends State<_TbBtn> {
             ),
             child: Center(
               child: AppIcon(widget.icon,
-                  size: widget.iconSize,
+                  size: 14,
                   color: !enabled
                       ? AppColors.fg3
                       : _hover

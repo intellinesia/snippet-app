@@ -2328,7 +2328,7 @@ class _SidebarSearchBoxState extends State<_SidebarSearchBox> {
     final radius = BorderRadius.circular(R.of(8));
     final tappable = widget.onTap != null;
     final fill = _focus
-        ? AppColors.surface3
+        ? AppColors.sidebarFocus
         : _hover && tappable
             ? AppColors.hoverPlate
             : AppColors.surface2;
@@ -2410,9 +2410,9 @@ class _PlaceRowState extends State<_PlaceRow> {
   Widget build(BuildContext context) {
     final enabled = widget.onTap != null;
     final fill = _focus
-        ? AppColors.surface3
+        ? AppColors.sidebarFocus
         : widget.selected
-            ? AppColors.surface2
+            ? AppColors.sidebarPlate
             : _hover && enabled
                 ? AppColors.hoverPlate
                 : Colors.transparent;

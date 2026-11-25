@@ -712,9 +712,9 @@ class _AgentRowShellState extends State<AgentRowShell> {
   Widget _desktopRow(BuildContext context) {
     final focused = _focusNode.hasFocus;
     final fill = focused
-        ? AppColors.surface3
+        ? AppColors.sidebarFocus
         : widget.selected
-            ? AppColors.surface2
+            ? AppColors.sidebarPlate
             : _hover
                 ? AppColors.hoverPlate
                 : Colors.transparent;

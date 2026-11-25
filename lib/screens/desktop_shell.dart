@@ -1,4 +1,4 @@
-import 'sidebar.dart' show SidebarState;
+import 'sidebar.dart' show SidebarBrand, SidebarState;
 import 'dart:async';
 
 import '../desk_attention.dart';
@@ -77,6 +77,7 @@ import 'session_rail.dart'
         sessionRailPageRequest,
         setSessionRailCollapsed;
 import 'shell_card_tab_strip.dart';
+import 'shell_frame.dart';
 import 'shell_main_pane.dart';
 import 'shell_models.dart';
 import 'shell_nav.dart';
@@ -261,7 +262,11 @@ class _DesktopShellState extends State<DesktopShell>
   bool _settingsOpen = false;
   // The tab to return to when the settings tab's back row is used.
   String? _preSettingsKey;
-  double _sidebarWidth = kSidebarWidth;
+
+  /// The user's dragged width; null follows [sidebarWidthFor] the window.
+  double? _sidebarWidthPref;
+  double get _sidebarWidth =>
+      _sidebarWidthPref ?? sidebarWidthFor(MediaQuery.sizeOf(context).width);
   List<ShellUsageItem> _usageItems = const [];
   String? _activeProfileName;
 
@@ -891,24 +896,25 @@ class _DesktopShellState extends State<DesktopShell>
     final raw = prefs.get(kSidebarWidthPref);
     final width = raw is num ? raw.toDouble() : null;
     if (!mounted || width == null) return;
-    _sidebarWidth = width.clamp(kSidebarMinWidth, kSidebarMaxWidth);
+    _sidebarWidthPref = width.clamp(kSidebarMinWidth, kSidebarMaxWidth);
   }
 
   void _saveSidebarWidth() {
-    final width = _sidebarWidth;
-    SharedPreferences.getInstance()
-        .then((p) => p.setDouble(kSidebarWidthPref, width));
+    final width = _sidebarWidthPref;
+    SharedPreferences.getInstance().then((p) => width == null
+        ? p.remove(kSidebarWidthPref)
+        : p.setDouble(kSidebarWidthPref, width));
   }
 
   void _resizeSidebar(double delta) {
     setState(() {
-      _sidebarWidth =
+      _sidebarWidthPref =
           (_sidebarWidth + delta).clamp(kSidebarMinWidth, kSidebarMaxWidth);
     });
   }
 
   void _resetSidebarWidth() {
-    setState(() => _sidebarWidth = kSidebarWidth);
+    setState(() => _sidebarWidthPref = null);
     _saveSidebarWidth();
   }
 
@@ -1822,7 +1828,6 @@ class _DesktopShellState extends State<DesktopShell>
         onOpenPullRequests: kMobile ? null : _openPullRequestsTile,
         onOpenArtifacts: kMobile ? null : _openArtifactsTile,
         onOpenWakes: kMobile ? null : _openWakesTile,
-        desktopFooter: kMobile ? null : _sidebarFooter(),
         onAddInstance: _addInstanceFlow,
         onRenameInstance: _renameInstance,
         onRemoveInstance: _removeInstance,

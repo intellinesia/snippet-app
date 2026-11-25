@@ -24,6 +24,7 @@ class ShellSplitView extends StatefulWidget {
     this.sidebarHeader,
     this.sidebarTop,
     this.mainHeader,
+    this.sidebarFooter,
     this.statusBar,
     this.leftTakeover,
     this.leftStripAfter,
@@ -66,6 +67,11 @@ class ShellSplitView extends StatefulWidget {
   final Widget? sidebarHeader;
   final Widget? sidebarTop;
   final Widget? mainHeader;
+
+  /// Pinned below the sidebar body (the 30 pt footer band).
+  final Widget? sidebarFooter;
+
+  /// Full-width band under the sidebar and centre columns (desktop only).
   final Widget? statusBar;
 
   /// Shown over the left pane's body (its tabs stay alive underneath).
@@ -352,61 +358,28 @@ class _ShellSplitViewState extends State<ShellSplitView>
                             .any((r) => r.pane == ShellPane.right)))));
     final showLeft = !(widget.leftCollapsed && widget.leftTabs.isNotEmpty);
 
-    final panes = Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (showLeft)
-          Expanded(
-            child: _dropOn(
-              ShellPane.left,
-              _paneView(ShellPane.left, roundRight: !showRight),
-            ),
-          )
-        else
-          Expanded(
-            child: CollapsedPaneStub(
-              pane: ShellPane.left,
-              onExpand: () => widget.onExpandPane(ShellPane.left),
-            ),
-          ),
-        _rightReveal(
-          showRight,
-          () => Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              PaneResizeHandle(
-                joinBaseline: showLeft,
-                onResize: widget.onPaneResize,
-              ),
-              SizedBox(
-                width: widget.paneWidth.clamp(kPaneMinWidth, double.infinity),
-                child: _dropOn(
-                  ShellPane.right,
-                  _paneView(ShellPane.right, roundRight: true),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-
-    final body = Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
+    final body = Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         if (!widget.sidebarHidden)
           SizedBox(
             width: widget.sidebarWidth,
             child: Stack(children: [
-              ColoredBox(
-                color: AppColors.windowChrome,
+              DecoratedBox(
+                key: const ValueKey('shell-sidebar-column'),
+                // One hairline on the right edge separates it from the pane.
+                decoration: BoxDecoration(
+                  color: AppColors.windowChrome,
+                  border: kMobile
+                      ? null
+                      : Border(
+                          right: BorderSide(color: AppColors.line, width: 1)),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     if (widget.sidebarTop != null) widget.sidebarTop!,
                     if (widget.sidebarHeader != null) widget.sidebarHeader!,
                     Expanded(child: widget.sidebar),
+                    if (widget.sidebarFooter != null) widget.sidebarFooter!,
                   ],
                 ),
               ),
@@ -425,44 +398,74 @@ class _ShellSplitViewState extends State<ShellSplitView>
             ]),
           ),
         Expanded(
+          // The centre column is the reading surface: strip and panes on bg.
           child: ColoredBox(
-            color: kMobile ? Colors.transparent : AppColors.panelFill,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (widget.mainHeader != null) widget.mainHeader!,
-                Expanded(child: _panel(panes)),
-              ],
-            ),
-          ),
+              color: kMobile ? Colors.transparent : AppColors.panelFill,
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (widget.mainHeader != null) widget.mainHeader!,
+                    Expanded(
+                      child: _panel(
+                          Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (showLeft)
+                                  Expanded(
+                                    child: _dropOn(
+                                      ShellPane.left,
+                                      _paneView(ShellPane.left,
+                                          roundRight: !showRight),
+                                    ),
+                                  )
+                                else
+                                  Expanded(
+                                    child: CollapsedPaneStub(
+                                      pane: ShellPane.left,
+                                      onExpand: () =>
+                                          widget.onExpandPane(ShellPane.left),
+                                    ),
+                                  ),
+                                _rightReveal(
+                                    showRight,
+                                    () => Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.stretch,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              PaneResizeHandle(
+                                                joinBaseline: showLeft,
+                                                onResize: widget.onPaneResize,
+                                              ),
+                                              SizedBox(
+                                                width: widget.paneWidth.clamp(
+                                                    kPaneMinWidth,
+                                                    double.infinity),
+                                                child: _dropOn(
+                                                  ShellPane.right,
+                                                  _paneView(ShellPane.right,
+                                                      roundRight: true),
+                                                ),
+                                              ),
+                                            ])),
+                              ])),
+                    ),
+                  ])),
         ),
-      ],
-    );
-
+      ]);
+    if (kMobile || widget.statusBar == null) return Expanded(child: body);
     return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(child: body),
-          if (widget.statusBar != null)
-            Container(
-              height: 22,
-              foregroundDecoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: AppColors.line),
-                ),
-              ),
-              child: widget.statusBar!,
-            ),
-        ],
-      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Expanded(child: body),
+        widget.statusBar!,
+      ]),
     );
   }
 
-  Widget _panel(Widget child) {
-    if (kMobile) return child;
-    return ColoredBox(color: AppColors.panelFill, child: child);
-  }
+  /// Desktop panes sit flat on the centre column: no inset, card or outline.
+  Widget _panel(Widget child) => kMobile
+      ? child
+      : ClipRect(key: const ValueKey('shell-panes'), child: child);
 }
 
 class _SidebarResizeHandle extends StatefulWidget {
@@ -492,7 +495,7 @@ class _SidebarResizeHandleState extends State<_SidebarResizeHandle> {
         width: 1,
         height: double.infinity,
         child: ColoredBox(
-          color: _hover ? AppColors.border2 : AppColors.line,
+          color: _hover ? AppColors.border2 : Colors.transparent,
         ),
       ),
     );

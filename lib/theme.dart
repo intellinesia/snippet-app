@@ -289,9 +289,9 @@ final _quietLight = _palette(
   name: 'quiet-light',
   label: 'Quiet Light',
   bg: const Color(0xFFFAFAF8),
-  surface1: const Color(0xFFF0F0EC),
-  surface2: const Color(0xFFE6E6E1),
-  surface3: const Color(0xFFDCDCD5),
+  surface1: const Color(0xFFFFFFFF),
+  surface2: const Color(0xFFF0F0EC),
+  surface3: const Color(0xFFE6E6E1),
   border: const Color(0xFFE4E4DF),
   border2: const Color(0xFFD2D2CC),
   accent: const Color(0xFF1C1C1A),
@@ -909,12 +909,6 @@ class AppColors {
   static Color get raised => currentTheme.surface1;
   static Color get overlay => currentTheme.surface2;
   static Color get hover => currentTheme.surface3;
-  static Color get hoverPlate {
-    if (currentTheme.name == 'quiet') return const Color(0xFF1F1F1D);
-    if (currentTheme.name == 'quiet-light') return const Color(0xFFF4F4F0);
-    return Color.lerp(currentTheme.surface1, currentTheme.surface2, 0.5)!;
-  }
-
   static Color get line => currentTheme.border;
   static Color get lineStrong => currentTheme.border2;
 
@@ -942,16 +936,39 @@ class AppColors {
   static double? chromeAlpha;
   // Desktop Pure Black takes the reference's window, card and outline greys.
   static bool get _deskBlack => false;
+  static bool get _quietDesk =>
+      !kMobile &&
+      (currentTheme.name == 'quiet' || currentTheme.name == 'quiet-light');
+  static bool get _quietDeskLight =>
+      _quietDesk && currentTheme.name == 'quiet-light';
+
+  /// Desktop window chrome: sidebar column and status bar. Quiet (home-orca
+  /// shell): s1 (light F0F0EC), with the centre pane on bg.
   static Color get windowBg => kMobile
       ? currentTheme.bg
       : (_deskBlack
               ? const Color(0xFF09090A)
-              // Quiet: the sidebar sits on s1, the centre pane on bg.
-              : (currentTheme.name == 'quiet' ||
-                      currentTheme.name == 'quiet-light')
-                  ? currentTheme.surface1
+              : _quietDesk
+                  ? (_quietDeskLight
+                      ? currentTheme.surface2
+                      : currentTheme.surface1)
                   : Color.lerp(currentTheme.bg, currentTheme.surface1, 0.45)!)
           .withValues(alpha: chromeAlpha ?? 1);
+
+  /// Sidebar selected plate, one tonal step above [windowBg] (s2 dark,
+  /// E6E6E1 light).
+  static Color get sidebarPlate =>
+      _quietDeskLight ? currentTheme.surface3 : currentTheme.surface2;
+
+  /// Sidebar keyboard-focus plate (s3 dark, DCDCD5 light).
+  static Color get sidebarFocus => _quietDeskLight
+      ? const Color(0xFFDCDCD5)
+      : currentTheme.surface3;
+
+  /// Pointer hover plate, between s1 and s2 (1F1F1D dark, F4F4F0 light).
+  static Color get hoverPlate => _quietDesk
+      ? (_quietDeskLight ? const Color(0xFFF4F4F0) : const Color(0xFF1F1F1D))
+      : Color.lerp(currentTheme.surface1, currentTheme.surface2, 0.5)!;
 
   /// Desktop window chrome; see-through while a scene plays behind the window.
   static Color get windowChrome => !kMobile && ChatScene.instance.active
@@ -964,14 +981,9 @@ class AppColors {
       : panelBg;
 
   /// The inset desktop panel; phones keep the page background.
-  static Color get panelBg => kMobile
+  static Color get panelBg => kMobile || _quietDesk
       ? currentTheme.bg
-      : (_deskBlack
-          ? const Color(0xFF121213)
-          : (currentTheme.name == 'quiet' ||
-                  currentTheme.name == 'quiet-light')
-              ? currentTheme.bg
-              : currentTheme.surface1);
+      : (_deskBlack ? const Color(0xFF121213) : currentTheme.surface1);
   static Color get panelOutline =>
       _deskBlack ? const Color(0xFF252526) : currentTheme.border;
   static Color get sidebarPanel => kMobile

@@ -77,9 +77,11 @@ void main() {
     // Desktop always lists agents above sessions.
     expect(find.byType(AgentsSidebarPanel), findsOneWidget);
 
+    // The footer band is pinned in the sidebar column, under the body.
     expect(
         find.descendant(
-            of: find.byType(Sidebar), matching: find.byTooltip('Settings')),
+            of: find.byKey(const ValueKey('shell-sidebar-footer')),
+            matching: find.byTooltip('Settings')),
         findsWidgets);
     expect(tester.state(find.byType(ShellSplitView)), same(before));
 

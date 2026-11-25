@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 
 import '../phosphor_icons.dart';
 import '../tap_detector.dart';
@@ -55,40 +54,33 @@ class ShellStatusBar extends StatelessWidget {
   Widget build(BuildContext context) {
     Theme.of(context);
     final warning = _firstNearLimit(usage);
-    return _StatusBarHitRegion(
-      fill: AppColors.surface1,
-      line: AppColors.line,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            _StatusStaticItem(
-              child: Text('Used', style: sans(11, color: AppColors.fg3)),
-            ),
-            const SizedBox(width: 12),
-            for (var i = 0; i < usage.length; i++) ...[
-              if (i > 0) const SizedBox(width: 12),
-              _UsageMeter(item: usage[i], onTap: onOpenUsage),
-            ],
-            if (usage.isNotEmpty) const SizedBox(width: 12),
-            _StatusIconTarget(
-              key: const ValueKey('shell-status-refresh-usage'),
-              icon: PhIcons.arrowClockwise,
-              tooltip: 'Refresh usage',
-              semanticLabel: 'Refresh usage',
-              color: AppColors.fg3,
-              onTap: onRefreshUsage,
-            ),
-            if (warning != null) ...[
-              const SizedBox(width: 12),
-              _NearLimit(item: warning),
-            ],
-            const Spacer(),
-            if (daemonDown) ..._daemonDownItems() else ..._rightItems(),
-          ],
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _StatusStaticItem(
+          child: Text('Used', style: sans(11, color: AppColors.fg3)),
         ),
-      ),
+        const SizedBox(width: 12),
+        for (var i = 0; i < usage.length; i++) ...[
+          if (i > 0) const SizedBox(width: 12),
+          _UsageMeter(item: usage[i], onTap: onOpenUsage),
+        ],
+        if (usage.isNotEmpty) const SizedBox(width: 12),
+        _StatusIconTarget(
+          key: const ValueKey('shell-status-refresh-usage'),
+          icon: PhIcons.arrowClockwise,
+          tooltip: 'Refresh usage',
+          semanticLabel: 'Refresh usage',
+          color: AppColors.fg3,
+          onTap: onRefreshUsage,
+        ),
+        if (warning != null) ...[
+          const SizedBox(width: 12),
+          _NearLimit(item: warning),
+        ],
+        const Spacer(),
+        if (daemonDown) ..._daemonDownItems() else ..._rightItems(),
+      ],
     );
   }
 
@@ -137,112 +129,6 @@ class ShellStatusBar extends StatelessWidget {
       onTap: rightPanelEnabled ? onToggleRightPanel : null,
     ));
     return items;
-  }
-}
-
-class _StatusBarHitRegion extends SingleChildRenderObjectWidget {
-  const _StatusBarHitRegion({
-    required this.fill,
-    required this.line,
-    required super.child,
-  });
-
-  final Color fill;
-  final Color line;
-
-  @override
-  RenderObject createRenderObject(BuildContext context) =>
-      _RenderStatusBarHitRegion(fill: fill, line: line);
-
-  @override
-  void updateRenderObject(
-    BuildContext context,
-    _RenderStatusBarHitRegion renderObject,
-  ) {
-    renderObject
-      ..fill = fill
-      ..line = line;
-  }
-}
-
-class _RenderStatusBarHitRegion extends RenderAligningShiftedBox {
-  _RenderStatusBarHitRegion({required Color fill, required Color line})
-      : _fill = fill,
-        _line = line,
-        super(
-          alignment: Alignment.bottomCenter,
-          textDirection: TextDirection.ltr,
-        );
-
-  static const double _barHeight = 22;
-  static const double _targetHeight = 24;
-
-  Color get fill => _fill;
-  Color _fill;
-  set fill(Color value) {
-    if (value == _fill) return;
-    _fill = value;
-    markNeedsPaint();
-  }
-
-  Color get line => _line;
-  Color _line;
-  set line(Color value) {
-    if (value == _line) return;
-    _line = value;
-    markNeedsPaint();
-  }
-
-  @override
-  bool get sizedByParent => true;
-
-  @override
-  Size computeDryLayout(BoxConstraints constraints) => constraints.constrain(
-        Size(constraints.maxWidth, _barHeight),
-      );
-
-  @override
-  void performLayout() {
-    child?.layout(
-      BoxConstraints(
-        minWidth: size.width,
-        maxWidth: size.width,
-        minHeight: _targetHeight,
-        maxHeight: _targetHeight,
-      ),
-      parentUsesSize: true,
-    );
-    alignChild();
-  }
-
-  @override
-  void paint(PaintingContext context, Offset offset) {
-    final bar = offset & size;
-    context.canvas.drawRect(bar, Paint()..color = fill);
-    super.paint(context, offset);
-    context.canvas.drawRect(
-      Rect.fromLTWH(offset.dx, offset.dy, size.width, 1),
-      Paint()..color = line,
-    );
-  }
-
-  @override
-  bool hitTest(BoxHitTestResult result, {required Offset position}) {
-    if (hitTestChildren(result, position: position)) return true;
-    return size.contains(position);
-  }
-
-  @override
-  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
-    final child = this.child;
-    if (child == null) return false;
-    final childParentData = child.parentData! as BoxParentData;
-    return result.addWithPaintOffset(
-      offset: childParentData.offset,
-      position: position,
-      hitTest: (result, transformed) =>
-          child.hitTest(result, position: transformed),
-    );
   }
 }
 
