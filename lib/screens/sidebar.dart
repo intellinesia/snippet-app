@@ -3,10 +3,13 @@ import 'phone_agent_page.dart';
 import 'agent_profile_panel.dart' show showAgentProfileSettings;
 import 'dart:async';
 
-import '../desktop_look.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart'
+    show kMiddleMouseButton, PointerDeviceKind;
+import 'package:flutter/services.dart';
 
 import '../api.dart';
+import '../crew_status.dart';
 import '../drafts.dart';
 import '../models.dart';
 import '../pins.dart';
@@ -29,11 +32,11 @@ import '../motion.dart';
 import '../page_stack.dart';
 import '../mochi.dart';
 import '../chat_scene.dart' show ChatScene;
-import 'agent_view_mode.dart' show activeShellPlace;
+import 'agent_view_mode.dart' show activeShellPlace, openAgentTab, openGroupTab;
 import 'all_agents_view.dart';
 import '../panel.dart' show presentScreen;
 import '../shell_panel.dart' show ShellPanelPurpose;
-import '../quiet.dart' show QuietOfflineBanner, QuietPlace, QuietHand;
+import '../quiet.dart' show QuietOfflineBanner, QuietPlace;
 import 'mobile_home/quiet_home.dart';
 import 'mobile_home/quiet_lists.dart';
 import 'tasks/tasks_panel.dart' show TasksPanel;
@@ -46,6 +49,94 @@ import 'mobile_home/everyone_switcher.dart' show showEveryoneSwitcher;
 import 'pull_requests.dart' show openPullRequest;
 export 'sidebar_mobile.dart';
 export 'sidebar_tiles.dart' show SidebarBrand;
+
+enum _AgentListStateFilter { all, needsYou, working, idle }
+
+extension on _AgentListStateFilter {
+  String get label => switch (this) {
+        _AgentListStateFilter.all => 'All',
+        _AgentListStateFilter.needsYou => 'Needs you',
+        _AgentListStateFilter.working => 'Working',
+        _AgentListStateFilter.idle => 'Idle',
+      };
+}
+
+class _FilteredAgentsSidebarPanel extends AgentsSidebarPanel {
+  const _FilteredAgentsSidebarPanel({
+    super.key,
+    required super.client,
+    required this.stateFilter,
+    super.onOpenAgent,
+    super.onOpenLead,
+    super.lead,
+    super.searchQuery,
+    super.onSearchChanged,
+    super.bottomPadding,
+    super.groupsKey,
+    super.heroBuilder,
+    super.sessions,
+    super.onOpenSession,
+    super.embedded,
+  });
+
+  final _AgentListStateFilter stateFilter;
+
+  @override
+  AgentsSidebarPanelState createState() => _FilteredAgentsSidebarPanelState();
+}
+
+class _FilteredAgentsSidebarPanelState extends AgentsSidebarPanelState {
+  @override
+  Widget build(BuildContext context) {
+    final filter = (widget as _FilteredAgentsSidebarPanel).stateFilter;
+    if (filter == _AgentListStateFilter.all) return super.build(context);
+    return ListenableBuilder(
+      listenable: widget.client.presence,
+      builder: (context, _) {
+        final unfiltered = agents;
+        final sessions = [
+          for (final s in widget.sessions ?? const <SessionInfo>[])
+            if (!s.settled) s,
+        ];
+        final crew = {
+          for (final e in deriveCrew(unfiltered, sessions,
+              presence: widget.client.presence))
+            e.agent.id: e,
+        };
+        bool needsYou(CoordinationAgent a) =>
+            crew[a.id]?.state == CrewState.needsYou || a.needsYou > 0;
+        bool working(CoordinationAgent a) {
+          final presence = widget.client.presence.presenceForAgentId(a.id);
+          return crew[a.id]?.state == CrewState.working ||
+              (presence?.active ?? false) ||
+              (a.presence?.live ?? false) ||
+              a.tasksIn({'in_progress'}) > 0;
+        }
+
+        bool matches(CoordinationAgent a) => switch (filter) {
+              _AgentListStateFilter.all => true,
+              _AgentListStateFilter.needsYou => needsYou(a),
+              _AgentListStateFilter.working => working(a),
+              _AgentListStateFilter.idle => !needsYou(a) && !working(a),
+            };
+        agents = [
+          for (final a in unfiltered)
+            if (matches(a)) a
+        ];
+        try {
+          return super.build(context);
+        } finally {
+          agents = unfiltered;
+        }
+      },
+    );
+  }
+}
+
+class _SidebarExpandIntent extends Intent {
+  const _SidebarExpandIntent(this.expand);
+  final bool expand;
+}
 
 class Sidebar extends StatefulWidget {
   final List<Instance> instances;
@@ -190,6 +281,12 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   /// Desktop search in section headers.
   final TextEditingController _desktopChatsSearchCtl = TextEditingController();
   final FocusNode _desktopChatsSearchFocus = FocusNode();
+  final TextEditingController _desktopAgentsSearchCtl = TextEditingController();
+  final FocusNode _desktopAgentsSearchFocus = FocusNode();
+  bool _agentSearchOpen = false;
+  _AgentListStateFilter _agentStateFilter = _AgentListStateFilter.all;
+  bool _agentsCollapsed = false;
+  int? _collapsedAgentsCount;
 
   MobileHome _lastMainHome = MobileHome.chats;
   // Settings rides over the main homes as a page, so it is never current here.
@@ -385,6 +482,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     _renameFocus.dispose();
     _desktopChatsSearchCtl.dispose();
     _desktopChatsSearchFocus.dispose();
+    _desktopAgentsSearchCtl.dispose();
+    _desktopAgentsSearchFocus.dispose();
     super.dispose();
   }
 
@@ -571,7 +670,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
               key: ValueKey('agent-page-${agent.id}'),
               child: Padding(
                 padding: EdgeInsets.only(bottom: _scrollBottomPad),
-child: PhoneAgentPage(
+                child: PhoneAgentPage(
                   agent: agent,
                   client: client,
                   sessions: _sessions ?? const <SessionInfo>[],
@@ -624,9 +723,7 @@ child: PhoneAgentPage(
           onArtifacts:
               widget.client == null ? null : () => openArtifactsList(context),
           onProfile: (a) => showAgentProfileSettings(context,
-              client: client,
-              agent: a,
-              name: a.displayName),
+              client: client, agent: a, name: a.displayName),
           onDecide: _decideHero,
           offline: widget.sessionsError == null
               ? null
@@ -692,8 +789,7 @@ child: PhoneAgentPage(
         if (client == null) {
           return _mobileUnavailable('Add a machine to see its tasks.');
         }
-        return TasksPanel(
-            key: const ValueKey('phone-tasks'), client: client);
+        return TasksPanel(key: const ValueKey('phone-tasks'), client: client);
 
       case MobileHome.agents:
         final client = widget.client;
@@ -716,16 +812,16 @@ child: PhoneAgentPage(
           if (agent != null)
             Padding(
               padding: EdgeInsets.only(bottom: _scrollBottomPad),
-child: PhoneAgentPage(
-                  agent: agent,
-                  client: client,
-                  sessions: _sessions ?? const <SessionInfo>[],
-                  onClose: () => widget.onAgent(null),
-                  onOpenSession: (s) =>
-                      widget.onOpenSession(s.id, s.title, s.profile),
-                  onAllSessions: () => widget.onMobileHome(MobileHome.chats),
-                  onDecide: _decideHero,
-                ),
+              child: PhoneAgentPage(
+                agent: agent,
+                client: client,
+                sessions: _sessions ?? const <SessionInfo>[],
+                onClose: () => widget.onAgent(null),
+                onOpenSession: (s) =>
+                    widget.onOpenSession(s.id, s.title, s.profile),
+                onAllSessions: () => widget.onMobileHome(MobileHome.chats),
+                onDecide: _decideHero,
+              ),
             ),
         ]);
 
@@ -802,10 +898,11 @@ child: PhoneAgentPage(
           VoidCallback? onOpenLead,
           bool mirror = false,
           bool embedded = false}) =>
-      AgentsSidebarPanel(
+      _FilteredAgentsSidebarPanel(
         embedded: embedded,
         key: mirror ? _agentsMirrorKey : _agentsPanelKey,
         client: client,
+        stateFilter: _agentStateFilter,
         lead: lead,
         onOpenLead: onOpenLead,
         searchQuery: _agentFilterQuery,
@@ -1433,19 +1530,19 @@ child: PhoneAgentPage(
       return _searchBox(
         onTap: palette,
         child: Row(children: [
-          AppIcon('search', size: 12, color: AppColors.fg4),
+          AppIcon('search', size: 13, color: AppColors.fg2),
           const SizedBox(width: 8),
           Expanded(
-            child: Text('Search', style: sans(13, color: AppColors.fg3)),
+            child: Text('Search', style: sans(12, color: AppColors.fg2)),
           ),
-          Text(kMacOS ? '⌘K' : 'Ctrl K', style: sans(11, color: AppColors.fg3)),
+          Text('Cmd K', style: sans(11, color: AppColors.fg3)),
         ]),
       );
     }
     final ctl = _desktopChatsSearchCtl;
     return _searchBox(
       child: Row(children: [
-        AppIcon('search', size: 12, color: AppColors.fg4),
+        AppIcon('search', size: 13, color: AppColors.fg2),
         const SizedBox(width: 8),
         Expanded(
           child: TextField(
@@ -1455,17 +1552,19 @@ child: PhoneAgentPage(
               _filterQuery = v;
               _agentFilterQuery = v;
             }),
-            style: sans(13, color: AppColors.fg1),
+            style: sans(12, color: AppColors.fg1),
             decoration: InputDecoration(
               isCollapsed: true,
               border: InputBorder.none,
               hintText: 'Search',
-              hintStyle: sans(13, color: AppColors.fg3),
+              hintStyle: sans(12, color: AppColors.fg2),
             ),
           ),
         ),
-        if (ctl.text.isNotEmpty)
-          IconBtn('x', size: 20, iconSize: 10, tooltip: 'Clear', onTap: () {
+        if (ctl.text.isEmpty)
+          Text('Cmd K', style: sans(11, color: AppColors.fg3))
+        else
+          IconBtn('x', size: 24, iconSize: 10, tooltip: 'Clear', onTap: () {
             ctl.clear();
             setState(() {
               _filterQuery = '';
@@ -1476,33 +1575,8 @@ child: PhoneAgentPage(
     );
   }
 
-  Widget _searchBox({VoidCallback? onTap, required Widget child}) {
-    final box = Tactile(
-      radius: BorderRadius.circular(R.of(6)),
-      kind: TactileKind.inset,
-      child: Container(
-        height: 30,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: AppColors.fg1.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(R.of(6)),
-        ),
-        child: child,
-      ),
-    );
-    if (onTap == null) return box;
-    return Tooltip(
-      message: kMacOS ? 'Search or jump (⌘K)' : 'Search or jump (Ctrl+K)',
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: box,
-        ),
-      ),
-    );
-  }
+  Widget _searchBox({VoidCallback? onTap, required Widget child}) =>
+      _SidebarSearchBox(onTap: onTap, child: child);
 
   /// Desktop sidebar: one scroll holding the agents (Lead first,
   /// then groups) and the recency-ordered sessions. Workspace is metadata on
@@ -1548,55 +1622,247 @@ child: PhoneAgentPage(
   }
 
   /// Home sits above the agents.
-  Widget _desktopTop(List<SessionInfo> all) {
-    final needs = all.where(sessionNeedsYou).length;
-    return Padding(
-      padding: EdgeInsets.only(top: S.s4, bottom: S.s4),
-      child: ValueListenableBuilder<String>(
-        valueListenable: activeShellPlace,
-        builder: (_, place, __) => _PlaceRow(
-          label: 'Home',
-          icon: 'home',
-          selected: place == 'home' && _place != QuietPlace.sessions,
-          badge: needs > 0 ? needs : null,
-          onTap: () => _selectPlace(QuietPlace.home),
+  Widget _desktopNav() => Padding(
+        padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+        child: ValueListenableBuilder<String>(
+          valueListenable: activeShellPlace,
+          builder: (_, place, __) => Column(children: [
+            _PlaceRow(
+              label: 'Home',
+              icon: 'home',
+              selected: place == 'home' && _place != QuietPlace.sessions,
+              onTap: () => _selectPlace(QuietPlace.home),
+            ),
+            _PlaceRow(
+              label: 'Tasks',
+              icon: 'list-checks',
+              selected: _place == QuietPlace.tasks,
+              onTap: () => _selectPlace(QuietPlace.tasks),
+            ),
+            _PlaceRow(
+              label: 'Artifacts',
+              icon: 'file-stack',
+              selected: false,
+              onTap: () => openArtifactsList(context),
+            ),
+            _PlaceRow(
+              label: 'Automations',
+              icon: 'repeat',
+              selected: false,
+              onTap: widget.onOpenWakes,
+            ),
+          ]),
         ),
+      );
+
+  void _toggleAgentSearch() {
+    setState(() {
+      _agentSearchOpen = !_agentSearchOpen;
+      if (_agentSearchOpen) {
+        final text = _agentFilterQuery;
+        _desktopAgentsSearchCtl.value = TextEditingValue(
+          text: text,
+          selection: TextSelection.collapsed(offset: text.length),
+        );
+      } else {
+        _desktopAgentsSearchCtl.clear();
+        _agentFilterQuery = '';
+      }
+    });
+    if (_agentSearchOpen) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _desktopAgentsSearchFocus.requestFocus();
+      });
+    }
+  }
+
+  Future<void> _openAgentStateFilter(BuildContext anchor) async {
+    final picked = await showAppMenu<_AgentListStateFilter>(
+      context,
+      anchor: anchor,
+      below: true,
+      alignEnd: true,
+      minWidth: 160,
+      maxWidth: 200,
+      items: [
+        for (final filter in _AgentListStateFilter.values)
+          appMenuItem(
+            value: filter,
+            label: filter.label,
+            selected: filter == _agentStateFilter,
+          ),
+      ],
+    );
+    if (picked != null && mounted) {
+      setState(() => _agentStateFilter = picked);
+    }
+  }
+
+  Widget _agentInlineSearch() => Padding(
+        padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+        child: Container(
+          height: 28,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            color: AppColors.surface2,
+            borderRadius: BorderRadius.circular(R.of(8)),
+          ),
+          child: Row(children: [
+            AppIcon('search', size: 12, color: AppColors.fg3),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                controller: _desktopAgentsSearchCtl,
+                focusNode: _desktopAgentsSearchFocus,
+                onChanged: (v) => setState(() => _agentFilterQuery = v),
+                style: sans(12, color: AppColors.fg1),
+                decoration: InputDecoration(
+                  isCollapsed: true,
+                  border: InputBorder.none,
+                  hintText: 'Search agents',
+                  hintStyle: sans(12, color: AppColors.fg3),
+                ),
+              ),
+            ),
+            if (_desktopAgentsSearchCtl.text.isNotEmpty)
+              IconBtn('x', size: 24, iconSize: 10, tooltip: 'Clear', onTap: () {
+                _desktopAgentsSearchCtl.clear();
+                setState(() => _agentFilterQuery = '');
+              }),
+          ]),
+        ),
+      );
+
+  void _toggleAgentsCollapsed() {
+    if (!_agentsCollapsed) {
+      _collapsedAgentsCount = _agentsPanelKey.currentState?.agents.length ??
+          widget.client
+              ?.cachedCoordinationAgents()
+              ?.where((a) => !a.isLead)
+              .length;
+    }
+    setState(() => _agentsCollapsed = !_agentsCollapsed);
+  }
+
+  Widget _agentsHeader() {
+    final panelCount = _agentsPanelKey.currentState?.agents.length;
+    final cachedCount = widget.client
+        ?.cachedCoordinationAgents()
+        ?.where((a) => !a.isLead)
+        .length;
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: SidebarSectionHeader(
+        'Agents',
+        collapsed: _agentsCollapsed,
+        count: _agentsCollapsed
+            ? (_collapsedAgentsCount ?? cachedCount)
+            : panelCount ?? cachedCount,
+        onToggle: _toggleAgentsCollapsed,
+        actions: [
+          SidebarSectionAction(
+            icon: 'search',
+            tooltip: 'Search agents',
+            onTap: (_) => _toggleAgentSearch(),
+          ),
+          SidebarSectionAction(
+            icon: 'sliders-horizontal',
+            tooltip: 'Filter agents',
+            onTap: (ctx) {
+              _openAgentStateFilter(ctx);
+            },
+          ),
+          SidebarSectionAction(
+            icon: 'plus',
+            tooltip: 'New agent or group',
+            onTap: (ctx) =>
+                _agentsPanelKey.currentState?.openCreateMenu(ctx, above: false),
+          ),
+        ],
       ),
     );
   }
 
-  /// Rosters and queues below the agents: all agents, all sessions, Tasks.
-  Widget _desktopBottom() => Padding(
-        padding: EdgeInsets.only(top: S.s8, bottom: S.s4),
-        child: Column(children: [
-          ValueListenableBuilder<String>(
-            valueListenable: activeShellPlace,
-            builder: (_, place, __) => _PlaceRow(
-              label: 'All agents and groups',
-              icon: 'users',
-              selected: place == 'agents' && _place != QuietPlace.sessions,
-              onTap: () => _selectPlace(QuietPlace.agents),
+  Widget _pinnedArtifactsHeader() => Padding(
+        padding: const EdgeInsets.only(top: 2, bottom: 2),
+        child: SidebarSectionHeader(
+          'Pinned artifacts',
+          collapsed: true,
+          count: 0,
+          actions: const [
+            SidebarSectionAction(
+              icon: 'plus',
+              tooltip: 'No artifact picker available',
+              enabled: false,
             ),
-          ),
-          _PlaceRow(
-            label: 'All sessions',
-            icon: 'layers',
-            selected: _place == QuietPlace.sessions,
-            onTap: () => _selectPlace(QuietPlace.sessions),
-          ),
-          _PlaceRow(
-            label: 'Tasks',
-            icon: 'list-checks',
-            selected: _place == QuietPlace.tasks,
-            onTap: () => _selectPlace(QuietPlace.tasks),
-          ),
-          _PlaceRow(
-            label: 'Artifacts',
-            icon: 'file-stack',
-            selected: false,
-            onTap: () => openArtifactsList(context),
-          ),
-        ]),
+          ],
+        ),
+      );
+
+  String? _focusedRowId(String prefix) {
+    final ctx = FocusManager.instance.primaryFocus?.context;
+    if (ctx == null) return null;
+    String? hit;
+    void inspect(BuildContext c) {
+      final key = c.widget.key;
+      if (key is ValueKey<String> && key.value.startsWith(prefix)) {
+        hit = key.value.substring(prefix.length);
+      }
+    }
+
+    inspect(ctx);
+    ctx.visitAncestorElements((element) {
+      inspect(element);
+      return hit == null;
+    });
+    return hit;
+  }
+
+  void _setFocusedExpansion(bool expand) {
+    final agent = _focusedRowId('agent-card-');
+    if (agent != null) {
+      if (expand) {
+        openAgentTab.value = agent;
+      } else if (openAgentTab.value == agent) {
+        openAgentTab.value = null;
+      }
+      return;
+    }
+    final group = _focusedRowId('group-row-');
+    if (group != null) {
+      if (expand) {
+        openGroupTab.value = group;
+      } else if (openGroupTab.value == group) {
+        openGroupTab.value = null;
+      }
+    }
+  }
+
+  Widget _withSidebarKeyboard(Widget child) => Actions(
+        actions: {
+          _SidebarExpandIntent:
+              CallbackAction<_SidebarExpandIntent>(onInvoke: (intent) {
+            _setFocusedExpansion(intent.expand);
+            return null;
+          }),
+        },
+        child: Shortcuts(
+          shortcuts: const {
+            SingleActivator(LogicalKeyboardKey.arrowUp):
+                DirectionalFocusIntent(TraversalDirection.up),
+            SingleActivator(LogicalKeyboardKey.arrowDown):
+                DirectionalFocusIntent(TraversalDirection.down),
+            SingleActivator(LogicalKeyboardKey.arrowRight):
+                _SidebarExpandIntent(true),
+            SingleActivator(LogicalKeyboardKey.arrowLeft):
+                _SidebarExpandIntent(false),
+            SingleActivator(LogicalKeyboardKey.enter, meta: true):
+                ActivateIntent(),
+            SingleActivator(LogicalKeyboardKey.enter, control: true):
+                ActivateIntent(),
+          },
+          child: FocusTraversalGroup(child: child),
+        ),
       );
 
   Widget _sectionedSidebar() {
@@ -1611,17 +1877,33 @@ child: PhoneAgentPage(
     _chatsShownAt ??= DateTime.now();
     final rows = _groupedRows(list, attentionFirst: true);
     final searching = _filterQuery.trim().isNotEmpty;
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      // Desktop search lives in the brand row.
-      if (hasClient && kMobile)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(10, 4, 10, 2),
-          child: _sidebarSearch(),
-        ),
-      Expanded(
-        child: SidebarHoverScope(
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    final showSessions = !hasClient || _place == QuietPlace.sessions;
+    final body = showSessions
+        ? PullToRefresh(
+            onRefresh: () async => widget.onRefreshSessions(),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+              children: [
+                // Desktop selects from a row's right-click menu instead.
+                SidebarSectionHeader(
+                  'Sessions',
+                  moreTooltip: 'Session options',
+                  moreBuilder: hasClient && kMobile ? _sessionsMenu : null,
+                ),
+                if (!hasClient)
+                  const SidebarEmpty('Add a machine to begin.')
+                else if (list.isEmpty)
+                  _emptySessions(searching: searching)
+                else
+                  ...rows,
+              ],
+            ),
+          )
+        : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            // New agents and sessions come from the top + menu.
+            _agentsHeader(),
+            if (_agentSearchOpen) _agentInlineSearch(),
             Expanded(
               child: PullToRefresh(
                 onRefresh: () async => widget.onRefreshSessions(),
@@ -1629,41 +1911,33 @@ child: PhoneAgentPage(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
                   children: [
-                    if (hasClient) _desktopTop(all),
-                    if (hasClient && _place != QuietPlace.sessions) ...[
-                      // New agents and sessions come from the top + menu.
-                      SidebarSectionHeader('Agents',
-                          addTooltip: 'New agent or group',
-                          addBuilder: (ctx) => _agentsPanelKey.currentState
-                              ?.openCreateMenu(ctx, above: false)),
+                    if (!_agentsCollapsed)
                       _agentList(widget.client!,
                           lead: mc,
                           onOpenLead: widget.onOpenLead,
                           embedded: true),
-                    ],
-                    if (!hasClient || _place == QuietPlace.sessions) ...[
-                      // Desktop selects from a row's right-click menu instead.
-                      SidebarSectionHeader(
-                        'Sessions',
-                        moreTooltip: 'Session options',
-                        moreBuilder:
-                            hasClient && kMobile ? _sessionsMenu : null,
-                      ),
-                      if (!hasClient)
-                        const SidebarEmpty('Add a machine to begin.')
-                      else if (list.isEmpty)
-                        _emptySessions(searching: searching)
-                      else
-                        ...rows,
-                    ],
-                    if (hasClient) _desktopBottom(),
                   ],
                 ),
               ),
             ),
-          ]),
+          ]);
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      if (hasClient)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
+          child: _sidebarSearch(),
+        ),
+      Expanded(
+        child: SidebarHoverScope(
+          child: _withSidebarKeyboard(
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              if (hasClient) _desktopNav(),
+              Expanded(child: body),
+            ]),
+          ),
         ),
       ),
+      if (hasClient) _pinnedArtifactsHeader(),
       if (widget.desktopFooter != null) widget.desktopFooter!,
     ]);
   }
@@ -2035,46 +2309,193 @@ child: PhoneAgentPage(
   }
 }
 
-class _PlaceRow extends StatelessWidget {
-  const _PlaceRow(
-      {required this.label,
-      required this.icon,
-      required this.selected,
-      required this.onTap,
-      this.badge});
+class _SidebarSearchBox extends StatefulWidget {
+  const _SidebarSearchBox({required this.child, this.onTap});
+
+  final Widget child;
+  final VoidCallback? onTap;
+
+  @override
+  State<_SidebarSearchBox> createState() => _SidebarSearchBoxState();
+}
+
+class _SidebarSearchBoxState extends State<_SidebarSearchBox> {
+  bool _hover = false;
+  bool _focus = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(R.of(8));
+    final tappable = widget.onTap != null;
+    final fill = _focus
+        ? AppColors.surface3
+        : _hover && tappable
+            ? AppColors.hoverPlate
+            : AppColors.surface2;
+    final box = ClipRRect(
+      borderRadius: radius,
+      child: Stack(children: [
+        AnimatedContainer(
+          duration: reduceMotion(context) ? Duration.zero : Motion.quick,
+          curve: Curves.easeOut,
+          height: 28,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(color: fill, borderRadius: radius),
+          child: widget.child,
+        ),
+        if (_focus)
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 2,
+            child: ColoredBox(color: AppColors.fg1),
+          ),
+      ]),
+    );
+    final focused = Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (v) => setState(() => _focus = v &&
+          FocusManager.instance.highlightMode ==
+              FocusHighlightMode.traditional),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        cursor: tappable ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        child: tappable
+            ? Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  borderRadius: radius,
+                  hoverColor: Colors.transparent,
+                  focusColor: Colors.transparent,
+                  splashFactory: NoSplash.splashFactory,
+                  onTap: widget.onTap,
+                  child: box,
+                ),
+              )
+            : box,
+      ),
+    );
+    if (!tappable) return focused;
+    return Tooltip(
+      message: kMacOS ? 'Search or jump (⌘K)' : 'Search or jump (Ctrl+K)',
+      child: focused,
+    );
+  }
+}
+
+class _PlaceRow extends StatefulWidget {
+  const _PlaceRow({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
   final String label;
   final String icon;
   final bool selected;
-  final VoidCallback onTap;
-  final int? badge;
+  final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => HoverSurface(
-        onTap: onTap,
-        radius: R.of(8),
-        selected: selected,
-        selectedColor: AppColors.surface2,
-        child: SizedBox(
-          height: 30,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Row(children: [
-              AppIcon(icon,
-                  size: 15, color: selected ? AppColors.fg1 : AppColors.fg3),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(label,
-                    style: sans(13,
-                        weight: selected ? W.label : W.body,
-                        color: selected ? AppColors.fg1 : AppColors.fg2)),
+  State<_PlaceRow> createState() => _PlaceRowState();
+}
+
+class _PlaceRowState extends State<_PlaceRow> {
+  bool _hover = false;
+  bool _focus = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = widget.onTap != null;
+    final fill = _focus
+        ? AppColors.surface3
+        : widget.selected
+            ? AppColors.surface2
+            : _hover && enabled
+                ? AppColors.hoverPlate
+                : Colors.transparent;
+    final fg = !enabled
+        ? AppColors.fg4
+        : widget.selected
+            ? AppColors.fg1
+            : AppColors.fg2;
+    final radius = BorderRadius.circular(R.of(8));
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (v) => setState(() => _focus = v &&
+          FocusManager.instance.highlightMode ==
+              FocusHighlightMode.traditional),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        child: Listener(
+          onPointerDown: !enabled
+              ? null
+              : (e) {
+                  if (e.kind == PointerDeviceKind.mouse &&
+                      e.buttons & kMiddleMouseButton != 0) {
+                    middleClickOpen = true;
+                    widget.onTap!();
+                    middleClickOpen = false;
+                  }
+                },
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              borderRadius: radius,
+              hoverColor: Colors.transparent,
+              focusColor: Colors.transparent,
+              splashFactory: NoSplash.splashFactory,
+              onTap: enabled
+                  ? () {
+                      tapHaptic();
+                      widget.onTap!();
+                    }
+                  : null,
+              child: ClipRRect(
+                borderRadius: radius,
+                child: Stack(children: [
+                  AnimatedContainer(
+                    duration:
+                        reduceMotion(context) ? Duration.zero : Motion.quick,
+                    curve: Curves.easeOut,
+                    height: 28,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration:
+                        BoxDecoration(color: fill, borderRadius: radius),
+                    child: Row(children: [
+                      AppIcon(widget.icon, size: 14, color: fg),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          widget.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(13,
+                              weight: widget.selected ? W.label : W.body,
+                              color: fg),
+                        ),
+                      ),
+                    ]),
+                  ),
+                  if (_focus)
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: 2,
+                      child: ColoredBox(color: AppColors.fg1),
+                    ),
+                ]),
               ),
-              if (badge != null) ...[
-                const QuietHand(size: 12),
-                const SizedBox(width: 3),
-                Text('$badge', style: sans(11, color: AppColors.fg3)),
-              ],
-            ]),
+            ),
           ),
         ),
-      );
+      ),
+    );
+  }
 }
