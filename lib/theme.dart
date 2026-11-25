@@ -216,6 +216,8 @@ ThemePreset _palette({
   Color ok = const Color(0xFF34D399),
   Color run = const Color(0xFFF59E0B),
   Color danger = const Color(0xFFFF5C5C),
+  Color? accentBg,
+  Color? runBg,
   Color? diffAddFg,
   Color? diffDelFg,
   Color? diffAddBg,
@@ -240,7 +242,7 @@ ThemePreset _palette({
     accent: accent,
     accentHover: hover,
     accentFg: accentFg,
-    accentBg: accent.withValues(alpha: 0.14),
+    accentBg: accentBg ?? accent.withValues(alpha: 0.14),
     accentLine: accent.withValues(alpha: 0.38),
     accentRing: accent.withValues(alpha: 0.45),
     accentFill: accent,
@@ -248,7 +250,7 @@ ThemePreset _palette({
     ok: ok,
     okBg: ok.withValues(alpha: 0.13),
     run: run,
-    runBg: run.withValues(alpha: 0.13),
+    runBg: runBg ?? run.withValues(alpha: 0.13),
     danger: danger,
     dangerBg: danger.withValues(alpha: 0.13),
     diffAddBg: diffAddBg ?? ok.withValues(alpha: 0.10),
@@ -358,14 +360,185 @@ final _hcLight = _palette(
   diffDelBg: const Color(0xFFFBE3E0),
 );
 
-/// Four palettes only: Quiet dark and light, and their high-contrast pair.
-/// System is a mode that picks dark or light, not a palette.
+// Ink: near-black monochrome with a rationed indigo accent (Linear).
+final _ink = _palette(
+  name: 'ink',
+  label: 'Ink',
+  bg: const Color(0xFF08090A),
+  surface1: const Color(0xFF101112),
+  surface2: const Color(0xFF1A1C1F),
+  surface3: const Color(0xFF23262B),
+  border: const Color(0xFF2B2F36),
+  border2: const Color(0xFF3B404A),
+  accent: const Color(0xFF808BE8),
+  accentFg: const Color(0xFF08090E),
+  fg1: const Color(0xFFE6EAF0),
+  fg2: const Color(0xFFB6BECB),
+  fg3: const Color(0xFF929AA8),
+  fg4: const Color(0xFF58606E),
+  ok: const Color(0xFF7FC89B),
+  run: const Color(0xFFE9B44C),
+  danger: const Color(0xFFF08E8A),
+  accentBg: const Color(0xFF222534),
+  runBg: const Color(0xFF2E281A),
+);
+
+// Mist: neutral light scale, white cards, Vercel blue.
+final _mist = _palette(
+  name: 'mist',
+  label: 'Mist',
+  bg: const Color(0xFFFAFAFA),
+  surface1: const Color(0xFFFFFFFF),
+  surface2: const Color(0xFFF0F0F2),
+  surface3: const Color(0xFFE6E6E9),
+  border: const Color(0xFFDCDCE0),
+  border2: const Color(0xFFC9C9CF),
+  accent: const Color(0xFF0062D1),
+  accentFg: const Color(0xFFFFFFFF),
+  fg1: const Color(0xFF171717),
+  fg2: const Color(0xFF4A4A4F),
+  fg3: const Color(0xFF595960),
+  fg4: const Color(0xFF9C9CA3),
+  ok: const Color(0xFF1E6E42),
+  run: const Color(0xFF7A4F00),
+  danger: const Color(0xFFB52B27),
+  accentBg: const Color(0xFFE8F1FB),
+  runBg: const Color(0xFFF0ECE3),
+  diffAddFg: const Color(0xFF1E6E42),
+  diffDelFg: const Color(0xFFB52B27),
+);
+
+// Slate Navy: navy-tinted dark surfaces with a crisp cyan accent (Stripe).
+final _navy = _palette(
+  name: 'navy',
+  label: 'Slate Navy',
+  bg: const Color(0xFF0D1526),
+  surface1: const Color(0xFF131E33),
+  surface2: const Color(0xFF1A2842),
+  surface3: const Color(0xFF233352),
+  border: const Color(0xFF2D3F61),
+  border2: const Color(0xFF384F79),
+  accent: const Color(0xFF5AC4E8),
+  accentFg: const Color(0xFF081424),
+  fg1: const Color(0xFFEDF2FA),
+  fg2: const Color(0xFFB8C6DE),
+  fg3: const Color(0xFF9AAACA),
+  fg4: const Color(0xFF5E7194),
+  ok: const Color(0xFF80CCA2),
+  run: const Color(0xFFE9B44C),
+  danger: const Color(0xFFF29492),
+  accentBg: const Color(0xFF1E374E),
+  runBg: const Color(0xFF313336),
+);
+
+// Paper: warm writing-paper ground with deep cyan ink (iA Writer).
+final _paper = _palette(
+  name: 'paper',
+  label: 'Paper',
+  bg: const Color(0xFFF5F4EF),
+  surface1: const Color(0xFFFCFBF8),
+  surface2: const Color(0xFFECEAE2),
+  surface3: const Color(0xFFE2DFD5),
+  border: const Color(0xFFD5D1C5),
+  border2: const Color(0xFFC6C1B0),
+  accent: const Color(0xFF126778),
+  accentFg: const Color(0xFFFCFBF8),
+  fg1: const Color(0xFF1F1E1B),
+  fg2: const Color(0xFF47453F),
+  fg3: const Color(0xFF57544D),
+  fg4: const Color(0xFF9E9A8F),
+  ok: const Color(0xFF2A6842),
+  run: const Color(0xFF7A4F00),
+  danger: const Color(0xFFA33329),
+  accentBg: const Color(0xFFE7EEEC),
+  runBg: const Color(0xFFEEE8DD),
+  diffAddFg: const Color(0xFF2A6842),
+  diffDelFg: const Color(0xFFA33329),
+);
+
+// Graphite: warm-neutral dark, deliberately low chroma (Notion).
+final _graphite = _palette(
+  name: 'graphite',
+  label: 'Graphite',
+  bg: const Color(0xFF191919),
+  surface1: const Color(0xFF212120),
+  surface2: const Color(0xFF2A2A28),
+  surface3: const Color(0xFF333330),
+  border: const Color(0xFF3C3C38),
+  border2: const Color(0xFF4E4E49),
+  accent: const Color(0xFF7FA8D9),
+  accentFg: const Color(0xFF11151B),
+  fg1: const Color(0xFFEFEFEA),
+  fg2: const Color(0xFFC0C0B9),
+  fg3: const Color(0xFFA6A69F),
+  fg4: const Color(0xFF6B6B65),
+  ok: const Color(0xFF88C89E),
+  run: const Color(0xFFE9B44C),
+  danger: const Color(0xFFF0968E),
+  accentBg: const Color(0xFF2F353C),
+  runBg: const Color(0xFF3D3626),
+);
+
+// OLED: pure black ground, achromatic near-white accent (Raycast).
+final _oled = _palette(
+  name: 'oled',
+  label: 'OLED',
+  bg: const Color(0xFF000000),
+  surface1: const Color(0xFF111214),
+  surface2: const Color(0xFF1B1C1E),
+  surface3: const Color(0xFF26282B),
+  border: const Color(0xFF2F3033),
+  border2: const Color(0xFF404146),
+  accent: const Color(0xFFE6E8EC),
+  accentFg: const Color(0xFF000000),
+  fg1: const Color(0xFFF5F6F8),
+  fg2: const Color(0xFFBDBFC5),
+  fg3: const Color(0xFF9C9FA8),
+  fg4: const Color(0xFF60636B),
+  ok: const Color(0xFF80CE9E),
+  run: const Color(0xFFE9B44C),
+  danger: const Color(0xFFF4908A),
+  accentBg: const Color(0xFF2D2E30),
+  runBg: const Color(0xFF2F291C),
+);
+
+/// Ten presets: the Quiet pair, six flat design palettes, then the
+/// high-contrast pair last. System is a mode, not a palette.
 final List<ThemePreset> allPresets = [
   _quiet,
   _quietLight,
+  _ink,
+  _mist,
+  _navy,
+  _paper,
+  _graphite,
+  _oled,
   _hcDark,
   _hcLight,
 ];
+
+/// Each palette's counterpart across the brightness axis.
+const Map<String, String> themePairs = {
+  'quiet': 'quiet-light',
+  'quiet-light': 'quiet',
+  'ink': 'mist',
+  'mist': 'ink',
+  'navy': 'mist',
+  'paper': 'graphite',
+  'graphite': 'paper',
+  'oled': 'mist',
+  'hc-dark': 'hc-light',
+  'hc-light': 'hc-dark',
+};
+
+// Interim: Ink/Mist default pending the user's decision.
+const String systemDark = 'quiet';
+const String systemLight = 'quiet-light';
+
+ThemePreset _systemPreset(bool light) => allPresets.firstWhere(
+      (p) => p.name == (light ? systemLight : systemDark),
+      orElse: () => _quiet,
+    );
 
 class AccentPreset {
   final String name;
@@ -731,10 +904,10 @@ class ThemeManager extends ChangeNotifier {
     _system = p.getBool(_systemPrefsKey) ?? true;
     if (_system) name = null;
     // First run follows the system; a saved choice always wins.
-    final systemLight =
+    final isLight =
         PlatformDispatcher.instance.platformBrightness == Brightness.light;
     final fallbackPreset = allPresets[_indexOr(allPresets.map((t) => t.name),
-        name ?? (systemLight ? 'quiet-light' : defaultTheme))];
+        name ?? (isLight ? systemLight : systemDark))];
     final savedAccent = p.getString(_accentPrefsKey);
     final accentName = savedAccent != null &&
             savedAccent.isNotEmpty &&
@@ -802,7 +975,7 @@ class ThemeManager extends ChangeNotifier {
     } catch (_) {}
     final light =
         PlatformDispatcher.instance.platformBrightness == Brightness.light;
-    final preset = allPresets[light ? 1 : 0];
+    final preset = _systemPreset(light);
     await _commit(ResolvedTheme.fromPreset(
       preset,
       accentName: null,
@@ -816,7 +989,7 @@ class ThemeManager extends ChangeNotifier {
     if (!_system) return;
     final light =
         PlatformDispatcher.instance.platformBrightness == Brightness.light;
-    final want = allPresets[light ? 1 : 0];
+    final want = _systemPreset(light);
     if (_resolved.id == want.name) return;
     await useSystem();
   }
