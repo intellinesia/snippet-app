@@ -56,13 +56,11 @@ class _QuietTasksScreenState extends State<QuietTasksScreen> {
           ? Padding(
               padding: EdgeInsets.all(S.s32),
               child: const Center(child: Spinner(size: 18)))
-          : Padding(
-              padding: EdgeInsets.all(S.s16),
-              child: QuietNeedsYou(
-                  title: 'Could not load tasks',
-                  detail: _error,
-                  action: 'Retry',
-                  onAction: _load)));
+          : EmptyState(
+              icon: 'alert-circle',
+              title: "Couldn't load tasks",
+              body: 'Check that your Mac is on, then try again.',
+              action: StateButton('Retry', onTap: _load)));
     } else {
       final dayStart = DateTime.now()
               .copyWith(hour: 0, minute: 0, second: 0, millisecond: 0)

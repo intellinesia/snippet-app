@@ -582,10 +582,10 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
     if (err != null && widget.sessions.isEmpty && widget.agents.isEmpty) {
       return Center(
         child: EmptyState(
-          icon: 'wifi-off',
-          title: "Couldn't load",
-          body: err,
-          action: Btn('Retry', small: true, onTap: widget.onRefresh ?? () {}),
+          icon: 'alert-circle',
+          title: "Couldn't load sessions",
+          body: 'Check that your Mac is on, then try again.',
+          action: StateButton('Retry', onTap: widget.onRefresh ?? () {}),
         ),
       );
     }

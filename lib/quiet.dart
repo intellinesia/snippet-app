@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'tap_detector.dart';
@@ -24,7 +25,8 @@ class QuietSectionLabel extends StatelessWidget {
         padding: EdgeInsets.fromLTRB(S.s16, S.s20, S.s16, S.s8),
         child: Row(children: [
           Text(count == null ? label : '$label $count',
-              style: sans(13, height: 18 / 13, weight: W.label, color: AppColors.fg2)),
+              style: sans(13,
+                  height: 18 / 13, weight: W.label, color: AppColors.fg2)),
           const Spacer(),
           if (trailing != null) trailing!,
         ]),
@@ -109,8 +111,7 @@ class _QuietRowState extends State<QuietRow> {
           ),
           if (meta != null) ...[
             SizedBox(width: S.s8),
-            Text(meta!,
-                style: sans(12, height: 16 / 12, color: AppColors.fg3)),
+            Text(meta!, style: sans(12, height: 16 / 12, color: AppColors.fg3)),
           ],
           if (trailing != null) ...[SizedBox(width: S.s8), trailing!],
         ]),
@@ -125,8 +126,8 @@ class _QuietRowState extends State<QuietRow> {
     final body = AnimatedContainer(
         duration: const Duration(milliseconds: 100),
         margin: EdgeInsets.symmetric(horizontal: S.s4),
-        decoration: BoxDecoration(
-            color: fill, borderRadius: BorderRadius.circular(14)),
+        decoration:
+            BoxDecoration(color: fill, borderRadius: BorderRadius.circular(14)),
         child: row);
     if (onTap == null && onLongPress == null) return body;
     return MouseRegion(
@@ -242,7 +243,10 @@ class QuietNeedsYou extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title,
-                    style: sans(15, height: 20 / 15, weight: W.label, color: AppColors.fg1)),
+                    style: sans(15,
+                        height: 20 / 15,
+                        weight: W.label,
+                        color: AppColors.fg1)),
                 if (detail != null && detail!.isNotEmpty)
                   Padding(
                     padding: EdgeInsets.only(top: S.s2),
@@ -276,61 +280,120 @@ class QuietNeedsYou extends StatelessWidget {
 }
 
 /// Cannot reach the machine: what is on screen is the last copy, replies queue.
-/// Amber hand, not red; one Retry.
-class QuietOfflineBanner extends StatelessWidget {
+/// A neutral glyph, no amber: a failed load is not a request for a decision.
+class QuietOfflineBanner extends StatefulWidget {
   const QuietOfflineBanner(
       {super.key, required this.machine, this.since, this.onRetry});
   final String machine;
   final String? since;
-  final VoidCallback? onRetry;
+  final FutureOr<void> Function()? onRetry;
 
   @override
-  Widget build(BuildContext context) =>
-      ToastAvoid(child: _body(context));
+  State<QuietOfflineBanner> createState() => _QuietOfflineBannerState();
+}
 
-  Widget _body(BuildContext context) => Container(
-        margin: EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s8),
-        padding: EdgeInsets.fromLTRB(S.s12, S.s12, S.s12, S.s12),
+String _shortName(String n) =>
+    n.length <= 24 ? n : '${n.substring(0, 23)}\u2026';
+
+class _QuietOfflineBannerState extends State<QuietOfflineBanner> {
+  bool _retrying = false;
+
+  Future<void> _retry() async {
+    if (_retrying) return;
+    setState(() => _retrying = true);
+    try {
+      await widget.onRetry?.call();
+    } finally {
+      if (mounted) setState(() => _retrying = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => ToastAvoid(child: _body(context));
+
+  Widget _body(BuildContext context) {
+    final retry = widget.onRetry != null;
+    return Semantics(
+      liveRegion: true,
+      container: true,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        constraints: const BoxConstraints(minHeight: 56),
         decoration: BoxDecoration(
-          color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(R.of(14)),
+          color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Padding(
-              padding: EdgeInsets.only(top: S.s2), child: const QuietHand()),
-          SizedBox(width: S.s12),
-          Expanded(
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Can't reach $machine",
-                      style: sans(15,
-                          height: 20 / 15,
-                          weight: W.label,
-                          color: AppColors.fg1)),
-                  Padding(
-                    padding: EdgeInsets.only(top: S.s2),
-                    child: Text(
-                        '${since == null ? 'Showing what you saw earlier' : 'Showing what you saw at $since'}. Replies send when it is back.',
-                        style: sans(13, height: 18 / 13, color: AppColors.fg3)),
-                  ),
-                ]),
-          ),
-          if (onRetry != null) ...[
-            SizedBox(width: S.s8),
-            TapDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onRetry,
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: S.s2),
-                child: Text('Retry',
-                    style: sans(14,
-                        weight: W.label, color: AppColors.fg1)),
+        child: Stack(
+            key: const ValueKey('offline-banner'),
+            clipBehavior: Clip.none,
+            children: [
+              Padding(
+                padding: EdgeInsets.fromLTRB(16, 12, retry ? 40 : 16, 12),
+                child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                          padding: const EdgeInsets.only(top: 1),
+                          child: AppIcon('wifi-off',
+                              size: 20, color: AppColors.fg2)),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                  // Only the name is shortened, never the words.
+                                  '${_shortName(widget.machine)} offline, showing cached',
+                                  style: sans(14,
+                                      height: 20 / 14, color: AppColors.fg1)),
+                              if (widget.since != null)
+                                Text(
+                                    'Last updated ${widget.since}. Replies send when it is back.',
+                                    style: sans(12,
+                                        height: 16 / 12, color: AppColors.fg3)),
+                            ]),
+                      ),
+                    ]),
               ),
-            ),
-          ],
-        ]),
-      );
+              if (retry)
+                Positioned(
+                  right: -12,
+                  top: 0,
+                  bottom: 0,
+                  child: Center(
+                    child: Semantics(
+                      button: true,
+                      enabled: !_retrying,
+                      excludeSemantics: true,
+                      label: _retrying ? 'Retrying' : 'Retry',
+                      child: TapDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: _retrying ? null : _retry,
+                        child: SizedBox(
+                          key: const ValueKey('offline-retry'),
+                          width: 48,
+                          height: 48,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: Text(_retrying ? 'Retrying' : 'Retry',
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  style: sans(13,
+                                      weight: W.label, color: AppColors.fg1)),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ]),
+      ),
+    );
+  }
 }
 
 /// The places, in order. Phone shows Agents, Sessions, Artifacts, Tasks.
@@ -454,8 +517,8 @@ class _Tab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = selected ? AppColors.fg1 : AppColors.fg2;
-    final clamped = MediaQuery.textScalerOf(context)
-        .clamp(maxScaleFactor: 1.35);
+    final clamped =
+        MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.35);
     return Semantics(
       button: true,
       selected: selected,
