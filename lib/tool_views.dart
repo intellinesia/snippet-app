@@ -580,7 +580,11 @@ List<Widget> _bashView(Map? a, Map? d, {required bool running, String? error}) {
   }
   final labelled = (a?['label']?.toString() ?? '').trim().isNotEmpty;
   final showCommand = cmd.isNotEmpty &&
-      (labelled || running || cmd.contains('\n') || cmd.length > 60);
+      (!kMobile ||
+          labelled ||
+          running ||
+          cmd.contains('\n') ||
+          cmd.length > 60);
   // The command wraps so it reads in full; output scrolls to keep columns.
   final cmdSpans = <InlineSpan>[];
   final spans = <InlineSpan>[];

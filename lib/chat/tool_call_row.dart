@@ -95,7 +95,15 @@ class ToolCallRow extends StatelessWidget {
       if (chip != null &&
           chip.text.isNotEmpty &&
           chip.tone != StepChipTone.ok) {
-        out.add(chip.text.split(', ').last);
+        // Keep the useful failure count ("2 failed") without repeating the
+        // exit code already supplied by toolMetaParts.
+        final failureCount =
+            RegExp(r'\d+ failed').firstMatch(chip.text)?.group(0);
+        final extra =
+            failureCount ?? (chip.text.startsWith('failed') ? '' : chip.text);
+        if (extra.isNotEmpty && !out.any((p) => p.contains(extra))) {
+          out.add(extra);
+        }
       }
     }
     final took = stepDuration(step);
