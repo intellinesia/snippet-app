@@ -68,11 +68,11 @@ class ChatChoices extends StatelessWidget {
     Theme.of(context);
     if (choices.isEmpty) return const SizedBox.shrink();
     final locked = chosen != null;
-    final minH = kMobile ? 40.0 : 30.0;
-    final vPad = kMobile ? 9.0 : 6.0;
+    final minH = kMobile ? 40.0 : 28.0;
+    final vPad = kMobile ? 9.0 : 0.0;
     return Wrap(
-      spacing: 6,
-      runSpacing: 6,
+      spacing: kMobile ? 6 : 8,
+      runSpacing: kMobile ? 6 : 8,
       children: [
         for (final choice in choices)
           _ChoicePill(
@@ -107,20 +107,26 @@ class _ChoicePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fill = picked
-        ? AppColors.accentBg
-        : (disabled
-            ? AppColors.surface1.withValues(alpha: 0.45)
-            : AppColors.surface1);
-    final border = picked
-        ? AppColors.accentLine
-        : (disabled
-            ? AppColors.border.withValues(alpha: 0.6)
-            : AppColors.border2);
-    final ink = picked
-        ? AppColors.accent
-        : (disabled ? AppColors.fg4 : AppColors.fg1);
-    final radius = BorderRadius.circular(R.pill);
+    final fill = kMobile
+        ? (picked
+            ? AppColors.accentBg
+            : (disabled
+                ? AppColors.surface1.withValues(alpha: 0.45)
+                : AppColors.surface1))
+        : (disabled ? AppColors.surface2 : AppColors.surface3);
+    final border = kMobile
+        ? (picked
+            ? AppColors.accentLine
+            : (disabled
+                ? AppColors.border.withValues(alpha: 0.6)
+                : AppColors.border2))
+        : null;
+    final ink = kMobile
+        ? (picked
+            ? AppColors.accent
+            : (disabled ? AppColors.fg4 : AppColors.fg1))
+        : (disabled ? AppColors.fg2 : AppColors.fg1);
+    final radius = BorderRadius.circular(kMobile ? R.pill : 6);
     return Pressable(
       kind: PressKind.button,
       enabled: onTap != null,
@@ -128,7 +134,7 @@ class _ChoicePill extends StatelessWidget {
         color: fill,
         shape: RoundedRectangleBorder(
           borderRadius: radius,
-          side: BorderSide(color: border),
+          side: border == null ? BorderSide.none : BorderSide(color: border),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -138,7 +144,8 @@ class _ChoicePill extends StatelessWidget {
             constraints: BoxConstraints(minHeight: minHeight),
             child: Padding(
               padding: EdgeInsets.symmetric(
-                  horizontal: S.of(14), vertical: verticalPadding),
+                  horizontal: kMobile ? S.of(14) : (picked ? 10 : 14),
+                  vertical: verticalPadding),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

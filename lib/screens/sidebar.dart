@@ -32,7 +32,7 @@ import '../motion.dart';
 import '../page_stack.dart';
 import '../mochi.dart';
 import '../chat_scene.dart' show ChatScene;
-import 'agent_view_mode.dart' show activeShellPlace, openAgentTab, openGroupTab;
+import 'agent_view_mode.dart' show activeShellPlace;
 import 'all_agents_view.dart';
 import '../panel.dart' show presentScreen;
 import '../shell_panel.dart' show ShellPanelPurpose;
@@ -77,6 +77,7 @@ class _FilteredAgentsSidebarPanel extends AgentsSidebarPanel {
     super.sessions,
     super.onOpenSession,
     super.embedded,
+    super.onAgentCountChanged,
   });
 
   final _AgentListStateFilter stateFilter;
@@ -287,6 +288,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   _AgentListStateFilter _agentStateFilter = _AgentListStateFilter.all;
   bool _agentsCollapsed = false;
   int? _collapsedAgentsCount;
+  int? _agentsCount;
 
   MobileHome _lastMainHome = MobileHome.chats;
   // Settings rides over the main homes as a page, so it is never current here.
@@ -917,6 +919,12 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         sessions: widget.sessions,
         onOpenSession: (s) => widget.onOpenSession(s.id, s.title, s.profile),
         onSearchChanged: (v) => setState(() => _agentFilterQuery = v),
+        onAgentCountChanged: (count) {
+          final next = count == 0 ? null : count;
+          if (mounted && _agentsCount != next) {
+            setState(() => _agentsCount = next);
+          }
+        },
         onOpenAgent: (a) =>
             kMobile ? widget.onAgent(a) : widget.onOpenAgent?.call(a),
       );
@@ -1729,7 +1737,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
 
   void _toggleAgentsCollapsed() {
     if (!_agentsCollapsed) {
-      _collapsedAgentsCount = _agentsPanelKey.currentState?.agents.length ??
+      _collapsedAgentsCount = _agentsCount ??
+          _agentsPanelKey.currentState?.agents.length ??
           widget.client
               ?.cachedCoordinationAgents()
               ?.where((a) => !a.isLead)
@@ -1744,14 +1753,16 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         ?.cachedCoordinationAgents()
         ?.where((a) => !a.isLead)
         .length;
+    final loadedCount = _agentsCount ?? panelCount ?? cachedCount;
+    final visibleCount = loadedCount == 0 ? null : loadedCount;
     return Padding(
       padding: const EdgeInsets.only(top: 2),
       child: SidebarSectionHeader(
         'Agents',
         collapsed: _agentsCollapsed,
         count: _agentsCollapsed
-            ? (_collapsedAgentsCount ?? cachedCount)
-            : panelCount ?? cachedCount,
+            ? (_collapsedAgentsCount ?? visibleCount)
+            : visibleCount,
         onToggle: _toggleAgentsCollapsed,
         actions: [
           SidebarSectionAction(
@@ -1813,23 +1824,15 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   }
 
   void _setFocusedExpansion(bool expand) {
+    final panel = _agentsPanelKey.currentState;
+    if (panel == null) return;
     final agent = _focusedRowId('agent-card-');
     if (agent != null) {
-      if (expand) {
-        openAgentTab.value = agent;
-      } else if (openAgentTab.value == agent) {
-        openAgentTab.value = null;
-      }
+      panel.setAgentRowExpanded(agent, expand);
       return;
     }
     final group = _focusedRowId('group-row-');
-    if (group != null) {
-      if (expand) {
-        openGroupTab.value = group;
-      } else if (openGroupTab.value == group) {
-        openGroupTab.value = null;
-      }
-    }
+    if (group != null) panel.setGroupRowExpanded(group, expand);
   }
 
   Widget _withSidebarKeyboard(Widget child) => Actions(

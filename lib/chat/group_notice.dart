@@ -34,12 +34,48 @@ class GroupNotice extends StatelessWidget {
         child: AppIcon(icon, size: 14, color: AppColors.fg2),
       );
 
+  // MSG-22 desktop: a centred 28-high line, icon 14 fg3 and text 12/400 fg2
+  // centred as one unit; plain is the text alone.
+  Widget _desk() {
+    final icon = switch (kind) {
+      GroupNoticeKind.approved => 'check',
+      GroupNoticeKind.sentBack => 'undo',
+      GroupNoticeKind.turn => 'repeat',
+      GroupNoticeKind.plain => null,
+    };
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 28),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 5.5, horizontal: 8),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (icon != null) ...[
+              AppIcon(icon, size: 14, color: AppColors.fg3),
+              const SizedBox(width: 8),
+            ],
+            Flexible(
+              child: Text(text,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: sans(12, height: 17 / 12, color: AppColors.fg2)),
+            ),
+            if (time != null) ...[
+              const SizedBox(width: 8),
+              Text(time!, style: sans(11, color: AppColors.fg3, tabular: true)),
+            ],
+          ]),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (!kMobile) return _desk();
     final style = sans(kMobile ? 13 : 12, color: AppColors.fg2);
     final Widget lead = switch (kind) {
-      GroupNoticeKind.approved =>
-        _badge('check', AppColors.ok, AppColors.okBg),
+      GroupNoticeKind.approved => _badge('check', AppColors.ok, AppColors.okBg),
       GroupNoticeKind.sentBack =>
         _badge('undo', AppColors.run, AppColors.runBg),
       GroupNoticeKind.turn => Row(mainAxisSize: MainAxisSize.min, children: [

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../chat/ask_kit.dart';
+import '../platform.dart';
 import '../state_cards.dart';
 import '../theme.dart';
 import '../toast.dart';
@@ -96,6 +98,37 @@ class _LimitCardState extends State<LimitCard> {
         : one
             ? 'Continue on ${widget.options.first}'
             : 'Switch profile';
+    if (!kMobile) {
+      final title = has
+          ? '${widget.profile} limit reached, resets $reset'
+          : '${widget.profile} limit reached';
+      return DesktopAskCard(
+        key: const ValueKey('limit-card'),
+        needsYou: widget.options.isNotEmpty,
+        meta: 'Usage limit',
+        title: title,
+        payload: Text(
+            has
+                ? 'Resets in ${_in(left.isNegative ? Duration.zero : left)}. Continue on another model now, or wait.'
+                : 'Continue on another model now, or wait.',
+            style: sans(12, height: 17 / 12, color: AppColors.fg2)),
+        actions: [
+          if (widget.options.isNotEmpty)
+            AskButton(switchLabel,
+                variant: AskButtonVariant.secondary,
+                busy: _busy == 'switch',
+                onTap: busy
+                    ? null
+                    : (one
+                        ? () => _act('switch', profile: widget.options.first)
+                        : _pickProfile)),
+          AskButton(_busy == 'wait' ? 'Waiting' : 'Wait for reset',
+              variant: AskButtonVariant.ghost,
+              busy: _busy == 'wait',
+              onTap: busy ? null : () => _act('wait')),
+        ],
+      );
+    }
     return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Container(

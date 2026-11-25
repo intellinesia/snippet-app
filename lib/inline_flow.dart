@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'chat/ask_kit.dart';
+import 'platform.dart';
 import 'settings_form.dart';
 import 'theme.dart';
 import 'widgets.dart';
@@ -19,6 +21,7 @@ class InlineConfirmStrip extends StatefulWidget {
     required this.onConfirm,
     this.confirmLabel = 'Remove',
     this.revertAfter = const Duration(seconds: 6),
+    this.busy = false,
   });
 
   final String title;
@@ -27,6 +30,7 @@ class InlineConfirmStrip extends StatefulWidget {
   final Duration revertAfter;
   final VoidCallback onCancel;
   final VoidCallback onConfirm;
+  final bool busy;
 
   @override
   State<InlineConfirmStrip> createState() => _InlineConfirmStripState();
@@ -56,6 +60,48 @@ class _InlineConfirmStripState extends State<InlineConfirmStrip> {
 
   @override
   Widget build(BuildContext context) {
+    if (!kMobile) {
+      return CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.escape): widget.onCancel,
+        },
+        child: Focus(
+          focusNode: _focus,
+          child: Container(
+            height: 30,
+            color: AppColors.surface1,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Row(children: [
+              Expanded(
+                child: Text.rich(
+                  TextSpan(children: [
+                    TextSpan(
+                        text: widget.title,
+                        style: sans(12, height: 17 / 12, color: AppColors.fg1)),
+                    if (widget.body.trim().isNotEmpty)
+                      TextSpan(
+                          text: '  ${widget.body}',
+                          style:
+                              sans(12, height: 17 / 12, color: AppColors.fg3)),
+                  ]),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 10),
+              AskButton(widget.confirmLabel,
+                  variant: AskButtonVariant.secondary,
+                  busy: widget.busy,
+                  onTap: widget.busy ? null : widget.onConfirm),
+              const SizedBox(width: 8),
+              AskButton('Cancel',
+                  variant: AskButtonVariant.ghost,
+                  onTap: widget.busy ? null : widget.onCancel),
+            ]),
+          ),
+        ),
+      );
+    }
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.escape): widget.onCancel,

@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:markdown/markdown.dart' as md;
 
 import 'highlight.dart';
+import 'chat/desktop_rich_cards.dart';
 import 'screens/artifact_viewer.dart' show MermaidDiagram, canRenderMermaid;
 import 'platform.dart';
-import 'settings_form.dart' show Grouped;
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -251,13 +251,11 @@ class _MdDiffBlockState extends State<_MdDiffBlock> {
         decoration: BoxDecoration(
           color: kMobile
               ? Color.lerp(AppColors.bg, Colors.black, 0.35)
-              : AppColors.surface2,
-          borderRadius: BorderRadius.circular(kMobile ? 14 : R.sm),
-          border: Border.all(
-            color: kMobile
-                ? AppColors.fg1.withValues(alpha: 0.08)
-                : AppColors.border,
-          ),
+              : AppColors.surface1,
+          borderRadius: BorderRadius.circular(kMobile ? 14 : 8),
+          border: kMobile
+              ? Border.all(color: AppColors.fg1.withValues(alpha: 0.08))
+              : null,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -363,7 +361,9 @@ class _MdDiffBlockState extends State<_MdDiffBlock> {
   Widget _buildLine(_MdDiffLine l, double gutterW, {required bool wrapped}) {
     if (l.kind == _MdDiffKind.hunk || l.kind == _MdDiffKind.meta) {
       return Container(
-        color: AppColors.surface1.withValues(alpha: 0.6),
+        color: kMobile
+            ? AppColors.surface1.withValues(alpha: 0.6)
+            : AppColors.surface2,
         padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.of(3)),
         child: Text(
           l.text,
@@ -444,7 +444,7 @@ class _MdCodeBlockState extends State<_MdCodeBlock> {
     final lang =
         widget.language.trim().isEmpty ? 'code' : widget.language.trim();
     if (!kMobile) {
-      return _desktop(lines, () => setState(() => _wrap = !_wrap));
+      return _desktop(lines, lang, () => setState(() => _wrap = !_wrap));
     }
     // Phone spec CH-22: surface1 radius 10, language label, copy 48 target,
     // horizontal scroll and never a wrap; keywords differ by weight only.
@@ -462,7 +462,8 @@ class _MdCodeBlockState extends State<_MdCodeBlock> {
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 0, 0, 0),
               child: Row(children: [
-                Text(lang, style: sans(11, weight: W.label, color: AppColors.fg3)),
+                Text(lang,
+                    style: sans(11, weight: W.label, color: AppColors.fg3)),
                 const Spacer(),
                 IconBtn(
                   'copy',
@@ -493,31 +494,56 @@ class _MdCodeBlockState extends State<_MdCodeBlock> {
 }
 
 extension on _MdCodeBlockState {
-  /// Desktop: a bare bordered block; copy and wrap appear on hover.
-  Widget _desktop(List<String> lines, VoidCallback toggleWrap) {
-    return _HoverTools(
-      code: widget.code,
-      wrap: _wrap,
-      onWrap: toggleWrap,
+  /// Desktop RC-12: a quiet surface-one block, language header and 28-point
+  /// wrap/copy affordances.
+  Widget _desktop(List<String> lines, String lang, VoidCallback toggleWrap) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 2, bottom: 12),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: Grouped.row,
-          borderRadius: BorderRadius.circular(R.of(13)),
-          border: Border.all(color: AppColors.fg1.withValues(alpha: 0.06)),
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(8),
         ),
-        child: _wrap
-            ? Text.rich(highlightedCodeSpan(widget.code,
-                language: widget.language, fontSize: 12.5, height: 1.6))
-            : NotificationListener<ScrollNotification>(
-                onNotification: (_) => true,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: SelectableText.rich(highlightedCodeSpan(widget.code,
-                      language: widget.language, fontSize: 12.5, height: 1.6)),
-                ),
-              ),
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 4, 4, 4),
+            child: Row(children: [
+              Text(lang, style: sans(11, color: AppColors.fg3)),
+              const Spacer(),
+              DesktopCardIconButton('wrap',
+                  tooltip: _wrap ? 'Unwrap lines' : 'Wrap lines',
+                  active: _wrap,
+                  onTap: toggleWrap),
+              DesktopCardIconButton('copy', tooltip: 'Copy', onTap: () {
+                Clipboard.setData(ClipboardData(text: widget.code));
+                toast(context, 'Copied');
+              }),
+            ]),
+          ),
+          Container(height: 1, color: AppColors.border),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+            child: _wrap
+                ? SelectableText.rich(highlightedCodeSpan(widget.code,
+                    language: widget.language,
+                    fontSize: 12.5,
+                    height: 20 / 12.5))
+                : NotificationListener<ScrollNotification>(
+                    onNotification: (_) => true,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: SelectableText.rich(highlightedCodeSpan(
+                          widget.code,
+                          language: widget.language,
+                          fontSize: 12.5,
+                          height: 20 / 12.5)),
+                    ),
+                  ),
+          ),
+        ]),
       ),
     );
   }

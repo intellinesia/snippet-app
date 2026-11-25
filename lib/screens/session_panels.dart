@@ -10,7 +10,6 @@ import '../widgets.dart';
 import '../transcript.dart'
     show LaneControlButton, LaneWho, RunSpinner, laneFirstSentence;
 import '../tap_detector.dart';
-import 'compact_btn.dart';
 import 'spec_bar.dart';
 import 'lanes.dart' show laneSections, openLaneView;
 
@@ -152,10 +151,10 @@ class _SessionCheckpointsPanelState extends State<SessionCheckpointsPanel> {
           child: Text(sub,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: sans(12, color: AppColors.fg4))),
+              style: sans(12, color: AppColors.fg3))),
     ]);
     return Container(
-      constraints: const BoxConstraints(minHeight: 36),
+      constraints: const BoxConstraints(minHeight: 32),
       padding: EdgeInsets.fromLTRB(S.s8, S.s2, S.s8, S.s2),
       child: Row(children: [
         Container(
@@ -174,9 +173,15 @@ class _SessionCheckpointsPanelState extends State<SessionCheckpointsPanel> {
         // forking the present lives on the actions sheet's Fork tile.
         if (!latest) ...[
           SizedBox(width: S.s8),
-          CompactBtn('Restore', onTap: () => widget.onRewind(c)),
+          Btn('Restore',
+              small: true,
+              variant: BtnVariant.ghost,
+              onTap: () => widget.onRewind(c)),
           SizedBox(width: S.s4),
-          CompactBtn('Fork', onTap: () => widget.onFork(c)),
+          Btn('Fork',
+              small: true,
+              variant: BtnVariant.ghost,
+              onTap: () => widget.onFork(c)),
         ],
       ]),
     );
@@ -189,8 +194,8 @@ class _SessionCheckpointsPanelState extends State<SessionCheckpointsPanel> {
         constraints: const BoxConstraints(minHeight: 62),
         padding: const EdgeInsets.only(left: 16, right: 16),
         decoration: BoxDecoration(
-            border: Border(
-                bottom: BorderSide(color: AppColors.border, width: 1))),
+            border:
+                Border(bottom: BorderSide(color: AppColors.border, width: 1))),
         child: Row(children: [
           Expanded(
             child: Padding(
@@ -227,8 +232,7 @@ class _SessionCheckpointsPanelState extends State<SessionCheckpointsPanel> {
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(color: AppColors.border)),
                     child: Text('Restore',
-                        style:
-                            sans(13, weight: W.label, color: AppColors.fg1)),
+                        style: sans(13, weight: W.label, color: AppColors.fg1)),
                   ),
                 ),
               ),
@@ -435,21 +439,22 @@ class _DeskLanesState extends State<_DeskLanes> {
         ? l.activity!.trim()
         : laneFirstSentence((l.summary ?? l.handoff ?? '').trim(), 60);
     final elapsed = _elapsed(l.startedAt);
+    final needs = failed || l.status == 'paused';
     final (word, fg, bg) = running
         ? (
-            elapsed.isEmpty ? 'Running' : elapsed,
+            elapsed.isEmpty ? 'Running' : 'Running · $elapsed',
             AppColors.fg2,
             AppColors.surface2
           )
-        : failed
-            ? ('Failed', AppColors.fg1, AppColors.surface2)
+        : needs
+            ? ('Needs you', AppColors.fg2, AppColors.surface2)
             : stopped
                 ? (
                     l.status == 'paused' ? 'Paused' : 'Cancelled',
                     AppColors.fg3,
                     AppColors.fg1.withValues(alpha: 0.07)
                   )
-                : ('Completed', AppColors.ok, AppColors.okBg);
+                : ('Completed', AppColors.fg2, AppColors.surface2);
     return InkWell(
       splashFactory: NoSplash.splashFactory,
       hoverColor: AppColors.surface3,
@@ -458,7 +463,8 @@ class _DeskLanesState extends State<_DeskLanes> {
           sessionId: widget.sessionId,
           liveLanes: () => widget.lanes),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        constraints: const BoxConstraints(minHeight: 32),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
         decoration: BoxDecoration(
           border: Border(
               top: BorderSide(color: AppColors.fg1.withValues(alpha: 0.07))),
@@ -469,18 +475,16 @@ class _DeskLanesState extends State<_DeskLanes> {
             child: Center(
               child: running
                   ? const RunSpinner(size: 12)
-                  : AppIcon(
-                      failed
-                          ? 'x'
-                          : stopped
-                              ? 'minus'
-                              : 'check',
-                      size: 14,
-                      color: failed
-                          ? AppColors.danger
-                          : stopped
-                              ? AppColors.fg4
-                              : AppColors.ok),
+                  : needs
+                      ? Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                              color: AppColors.run, shape: BoxShape.circle),
+                        )
+                      : AppIcon(stopped ? 'minus' : 'check',
+                          size: 14,
+                          color: stopped ? AppColors.fg4 : AppColors.fg2),
             ),
           ),
           const SizedBox(width: 10),
@@ -602,7 +606,7 @@ class _DeskLanesState extends State<_DeskLanes> {
                 SizedBox(
                   width: 46,
                   child: Text(_at(j.nextRunAt),
-                      style: mono(12, color: AppColors.accent)),
+                      style: mono(12, color: AppColors.fg3)),
                 ),
                 Expanded(
                   child: Text(j.title,
@@ -661,8 +665,7 @@ class _SessionPanelsPageState extends State<SessionPanelsPage> {
           ],
         ),
       ),
-      Expanded(
-          child: [widget.checkpoints, widget.lanes, widget.activity][_i]),
+      Expanded(child: [widget.checkpoints, widget.lanes, widget.activity][_i]),
     ]);
   }
 }

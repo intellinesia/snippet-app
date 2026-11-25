@@ -165,10 +165,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('jh'), findsOneWidget);
-    expect(find.text('2 members'), findsOneWidget);
+    expect(find.textContaining('2 members'), findsOneWidget);
     expect(find.text('You'), findsWidgets);
     expect(find.text('Revenue Scout'), findsWidgets);
-    expect(find.text('Lead'), findsWidgets);
+    expect(find.text('Leads the group'), findsOneWidget);
 
     await tester.tap(find.text('Add member'));
     await tester.pumpAndSettle();

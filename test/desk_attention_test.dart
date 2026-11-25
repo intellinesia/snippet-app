@@ -27,8 +27,8 @@ void main() {
             client: DaemonClient('https://daemon.invalid', 'test'),
             asks: DeskAttentionScope.asksFrom(sessions),
             onOpen: (_) {},
-            child: SizedBox(
-                width: 680, child: DeskAttentionBar(exclude: exclude)),
+            child:
+                SizedBox(width: 680, child: DeskAttentionBar(exclude: exclude)),
           ),
         ),
       );
@@ -41,15 +41,26 @@ void main() {
     await tester.pumpWidget(host([_ask('a', at: 2), plain], exclude: 'a'));
     expect(find.byKey(const Key('deskAttention')), findsNothing);
 
-    await tester.pumpWidget(
-        host([_ask('a', at: 2), _ask('b', type: 'question', at: 1)]));
-    expect(find.text('Approve'), findsOneWidget);
-    expect(find.text('1 of 2 waiting'), findsOneWidget);
+    var opened = '';
+    await tester.pumpWidget(MaterialApp(
+      theme: buildAppTheme(),
+      home: Scaffold(
+        body: DeskAttentionScope(
+          client: DaemonClient('https://daemon.invalid', 'test'),
+          asks: DeskAttentionScope.asksFrom(
+              [_ask('a', at: 2), _ask('b', type: 'question', at: 1)]),
+          onOpen: (s) => opened = s.id,
+          child: const SizedBox(width: 680, child: DeskAttentionBar()),
+        ),
+      ),
+    ));
+    expect(find.text('2 things need you'), findsOneWidget);
+    expect(find.text('Review'), findsOneWidget);
+    expect(find.text('Approve'), findsNothing);
 
-    await tester.tap(find.text('1 of 2 waiting'));
+    await tester.tap(find.text('Review'));
     await tester.pump();
-    expect(find.text('Answer'), findsOneWidget);
-    expect(find.text('2 of 2 waiting'), findsOneWidget);
+    expect(opened, 'a');
     debugDefaultTargetPlatformOverride = null;
   });
 }

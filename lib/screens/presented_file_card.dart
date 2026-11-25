@@ -8,7 +8,6 @@ import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'file_viewer.dart';
-import '../settings_form.dart' show Grouped;
 import '../tap_detector.dart';
 
 /// A file the agent handed over with `present_file`: a card on a phone and a
@@ -159,92 +158,102 @@ class PresentedFileCard extends StatelessWidget {
     );
   }
 
-  /// Desktop, several files: a 52px row with a 40px thumbnail (or the file
-  /// kind's icon), name over caption, and a bare download icon.
+  /// Desktop, several files: one 32pt row with a 20pt thumbnail (or the
+  /// file kind's icon), name over caption, and a bare download target.
   Widget deskThumbRow(BuildContext context) {
     final isImage = mediaKindOf(path) == MediaKind.image;
     final sub = caption.isNotEmpty ? caption : _kindLabel;
     return Material(
-      color: AppColors.surface2,
-      borderRadius: BorderRadius.circular(R.of(10)),
+      color: AppColors.surface1,
+      borderRadius: BorderRadius.circular(7),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => _open(context),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(6, 6, 8, 6),
-          child: Row(children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(R.of(7)),
-              child: SizedBox.square(
-                dimension: 40,
-                child: isImage
-                    // The row opens it; the thumb only shows it.
-                    ? IgnorePointer(
-                        child: ImageThumb(
-                            client: client, path: path, width: 40, height: 40))
-                    : ColoredBox(
-                        color: AppColors.surface3,
-                        child: Center(
-                            child: AppIcon(_icon,
-                                size: 16, color: AppColors.fg2))),
+        child: SizedBox(
+          height: 32,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(10, 0, 2, 0),
+            child: Row(children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(5),
+                child: SizedBox.square(
+                  dimension: 20,
+                  child: isImage
+                      // The row opens it; the thumb only shows it.
+                      ? IgnorePointer(
+                          child: ImageThumb(
+                              client: client,
+                              path: path,
+                              width: 20,
+                              height: 20))
+                      : ColoredBox(
+                          color: AppColors.surface3,
+                          child: Center(
+                              child: AppIcon(_icon,
+                                  size: 13, color: AppColors.fg2))),
+                ),
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(_name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(13, color: AppColors.fg1)),
-                  Text(sub,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(12, color: AppColors.fg4)),
-                ],
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text.rich(
+                  TextSpan(children: [
+                    TextSpan(
+                        text: _name,
+                        style: mono(12, weight: W.label, color: AppColors.fg1)),
+                    if (sub.isNotEmpty)
+                      TextSpan(
+                          text: '  $sub',
+                          style: sans(11, color: AppColors.fg3)),
+                  ]),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            DeskIconButton('download',
-                tooltip: 'Download',
-                iconSize: 14,
-                onTap: () => _download(context)),
-          ]),
+              const SizedBox(width: 8),
+              DeskIconButton('download',
+                  tooltip: 'Download',
+                  iconSize: 13,
+                  onTap: () => _download(context)),
+            ]),
+          ),
         ),
       ),
     );
   }
 
-  /// Desktop: one 44px row in the tool rows' language, not a big card.
+  /// Desktop: one 30pt TC row in the tool rows' language, not a big card.
   Widget _deskRow(BuildContext context) {
     final meta = [_kindLabel, if (caption.isNotEmpty) caption].join(' · ');
-    final radius = BorderRadius.circular(R.of(13));
+    final radius = BorderRadius.circular(7);
     return Material(
-      color: Grouped.row,
+      color: AppColors.surface1,
       borderRadius: radius,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => _open(context),
         child: Container(
-          constraints: const BoxConstraints(minHeight: 44),
-          padding: EdgeInsets.fromLTRB(Grouped.padX, 6, 8, 6),
+          constraints: const BoxConstraints(minHeight: 30),
+          padding: const EdgeInsets.fromLTRB(10, 0, 2, 0),
           child: Row(children: [
-            AppIcon(_icon, size: 16, color: AppColors.fg2),
-            SizedBox(width: Grouped.iconGap),
+            SizedBox(
+              width: 14,
+              height: 14,
+              child:
+                  Center(child: AppIcon(_icon, size: 13, color: AppColors.fg2)),
+            ),
+            const SizedBox(width: 8),
             Expanded(
               child: Text.rich(
                 TextSpan(children: [
-                  TextSpan(text: _name, style: TextStyle(color: AppColors.fg1)),
+                  TextSpan(
+                      text: _name,
+                      style: mono(12, weight: W.label, color: AppColors.fg1)),
                   if (meta.isNotEmpty)
                     TextSpan(
-                        text: '  $meta',
-                        style: TextStyle(color: AppColors.fg4)),
+                        text: '  $meta', style: sans(11, color: AppColors.fg3)),
                 ]),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: sans(13, height: 20 / 13),
               ),
             ),
             SizedBox(width: S.s8),
@@ -301,17 +310,19 @@ class MediaRow extends StatelessWidget {
     final row = InkWell(
       onTap: onTap,
       child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: kMobile ? 60 : 48),
+        constraints: BoxConstraints(minHeight: kMobile ? 60 : 30),
         child: Padding(
-          padding: EdgeInsets.fromLTRB(S.s12, S.s8, S.of(10), S.s8),
+          padding: EdgeInsets.fromLTRB(kMobile ? S.s12 : 10, kMobile ? S.s8 : 0,
+              kMobile ? S.of(10) : 8, kMobile ? S.s8 : 0),
           child: Row(children: [
             Container(
-              width: 28,
-              height: 36,
+              width: kMobile ? 28 : 14,
+              height: kMobile ? 36 : 14,
               alignment: Alignment.center,
-              child: AppIcon(icon, size: 20, color: AppColors.fg2),
+              child:
+                  AppIcon(icon, size: kMobile ? 20 : 13, color: AppColors.fg2),
             ),
-            SizedBox(width: S.s12),
+            SizedBox(width: kMobile ? S.s12 : 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

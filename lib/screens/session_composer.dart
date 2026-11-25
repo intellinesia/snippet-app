@@ -906,6 +906,13 @@ extension _SessionScreenComposerExt on _SessionScreenState {
         : (agent.isEmpty ? 'Reply to Snippet' : 'Message $agent');
     final rcpt = _recipientChip();
     final ownModel = _inboxAgentId(widget.sessionId) == null;
+    if (!kMobile && _showsCold(running) && _resumeMode == 'ask') {
+      return DeskColdComposerStrip(
+        mode: _resumeMode,
+        resumeTokens: (_cold?['resume_tokens'] as num?)?.toInt(),
+        onPick: _onColdPick,
+      );
+    }
     return ChatComposer(
       input: _input,
       focus: _inputFocus,
@@ -919,17 +926,8 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       shortcuts: _composerShortcuts,
       contentInsertion: _keyboardContent,
       fieldWrapper: (field) => SlashKeys(controller: _slash, child: field),
-      banner: rcpt != null
-          ? Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: kMobile
-                  ? CrossAxisAlignment.stretch
-                  : CrossAxisAlignment.start,
-              children: [
-                if (rcpt != null) rcpt,
-              ],
-            )
-          : null,
+      banner: kMobile && rcpt != null ? rcpt : null,
+      deskRecipient: rcpt,
       above: [
         if (kMobile && _showsQuickActions)
           ListenableBuilder(
@@ -944,6 +942,14 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       ],
       attachments: () => _attachments.isNotEmpty ? _attachmentBar() : null,
       attach: _composerPlus(),
+      deskAttach: kMobile
+          ? null
+          : DeskComposerPlusButton(
+              onPhoto: () => unawaited(_pickDesktopPhoto()),
+              onFile: () => unawaited(_pickFiles()),
+              onVoice: () => unawaited(_voice.toggleRecording()),
+              onCanvas: () => unawaited(_newCanvasFromComposer()),
+            ),
       onAttach: _onAttachTap,
       // The phone tray carries the model; the desktop card keeps it inline.
       trailing: kMobile && !_showsQuickActions && ownModel ? _modelChip : null,
@@ -968,9 +974,11 @@ extension _SessionScreenComposerExt on _SessionScreenState {
               onPick: _onColdPick)
           : null,
       // No send-mode legend; only the new-line key, while idle.
-      deskHint: () => _input.text.isEmpty || running
-          ? null
-          : DeskHint([('\u21e7\u21b5', 'new line')]),
+      deskHint: () => DeskHint([
+        ('\u21b5', running ? 'queue' : 'send'),
+        ('\u21e7\u21b5', 'new line'),
+        ('esc', 'dismiss'),
+      ]),
       running: running,
       sending: _sendingAudio,
       hasDraft: () => _hasDraft,
@@ -982,9 +990,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
   }
 
   bool get _showsQuickActions =>
-      !_isLead &&
-      !widget.readOnly &&
-      _inboxAgentId(widget.sessionId) == null;
+      !_isLead && !widget.readOnly && _inboxAgentId(widget.sessionId) == null;
 
   /// The composer's "+": on phone sessions with actions it toggles the tray
   /// (turning 45 degrees to read as a close); elsewhere it attaches directly.

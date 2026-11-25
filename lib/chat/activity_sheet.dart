@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 
 import '../api.dart' show DaemonClient;
 import '../media_views.dart' show DaemonScope, ImageThumb;
+import '../platform.dart';
 import '../morph_sheet.dart';
 import '../theme.dart';
 import '../tool_activity.dart';
@@ -18,6 +19,7 @@ import '../tool_views.dart';
 import '../transcript.dart' show TerminalBlock, isLookupStep, isSearchStep;
 import '../widgets.dart';
 import 'activity_dock.dart';
+import 'tool_call_row.dart';
 import 'phone_ledger.dart';
 import '../tap_detector.dart';
 
@@ -234,6 +236,39 @@ class _ListPage extends StatelessWidget {
       }
     }
     final t = took ?? stepsDuration(steps);
+    if (!kMobile) {
+      final state = batch.running ? 'Running' : 'Done';
+      final meta = [
+        state,
+        '${steps.length} ${steps.length == 1 ? 'step' : 'steps'}',
+        if (t != null) formatWorkDuration(t),
+      ].join(' · ');
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            height: 36,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(children: [
+                Text('Activity',
+                    style: sans(13, weight: W.label, color: AppColors.fg1)),
+                const Spacer(),
+                Text(meta, style: mono(11, color: AppColors.fg3)),
+              ]),
+            ),
+          ),
+          Container(height: 1, color: AppColors.line),
+          Expanded(
+            child: ListView(
+              controller: scroll,
+              padding: const EdgeInsets.fromLTRB(4, 4, 4, 12),
+              children: rows,
+            ),
+          ),
+        ],
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -265,7 +300,10 @@ class _ListPage extends StatelessWidget {
             controller: scroll,
             padding: EdgeInsets.only(
                 bottom: 24 + MediaQuery.of(context).padding.bottom),
-            children: [PhoneLedgerCard(steps: steps), ...rows],
+            children: [
+              if (kMobile) PhoneLedgerCard(steps: steps),
+              ...rows,
+            ],
           ),
         ),
       ],
@@ -441,6 +479,17 @@ class _StepRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!kMobile) {
+      return Padding(
+        padding: EdgeInsets.only(left: indent, top: 2),
+        child: ToolCallRow(
+          step: step,
+          onTap: onTap,
+          filled: false,
+          showChevron: true,
+        ),
+      );
+    }
     final tone = _stepTone(step);
     final chip = stepChip(step);
     final failed = tone == _Tone.bad;
@@ -608,6 +657,64 @@ class _GroupRow extends StatelessWidget {
         if (searches > 0) '$searches ${searches == 1 ? 'search' : 'searches'}',
       ].join(', ');
     }
+    if (!kMobile) {
+      final bad = failed;
+      return TapDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox(
+          height: 28,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(10, 0, 8, 0),
+            child: Row(children: [
+              SizedBox(
+                width: 14,
+                height: 14,
+                child: Center(
+                  child: live
+                      ? Spinner(size: 13, color: AppColors.fg2)
+                      : AppIcon(bad ? 'x' : 'check',
+                          size: bad ? 14 : 13,
+                          color: bad ? AppColors.fg1 : AppColors.fg3),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text.rich(
+                  TextSpan(children: [
+                    TextSpan(
+                        text: title,
+                        style: TextStyle(
+                            color:
+                                live || bad ? AppColors.fg1 : AppColors.fg2)),
+                    if (sub.isNotEmpty)
+                      TextSpan(
+                          text: ' $sub',
+                          style: TextStyle(color: AppColors.fg3)),
+                  ]),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(12),
+                ),
+              ),
+              if (meta != null) ...[
+                const SizedBox(width: 10),
+                DefaultTextStyle(
+                  style: mono(11, color: AppColors.fg3),
+                  child: meta,
+                ),
+              ],
+              const SizedBox(width: 6),
+              AnimatedRotation(
+                turns: open ? 0.25 : 0,
+                duration: Motion.fast,
+                child: AppIcon('chevron-right', size: 12, color: AppColors.fg3),
+              ),
+            ]),
+          ),
+        ),
+      );
+    }
     return TapDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -681,7 +788,7 @@ class _DetailPage extends StatelessWidget {
   final void Function(String path)? onOpenFile;
 
   Widget _body(BuildContext context, ToolStep step) {
-    if (toolBaseName(step.tool) == 'bash') {
+    if (kMobile && toolBaseName(step.tool) == 'bash') {
       return TerminalBlock(
           step: step,
           commandLines: 3,
@@ -689,8 +796,18 @@ class _DetailPage extends StatelessWidget {
           tail: step.running,
           size: 13);
     }
-    return safeToolDetailView(context,
+    final detail = safeToolDetailView(context,
         tool: step.tool, args: step.args, result: step.result);
+    if (kMobile) return detail;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surface2,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: detail,
+    );
   }
 
   void _openFull(BuildContext context, ToolStep step) {
@@ -717,10 +834,9 @@ class _DetailPage extends StatelessWidget {
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                child: toolBaseName(step.tool) == 'bash'
+                child: kMobile && toolBaseName(step.tool) == 'bash'
                     ? TerminalBlock(step: step, outputCap: 100000, size: 13)
-                    : safeToolDetailView(context,
-                        tool: step.tool, args: step.args, result: step.result),
+                    : _body(context, step),
               ),
             ),
           ]),
@@ -748,7 +864,8 @@ class _DetailPage extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
           child: Row(children: [
-            _RoundButton(icon: 'chevron-left', onTap: onBack, size: 40),
+            _RoundButton(
+                icon: 'chevron-left', onTap: onBack, size: kMobile ? 40 : 28),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -763,7 +880,7 @@ class _DetailPage extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Text('${index + 1} of ${steps.length}',
-                style: sans(13, color: AppColors.fg3, tabular: true)),
+                style: mono(kMobile ? 13 : 11, color: AppColors.fg3)),
           ]),
         ),
         Padding(
@@ -860,13 +977,13 @@ class _NavButton extends StatelessWidget {
         child: Opacity(
           opacity: enabled ? 1 : 0.35,
           child: Container(
-            width: 44,
-            height: 44,
+            width: kMobile ? 44 : 28,
+            height: kMobile ? 44 : 28,
             alignment: Alignment.center,
             decoration: BoxDecoration(
                 color: AppColors.surface3,
-                borderRadius: BorderRadius.circular(22)),
-            child: AppIcon(icon, size: 18, color: AppColors.fg1),
+                borderRadius: BorderRadius.circular(kMobile ? 22 : 6)),
+            child: AppIcon(icon, size: kMobile ? 18 : 13, color: AppColors.fg1),
           ),
         ),
       );
@@ -884,19 +1001,20 @@ class _WideButton extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Container(
-          height: 44,
+          height: kMobile ? 44 : 28,
           alignment: Alignment.center,
           decoration: BoxDecoration(
               color: AppColors.surface3,
-              borderRadius: BorderRadius.circular(22)),
+              borderRadius: BorderRadius.circular(kMobile ? 22 : 6)),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            AppIcon(icon, size: 18, color: AppColors.fg1),
-            const SizedBox(width: 8),
+            AppIcon(icon, size: kMobile ? 18 : 13, color: AppColors.fg1),
+            SizedBox(width: kMobile ? 8 : 6),
             Flexible(
               child: Text(label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(15, weight: W.label, color: AppColors.fg1)),
+                  style: sans(kMobile ? 15 : 12,
+                      weight: W.label, color: AppColors.fg1)),
             ),
           ]),
         ),

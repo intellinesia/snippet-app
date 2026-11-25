@@ -1418,7 +1418,7 @@ class M {
 const double kComposerGutter = 16;
 
 // ---------------------------------------------------------------------------
-// Typography — Geist for UI, Geist Mono for code.
+// Typography — Inter for UI and body, Geist Mono for code and data.
 //
 // Two weights: 400 for prose, 500 for titles, row titles and controls. Nothing
 // renders heavier than 500.
@@ -1469,8 +1469,8 @@ TextStyle sans(double size,
       letterSpacing: spacing ?? _tracking(size),
       color: color ?? AppColors.fg2,
       // Proportional digits have different widths, so a ticking timer or a
-      // counter shimmers and reflows as it updates. Geist ships `tnum`
-      // (verified in the font's GSUB table), so this is a real substitution.
+      // counter shimmers and reflows as it updates. Inter ships `tnum`,
+      // so this is a real substitution.
       fontFeatures: tabular ? const [FontFeature.tabularFigures()] : null,
     );
 
@@ -1485,19 +1485,23 @@ TextStyle display(double size,
       color: color ?? AppColors.fg1,
     );
 
-/// Numbers, ids and labels: the UI face with tabular figures, not a code face.
+/// Numbers, ids, commands and other data: the chosen monospace face.
 TextStyle mono(double size,
         {FontWeight? weight,
         double? height,
         double? spacing,
         Color? color,
         bool tabular = true}) =>
-    sans(size,
-        weight: weight ?? W.body,
-        height: height ?? 1.45,
-        spacing: spacing,
-        color: color ?? AppColors.fg1,
-        tabular: tabular);
+    TextStyle(
+      fontFamily: monoFamily,
+      fontFamilyFallback: const ['GeistMono', 'monospace'],
+      fontSize: size,
+      fontWeight: weightFor(weight ?? W.body),
+      height: height ?? 1.45,
+      letterSpacing: spacing,
+      color: color ?? AppColors.fg1,
+      fontFeatures: tabular ? const [FontFeature.tabularFigures()] : null,
+    );
 
 /// Real code: the user's chosen monospace face.
 TextStyle codeMono(double size,

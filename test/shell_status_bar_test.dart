@@ -31,6 +31,15 @@ void main() {
     expect(count, 3);
   });
 
+  test('typography baseline resolves Inter UI and Geist Mono data/code', () {
+    ThemeManager.instance.resetForTest();
+    expect(ThemeManager.defaultFont, 'Inter');
+    expect(ThemeManager.defaultMonoFont, 'GeistMono');
+    expect(sans(11).fontFamily, 'Inter');
+    expect(mono(11).fontFamily, 'GeistMono');
+    expect(codeMono(11).fontFamily, 'GeistMono');
+  });
+
   Future<void> pumpBar(WidgetTester tester, ShellStatusBar bar) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(1440, 200);
@@ -132,7 +141,8 @@ void main() {
     expect(retries, 1);
   });
 
-  testWidgets('usage hit target reaches above the bar', (tester) async {
+  testWidgets('usage hit target is vertically centred inside the 26-high bar',
+      (tester) async {
     var opened = 0;
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(1440, 200);
@@ -154,9 +164,23 @@ void main() {
       ),
     );
     await tester.pump();
+    final bar = tester.getRect(find.byKey(const ValueKey('shell-status-bar')));
+    expect(bar.height, kShellStatusBarHeight);
+    expect(bar.height, 26);
     final x = tester.getCenter(find.text('Claude 42%')).dx;
-    await tester.tapAt(Offset(x, 49));
+
+    await tester.tapAt(Offset(x, bar.top + 0.5));
+    await tester.pump();
+    expect(opened, 0);
+    await tester.tapAt(Offset(x, bar.top + 1.5));
     await tester.pump();
     expect(opened, 1);
+
+    await tester.tapAt(Offset(x, bar.bottom - 0.5));
+    await tester.pump();
+    expect(opened, 1);
+    await tester.tapAt(Offset(x, bar.bottom - 1.5));
+    await tester.pump();
+    expect(opened, 2);
   });
 }

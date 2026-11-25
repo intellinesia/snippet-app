@@ -152,8 +152,7 @@ class SlashController extends ChangeNotifier {
       };
 
   bool get isOpen =>
-      env != null &&
-      (_sub != null || (!_dismissed && rootItems.isNotEmpty));
+      env != null && (_sub != null || (!_dismissed && _q != null));
 
   int get _count => _sub != null ? _subCount : rootItems.length;
 
@@ -354,21 +353,29 @@ class SlashMenuView extends StatelessWidget {
     final rows = <Widget>[];
     if (sub == null) {
       final items = c.rootItems;
-      rows.add(_group('Session'));
+      if (kMobile) rows.add(_group('Session'));
+      if (items.isEmpty) {
+        rows.add(Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          child: Text('No commands',
+              style: sans(13, height: 18 / 13, color: AppColors.fg2)),
+        ));
+      }
       for (var i = 0; i < items.length; i++) {
         final it = items[i];
         rows.add(_Row(
           icon: it.icon,
           label: it.label,
+          command: it.command,
           on: i == c.index,
           onTap: () => c.pick(i),
           onHover: () => c.hover(i),
           right: it.drill
               ? Row(mainAxisSize: MainAxisSize.min, children: [
                   Text(it.value ?? '', style: sans(11.5, color: AppColors.fg4)),
-                  AppIcon('chevron-right', size: 14, color: AppColors.fg3),
+                  AppIcon('chevron-right', size: 13, color: AppColors.fg3),
                 ])
-              : Text(it.command, style: mono(11, color: AppColors.fg4)),
+              : const SizedBox.shrink(),
         ));
       }
     } else {
@@ -457,7 +464,8 @@ class SlashMenuView extends StatelessWidget {
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(kMobile ? 12 : 10),
+        borderRadius: BorderRadius.circular(kMobile ? 12 : 8),
+        boxShadow: kMobile ? null : overlayShadow,
       ),
       child: kMobile
           ? SingleChildScrollView(
@@ -482,6 +490,7 @@ class _Row extends StatelessWidget {
   const _Row({
     required this.icon,
     required this.label,
+    this.command,
     required this.on,
     required this.onTap,
     required this.onHover,
@@ -489,6 +498,7 @@ class _Row extends StatelessWidget {
   });
   final String? icon;
   final String label;
+  final String? command;
   final bool on;
   final VoidCallback onTap;
   final VoidCallback onHover;
@@ -501,26 +511,32 @@ class _Row extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
           child: Container(
-            constraints: BoxConstraints(minHeight: kMobile ? 48 : 30),
+            constraints: BoxConstraints(minHeight: kMobile ? 48 : 28),
             padding: EdgeInsets.symmetric(horizontal: kMobile ? 12 : 8),
             decoration: BoxDecoration(
-              color: on
-                  ? (kMobile
-                      ? AppColors.surface3
-                      : AppColors.fg1.withValues(alpha: 0.07))
-                  : null,
+              color: on ? AppColors.surface3 : null,
               borderRadius: BorderRadius.circular(kMobile ? 8 : 6),
             ),
             child: Row(children: [
               if (icon != null) ...[
-                AppIcon(icon!, size: 16, color: AppColors.fg3),
-                const SizedBox(width: 10),
+                AppIcon(icon!, size: kMobile ? 16 : 14, color: AppColors.fg2),
+                SizedBox(width: kMobile ? 10 : 8),
               ] else
-                const SizedBox(width: 26),
+                SizedBox(width: kMobile ? 26 : 22),
+              if (!kMobile && command != null) ...[
+                Text(command!,
+                    style: mono(12.5,
+                        weight: FontWeight.w500,
+                        height: 17 / 12.5,
+                        color: AppColors.fg1)),
+                const SizedBox(width: 10),
+              ],
               Expanded(
                   child: Text(label,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(kMobile ? 13 : 12.5, color: AppColors.fg2))),
+                      style: sans(kMobile ? 13 : 12,
+                          height: kMobile ? null : 16 / 12,
+                          color: kMobile ? AppColors.fg2 : AppColors.fg3))),
               right,
             ]),
           ),

@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 
 import 'ambient_loop.dart';
 import 'chat/ledger_line.dart';
+import 'chat/tool_call_row.dart';
 import 'chat/signal_row.dart';
 import 'api.dart' show DaemonClient;
 import 'crew_widgets.dart' show AgentProviderMark;
@@ -575,6 +576,15 @@ class _DenseToolRowState extends State<DenseToolRow> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Desktop TC-04/05: the shared tool-call row anatomy.
+        if (!kMobile)
+          ToolCallRow(
+            step: step,
+            onTap: canExpand ? _toggle : null,
+            open: open,
+            showChevron: canExpand,
+          )
+        else
         _FlatRow(
           live: live,
           onTap: canExpand ? _toggle : null,

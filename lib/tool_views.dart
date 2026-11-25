@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import 'coordination_tool_views.dart';
@@ -18,27 +20,50 @@ List<Map> _mapItems(dynamic value) =>
 /// Per-tool rendering: a glyph + one-line summary for the inline tool row, and
 // a rich, tool-specific body for the detail drawer (never raw JSON unless unknown).
 
+bool _isCanvasToolName(String tool) =>
+    tool.startsWith('canvas') ||
+    tool == 'frame_apply' ||
+    tool == 'canvas_apply' ||
+    tool == 'canvas_ask';
+
+bool _isGitToolName(String tool) =>
+    tool.startsWith('git_') ||
+    tool == 'git' ||
+    tool == 'commit' ||
+    tool == 'push' ||
+    tool == 'pull_request' ||
+    tool == 'pr' ||
+    tool.startsWith('github_pr');
+
 /// Lucide-ish glyph name for a tool (resolved via [iconFor]).
-String toolIcon(String tool) => switch (toolBaseName(tool)) {
-      'change_files' => 'edit',
-      'view_image' => 'image',
-      'bash' => 'terminal',
-      'web_search' || 'web_read' => 'globe',
-      'set_session_title' => 'edit',
-      'search_skills' || 'skill' => 'sparkles',
-      'monitor' => 'eye',
-      'present_file' => 'file',
-      'manage_process' => 'cpu',
-      'share_artifact' => 'file',
-      'delegate_task' => 'users',
-      'send_agent_message' ||
-      'post_chat' ||
-      'group_thread' ||
-      'post_task_coordination' =>
-        'message-square',
-      'ask_user' => 'help-circle',
-      _ => 'code',
-    };
+String toolIcon(String tool) {
+  final base = toolBaseName(tool);
+  return switch (base) {
+    'change_files' => 'edit',
+    'view_image' => 'image',
+    'bash' => 'terminal',
+    'read_file' || 'view_file' => 'file-text',
+    'list_dir' => 'folder',
+    'search_content' || 'grep_search' || 'find_by_name' || 'glob' => 'search',
+    'web_search' || 'web_read' => 'globe',
+    'set_session_title' => 'edit',
+    'search_skills' || 'skill' => 'sparkles',
+    'monitor' => 'eye',
+    'present_file' => 'file',
+    'manage_process' => 'cpu',
+    'share_artifact' => 'file',
+    'delegate_task' => 'users',
+    'send_agent_message' ||
+    'post_chat' ||
+    'group_thread' ||
+    'post_task_coordination' =>
+      'message-square',
+    'ask_user' => 'help-circle',
+    _ when _isCanvasToolName(base) => 'layers',
+    _ when _isGitToolName(base) => 'git-branch',
+    _ => 'code',
+  };
+}
 
 /// One-line, tool-aware summary for the inline activity line.
 String toolArgSummary(String tool, dynamic args) {
@@ -46,6 +71,23 @@ String toolArgSummary(String tool, dynamic args) {
   if (args is! Map) return '';
   String s(String k) => args[k]?.toString() ?? '';
   String first(String v) => v.split('\n').first.trim();
+  if (_isCanvasToolName(tool)) {
+    return first([
+      s('operation').isNotEmpty ? s('operation') : s('action'),
+      s('frame').isNotEmpty ? '"${s('frame')}"' : s('title'),
+      s('revision').isNotEmpty ? 'r${s('revision')}' : '',
+    ].where((v) => v.isNotEmpty).join(' '));
+  }
+  if (_isGitToolName(tool)) {
+    return first([
+      s('operation').isNotEmpty ? s('operation') : s('action'),
+      s('message').isNotEmpty ? '"${s('message')}"' : '',
+      s('hash').isNotEmpty
+          ? s('hash').substring(0, s('hash').length < 7 ? s('hash').length : 7)
+          : '',
+      s('pr').isNotEmpty ? '#${s('pr')}' : s('pull_request'),
+    ].where((v) => v.isNotEmpty).join(' '));
+  }
   final v = switch (tool) {
     // The command itself, not a placeholder. Showing "shell command" for every
     // bash call made the transcript unreadable: `cargo test`, `rm -rf build` and
@@ -144,6 +186,9 @@ bool toolHasDetail(ToolStep step) {
   final coordination =
       coordinationHasDetail(tool, args is Map ? args : null, data);
   if (coordination != null) return coordination;
+  if (_isCanvasToolName(tool) || _isGitToolName(tool)) {
+    return args is Map && args.isNotEmpty || resultHasBody();
+  }
 
   switch (tool) {
     case 'change_files':
@@ -167,26 +212,33 @@ bool toolHasDetail(ToolStep step) {
       return (data?['log'] ?? '').toString().trim().isNotEmpty;
     default:
       final shown = toolArgSummary(tool, args);
-      return shown.contains('…') || resultHasBody();
+      return shown.contains('…') ||
+          resultHasBody() ||
+          (args is Map && args.isNotEmpty);
   }
 }
 
 /// Friendly title for the drawer header.
-String toolTitle(String tool) => switch (toolBaseName(tool)) {
-      'change_files' => 'Change',
-      'view_image' => 'Image',
-      'bash' => 'Run',
-      'web_search' => 'Search',
-      'web_read' => 'Page',
-      'set_session_title' => 'Title',
-      'search_skills' => 'Skills',
-      'skill' => 'Skill',
-      'monitor' => 'Watch',
-      'present_file' => 'Present',
-      'read_file' => 'Read',
-      'view_file' => 'Read',
-      _ => _humanizeTool(toolBaseName(tool)),
-    };
+String toolTitle(String tool) {
+  final base = toolBaseName(tool);
+  return switch (base) {
+    'change_files' => 'Change',
+    'view_image' => 'Image',
+    'bash' => 'Run',
+    'web_search' => 'Search',
+    'web_read' => 'Page',
+    'set_session_title' => 'Title',
+    'search_skills' => 'Skills',
+    'skill' => 'Skill',
+    'monitor' => 'Watch',
+    'present_file' => 'Present',
+    'read_file' => 'Read',
+    'view_file' => 'Read',
+    _ when _isCanvasToolName(base) => 'Canvas',
+    _ when _isGitToolName(base) => 'Git',
+    _ => _humanizeTool(base),
+  };
+}
 
 String _humanizeTool(String tool) {
   final parts = tool.split(RegExp(r'[_\-]+')).where((p) => p.isNotEmpty);
@@ -220,7 +272,7 @@ class _ToolPanelError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text('This tool panel could not render its result.',
-        style: sans(13, color: AppColors.danger));
+        style: sans(13, color: AppColors.fg1));
   }
 }
 
@@ -307,6 +359,8 @@ class _HScroll extends StatelessWidget {
 
 List<Widget> _toolBody(BuildContext context, String tool, Map? a, Map? d,
     String? status, bool running) {
+  if (_isCanvasToolName(tool)) return _canvasView(a, d, status);
+  if (_isGitToolName(tool)) return _gitView(a, d, status);
   switch (tool) {
     case 'change_files':
       return _changeFilesView(a, d, failed: status == 'error');
@@ -387,15 +441,50 @@ List<String> toolMetaParts(ToolStep step) {
       return [if (n > 0) plural(n, 'result', 'results')];
     case 'web_read':
       final date = d?['published_date']?.toString() ?? '';
-      return [if (date.isNotEmpty) date];
+      final words = (d?['word_count'] ?? d?['words']) as num?;
+      return [
+        if (date.isNotEmpty) date,
+        if (words != null) plural(words.toInt(), 'word', 'words'),
+      ];
     case 'manage_process':
       final code = (d?['exit_status'] as num?)?.toInt();
       return [
         if (d?['outcome'] == 'timeout') 'still running',
         if (code != null && code != 0) 'exit $code',
       ];
+    case 'view_image':
+      final w = (d?['width'] as num?)?.toInt();
+      final h = (d?['height'] as num?)?.toInt();
+      return [if (w != null && h != null) '$w×$h'];
+    case 'skill':
+    case 'search_skills':
+      final results = d?['results'];
+      if (results is List) return [plural(results.length, 'skill', 'skills')];
+      return const [];
   }
-  return const [];
+  if (_isCanvasToolName(tool)) {
+    final revision =
+        d?['revision'] ?? (step.args is Map ? step.args['revision'] : null);
+    final ops = (step.args is Map ? step.args['ops'] : null);
+    return [
+      if (ops is List) plural(ops.length, 'op', 'ops'),
+      if (revision != null && revision.toString().isNotEmpty) 'r$revision',
+    ];
+  }
+  if (_isGitToolName(tool)) {
+    final hash = (d?['hash'] ?? d?['commit'] ?? '').toString();
+    final files = (d?['files_changed'] ?? d?['files']) as num?;
+    return [
+      if (hash.isNotEmpty) hash.substring(0, hash.length < 7 ? hash.length : 7),
+      if (files != null) plural(files.toInt(), 'file', 'files'),
+    ];
+  }
+  final ms = d?['duration_ms'];
+  final secs = d?['duration_secs'] ?? d?['elapsed_secs'];
+  return [
+    if (ms is num) '${(ms / 1000).toStringAsFixed(1)}s',
+    if (ms is! num && secs is num) '${secs.toStringAsFixed(1)}s',
+  ];
 }
 
 // ---- per-tool views ----
@@ -410,12 +499,15 @@ Widget _fileLabel(String name, int adds, int dels, {String note = ''}) =>
       ),
       if (adds > 0) ...[
         SizedBox(width: S.s8),
-        Text('+$adds', style: codeMono(kMobile ? 12 : 12, color: AppColors.ok)),
+        Text('+$adds',
+            style: codeMono(kMobile ? 12 : 12,
+                color: kMobile ? AppColors.ok : AppColors.fg2)),
       ],
       if (dels > 0) ...[
         SizedBox(width: S.s6),
         Text('−$dels',
-            style: codeMono(kMobile ? 12 : 12, color: AppColors.danger)),
+            style: codeMono(kMobile ? 12 : 12,
+                color: kMobile ? AppColors.danger : AppColors.fg3)),
       ],
       if (note.isNotEmpty) ...[
         SizedBox(width: S.s8),
@@ -488,7 +580,11 @@ List<Widget> _bashView(Map? a, Map? d, {required bool running, String? error}) {
   }
   final labelled = (a?['label']?.toString() ?? '').trim().isNotEmpty;
   final showCommand = cmd.isNotEmpty &&
-      (labelled || running || cmd.contains('\n') || cmd.length > 60);
+      (!kMobile ||
+          labelled ||
+          running ||
+          cmd.contains('\n') ||
+          cmd.length > 60);
   // The command wraps so it reads in full; output scrolls to keep columns.
   final cmdSpans = <InlineSpan>[];
   final spans = <InlineSpan>[];
@@ -509,17 +605,20 @@ List<Widget> _bashView(Map? a, Map? d, {required bool running, String? error}) {
   }
   if (stdout.isNotEmpty) {
     for (final l in stdout.split('\n')) {
+      final comment = l.trimLeft().startsWith('#');
       line(
           l,
           errorLineMarker.hasMatch(l)
-              ? AppColors.danger
-              : (kMobile ? AppColors.fg2 : AppColors.fg3));
+              ? (kMobile ? AppColors.danger : AppColors.fg1)
+              : comment
+                  ? AppColors.fg3
+                  : (kMobile ? AppColors.fg2 : AppColors.fg1));
     }
   }
   if (stderr.isNotEmpty) {
     if (stdout.isNotEmpty) spans.add(const TextSpan(text: '\n'));
     for (final l in stderr.split('\n')) {
-      line(l, AppColors.danger);
+      line(l, kMobile ? AppColors.danger : AppColors.fg1);
     }
   }
   final command = cmdSpans.isEmpty
@@ -745,6 +844,107 @@ List<Widget> _webReadView(Map? a, Map? d) {
   return out;
 }
 
+Widget _detailLine(String label, String value, {bool monoText = true}) {
+  if (value.trim().isEmpty) return const SizedBox.shrink();
+  return Padding(
+    padding: EdgeInsets.only(bottom: S.s4),
+    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      SizedBox(
+        width: 82,
+        child: Text(label, style: sans(11.5, color: AppColors.fg3)),
+      ),
+      Expanded(
+        child: Text(value,
+            style: monoText
+                ? codeMono(12, height: 1.5, color: AppColors.fg1)
+                : sans(_bodySize, height: 1.45, color: AppColors.fg2)),
+      ),
+    ]),
+  );
+}
+
+List<Widget> _canvasView(Map? a, Map? d, String? status) {
+  String pick(String key) => (d?[key] ?? a?[key] ?? '').toString().trim();
+  final operation = [
+    pick('operation'),
+    pick('action'),
+    pick('kind'),
+  ].firstWhere((v) => v.isNotEmpty, orElse: () => 'canvas call');
+  final frame = [pick('frame'), pick('frame_id'), pick('title'), pick('id')]
+      .firstWhere((v) => v.isNotEmpty, orElse: () => '');
+  final revision = pick('revision').isNotEmpty ? 'r${pick('revision')}' : '';
+  final ops = a?['ops'];
+  final question = [pick('question'), pick('ask'), pick('body')]
+      .firstWhere((v) => v.isNotEmpty, orElse: () => '');
+  final rows = <Widget>[
+    if (status == 'error')
+      Padding(
+        padding: EdgeInsets.only(bottom: S.s6),
+        child: Row(children: [
+          AppIcon('x', size: 13, color: AppColors.fg1),
+          SizedBox(width: S.s6),
+          Text('Failed',
+              style: sans(12, weight: W.label, color: AppColors.fg1)),
+        ]),
+      ),
+    _detailLine('Operation', operation),
+    _detailLine('Frame', frame),
+    if (revision.isNotEmpty) _detailLine('Revision', revision),
+    if (ops is List) _detailLine('Operations', '${ops.length}'),
+    if (question.isNotEmpty) _detailLine('Ask', question, monoText: false),
+  ];
+  return rows.isEmpty ? _simpleFallback(a, d) : rows;
+}
+
+List<Widget> _gitView(Map? a, Map? d, String? status) {
+  String pick(String key) => (d?[key] ?? a?[key] ?? '').toString().trim();
+  final operation = [pick('operation'), pick('action'), pick('command')]
+      .firstWhere((v) => v.isNotEmpty, orElse: () => 'git operation');
+  final hash = pick('hash').isNotEmpty ? pick('hash') : pick('commit');
+  final shortHash =
+      hash.isEmpty ? '' : hash.substring(0, hash.length < 7 ? hash.length : 7);
+  final message = pick('message');
+  final pr = [pick('pr'), pick('pull_request'), pick('number')]
+      .firstWhere((v) => v.isNotEmpty, orElse: () => '');
+  final rows = <Widget>[
+    if (status == 'error')
+      Padding(
+        padding: EdgeInsets.only(bottom: S.s6),
+        child: Row(children: [
+          AppIcon('x', size: 13, color: AppColors.fg1),
+          SizedBox(width: S.s6),
+          Text('Failed',
+              style: sans(12, weight: W.label, color: AppColors.fg1)),
+        ]),
+      ),
+    _detailLine('Operation', operation),
+    if (shortHash.isNotEmpty) _detailLine('Commit', shortHash),
+    if (message.isNotEmpty) _detailLine('Message', message),
+    if (pr.isNotEmpty) _detailLine('PR', pr.startsWith('#') ? pr : '#$pr'),
+    if (pick('url').isNotEmpty) _detailLine('URL', pick('url')),
+  ];
+  return rows.length <= (status == 'error' ? 2 : 1)
+      ? _simpleFallback(a, d)
+      : rows;
+}
+
+String? _jsonTail(dynamic value) {
+  if (value == null) return null;
+  String encoded;
+  try {
+    encoded = jsonEncode(value);
+  } catch (_) {
+    encoded = value.toString();
+  }
+  encoded = encoded.trim();
+  if (encoded.isEmpty || encoded == '{}' || encoded == 'null') return null;
+  const cap = 900;
+  if (encoded.length > cap) {
+    encoded = '…${encoded.substring(encoded.length - cap)}';
+  }
+  return encoded;
+}
+
 List<Widget> _simpleFallback(Map? a, Map? d) {
   final bits = <String>[];
   void take(dynamic v) {
@@ -777,13 +977,29 @@ List<Widget> _simpleFallback(Map? a, Map? d) {
       take(d[k]);
     }
   }
-  if (bits.isEmpty) {
-    return [Text('Done', style: sans(_bodySize, color: AppColors.fg3))];
+  final rows = <Widget>[];
+  if (bits.isNotEmpty) {
+    rows.add(Text(_displayText(bits.first).trimRight(),
+        style: sans(_bodySize, height: 1.45, color: AppColors.fg2)));
   }
-  return [
-    Text(_displayText(bits.first).trimRight(),
-        style: sans(_bodySize, height: 1.45, color: AppColors.fg2))
-  ];
+  final argTail = _jsonTail(a);
+  final resultTail = _jsonTail(d);
+  void jsonRow(String label, String tail) {
+    rows.add(Padding(
+      padding: EdgeInsets.only(top: rows.isEmpty ? 0 : S.s6),
+      child: Text('$label $tail',
+          style: codeMono(11.5, height: 1.5, color: AppColors.fg3)),
+    ));
+  }
+
+  if (argTail != null) jsonRow('args', argTail);
+  if (resultTail != null && resultTail != argTail) {
+    jsonRow('result', resultTail);
+  }
+  if (rows.isEmpty) {
+    rows.add(Text('Done', style: sans(_bodySize, color: AppColors.fg3)));
+  }
+  return rows;
 }
 
 // ---- shared pieces ----
@@ -931,7 +1147,10 @@ class _ToolMarkdown extends StatelessWidget {
 // Tool previews may be JSON strings that were encoded once for the result
 // envelope. Restore escaped control characters for display without changing the
 // underlying command/file data.
+final _ansiEscape = RegExp(r'\x1B\[[0-9;]*[A-Za-z]');
+
 String _displayText(String text) => text
+    .replaceAll(_ansiEscape, '')
     .replaceAll(r'\r\n', '\n')
     .replaceAll(r'\n', '\n')
     .replaceAll(r'\r', '\r');
@@ -1041,10 +1260,19 @@ class _DiffLines extends StatelessWidget {
   static const _maxLines = 400;
 
   Widget _row(_DLine l) {
+    final desktop = !kMobile;
     final (Color bg, Color fg, String sign) = switch (l.kind) {
-      _DKind.add => (AppColors.diffAddBg, AppColors.diffAddFg, '+'),
-      _DKind.del => (AppColors.diffDelBg, AppColors.diffDelFg, '-'),
-      _DKind.ctx => (Colors.transparent, AppColors.fg3, ' '),
+      _DKind.add => desktop
+          ? (AppColors.surface3, AppColors.fg1, '+')
+          : (AppColors.diffAddBg, AppColors.diffAddFg, '+'),
+      _DKind.del => desktop
+          ? (AppColors.bg, AppColors.fg3, '−')
+          : (AppColors.diffDelBg, AppColors.diffDelFg, '-'),
+      _DKind.ctx => (
+          Colors.transparent,
+          desktop ? AppColors.fg2 : AppColors.fg3,
+          ' '
+        ),
     };
     return Container(
       color: bg,

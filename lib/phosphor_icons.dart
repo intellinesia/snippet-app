@@ -158,6 +158,7 @@ abstract final class PhIcons {
   static const IconData treeStructure = IconData(0xe67c, fontFamily: 'Phosphor');
   static const IconData uploadSimple = IconData(0xe4c0, fontFamily: 'Phosphor');
   static const IconData user = IconData(0xe4c2, fontFamily: 'Phosphor');
+  static const IconData userMinus = IconData(0xe4ce, fontFamily: 'Phosphor');
   static const IconData userPlus = IconData(0xe4d0, fontFamily: 'Phosphor');
   static const IconData users = IconData(0xe4d6, fontFamily: 'Phosphor');
   static const IconData warning = IconData(0xe4e0, fontFamily: 'Phosphor');

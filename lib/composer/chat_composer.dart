@@ -28,6 +28,8 @@ class ChatComposer extends StatelessWidget {
     this.listen,
     required this.onAttach,
     this.attach,
+    this.deskAttach,
+    this.deskRecipient,
     this.onStop,
     this.onSteer,
     this.running = false,
@@ -67,6 +69,12 @@ class ChatComposer extends StatelessWidget {
   /// Default attach button action; [attach] replaces the phone button.
   final VoidCallback onAttach;
   final Widget? attach;
+
+  /// Desktop-specific attach control; [attach] remains the phone slot.
+  final Widget? deskAttach;
+
+  /// Recipient label or chip immediately left of the desktop action button.
+  final Widget? deskRecipient;
 
   /// Stop is offered while [running]; [onSteer] is the long-press send.
   final VoidCallback? onStop;
@@ -158,7 +166,8 @@ class ChatComposer extends StatelessWidget {
     void mic() => unawaited(voice.toggleRecording());
     // Phone spec: a voice icon and a separate send circle, both always there.
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      if (kCanRecord) ComposerBareButton('mic', label: 'Record', onTap: mic, size: 20),
+      if (kCanRecord)
+        ComposerBareButton('mic', label: 'Record', onTap: mic, size: 20),
       GestureDetector(
         onLongPress: running && canSend() ? onSteer : null,
         child: ComposerSendButton(
@@ -171,13 +180,14 @@ class ChatComposer extends StatelessWidget {
     ]);
   }
 
-  Widget _deskCard() {
+  Widget _deskCard(Widget? attachmentBar) {
     Widget field = TextField(
       controller: input,
       focusNode: focus,
       contentInsertionConfiguration: contentInsertion,
       minLines: 1,
-      maxLines: 10,
+      maxLines: 4,
+      cursorWidth: 1.5,
       cursorColor: AppColors.fg1,
       onSubmitted: (_) => _submit(),
       style: DeskComposerCard.fieldStyle,
@@ -188,39 +198,43 @@ class ChatComposer extends StatelessWidget {
       attentionExclude: attentionExclude,
       highlight: highlight,
       focus: focus,
-      banner: banner,
+      attachments: attachmentBar,
       field: CallbackShortcuts(bindings: _bindings, child: field),
-      attach: DeskIconButton('plus',
-          tooltip: 'Attach', onTap: onAttach, iconSize: 16, color: AppColors.fg2),
+      attach: deskAttach ??
+          DeskIconButton('plus',
+              tooltip: 'Attach',
+              onTap: onAttach,
+              iconSize: 15,
+              color: AppColors.fg2),
       model: deskModel,
       cold: deskCold,
       hint: deskHint?.call(),
-      mic: kCanRecord
-          ? DeskIconButton('mic',
-              tooltip: 'Record',
-              onTap: () => unawaited(voice.toggleRecording()))
-          : null,
+      recipient: deskRecipient,
       action: _deskAction(),
     );
   }
 
+  /// Desktop has one 28×28 action. It is mic when empty, send when armed,
+  /// stop while the turn runs, and a spinner while a stop/send is in flight.
   Widget _deskAction() {
-    final send = DeskActionButton(
-      icon: 'arrow-up',
-      tooltip: 'Send',
-      on: canSend(),
-      busy: sending,
-      onTap: canSend() ? onSend : null,
+    if (sending) {
+      return DeskActionButton(
+          icon: 'arrow-up', tooltip: 'Sending', busy: true, onTap: null);
+    }
+    if (running && onStop != null) {
+      return DeskActionButton(
+          icon: 'stop', tooltip: 'Stop', soft: true, onTap: onStop);
+    }
+    if (canSend()) {
+      return DeskActionButton(
+          icon: 'arrow-up', tooltip: 'Send', on: true, onTap: onSend);
+    }
+    return DeskActionButton(
+      icon: 'mic',
+      tooltip: kCanRecord ? 'Record' : 'Voice recording is unavailable',
+      on: false,
+      onTap: kCanRecord ? () => unawaited(voice.toggleRecording()) : null,
     );
-    if (!running || onStop == null) return send;
-    final stop = DeskActionButton(
-        icon: 'stop', tooltip: 'Stop', soft: true, onTap: onStop);
-    if (!hasDraft()) return stop;
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      stop,
-      const SizedBox(width: 6),
-      send,
-    ]);
   }
 
   @override
@@ -245,20 +259,28 @@ class ChatComposer extends StatelessWidget {
                 kMobile ? M.gutter : S.s20,
                 S.s8,
                 kMobile ? M.gutter : S.s20,
-                kMobile
-                    ? 8 + (keyboard > 0 ? 0 : mq.padding.bottom)
-                    : 18),
+                kMobile ? 8 + (keyboard > 0 ? 0 : mq.padding.bottom) : 18),
             child: ListenableBuilder(
               listenable: Listenable.merge([voice, input, listen]),
               builder: (context, _) {
                 final recording = voice.isActive;
+                final attachmentBar = attachments?.call();
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     ...above,
-                    // Attachments sit above the composer, never inside it.
-                    if (attachments?.call() case final bar?) bar,
+                    // The reply banner is the desktop strip directly above the
+                    // card; phone keeps it inside the pill layout.
+                    if (!kMobile && banner != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Align(
+                            alignment: Alignment.centerLeft, child: banner),
+                      ),
+                    // Phone attachments sit above the pill; desktop attachment
+                    // rows are chips inside the composer card itself.
+                    if (kMobile && attachmentBar != null) attachmentBar,
                     Swap(
                       stateKey: recording ? 'recorder' : 'composer',
                       alignment: Alignment.bottomCenter,
@@ -268,7 +290,8 @@ class ChatComposer extends StatelessWidget {
                               sending: sending,
                               recipient: recipient,
                               onSend: onSend,
-                              onMore: onRecordMore ?? () => unawaited(voice.recordMore()),
+                              onMore: onRecordMore ??
+                                  () => unawaited(voice.recordMore()),
                             )
                           : besideCard != null
                               ? Row(
@@ -281,14 +304,16 @@ class ChatComposer extends StatelessWidget {
                                         key: cardKey,
                                         child: kMobile
                                             ? _phoneCard()
-                                            : _deskCard(),
+                                            : _deskCard(attachmentBar),
                                       ),
                                     ),
                                   ],
                                 )
                               : KeyedSubtree(
                                   key: cardKey,
-                                  child: kMobile ? _phoneCard() : _deskCard()),
+                                  child: kMobile
+                                      ? _phoneCard()
+                                      : _deskCard(attachmentBar)),
                     ),
                   ],
                 );

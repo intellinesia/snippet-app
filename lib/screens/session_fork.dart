@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../morph_sheet.dart';
+import '../platform.dart';
 import '../theme.dart';
 import '../tap_detector.dart';
+import '../widgets.dart';
 
 /// "Fork this conversation" sheet. Resolves true for "From this message",
 /// false for "Full history", null when dismissed. [origin] is the tapped
@@ -16,7 +18,8 @@ Future<bool?> showForkSheet(
     showMorphSheet<bool>(
       context,
       title: 'Fork this conversation',
-      subtitle: 'A new session; this one stays as it is. Files on disk are shared.',
+      subtitle:
+          'A new session; this one stays as it is. Files on disk are shared.',
       origin: origin,
       builder: (ctx) => SessionForkPanel(
           fromLabel: fromLabel,
@@ -64,7 +67,7 @@ class _SessionForkPanelState extends State<SessionForkPanel> {
         ),
         const SizedBox(height: 12),
         Container(
-          constraints: const BoxConstraints(minHeight: 48),
+          constraints: BoxConstraints(minHeight: kMobile ? 48 : 32),
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
               color: AppColors.surface3,
@@ -73,52 +76,63 @@ class _SessionForkPanelState extends State<SessionForkPanel> {
           alignment: Alignment.center,
           child: TextField(
             controller: _title,
-            style: sans(15, color: AppColors.fg1),
+            style: sans(kMobile ? 15 : 13, color: AppColors.fg1),
             cursorColor: AppColors.fg1,
             decoration: InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
                 hintText: 'Fork title',
-                hintStyle: sans(15, color: AppColors.fg3)),
+                hintStyle: sans(kMobile ? 15 : 13, color: AppColors.fg3)),
           ),
         ),
         const SizedBox(height: 12),
-        Semantics(
-          button: true,
-          label: 'Fork',
-          child: ExcludeSemantics(
-            child: TapDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => widget.onChoose(true),
-              child: Container(
-                constraints: const BoxConstraints(minHeight: 48),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                    color: AppColors.surface2,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: AppColors.border)),
-                child: Text('Fork',
-                    style: sans(15, weight: W.label, color: AppColors.fg1)),
+        if (!kMobile)
+          Row(children: [
+            Btn('Fork', small: true, onTap: () => widget.onChoose(true)),
+            const SizedBox(width: 8),
+            Btn('Fork from the start instead',
+                small: true,
+                variant: BtnVariant.ghost,
+                onTap: () => widget.onChoose(false)),
+          ])
+        else ...[
+          Semantics(
+            button: true,
+            label: 'Fork',
+            child: ExcludeSemantics(
+              child: TapDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => widget.onChoose(true),
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 48),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                      color: AppColors.surface2,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AppColors.border)),
+                  child: Text('Fork',
+                      style: sans(15, weight: W.label, color: AppColors.fg1)),
+                ),
               ),
             ),
           ),
-        ),
-        Semantics(
-          button: true,
-          label: 'Fork from the start instead',
-          child: ExcludeSemantics(
-            child: TapDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => widget.onChoose(false),
-              child: Container(
-                constraints: const BoxConstraints(minHeight: 48),
-                alignment: Alignment.center,
-                child: Text('Fork from the start instead',
-                    style: sans(15, color: AppColors.fg2)),
+          Semantics(
+            button: true,
+            label: 'Fork from the start instead',
+            child: ExcludeSemantics(
+              child: TapDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => widget.onChoose(false),
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 48),
+                  alignment: Alignment.center,
+                  child: Text('Fork from the start instead',
+                      style: sans(15, color: AppColors.fg2)),
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ],
     );
   }

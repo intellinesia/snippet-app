@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../approval_code.dart';
+import '../chat/canvas_ask_card.dart';
 import '../chat/chat_card.dart';
 import '../mochi.dart';
 import '../chat/decided_card.dart';
@@ -77,6 +78,29 @@ Widget? agentThreadEventCard(
   List<CoordinationEvent> events = const [],
 }) {
   final payload = e.payload;
+  if (!kMobile) {
+    final canvasAsk = CanvasAskCard.payloadOf(payload);
+    if (canvasAsk != null) {
+      final quickSession =
+          '${payload['session'] ?? canvasAsk['session'] ?? ''}';
+      return CanvasAskCard(
+        canvasAsk,
+        client: client,
+        session: quickSession.isEmpty ? null : quickSession,
+        onAnswer: quickSession.isEmpty
+            ? null
+            : (value, {decision}) => quickSend(
+                  client: client,
+                  session: quickSession,
+                  action: decision == 'approve'
+                      ? const QuickApprove()
+                      : decision == 'reject'
+                          ? const QuickDeny()
+                          : QuickAnswer(value),
+                ),
+      );
+    }
+  }
   final attachment = payload['attachment'];
   if (attachment is Map && attachment['kind'] == 'audio') {
     return _audioCard(e, attachment, client: client);
@@ -386,7 +410,8 @@ Widget _chatPill({
       decoration: BoxDecoration(
         color: kMobile && !primary ? AppColors.surface2 : bg,
         borderRadius: BorderRadius.circular(kMobile ? 10 : R.pill),
-        border: kMobile && !primary ? Border.all(color: AppColors.border) : null,
+        border:
+            kMobile && !primary ? Border.all(color: AppColors.border) : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -557,6 +582,57 @@ Widget _approvalSegments({
     _ => 'Waiting for approval',
   };
   final first = code.split('\n').first;
+  if (!kMobile) {
+    if (state != 'waiting') {
+      final kind = switch (state) {
+        'approved' => DecidedKind.approved,
+        'outdated' => DecidedKind.outdated,
+        'expired' => DecidedKind.expired,
+        _ => DecidedKind.denied,
+      };
+      return DecidedCard(
+        kind: kind,
+        title: title,
+        subtitle: [
+          if (first.isNotEmpty) first,
+          if (from.isNotEmpty) from,
+        ].join(' · '),
+      );
+    }
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: S.s2),
+      child: DesktopAskCard(
+        title: title,
+        meta: from,
+        payload: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (first.isNotEmpty) AskCommandPlate(code, maxLines: 3),
+            if (secrets.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Wrap(spacing: 6, runSpacing: 4, children: [
+                  for (final name in secrets)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface3,
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      child: Text(name,
+                          style: codeMono(11,
+                              height: 15 / 11, color: AppColors.fg2)),
+                    ),
+                ]),
+              ),
+            ...extra,
+          ],
+        ),
+      ),
+    );
+  }
   return GroupedCard(segments: [
     GroupedCardHeader(
       icon: 'square-terminal',
@@ -900,8 +976,7 @@ class _SendBackSheetState extends State<_SendBackSheet> {
                         decoration: BoxDecoration(
                             color: AppColors.surface3,
                             borderRadius: BorderRadius.circular(16)),
-                        child: Text(q,
-                            style: sans(13, color: AppColors.fg1)),
+                        child: Text(q, style: sans(13, color: AppColors.fg1)),
                       ),
                     ),
                   ),
@@ -1193,7 +1268,8 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
       return _approvalSegments(
         state: switch (kind) {
           DecidedKind.approved => 'approved',
-          DecidedKind.outdated || DecidedKind.expired => 'outdated',
+          DecidedKind.outdated => 'outdated',
+          DecidedKind.expired => 'expired',
           _ => 'declined',
         },
         title: isCommand ? 'Ran a command' : line,
@@ -1214,6 +1290,75 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
     final ruleLabel = approvalRuleLabel(widget.approval['rule']);
     final multiline = parsed.shownCommand.contains('\n');
     final where = head.isNotEmpty ? head : from;
+    if (!kMobile) {
+      final at = DateTime.tryParse(widget.event.createdAt)?.toLocal();
+      final time = at == null
+          ? ''
+          : '${at.hour.toString().padLeft(2, '0')}:${at.minute.toString().padLeft(2, '0')}';
+      final actor = widget.agentId.isNotEmpty
+          ? widget.agentId
+          : widget.event.actorId.trim();
+      final metaParts = [
+        if (actor.isNotEmpty) actor,
+        if (time.isNotEmpty) time,
+        if (counter != null) counter,
+      ];
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: S.s2),
+        child: DesktopAskCard(
+          title: asked ?? (isCommand ? 'Run a command?' : title),
+          meta: metaParts.join(' · '),
+          payload: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (parsed.shownCommand.isNotEmpty)
+                AskCommandPlate(parsed.shownCommand,
+                    maxLines: multiline ? 8 : 3),
+              if (reason.isNotEmpty || context_.isNotEmpty)
+                Padding(
+                  padding: EdgeInsets.only(
+                      top: parsed.shownCommand.isNotEmpty ? 8 : 0),
+                  child: Text(
+                      [reason, context_].where((x) => x.isNotEmpty).join('\n'),
+                      style: sans(12, height: 17 / 12, color: AppColors.fg2)),
+                ),
+              if (parsed.secrets.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Wrap(spacing: 6, runSpacing: 4, children: [
+                    for (final name in parsed.secrets)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface3,
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: Text(name,
+                            style: codeMono(11,
+                                height: 15 / 11, color: AppColors.fg2)),
+                      ),
+                  ]),
+                ),
+            ],
+          ),
+          actions: [
+            if (ruleLabel != null)
+              AskButton('Always allow $ruleLabel',
+                  variant: AskButtonVariant.ghost,
+                  onTap: _busy ? null : () => _decide(true, rule: true)),
+            AskButton('Deny',
+                variant: AskButtonVariant.secondary,
+                onTap: _busy ? null : () => _decide(false)),
+            AskButton(_busy ? 'Approving' : 'Approve',
+                variant: AskButtonVariant.primary,
+                busy: _busy,
+                onTap: () => _decide(true)),
+          ],
+        ),
+      );
+    }
     return Padding(
       padding: EdgeInsets.symmetric(vertical: S.s2),
       child: GroupedCard(segments: [

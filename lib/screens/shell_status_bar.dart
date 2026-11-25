@@ -436,10 +436,7 @@ class _StatusStaticItem extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget result = SizedBox(
       height: 24,
-      child: Padding(
-        padding: const EdgeInsets.only(top: 2),
-        child: Center(widthFactor: 1, child: child),
-      ),
+      child: Center(widthFactor: 1, child: child),
     );
     if (tooltip != null) result = Tooltip(message: tooltip!, child: result);
     return result;
@@ -509,7 +506,6 @@ class _StatusTargetState extends State<_StatusTarget> {
             height: 24,
             constraints:
                 widget.iconOnly ? null : const BoxConstraints(minWidth: 24),
-            padding: const EdgeInsets.only(top: 2),
             decoration: BoxDecoration(
               color: fill,
               borderRadius: BorderRadius.circular(6),

@@ -328,22 +328,33 @@ void main() {
           .moveTo(t.getCenter(find.text('Finished running benchmarks.')));
       await _pumpFrames(t);
       expect(find.byType(MessageActionsView), findsNothing);
+      expect(find.byType(MessageFocusOverlay), findsNothing);
 
+      // MSG-08: a hold opens the focus overlay, sized to 28 targets.
       await t.longPress(find.text('Finished running benchmarks.'),
           kind: PointerDeviceKind.mouse);
       await _pumpFrames(t);
-      expect(find.byType(MessageActionsView), findsOneWidget);
+      expect(find.byType(MessageFocusOverlay), findsOneWidget);
+      final eyes = find.descendant(
+          of: find.byType(MessageFocusOverlay), matching: find.text('👀'));
+      expect(t.getSize(find.ancestor(of: eyes, matching: find.byType(SizedBox)).first),
+          const Size(28, 28));
+      expect(t.getSize(find.ancestor(
+              of: find.descendant(
+                  of: find.byType(MessageFocusOverlay),
+                  matching: find.text('Reply')),
+              matching: find.byType(SizedBox)).first).height,
+          28);
 
-      await t.tap(find.descendant(
-          of: find.byType(MessageActionsView), matching: find.text('👀')));
+      await t.tap(eyes);
       await _pumpFrames(t);
 
       expect(client.sent.length, 1);
       expect(client.sent.single['reply_to'], 'm1');
       expect(client.sent.single['reaction'], '👀');
       expect(client.sent.single['body'], '');
-      expect(find.byType(MessageActionsView), findsNothing);
-      expect(find.byType(MessageReactionChips), findsOneWidget);
+      expect(find.byType(MessageFocusOverlay), findsNothing);
+      expect(find.byType(DeskReactionRow), findsOneWidget);
 
       await t.pumpWidget(const SizedBox());
     } finally {

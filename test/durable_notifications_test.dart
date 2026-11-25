@@ -155,7 +155,11 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Other instance'), findsOneWidget);
-    await tester.drag(find.byType(Dismissible), const Offset(0, -500));
+    await tester.drag(
+        find.ancestor(
+            of: find.text('Other instance'),
+            matching: find.byType(Dismissible)),
+        const Offset(-500, 0));
     await tester.pumpAndSettle();
     expect(find.text('Queued'), findsNothing);
     expect(find.text('Other instance'), findsNothing);
@@ -411,7 +415,7 @@ void main() {
     await tester.pumpWidget(
         const MaterialApp(home: NotificationPopovers(child: Scaffold())));
     expect(find.text('Queued at startup'), findsOneWidget);
-    await tester.drag(find.byType(Dismissible), const Offset(0, -500));
+    await tester.drag(find.byType(Dismissible), const Offset(-500, 0));
     await tester.pumpAndSettle();
     expect(find.text('Queued at startup'), findsNothing);
   });
@@ -430,8 +434,10 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Hello'));
       await tester.pumpAndSettle();
-      if (find.text('Open chat').evaluate().isNotEmpty) {
-        await tester.tap(find.text('Open chat'));
+      final openLabel =
+          find.text('Open chat').evaluate().isNotEmpty ? 'Open chat' : 'Open';
+      if (find.text(openLabel).evaluate().isNotEmpty) {
+        await tester.tap(find.text(openLabel));
         await tester.pumpAndSettle();
       }
       expect(opened?['destination']['id'], 'target');

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'mochi.dart';
 import 'notification_banner.dart';
 import 'notification_text.dart';
+import 'platform.dart';
 import 'session_quick_send.dart';
 import 'theme.dart';
 import 'widgets.dart';
@@ -22,9 +23,16 @@ CardAction cardActionFor(Map<String, dynamic> p) {
       (dest is Map && '${dest['id'] ?? ''}'.isNotEmpty && destType != 'task');
   if (kind == 'waiting') {
     if (!hasSession) return CardAction.none;
-    return attentionType == 'approval'
-        ? CardAction.approval
-        : CardAction.answer;
+    if (attentionType == 'approval') return CardAction.approval;
+    // A question is only answerable when the daemon supplied its payload. A
+    // bare waiting event has no ask shape, so it can only open the session.
+    if (attention is Map &&
+        (attentionType == 'question' ||
+            '${attention['text'] ?? ''}'.trim().isNotEmpty ||
+            attention['choices'] is List)) {
+      return CardAction.answer;
+    }
+    return CardAction.none;
   }
   if ((kind == 'term' || kind == 'message' || destType == 'conversation') &&
       hasSession) {
@@ -36,8 +44,9 @@ CardAction cardActionFor(Map<String, dynamic> p) {
   return CardAction.none;
 }
 
-/// NT-02: a needs-you or message banner expanded in place, with a quick
-/// reply field and a 48 high action row. Opaque, no shadow.
+/// NT-02: a needs-you or message banner expanded in place. Desktop uses the
+/// locked compact card: surface2 radius 14, a 36 reply field, and 28-high flat
+/// buttons. Mobile keeps the roomier touch geometry.
 class NotificationMessageCard extends StatefulWidget {
   const NotificationMessageCard({
     super.key,
@@ -125,6 +134,8 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
 
   @override
   Widget build(BuildContext context) {
+    Theme.of(context);
+    final compact = !kMobile;
     final p = widget.payload;
     final title = '${p['title'] ?? ''}'.trim();
     final name = title.isEmpty ? 'Snippet' : title;
@@ -143,7 +154,17 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
     final mq = MediaQuery.of(context);
     final tight = mq.size.height <= 640 || mq.viewInsets.bottom > 0;
     final maxLines = tight ? 2 : 4;
+    final controlH = compact ? 28.0 : 48.0;
+    final labelSize = compact ? 12.0 : 14.0;
     final amber = AppColors.run;
+
+    final needsMark = compact
+        ? const NeedsYouMark(fontSize: 12)
+        : Row(mainAxisSize: MainAxisSize.min, children: [
+            AppIcon('hand', size: 14, color: amber),
+            const SizedBox(width: 4),
+            Text('Needs you', style: sans(12, weight: W.label, color: amber)),
+          ]);
 
     final header = Row(children: [
       Container(
@@ -164,13 +185,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: sans(14, weight: W.label, color: AppColors.fg1)),
-            if (needs)
-              Row(mainAxisSize: MainAxisSize.min, children: [
-                AppIcon('hand', size: 14, color: amber),
-                const SizedBox(width: 4),
-                Text('Needs you',
-                    style: sans(12, weight: W.label, color: amber)),
-              ]),
+            if (needs) needsMark,
           ],
         ),
       ),
@@ -180,7 +195,9 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
     ]);
 
     final more = Builder(builder: (context) {
-      final style = sans(13.5, height: 19 / 13.5, color: AppColors.fg1);
+      final style = compact
+          ? sans(13, height: 19 / 13, color: AppColors.fg1)
+          : sans(13.5, height: 19 / 13.5, color: AppColors.fg1);
       final painter = TextPainter(
         text: TextSpan(text: body, style: style),
         textDirection: TextDirection.ltr,
@@ -201,13 +218,14 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
             InkWell(
               onTap: widget.onOpen,
               child: ConstrainedBox(
-                constraints:
-                    const BoxConstraints(minHeight: 48, minWidth: 48),
+                constraints: BoxConstraints(
+                    minHeight: compact ? 28 : 48, minWidth: compact ? 24 : 48),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   widthFactor: 1,
                   child: Text('More',
-                      style: sans(13, weight: W.label, color: AppColors.fg2)),
+                      style: sans(compact ? 12 : 13,
+                          weight: W.label, color: AppColors.fg2)),
                 ),
               ),
             ),
@@ -215,56 +233,75 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
       );
     });
 
-    Widget button(String text, VoidCallback? onTap, {required bool primary}) =>
-        Semantics(
-          button: true,
-          enabled: onTap != null,
-          label: text,
-          excludeSemantics: true,
-          onTap: onTap,
-          child: Material(
-            color: primary ? AppColors.fg1 : AppColors.surface2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(6),
-              side: primary
-                  ? BorderSide.none
-                  : BorderSide(color: AppColors.border),
-            ),
-            child: InkWell(
-              onTap: onTap,
-              customBorder: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6)),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 48),
-                child: Center(
-                  child: Text(text,
-                      textAlign: TextAlign.center,
-                      style: sans(14,
-                          weight: W.label,
-                          color: primary ? AppColors.bg : AppColors.fg1)),
-                ),
-              ),
+    Widget button(String text, VoidCallback? onTap, {required bool primary}) {
+      final disabled = onTap == null;
+      final fill = disabled
+          ? AppColors.surface3
+          : primary
+              ? AppColors.fg1
+              : compact
+                  ? AppColors.surface3
+                  : AppColors.surface2;
+      final fg = disabled
+          ? AppColors.fg2
+          : primary
+              ? AppColors.bg
+              : AppColors.fg1;
+      return Semantics(
+        button: true,
+        enabled: !disabled,
+        label: text,
+        excludeSemantics: true,
+        onTap: onTap,
+        child: Material(
+          color: fill,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(6),
+            side: primary || compact || disabled
+                ? BorderSide.none
+                : BorderSide(color: AppColors.border),
+          ),
+          child: InkWell(
+            onTap: onTap,
+            customBorder:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+            child: Container(
+              constraints: BoxConstraints(
+                  minHeight: controlH, minWidth: compact ? 0 : 48),
+              padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 8),
+              alignment: Alignment.center,
+              child: Text(text,
+                  textAlign: TextAlign.center,
+                  style: sans(labelSize, weight: W.label, color: fg)),
             ),
           ),
-        );
+        ),
+      );
+    }
 
     final hint = 'Reply to $name...';
     final canSend = !busy && _text.text.trim().isNotEmpty;
     final hasText = _text.text.trim().isNotEmpty;
+    final fieldH = compact ? 36.0 : 48.0;
+    final innerH = compact ? 36.0 : 44.0;
+    final sendTarget = compact ? 28.0 : 48.0;
+    final sendInset = compact ? 4.0 : 0.0;
     final field = SizedBox(
-      height: 48,
+      height: fieldH,
       child: Stack(children: [
         Positioned(
           left: 0,
           right: 0,
-          top: 2,
-          height: 44,
+          top: compact ? 0 : 2,
+          height: innerH,
           child: Container(
             key: const ValueKey('reply-field'),
-            padding: EdgeInsets.only(left: 16, right: hasText ? 48 : 16),
+            padding: EdgeInsets.only(
+                left: compact ? 12 : 16,
+                right: hasText ? (compact ? 40 : 48) : (compact ? 12 : 16)),
             decoration: BoxDecoration(
                 color: AppColors.surface1,
-                borderRadius: BorderRadius.circular(22)),
+                borderRadius: BorderRadius.circular(compact ? 8 : 22)),
             alignment: Alignment.centerLeft,
             child: TextField(
               controller: _text,
@@ -272,35 +309,38 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
               enabled: !busy,
               textInputAction: TextInputAction.send,
               onSubmitted: (_) => _submitText(action),
-              style: sans(14, color: AppColors.fg1),
+              style: sans(compact ? 13 : 14, color: AppColors.fg1),
               decoration: InputDecoration(
                 isCollapsed: true,
                 border: InputBorder.none,
                 hintText: action == CardAction.answer ? 'Answer...' : hint,
-                hintStyle: sans(14, color: AppColors.fg3),
+                hintStyle: sans(compact ? 13 : 14, color: AppColors.fg3),
               ),
             ),
           ),
         ),
         if (hasText)
           Positioned(
-            right: 0,
-            top: 0,
-            width: 48,
-            height: 48,
+            right: sendInset,
+            top: sendInset,
+            width: sendTarget,
+            height: sendTarget,
             child: IconButton(
               tooltip: 'Send',
               padding: EdgeInsets.zero,
+              constraints: BoxConstraints.tightFor(
+                  width: sendTarget, height: sendTarget),
               onPressed: canSend ? () => _submitText(action) : null,
               icon: Container(
-                width: 36,
-                height: 36,
+                width: compact ? 28 : 36,
+                height: compact ? 28 : 36,
                 decoration: BoxDecoration(
                     color: canSend ? AppColors.fg1 : AppColors.surface3,
-                    shape: BoxShape.circle),
+                    borderRadius: compact ? BorderRadius.circular(6) : null,
+                    shape: compact ? BoxShape.rectangle : BoxShape.circle),
                 child: Center(
                     child: AppIcon('arrow-up',
-                        size: 16,
+                        size: compact ? 13 : 16,
                         color: canSend ? AppColors.bg : AppColors.fg4)),
               ),
             ),
@@ -309,23 +349,27 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
     );
 
     final canAct = action != CardAction.none;
+    final canReply = action == CardAction.approval ||
+        action == CardAction.answer ||
+        action == CardAction.reply;
     final primary = action == CardAction.approval
-        ? button(busy ? 'Approving...' : 'Approve',
+        ? button(
+            busy ? 'Approving...' : 'Approve',
             busy
                 ? null
                 : () => _send(const QuickApprove(via: 'notification'),
                     'Approving...', 'Approved'),
             primary: true)
-        : button('Reply', busy ? null : _focus.requestFocus, primary: true);
+        : canReply
+            ? button('Reply', busy ? null : _focus.requestFocus, primary: true)
+            : null;
     final open = button('Open', widget.onOpen, primary: false);
 
     final Widget actions;
     if (choices.isNotEmpty) {
-      actions = Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final (i, c) in choices.indexed) ...[
-            if (i > 0) const SizedBox(height: 8),
+      if (compact) {
+        actions = Wrap(spacing: 8, runSpacing: 8, children: [
+          for (final (i, c) in choices.indexed)
             button(
                 c.$1,
                 busy
@@ -336,18 +380,43 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
                         'Sending...',
                         'Sent'),
                 primary: i == 0),
-          ],
-          const SizedBox(height: 8),
           open,
-        ],
-      );
-    } else if (!canAct) {
+        ]);
+      } else {
+        actions = Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final (i, c) in choices.indexed) ...[
+              if (i > 0) const SizedBox(height: 8),
+              button(
+                  c.$1,
+                  busy
+                      ? null
+                      : () => _send(
+                          QuickAnswer(answerText(attention, choiceAnswer(c)),
+                              via: 'notification'),
+                          'Sending...',
+                          'Sent'),
+                  primary: i == 0),
+            ],
+            const SizedBox(height: 8),
+            open,
+          ],
+        );
+      }
+    } else if (!canAct || primary == null) {
       actions = open;
-    } else if (stacked) {
+    } else if (!compact && stacked) {
       actions = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [primary, const SizedBox(height: 8), open],
       );
+    } else if (compact) {
+      actions = Row(mainAxisSize: MainAxisSize.min, children: [
+        open,
+        const SizedBox(width: 8),
+        primary,
+      ]);
     } else {
       actions = Row(children: [
         Expanded(child: open),
@@ -360,7 +429,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
       container: true,
       label: '$name, ${needs ? 'needs you' : 'message'}, $body',
       child: Material(
-        color: needs ? AppColors.attentionTint : AppColors.surface2,
+        color: needs && !compact ? AppColors.attentionTint : AppColors.surface2,
         borderRadius: BorderRadius.circular(14),
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -370,12 +439,14 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
             children: [
               header,
               if (body.isNotEmpty)
+                Padding(padding: const EdgeInsets.only(top: 8), child: more),
+              if (canReply && choices.isEmpty)
                 Padding(
-                    padding: const EdgeInsets.only(top: 8), child: more),
-              if (canAct && choices.isEmpty)
-                Padding(
-                    padding: const EdgeInsets.only(top: 6), child: field),
-              Padding(padding: const EdgeInsets.only(top: 12), child: actions),
+                    padding: EdgeInsets.only(top: compact ? 8 : 6),
+                    child: field),
+              Padding(
+                  padding: EdgeInsets.only(top: compact ? 10 : 12),
+                  child: actions),
               if (_state == _Send.failed)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
@@ -395,12 +466,13 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
   }
 }
 
+/// Terminal-state colour is deliberately neutral in chat chrome; the words and
+/// icons carry failed/done state.
 Color notificationTone(Map<String, dynamic> p) =>
     switch ('${p['kind'] ?? ''}'.split('.').last) {
-      'waiting' => AppColors.run,
+      'waiting' => AppColors.fg2,
       'done' || 'completed' => AppColors.fg2,
-      'error' || 'failed' => AppColors.danger,
+      'error' || 'failed' => AppColors.fg2,
       'idle' => AppColors.fg3,
       _ => AppColors.fg4,
     };
-

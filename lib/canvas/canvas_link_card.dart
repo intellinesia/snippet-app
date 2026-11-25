@@ -8,6 +8,7 @@ import '../components.dart' show LoadingBlock;
 import '../media_views.dart' show DaemonScope;
 import '../platform.dart';
 import '../theme.dart';
+import '../chat/desktop_rich_cards.dart';
 import '../widgets.dart' show AppIcon;
 import 'canvas_card_client.dart';
 import 'canvas_client.dart' show DaemonCanvasClient;
@@ -193,9 +194,8 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
       final meta = await client.resolveLink(widget.canvasRef);
       if (!mounted || seq != _loadSeq) return;
       final elId = widget.canvasRef.elId ?? meta.elId;
-      final frameId = meta.frameId.isNotEmpty
-          ? meta.frameId
-          : widget.canvasRef.frameId;
+      final frameId =
+          meta.frameId.isNotEmpty ? meta.frameId : widget.canvasRef.frameId;
       CanvasLayout? layout;
       if (elId != null &&
           elId.isNotEmpty &&
@@ -285,6 +285,30 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
     Theme.of(context);
     if (_phase == _CardPhase.unreachable) {
       if (widget.inline) return const SizedBox.shrink();
+      if (!kMobile) {
+        return Container(
+          constraints: const BoxConstraints(maxWidth: 400),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(children: [
+            AppIcon('x', size: 13, color: AppColors.fg1),
+            const SizedBox(width: 7),
+            Expanded(
+              child: Text('Canvas unreachable',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(13, height: 18 / 13, color: AppColors.fg1)),
+            ),
+            DesktopRichButton('Retry',
+                variant: DesktopRichButtonVariant.secondary,
+                parentSurface: 1,
+                onTap: _load),
+          ]),
+        );
+      }
       return _PlainLinkFallback(
         title:
             widget.title.isNotEmpty ? widget.title : widget.canvasRef.format(),
@@ -306,9 +330,9 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
           child: Container(
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
-              color: kMobile ? AppColors.surface1 : AppColors.surface2,
-              borderRadius: BorderRadius.circular(R.of(14)),
-              border: Border.all(color: AppColors.border),
+              color: AppColors.surface1,
+              borderRadius: BorderRadius.circular(kMobile ? R.of(14) : 8),
+              border: kMobile ? Border.all(color: AppColors.border) : null,
             ),
             child: Material(
               type: MaterialType.transparency,
@@ -365,18 +389,25 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
     );
   }
 
-  Widget _buildOpenAction(BuildContext context) => Semantics(
-        button: true,
-        label: 'Open canvas',
-        excludeSemantics: true,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
-          alignment: Alignment.center,
-          padding: EdgeInsets.symmetric(horizontal: S.s8),
-          child: Text('Open',
-              style: sans(13, weight: W.label, color: AppColors.accent)),
-        ),
-      );
+  Widget _buildOpenAction(BuildContext context) {
+    if (!kMobile) {
+      return DesktopRichButton('Open',
+          variant: DesktopRichButtonVariant.ghost,
+          onTap: () => _handleTap(context));
+    }
+    return Semantics(
+      button: true,
+      label: 'Open canvas',
+      excludeSemantics: true,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+        alignment: Alignment.center,
+        padding: EdgeInsets.symmetric(horizontal: S.s8),
+        child: Text('Open',
+            style: sans(13, weight: W.label, color: AppColors.accent)),
+      ),
+    );
+  }
 
   Widget _buildActivityLine() {
     final a = _activity;

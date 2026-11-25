@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import 'api.dart';
+import 'chat/desktop_rich_cards.dart';
 import 'gesture_physics.dart';
 import 'platform.dart';
 import 'screens/file_viewer.dart';
@@ -205,46 +206,186 @@ class ImageThumb extends StatelessWidget {
   });
 
   @override
+  Widget build(BuildContext context) => _ImageThumbContent(
+        client: client,
+        path: path,
+        width: width,
+        height: height,
+        fit: fit,
+        cacheWidth: cacheWidth,
+        gallery: gallery,
+      );
+}
+
+class _ImageThumbContent extends StatefulWidget {
+  final DaemonClient client;
+  final String path;
+  final double width;
+  final double height;
+  final BoxFit fit;
+  final int? cacheWidth;
+  final List<String>? gallery;
+
+  const _ImageThumbContent({
+    required this.client,
+    required this.path,
+    required this.width,
+    required this.height,
+    required this.fit,
+    this.cacheWidth,
+    this.gallery,
+  });
+
+  @override
+  State<_ImageThumbContent> createState() => _ImageThumbContentState();
+}
+
+class _ImageThumbContentState extends State<_ImageThumbContent> {
+  int _retry = 0;
+  bool _hover = false;
+
+  Widget _loading() {
+    if (kMobile) return LoadingBlock(color: AppColors.surface2);
+    return ColoredBox(
+      color: AppColors.surface2,
+      child: Center(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Spinner(size: 14, color: AppColors.fg3),
+          if (widget.height >= 52) ...[
+            const SizedBox(height: 6),
+            Text('Loading', style: sans(11, color: AppColors.fg3)),
+          ],
+        ]),
+      ),
+    );
+  }
+
+  Future<void> _retryLoad() async {
+    final base = widget.client.imageProvider(widget.path);
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final resized = ResizeImage.resizeIfNeeded(
+      widget.cacheWidth ?? (widget.width * dpr).round(),
+      null,
+      base,
+    );
+    await resized.evict();
+    await base.evict();
+    if (mounted) setState(() => _retry++);
+  }
+
+  Widget _error() {
+    if (kMobile) {
+      return ColoredBox(
+        color: AppColors.surface2,
+        child: Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            AppIcon('image', size: 18, color: AppColors.fg4),
+            if (widget.height >= 72) ...[
+              SizedBox(height: S.s4),
+              Text('Couldn’t load image',
+                  textAlign: TextAlign.center,
+                  style: sans(11, color: AppColors.fg4)),
+            ],
+          ]),
+        ),
+      );
+    }
+    return ColoredBox(
+      color: AppColors.surface2,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Row(mainAxisSize: MainAxisSize.min, children: [
+              AppIcon('image', size: 14, color: AppColors.fg2),
+              const SizedBox(width: 4),
+              AppIcon('x', size: 12, color: AppColors.fg2),
+            ]),
+            if (widget.height >= 64) ...[
+              const SizedBox(height: 4),
+              Text('Could not load',
+                  textAlign: TextAlign.center,
+                  style: sans(11.5, color: AppColors.fg2)),
+            ],
+            if (widget.height >= 104) ...[
+              const SizedBox(height: 6),
+              DesktopRichButton('Retry',
+                  variant: DesktopRichButtonVariant.secondary,
+                  parentSurface: 2,
+                  onTap: _retryLoad),
+            ],
+          ]),
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final dpr = MediaQuery.devicePixelRatioOf(context);
-    final placeholder = LoadingBlock(color: AppColors.surface2);
+    final provider = ResizeImage.resizeIfNeeded(
+      widget.cacheWidth ?? (widget.width * dpr).round(),
+      null,
+      widget.client.imageProvider(widget.path),
+    );
+    final image = Image(
+      key: ValueKey('${widget.path}:$_retry'),
+      image: provider,
+      fit: widget.fit,
+      gaplessPlayback: true,
+      frameBuilder: (_, child, frame, sync) =>
+          sync || frame != null ? child : _loading(),
+      errorBuilder: (_, __, ___) => _error(),
+    );
+    final showAffordance =
+        !kMobile && _hover && widget.width >= 112 && widget.height >= 48;
     return Semantics(
       image: true,
-      label: baseName(path),
+      label: baseName(widget.path),
       button: true,
       child: TapDetector(
-        onTap: () => openMedia(context, client, path, gallery: gallery),
-        child: Container(
-          width: width,
-          height: height,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(kMobile ? 8 : R.of(14)),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Image(
-            image: ResizeImage.resizeIfNeeded(
-              cacheWidth ?? (width * dpr).round(),
-              null,
-              client.imageProvider(path),
+        onTap: () => openMedia(context, widget.client, widget.path,
+            gallery: widget.gallery),
+        child: MouseRegion(
+          onEnter: !kMobile ? (_) => setState(() => _hover = true) : null,
+          onExit: !kMobile ? (_) => setState(() => _hover = false) : null,
+          child: Container(
+            width: widget.width,
+            height: widget.height,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(kMobile ? 8 : 6),
             ),
-            fit: fit,
-            gaplessPlayback: true,
-            frameBuilder: (_, child, frame, sync) =>
-                sync || frame != null ? child : placeholder,
-            errorBuilder: (_, __, ___) => ColoredBox(
-              color: AppColors.surface2,
-              child: Center(
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  AppIcon('image', size: 18, color: AppColors.fg4),
-                  if (height >= 72) ...[
-                    SizedBox(height: S.s4),
-                    Text('Couldn’t load image',
-                        textAlign: TextAlign.center,
-                        style: sans(11, color: AppColors.fg4)),
-                  ],
-                ]),
+            clipBehavior: Clip.antiAlias,
+            child: Stack(fit: StackFit.expand, children: [
+              image,
+              Positioned(
+                right: 8,
+                bottom: 8,
+                child: IgnorePointer(
+                  child: AnimatedOpacity(
+                    opacity: showAffordance ? 1 : 0,
+                    duration: Motion.quick,
+                    child: Container(
+                      height: 28,
+                      padding: const EdgeInsets.symmetric(horizontal: 9),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface1,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        AppIcon('eye', size: 13, color: AppColors.fg1),
+                        const SizedBox(width: 5),
+                        Text('Click to view',
+                            style: sans(12,
+                                weight: FontWeight.w500,
+                                height: 1,
+                                color: AppColors.fg1)),
+                      ]),
+                    ),
+                  ),
+                ),
               ),
-            ),
+            ]),
           ),
         ),
       ),
@@ -296,25 +437,38 @@ class ImageGallery extends StatelessWidget {
         ],
       );
     }
-    final gap = kMobile ? 4.0 : 6.0;
-    final columns = paths.length == 2 || paths.length == 4 ? 2 : 3;
-    final cap = kMobile ? 260.0 : 420.0;
-    final itemMaxW =
-        ((maxWidth.clamp(220.0, cap) - gap * (columns - 1)) / columns)
-            .floorToDouble();
-    return Wrap(
-      spacing: gap,
-      runSpacing: gap,
-      children: [
-        for (final path in paths)
-          SingleImage(
+    final width = maxWidth.clamp(220.0, 420.0);
+    Widget tile(String path) => LayoutBuilder(builder: (_, c) {
+          final w = c.maxWidth.isFinite ? c.maxWidth : width / 2;
+          final h = c.maxHeight.isFinite ? c.maxHeight : 124.0;
+          return ImageThumb(
             client: client,
             path: path,
-            maxWidth: itemMaxW,
-            maxHeight: kMobile ? 220.0 : 280.0,
+            width: w,
+            height: h,
             gallery: paths,
+          );
+        });
+    return SizedBox(
+      width: width,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DesktopImageGalleryGrid(
+            tiles: [for (final path in paths) tile(path)],
+            overflowCount: paths.length > 4 ? paths.length - 4 : 0,
+            onOverflowTap: paths.length > 4
+                ? () => openMedia(context, client, paths[4], gallery: paths)
+                : null,
           ),
-      ],
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text('${paths.length} images',
+                style: sans(11, height: 1, color: AppColors.fg3)),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -407,25 +561,52 @@ class _SingleImageState extends State<SingleImage> {
   Widget build(BuildContext context) {
     final maxWidth = _maxWidth;
     final size = _size;
+    final maxHeight =
+        kMobile ? _maxHeight : math.min(_maxHeight, maxWidth * 0.7);
     var w = (kMobile ? 200.0 : 260.0).clamp(0.0, maxWidth);
-    var h = kMobile ? 150.0 : 180.0;
+    var h = kMobile ? 150.0 : math.min(180.0, maxHeight);
     if (size != null && size.width > 0 && size.height > 0) {
-      final scale = [maxWidth / size.width, _maxHeight / size.height, 1.0]
+      final scale = [maxWidth / size.width, maxHeight / size.height, 1.0]
           .reduce((a, b) => a < b ? a : b);
       w = (size.width * scale).clamp(_minSide, maxWidth);
-      h = (size.height * scale).clamp(_minSide, _maxHeight);
+      h = (size.height * scale).clamp(_minSide, maxHeight);
     }
+    final thumb = ImageThumb(
+        client: widget.client,
+        path: widget.path,
+        width: w,
+        height: h,
+        fit: BoxFit.contain,
+        cacheWidth: _cacheWidth,
+        gallery: widget.gallery);
     return AnimatedSize(
       duration: Motion.quick,
       alignment: Alignment.topLeft,
-      child: ImageThumb(
-          client: widget.client,
-          path: widget.path,
-          width: w,
-          height: h,
-          fit: BoxFit.contain,
-          cacheWidth: _cacheWidth,
-          gallery: widget.gallery),
+      child: kMobile
+          ? thumb
+          : SizedBox(
+              width: w,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  thumb,
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      [
+                        baseName(widget.path),
+                        if (size != null)
+                          '${size.width.round()}x${size.height.round()}',
+                      ].join(' '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(11, height: 1.2, color: AppColors.fg3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
     );
   }
 }
@@ -434,6 +615,7 @@ class FileChip extends StatelessWidget {
   final DaemonClient? client;
   final String path;
   final String? name;
+  final int? sizeBytes;
   final VoidCallback? onTap;
   final Widget? trailing;
   const FileChip({
@@ -441,6 +623,7 @@ class FileChip extends StatelessWidget {
     required this.path,
     this.client,
     this.name,
+    this.sizeBytes,
     this.onTap,
     this.trailing,
   });
@@ -453,6 +636,22 @@ class FileChip extends StatelessWidget {
         label.contains('.') ? label.split('.').last.toUpperCase() : 'FILE';
     final tap = onTap ??
         (client == null ? null : () => openMedia(context, client!, path));
+    if (!kMobile) {
+      var bytes = sizeBytes;
+      if (bytes == null) {
+        try {
+          final file = File(path);
+          if (file.existsSync()) bytes = file.lengthSync();
+        } catch (_) {}
+      }
+      return DesktopFileChip(
+        icon: _iconFor(kind),
+        name: label,
+        sizeLabel: bytes == null ? '' : desktopFileSizeLabel(bytes),
+        onTap: tap,
+        trailing: trailing,
+      );
+    }
     final radius = kMobile ? 8.0 : 14.0;
     return Material(
       color: AppColors.surface2,
@@ -745,6 +944,40 @@ class _VoiceNoteState extends State<VoiceNote> {
     final total = _duration.inMilliseconds;
     final progress =
         total <= 0 ? 0.0 : (_position.inMilliseconds / total).clamp(0.0, 1.0);
+    if (!kMobile) {
+      final active = _playing || _position > Duration.zero;
+      final state = _error != null
+          ? DesktopVoiceNoteState.failed
+          : _loading
+              ? DesktopVoiceNoteState.loading
+              : _playing
+                  ? DesktopVoiceNoteState.playing
+                  : _position > Duration.zero
+                      ? DesktopVoiceNoteState.paused
+                      : DesktopVoiceNoteState.idle;
+      final duration = _duration == Duration.zero
+          ? (active ? _clock(_position) : '--:--')
+          : _clock(active ? _position : _duration);
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DesktopVoiceNoteRow(
+            durationLabel: duration,
+            state: state,
+            progress: progress,
+            seed: (widget.url ?? widget.path).hashCode,
+            onToggle: _toggle,
+            onSeek: _seekTo,
+            onRetry: _toggle,
+          ),
+          if (_error != null && widget.transcript != null) ...[
+            SizedBox(height: S.s6),
+            widget.transcript!,
+          ],
+        ],
+      );
+    }
     return _mobile(progress);
   }
 }
@@ -958,7 +1191,7 @@ Future<void> showImageViewer(
   final paths = gallery != null && gallery.contains(path) ? gallery : [path];
   return Navigator.of(context, rootNavigator: true).push(PageRouteBuilder<void>(
     opaque: false,
-    barrierColor: kMobile ? null : Colors.black,
+    barrierColor: kMobile ? null : const Color(0xFF0E0E0D),
     transitionDuration: Motion.fast,
     reverseTransitionDuration: Motion.quick,
     pageBuilder: (_, __, ___) => _ImageViewer(
@@ -1105,7 +1338,7 @@ class _ImageViewerState extends State<_ImageViewer>
   }
 
   /// V1: the viewer keeps the app ground on the phone, so nothing flashes.
-  Color get _ink => kMobile ? AppColors.fg1 : Colors.white;
+  Color get _ink => AppColors.fg1;
 
   void _toggleZoom() {
     final z = _zoomFor(_index);
@@ -1113,6 +1346,18 @@ class _ImageViewerState extends State<_ImageViewer>
         ? Matrix4.identity()
         : (Matrix4.identity()..scaleByDouble(2.0, 2.0, 1.0, 1.0));
     setState(() => _wasZoomed = _zoomed);
+  }
+
+  void _zoomBy(double factor) {
+    final z = _zoomFor(_index);
+    final scale = (z.value.getMaxScaleOnAxis() * factor).clamp(1.0, 6.0);
+    z.value = Matrix4.identity()..scaleByDouble(scale, scale, 1.0, 1.0);
+    setState(() => _wasZoomed = _zoomed);
+  }
+
+  void _fitZoom() {
+    _zoomFor(_index).value = Matrix4.identity();
+    setState(() => _wasZoomed = false);
   }
 
   @override
@@ -1195,8 +1440,10 @@ class _ImageViewerState extends State<_ImageViewer>
                           maxLines: 1,
                           textAlign: TextAlign.center,
                           overflow: TextOverflow.ellipsis,
-                          style: sans(15,
-                              height: 20 / 15, weight: W.label, color: _ink)),
+                          style: sans(kMobile ? 15 : 12.5,
+                              height: 20 / (kMobile ? 15 : 12.5),
+                              weight: W.label,
+                              color: _ink)),
                     ),
                   ),
                   _bar('share', 'Share', _share),
@@ -1227,7 +1474,40 @@ class _ImageViewerState extends State<_ImageViewer>
           ),
         ),
       ),
-      if (many)
+      if (!kMobile)
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: IgnorePointer(
+            ignoring: !showChrome,
+            child: AnimatedOpacity(
+              opacity: showChrome ? 1 : 0,
+              duration: Motion.quick,
+              child: Container(
+                height: 40,
+                color: AppColors.surface2,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Row(children: [
+                  Text(
+                    many ? '${_index + 1} of ${widget.paths.length}' : '',
+                    style: sans(11.5, color: AppColors.fg3),
+                  ),
+                  const Spacer(),
+                  DesktopCardIconButton('minus',
+                      tooltip: 'Zoom out', onTap: () => _zoomBy(1 / 1.25)),
+                  DesktopCardIconButton('plus',
+                      tooltip: 'Zoom in', onTap: () => _zoomBy(1.25)),
+                  DesktopCardIconButton('wrap',
+                      tooltip: 'Fit to window', onTap: _fitZoom),
+                  DesktopCardIconButton('share',
+                      tooltip: 'Share', onTap: _share),
+                ]),
+              ),
+            ),
+          ),
+        ),
+      if (many && kMobile)
         Positioned(
           left: 0,
           right: 0,
@@ -1285,7 +1565,7 @@ class _ImageViewerState extends State<_ImageViewer>
     ]);
     if (!kMobile) {
       return Scaffold(
-        backgroundColor: Colors.black.withValues(alpha: fade),
+        backgroundColor: const Color(0xFF0E0E0D).withValues(alpha: fade),
         body: stack,
       );
     }
@@ -1307,9 +1587,10 @@ class _ImageViewerState extends State<_ImageViewer>
           behavior: HitTestBehavior.opaque,
           onTap: _busy ? null : onTap,
           child: SizedBox(
-              width: 48,
-              height: 48,
-              child: Center(child: AppIcon(icon, size: 22, color: _ink))),
+              width: kMobile ? 48 : 28,
+              height: kMobile ? 48 : 28,
+              child: Center(
+                  child: AppIcon(icon, size: kMobile ? 22 : 14, color: _ink))),
         ),
       );
 }
@@ -1411,79 +1692,6 @@ class _PastedTextCardState extends State<PastedTextCard> {
   @override
   Widget build(BuildContext context) {
     if (kMobile) return _phone();
-    final lines = widget.text.split('\n');
-    final preview = lines.take(3).join('\n');
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 420),
-      decoration: BoxDecoration(
-        color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(R.card),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          InkWell(
-            onTap: () => setState(() => _open = !_open),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(R.card)),
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(S.of(10), S.s8, S.s6, S.s8),
-              child: Row(children: [
-                AppIcon('file-text', size: 14, color: AppColors.fg3),
-                SizedBox(width: S.s8),
-                Expanded(
-                  child: Text(
-                    'Pasted text · ${lines.length} ${lines.length == 1 ? 'line' : 'lines'}',
-                    style: sans(12, weight: W.label, color: AppColors.fg2),
-                  ),
-                ),
-                Tooltip(
-                  message: 'Copy',
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(R.sm),
-                    onTap: () async {
-                      await Clipboard.setData(ClipboardData(text: widget.text));
-                      if (context.mounted) toast(context, 'Copied');
-                    },
-                    child: Padding(
-                      padding: EdgeInsets.all(S.s6),
-                      child: AppIcon('copy', size: 13, color: AppColors.fg3),
-                    ),
-                  ),
-                ),
-                AppIcon(_open ? 'chevron-up' : 'chevron-down',
-                    size: 14, color: AppColors.fg3),
-                SizedBox(width: S.s6),
-              ]),
-            ),
-          ),
-          Container(height: 1, color: AppColors.border),
-          AnimatedSize(
-            duration: Motion.fast,
-            curve: Motion.enter,
-            alignment: Alignment.topCenter,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.of(10)),
-              child: _open
-                  ? ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 360),
-                      child: SingleChildScrollView(
-                        child: SelectableText(widget.text,
-                            style: codeMono(12,
-                                height: 1.45, color: AppColors.fg1)),
-                      ),
-                    )
-                  : Text(
-                      lines.length > 3 ? '$preview\n…' : preview,
-                      maxLines: 4,
-                      overflow: TextOverflow.fade,
-                      style: codeMono(12, height: 1.45, color: AppColors.fg2),
-                    ),
-            ),
-          ),
-        ],
-      ),
-    );
+    return DesktopPastedTextCard(text: widget.text);
   }
 }

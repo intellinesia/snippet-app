@@ -107,8 +107,8 @@ class ChatColors {
 }
 
 TextStyle chatText({required bool mine, BuildContext? context}) =>
-    sans(ChatColors.fontSize,
-        height: 1.3,
+    sans(kMobile ? ChatColors.fontSize : 13,
+        height: kMobile ? 1.3 : 19 / 13,
         color: mine
             ? (context != null
                 ? ChatColors.sentTextIn(context)
@@ -214,6 +214,27 @@ class ChatBubble extends StatelessWidget {
             ),
             child: DefaultTextStyle.merge(
               style: chatText(mine: mine, context: bubbleCtx),
+              textWidthBasis: TextWidthBasis.longestLine,
+              child: child,
+            ),
+          ),
+        ),
+      );
+    }
+    // MSG-01 desktop: your bubble is s2, radius 12, pad 12, at most 360 wide.
+    if (!kMobile && mine && color == null) {
+      return ChatBubbleFill(
+        fill: fill,
+        child: Builder(
+          builder: (bubbleCtx) => Container(
+            constraints: const BoxConstraints(maxWidth: 360),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: fill,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: DefaultTextStyle.merge(
+              style: chatText(mine: true, context: bubbleCtx),
               textWidthBasis: TextWidthBasis.longestLine,
               child: child,
             ),
@@ -351,9 +372,15 @@ class ChatBubbleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(builder: (_, box) {
-        // One cap everywhere: user 0.79 W, agent 0.88 W, cards the whole W.
-        final share = fill ? 1.0 : (mine ? kUserBubbleShare : kAgentBubbleShare);
-        final max = box.maxWidth.isFinite ? box.maxWidth * share : 520.0;
+        // Phone keeps the proportional caps. Desktop MSG-01 caps your bubble
+        // at min(column - 36, 360); agent prose/cards use the column caps.
+        final share =
+            fill ? 1.0 : (mine ? kUserBubbleShare : kAgentBubbleShare);
+        final max = !box.maxWidth.isFinite
+            ? 520.0
+            : !kMobile && mine && !fill
+                ? (box.maxWidth - 36).clamp(0.0, 360.0).toDouble()
+                : box.maxWidth * share;
         final bubble = fill
             ? SizedBox(width: max, child: child)
             : ConstrainedBox(
@@ -476,8 +503,7 @@ class ChatGlassButton extends StatelessWidget {
                   height: size,
                   child: Center(
                     child: AppIcon(icon,
-                        size: kMobile ? 18 : 15,
-                        color: AppColors.fg1),
+                        size: kMobile ? 18 : 15, color: AppColors.fg1),
                   ),
                 ),
               ),
@@ -571,8 +597,7 @@ class ChatHeader extends StatelessWidget {
               child: Text(title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(13,
-                      weight: W.label, color: AppColors.fg1)),
+                  style: sans(13, weight: W.label, color: AppColors.fg1)),
             ),
             if (onTitleTap != null) ...[
               SizedBox(width: S.of(3)),
@@ -601,8 +626,7 @@ class ChatHeader extends StatelessWidget {
                         backCount != null && backCount! > 0 ? S.s12 : 0),
                 alignment: Alignment.center,
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  AppIcon('chevron-left',
-                      size: 18, color: AppColors.fg1),
+                  AppIcon('chevron-left', size: 18, color: AppColors.fg1),
                   if (backCount != null && backCount! > 0) ...[
                     SizedBox(width: S.s2),
                     Text('${backCount!}',

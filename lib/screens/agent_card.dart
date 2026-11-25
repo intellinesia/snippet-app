@@ -171,6 +171,15 @@ class AgentCard extends StatefulWidget {
   /// Desktop: the host label when a failed refresh leaves cached rows offline.
   final String? offlineHost;
 
+  /// Desktop: whether live session sub-rows are expanded.
+  final bool expanded;
+
+  /// Desktop: whether live session sub-rows can be expanded.
+  final bool expandable;
+
+  /// Desktop: explicit user toggle for the session sub-rows.
+  final VoidCallback? onToggleExpansion;
+
   const AgentCard({
     super.key,
     required this.client,
@@ -185,6 +194,9 @@ class AgentCard extends StatefulWidget {
     this.group,
     this.selected = false,
     this.offlineHost,
+    this.expanded = false,
+    this.expandable = false,
+    this.onToggleExpansion,
   });
 
   @override
@@ -361,11 +373,7 @@ class _AgentCardState extends State<AgentCard> {
     final titles = widget.groupTitles ?? const {};
     if (crew != null && crew.state != CrewState.standingBy) {
       final text = cleanAgentStatusText(crew.line, groupTitles: titles);
-      // Desktop keeps the last message; the working dot says it is busy.
-      if (crew.state == CrewState.working) {
-        if (kMobile) return text;
-        return agentStatusLine(agent, presence: presence, groupTitles: titles);
-      }
+      if (crew.state == CrewState.working) return text;
       final kind = crew.attention?['type'];
       return kind == 'approval'
           ? 'Approval: $text'
@@ -531,6 +539,9 @@ class _AgentCardState extends State<AgentCard> {
       needsCount: agent.needsYou > 0 ? agent.needsYou : (needs ? 1 : 0),
       unread: last?.unread ?? false,
       offlineHost: widget.offlineHost,
+      expanded: widget.expanded,
+      expandable: widget.expandable,
+      onToggleExpansion: widget.onToggleExpansion,
     );
   }
 }
@@ -574,6 +585,9 @@ class AgentRowShell extends StatefulWidget {
     this.needsCount = 0,
     this.unread = false,
     this.offlineHost,
+    this.expanded = false,
+    this.expandable = false,
+    this.onToggleExpansion,
   });
 
   /// Draws the whole 28x22 slot, given the row's backdrop colour for rings.
@@ -616,6 +630,11 @@ class AgentRowShell extends StatefulWidget {
   final int needsCount;
   final bool unread;
   final String? offlineHost;
+
+  /// Desktop: explicit expansion affordance for live session sub-rows.
+  final bool expanded;
+  final bool expandable;
+  final VoidCallback? onToggleExpansion;
 
   @override
   State<AgentRowShell> createState() => _AgentRowShellState();
@@ -742,7 +761,7 @@ class _AgentRowShellState extends State<AgentRowShell> {
         const SizedBox(width: 6),
         Expanded(
           child: Text(
-            needsCount == 1 ? '1 needs you' : '$needsCount need you',
+            '$needsCount needs you',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: statusStyle,
@@ -837,9 +856,24 @@ class _AgentRowShellState extends State<AgentRowShell> {
                       color: AppColors.fg3,
                       tabular: true)),
             ],
-            if (widget.selected) ...[
+            if (widget.expandable) ...[
               const SizedBox(width: 4),
-              AppIcon('chevron-right', size: 12, color: AppColors.fg2),
+              GestureDetector(
+                key: const ValueKey('agent-expansion-toggle'),
+                behavior: HitTestBehavior.opaque,
+                onTap: widget.onToggleExpansion,
+                child: SizedBox(
+                  width: 24,
+                  height: 17,
+                  child: Center(
+                    child: AppIcon(
+                      widget.expanded ? 'chevron-down' : 'chevron-right',
+                      size: 12,
+                      color: AppColors.fg2,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ]),
         ),

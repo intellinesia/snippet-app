@@ -206,9 +206,10 @@ class MessageFocusOverlay extends StatelessWidget {
 
   static const _springCurve = Cubic(0.22, 1.12, 0.36, 1.0);
   static const _gap = 10.0;
-  static const _barHeight = 56.0;
-  static const _cardWidth = 240.0;
-  static const _rowHeight = 48.0;
+  // Desktop (MSG-08): a 36 bar of 28 targets, 28 rows on a 200 card.
+  static double get _barHeight => kMobile ? 56.0 : 36.0;
+  static double get _cardWidth => kMobile ? 240.0 : 200.0;
+  static double get _rowHeight => kMobile ? 48.0 : 28.0;
   static const _sideMargin = 16.0;
 
   @override
@@ -219,11 +220,14 @@ class MessageFocusOverlay extends StatelessWidget {
     final pad = media.padding;
 
     final hasReactions = quickReactions.isNotEmpty;
-    final actionCount = (showReply ? 1 : 0) + (showCopy ? 1 : 0);
+    // Desktop moves More from the emoji bar into the action card.
+    final deskMore = !kMobile && showMoreButton;
+    final actionCount =
+        (showReply ? 1 : 0) + (showCopy ? 1 : 0) + (deskMore ? 1 : 0);
     final hasActions = actionCount > 0;
     final actionsHeight = actionCount == 0
         ? 0.0
-        : actionCount * _rowHeight + (actionCount - 1) * 1.0;
+        : actionCount * _rowHeight + (kMobile ? (actionCount - 1) * 1.0 : 8.0);
 
     final barSection = hasReactions ? _barHeight + _gap : 0.0;
     final cardSection = hasActions ? _gap + actionsHeight : 0.0;
@@ -265,7 +269,9 @@ class MessageFocusOverlay extends StatelessWidget {
 
     final estimatedBarW = math.min(
       screen.width - _sideMargin * 2,
-      20.0 + quickReactions.length * 48.0 + (showMoreButton ? 52.0 : 0.0),
+      kMobile
+          ? 20.0 + quickReactions.length * 48.0 + (showMoreButton ? 52.0 : 0.0)
+          : 8.0 + quickReactions.length * 28.0,
     );
     final barLeft = (mine ? bubbleRight - estimatedBarW : bubbleLeft)
         .clamp(
@@ -284,9 +290,7 @@ class MessageFocusOverlay extends StatelessWidget {
           final curveT = animation.status == AnimationStatus.reverse
               ? Motion.exit.transform(t)
               : _springCurve.transform(raw);
-          final barOpacity = calm
-              ? t
-              : const Interval(0.0, 0.72).transform(t);
+          final barOpacity = calm ? t : const Interval(0.0, 0.72).transform(t);
           final bubbleScale = calm ? 1.0 : 0.96 + 0.04 * curveT;
           final barScale = calm ? 1.0 : 0.84 + 0.16 * curveT;
 
@@ -326,7 +330,8 @@ class MessageFocusOverlay extends StatelessWidget {
           final base = kMobile ? AppColors.scrim : AppColors.glassScrim;
           final scrimColor = base.withValues(alpha: base.a * t);
           Widget backdrop = ColoredBox(color: scrimColor);
-          if (Glass.effectiveEnabled && t > 0.001) {
+          // Desktop: a flat dim, no backdrop blur.
+          if (kMobile && Glass.effectiveEnabled && t > 0.001) {
             backdrop = BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 20 * t, sigmaY: 20 * t),
               child: backdrop,
@@ -374,7 +379,7 @@ class MessageFocusOverlay extends StatelessWidget {
                           mine ? Alignment.bottomRight : Alignment.bottomLeft,
                       child: _ReactionBar(
                         reactions: quickReactions,
-                        showMore: showMoreButton,
+                        showMore: showMoreButton && kMobile,
                         onReact: (emoji) => onPick(FocusReact(emoji)),
                         onMore: () => onPick(FocusMore()),
                       ),
@@ -394,8 +399,10 @@ class MessageFocusOverlay extends StatelessWidget {
                       child: _ActionsCard(
                         showReply: showReply,
                         showCopy: showCopy,
+                        showMore: deskMore,
                         onReply: () => onPick(FocusReply()),
                         onCopy: () => onPick(FocusCopy()),
+                        onMore: () => onPick(FocusMore()),
                       ),
                     ),
                   ),
@@ -421,8 +428,37 @@ class _ReactionBar extends StatelessWidget {
   final ValueChanged<String> onReact;
   final VoidCallback onMore;
 
+  Widget _desk() => Container(
+        height: 36,
+        padding: const EdgeInsets.all(4),
+        decoration: _deskSurface(),
+        child: Material(
+          type: MaterialType.transparency,
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            for (final emoji in reactions)
+              Semantics(
+                button: true,
+                label: 'React $emoji',
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(6),
+                  hoverColor: AppColors.surface3,
+                  onTap: () => onReact(emoji),
+                  child: SizedBox.square(
+                    dimension: 28,
+                    child: Center(
+                      child: Text(emoji,
+                          style: const TextStyle(fontSize: 16, height: 1.1)),
+                    ),
+                  ),
+                ),
+              ),
+          ]),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
+    if (!kMobile) return _desk();
     return SizedBox(
       height: 56,
       child: Glass(
@@ -488,21 +524,57 @@ class _ReactionBar extends StatelessWidget {
   }
 }
 
+/// Desktop floating layer: flat s2, radius 8, the single overlay shadow.
+BoxDecoration _deskSurface() => BoxDecoration(
+      color: AppColors.surface2,
+      borderRadius: BorderRadius.circular(8),
+      boxShadow: overlayShadow,
+    );
+
 class _ActionsCard extends StatelessWidget {
   const _ActionsCard({
     required this.showReply,
     required this.showCopy,
     required this.onReply,
     required this.onCopy,
+    this.showMore = false,
+    this.onMore,
   });
 
   final bool showReply;
   final bool showCopy;
   final VoidCallback onReply;
   final VoidCallback onCopy;
+  final bool showMore;
+  final VoidCallback? onMore;
+
+  Widget _desk() => Container(
+        padding: const EdgeInsets.all(4),
+        decoration: _deskSurface(),
+        child: Material(
+          type: MaterialType.transparency,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (showReply)
+                _ActionRow(
+                    label: 'Reply',
+                    icon: PhIcons.arrowElbowUpLeft,
+                    onTap: onReply),
+              if (showCopy)
+                _ActionRow(label: 'Copy', icon: PhIcons.copy, onTap: onCopy),
+              if (showMore && onMore != null)
+                _ActionRow(
+                    label: 'More', icon: PhIcons.dotsThree, onTap: onMore!),
+            ],
+          ),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
+    if (!kMobile) return _desk();
     final dividerColor = AppColors.fg1.withValues(alpha: 0.08);
     return Glass(
       radius: BorderRadius.circular(R.of(16)),
@@ -518,7 +590,8 @@ class _ActionsCard extends StatelessWidget {
                 icon: PhIcons.arrowElbowUpLeft,
                 onTap: onReply,
               ),
-            if (showReply && showCopy) Container(height: 1, color: dividerColor),
+            if (showReply && showCopy)
+              Container(height: 1, color: dividerColor),
             if (showCopy)
               _ActionRow(
                 label: 'Copy',
@@ -543,8 +616,29 @@ class _ActionRow extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
 
+  // Desktop: 28 rows, icon 14 fg3, label 12/400 fg1 (DL-02 menu row).
+  Widget _desk() => InkWell(
+        borderRadius: BorderRadius.circular(6),
+        hoverColor: AppColors.surface3,
+        onTap: onTap,
+        child: SizedBox(
+          height: 28,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(children: [
+              Icon(icon, size: 14, color: AppColors.fg3),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(label, style: sans(12, color: AppColors.fg1)),
+              ),
+            ]),
+          ),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
+    if (!kMobile) return _desk();
     return InkWell(
       onTap: onTap,
       child: SizedBox(
