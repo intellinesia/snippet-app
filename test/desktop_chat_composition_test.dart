@@ -73,7 +73,7 @@ Future<void> _pumpFrames(WidgetTester tester) async {
 void main() {
   for (final size in const [Size(1440, 900), Size(1024, 700)]) {
     testWidgets(
-        'desktop group chat keeps transcript below its measured header at ${size.width.toInt()}x${size.height.toInt()}',
+        'desktop group chat draws no in-pane head and keeps its transcript in the pane at ${size.width.toInt()}x${size.height.toInt()}',
         (tester) async {
       _desktop(tester, size);
       try {
@@ -91,11 +91,13 @@ void main() {
         expect(material.color, AppColors.panelBg);
         expect(material.color!.a, 1.0);
 
-        final header = tester.getRect(find.text('App Redesign').first);
+        // The shell's XO-03 bar carries the identity; the screen draws no head.
+        expect(find.text('App Redesign'), findsNothing);
+        final screen = tester.getRect(find.byType(GroupThreadScreen));
         final transcript =
             tester.getRect(find.textContaining('Alpha release note').first);
-        expect(transcript.top, greaterThanOrEqualTo(header.bottom),
-            reason: 'transcript content must not slide under the desktop chat head');
+        expect(transcript.top, greaterThanOrEqualTo(screen.top),
+            reason: 'transcript content must stay inside the chat pane');
         expect(tester.takeException(), isNull);
       } finally {
         debugDefaultTargetPlatformOverride = null;

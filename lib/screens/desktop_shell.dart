@@ -3,6 +3,8 @@ import 'dart:async';
 
 import '../desk_attention.dart';
 import '../desktop_look.dart';
+import '../chat/chat_header_bar.dart';
+import '../chat/signal_row.dart' show prettyModel, prettyProfile;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -444,8 +446,8 @@ class _DesktopShellState extends State<DesktopShell>
   ShellSection get _effectiveSection =>
       _hiddenSections.contains(_section) ? ShellSection.sessions : _section;
 
-  /// Agent right rail is open by default on desktop (V3); toggled by the bar.
-  bool _agentPanelHidden = false;
+  /// The info panel opens from the chat header (XO-03); closed by default.
+  bool _agentPanelHidden = true;
 
   CoordinationAgent? _mcAgent;
   List<CoordinationAgent> _coordinationAgents = const [];
