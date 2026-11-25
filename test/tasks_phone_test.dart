@@ -130,6 +130,58 @@ void main() {
           expect(r.width, w);
           expect(r.height, greaterThanOrEqualTo(56));
         }
+        // Amber discipline: AppColors.run only on the hand glyph (at most one
+        // per row), AppColors.danger nowhere, and Text never uses run.
+        const amberIds = {'t-r1', 't-b1'};
+        final amberSeen = <String>{};
+        void checkColours() {
+          for (final e in find.byType(PhoneTaskCard).evaluate()) {
+            final cardFinder = find.byElementPredicate((x) => x == e);
+            final key = (e.widget.key as ValueKey?)?.value;
+            var runIcons = 0;
+            for (final i in find
+                .descendant(of: cardFinder, matching: find.byType(Icon))
+                .evaluate()) {
+              final c = (i.widget as Icon).color;
+              expect(c, isNot(AppColors.danger), reason: 'red icon in $key');
+              if (c == AppColors.run) runIcons++;
+            }
+            for (final a in find
+                .descendant(of: cardFinder, matching: find.byType(AppIcon))
+                .evaluate()) {
+              final w2 = a.widget as AppIcon;
+              expect(w2.color, isNot(AppColors.danger),
+                  reason: 'red AppIcon in $key');
+              if (w2.color == AppColors.run) {
+                expect(w2.name, 'hand', reason: 'amber on non-hand in $key');
+              }
+            }
+            for (final t in find
+                .descendant(of: cardFinder, matching: find.byType(Text))
+                .evaluate()) {
+              final w2 = t.widget as Text;
+              final colours = <Color?>[w2.style?.color];
+              void walk(InlineSpan? s) {
+                if (s is! TextSpan) return;
+                colours.add(s.style?.color);
+                s.children?.forEach(walk);
+              }
+              walk(w2.textSpan);
+              expect(colours, isNot(contains(AppColors.run)),
+                  reason: 'amber text in $key');
+              expect(colours, isNot(contains(AppColors.danger)),
+                  reason: 'red text in $key');
+            }
+            expect(runIcons, lessThanOrEqualTo(1),
+                reason: 'more than one amber icon in $key');
+            if (runIcons > 0) {
+              expect(amberIds.contains(key), isTrue,
+                  reason: 'amber icon in unexpected row $key');
+              amberSeen.add('$key');
+            }
+          }
+        }
+        checkColours();
         // groups: Needs you (in_review, blocked, failed), Doing, Todo, Done
         expect(find.byKey(const ValueKey('group-Needs you')), findsOneWidget);
         expect(find.byKey(const ValueKey('group-Doing')), findsOneWidget);
@@ -199,6 +251,9 @@ void main() {
             scrollable: find.byType(Scrollable).first);
         expect(find.byKey(const ValueKey('t-c1')), findsOneWidget);
         expect(iconOf('t-c1'), 'x');
+        checkColours();
+        // ignore: avoid_print
+        print('AMBER w=$w s=$scale rows=${amberSeen.toList()..sort()}');
         expect(tester.takeException(), isNull);
       });
     }
