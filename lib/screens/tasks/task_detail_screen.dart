@@ -28,6 +28,12 @@ import '../../tap_detector.dart';
 /// The room is the whole point of a task owning a thread. Agents assigned to
 /// this task — and the human — read and post here, and nobody on a DIFFERENT
 /// task is woken by it, which is what a single global board could not give.
+// Desktop desks are neutral: failures and blockers read as words in fg1/fg2,
+// never red or amber text; amber is kept for the needs-you dot.
+Color get _deskDanger => kMobile ? AppColors.danger : AppColors.fg1;
+Color get _deskRun => kMobile ? AppColors.run : AppColors.fg2;
+FontWeight get _deskStrong => kMobile ? FontWeight.w600 : FontWeight.w500;
+
 class TaskDetailScreen extends StatefulWidget {
   const TaskDetailScreen({
     super.key,
@@ -587,7 +593,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 text: ' · $kind',
                 style: sans(size,
                     color:
-                        kind == 'blocker' ? AppColors.danger : AppColors.fg3)),
+                        kind == 'blocker' ? _deskDanger : AppColors.fg3)),
         ]),
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
@@ -745,7 +751,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   padding: EdgeInsets.all(S.s24),
                   child: Text(error!,
                       textAlign: TextAlign.center,
-                      style: sans(12, color: AppColors.run)),
+                      style: sans(12, color: _deskRun)),
                 ),
               )
             : t == null
@@ -807,7 +813,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   _ => t.status.label,
                 },
                 t.status == TaskStatus.blocked
-                    ? AppColors.run
+                    ? _deskRun
                     : statusColor(t.status)),
         ]),
         const SizedBox(height: 8),
@@ -815,7 +821,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
             style: sans(kMobile ? 20 : 16,
-                weight: FontWeight.w600,
+                weight: _deskStrong,
                 spacing: -0.2,
                 color: AppColors.fg1)),
       ]),
@@ -890,10 +896,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           'Changes',
           Row(mainAxisSize: MainAxisSize.min, children: [
             Text('+${compactCount(changes.added)}',
-                style: mono(12, color: AppColors.ok)),
+                style: mono(12, color: kMobile ? AppColors.ok : AppColors.fg2)),
             const SizedBox(width: 6),
             Text('−${compactCount(changes.removed)}',
-                style: mono(12, color: AppColors.danger)),
+                style: mono(12, color: kMobile ? AppColors.danger : AppColors.fg3)),
             if (changes.files > 0) ...[
               const SizedBox(width: 6),
               Text('${changes.files} files',
@@ -929,7 +935,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         padding: const EdgeInsets.only(bottom: 6),
         child: Row(children: [
           Text(label,
-              style: sans(13, weight: FontWeight.w600, color: AppColors.fg1)),
+              style: sans(13, weight: _deskStrong, color: AppColors.fg1)),
           if (count != null) ...[
             const SizedBox(width: 8),
             Text(count, style: mono(11, color: AppColors.fg4)),
@@ -1077,7 +1083,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             Text('No linked tasks.', style: sans(12, color: AppColors.fg4))
           else ...[
             for (final blocker in links.blockedBy)
-              _linkRow('Blocked by', blocker, AppColors.danger),
+              _linkRow('Blocked by', blocker, _deskDanger),
             for (final l in links.links)
               if (l.kind == TaskLinkKind.relatesTo)
                 _linkRow(
@@ -1100,7 +1106,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             AppIcon('eye', size: 14, color: AppColors.accent),
             const SizedBox(width: 8),
             Text('Your verdict',
-                style: sans(13, weight: FontWeight.w600, color: AppColors.fg1)),
+                style: sans(13, weight: _deskStrong, color: AppColors.fg1)),
           ]),
           const SizedBox(height: 6),
           Text(
@@ -1132,7 +1138,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             child: Row(children: [
               Text('The room',
                   style: sans(12.5,
-                      weight: FontWeight.w600, color: AppColors.fg1)),
+                      weight: _deskStrong, color: AppColors.fg1)),
               const SizedBox(width: 8),
               Text('${room?.events.length ?? 0}',
                   style: mono(11, color: AppColors.fg4)),
@@ -1154,7 +1160,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           padding: EdgeInsets.all(S.s24),
           child: Text(error!,
               textAlign: TextAlign.center,
-              style: sans(12, color: AppColors.run)),
+              style: sans(12, color: _deskRun)),
         ),
       );
     }
@@ -1356,7 +1362,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style:
-                    sans(14, color: inReview ? AppColors.run : AppColors.fg3)),
+                    sans(14, color: inReview ? _deskRun : AppColors.fg3)),
           ),
         ]),
         if (inReview) ...[
@@ -1829,7 +1835,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             // Blockers first: "what is holding this up" is the question the
             // links exist to answer.
             for (final blocker in links.blockedBy)
-              _linkRow('Blocked by', blocker, AppColors.danger),
+              _linkRow('Blocked by', blocker, _deskDanger),
             for (final l in links.links)
               if (l.kind == TaskLinkKind.relatesTo)
                 _linkRow(

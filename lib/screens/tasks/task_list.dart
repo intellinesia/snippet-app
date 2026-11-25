@@ -294,7 +294,8 @@ class _FoldedTasksState extends State<FoldedTasks> {
             height: 28,
             alignment: Alignment.centerLeft,
             // The title column: row inset + mark column + gap + id column.
-            padding: const EdgeInsets.only(left: kTaskRowInset + 22 + 4 + kTaskIdWidth),
+            padding: const EdgeInsets.only(
+                left: kTaskRowInset + 22 + 4 + kTaskIdWidth),
             child: Text(
                 _open ? 'Show less' : 'Show ${widget.hidden.length} more',
                 style: sans(12, color: AppColors.fg3)),
@@ -354,7 +355,9 @@ class TaskRow extends StatelessWidget {
         [id, who, task.status.label].where((p) => p.isNotEmpty).join(' · ');
     final avatar = rowAvatarSize(kMobile ? 52 : 40);
     return Material(
-      color: selected ? AppColors.accentBg : Colors.transparent,
+      color: selected
+          ? (kMobile ? AppColors.accentBg : AppColors.surface2)
+          : Colors.transparent,
       child: InkWell(
         onTap: onTap,
         child: Container(
@@ -362,9 +365,13 @@ class TaskRow extends StatelessWidget {
           padding: EdgeInsets.symmetric(
               horizontal: S.s12, vertical: kMobile ? S.s8 : S.s6),
           decoration: BoxDecoration(
-            border: divider
-                ? Border(bottom: BorderSide(color: AppColors.line))
-                : null,
+            border: Border(
+              left: selected && !kMobile
+                  ? BorderSide(color: AppColors.fg1, width: 2)
+                  : BorderSide.none,
+              bottom:
+                  divider ? BorderSide(color: AppColors.line) : BorderSide.none,
+            ),
           ),
           child: Row(children: [
             SizedBox(
@@ -415,11 +422,22 @@ class TaskRow extends StatelessWidget {
                 ],
               ),
             ),
+            if (!kMobile && needsYou) ...[
+              SizedBox(width: S.s8),
+              Container(
+                width: 6,
+                height: 6,
+                decoration:
+                    BoxDecoration(color: AppColors.run, shape: BoxShape.circle),
+              ),
+              SizedBox(width: S.s6),
+              Text('Needs you',
+                  style:
+                      sans(12, weight: FontWeight.w500, color: AppColors.fg2)),
+            ],
             if (!kMobile && age.isNotEmpty) ...[
               SizedBox(width: S.s8),
-              Text(age,
-                  style: mono(11,
-                      color: needsYou ? AppColors.run : AppColors.fg4)),
+              Text(age, style: mono(11, color: AppColors.fg4)),
             ],
           ]),
         ),
@@ -512,15 +530,28 @@ class PhoneTaskRow extends StatelessWidget {
 
   static const _warn = Color(0xFFD4923C);
 
-  (String, Color) get _status => switch (task.status) {
-        TaskStatus.inReview => ('Ready for review', AppColors.ok),
-        TaskStatus.blocked => ('Blocked', _warn),
-        TaskStatus.inProgress => ('Working', AppColors.accent),
-        TaskStatus.failed => ('Failed', AppColors.run),
-        TaskStatus.todo => ('To do', AppColors.fg3),
-        TaskStatus.done => ('Done', AppColors.ok),
-        TaskStatus.cancelled => ('Cancelled', AppColors.fg3),
-      };
+  (String, Color) get _status => !kMobile
+      ? (
+          switch (task.status) {
+            TaskStatus.inReview => 'Ready for review',
+            TaskStatus.blocked => 'Blocked',
+            TaskStatus.inProgress => 'Working',
+            TaskStatus.failed => 'Failed',
+            TaskStatus.todo => 'To do',
+            TaskStatus.done => 'Done',
+            TaskStatus.cancelled => 'Cancelled',
+          },
+          statusColor(task.status)
+        )
+      : switch (task.status) {
+          TaskStatus.inReview => ('Ready for review', AppColors.ok),
+          TaskStatus.blocked => ('Blocked', _warn),
+          TaskStatus.inProgress => ('Working', AppColors.accent),
+          TaskStatus.failed => ('Failed', AppColors.run),
+          TaskStatus.todo => ('To do', AppColors.fg3),
+          TaskStatus.done => ('Done', AppColors.ok),
+          TaskStatus.cancelled => ('Cancelled', AppColors.fg3),
+        };
 
   String get _note {
     final who = (agentName ?? '').trim().isNotEmpty
