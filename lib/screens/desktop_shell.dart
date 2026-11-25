@@ -51,7 +51,7 @@ import 'tasks/task_kanban.dart';
 import 'tasks/task_board.dart';
 import 'mobile_chrome.dart';
 import 'mobile_shell.dart';
-import 'new_session_picker.dart';
+import '../motion_routes.dart';
 import 'new_session_draft.dart';
 import 'new_menu.dart';
 import 'agents_sidebar_panel.dart' show showCreateAgentDialog;
@@ -1507,60 +1507,28 @@ class _DesktopShellState extends State<DesktopShell>
       _openDraftTab();
       return;
     }
-    await presentScreen(
-      context,
-      style: PanelStyle.dialog,
-      // Wider and shorter than a default dialog: this is a folder BROWSER, so
-      // horizontal room is what buys legibility (deep paths and long folder
-      // names), while extra height only stretched a list that rarely fills it —
-      // leaving a tall empty box around short content.
-      maxWidth: 440,
-      maxHeight: 500,
-      builder: (_, close) => NewSessionPicker(
+    // SE-05: the phone draft page (bar B, one card), not the folder dialog.
+    await Navigator.of(context).push<void>(AppPageRoute<void>(
+      builder: (page) => NewSessionDraft(
         client: c,
         machineLabel: active?.label ?? '',
-        // Deliberately NOT `_activeWorkspaceFolder()`. This picker is the entry
-        // point for a NEW conversation and must stand on its own: inheriting the
-        // open session's workspace both implied a dependency on one existing and
-        // silently narrowed where a new chat could start. Null lets the daemon
-        // answer with its home directory, which is the sane default.
-        startPath: null,
-        onClose: close,
-        onStart: (folder, workspace, profile, text, attachments) async {
+        layout: NewSessionLayout.phone,
+        onCancel: () => Navigator.of(page).pop(),
+        onStart: (folder, workspace, profile, text) async {
           try {
             final id = await c.openSession(folder,
                 workspace: workspace, profile: profile, newConversation: true);
+            if (page.mounted) Navigator.of(page).pop();
             _openSession(id, 'New session', profile,
-                share: SharedInbound(
-                  type: attachments.isEmpty ? 'text' : 'file',
-                  text: text,
-                  paths: [for (final a in attachments) a.path],
-                  names: [for (final a in attachments) a.name],
-                  send: true,
-                ));
+                share: SharedInbound(type: 'text', text: text, send: true));
             _loadSessions();
           } catch (e) {
             if (mounted) toast(context, '$e', danger: true);
             rethrow;
           }
-          close();
-        },
-        onOpenFolder: (folder, workspace) async {
-          try {
-            final id = await c.openSession(folder,
-                workspace: workspace, newConversation: true);
-            _openSession(id, 'New session', null);
-            _loadSessions();
-          } catch (e) {
-            // Surfaced by the picker as a toast; keep the screen open so the
-            // folder choice is not lost on a transient failure.
-            if (mounted) toast(context, '$e', danger: true);
-            rethrow;
-          }
-          close();
         },
       ),
-    );
+    ));
   }
 
   void _selectInstance(Instance inst) {

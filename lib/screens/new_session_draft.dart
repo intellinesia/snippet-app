@@ -8,11 +8,13 @@ import '../mochi.dart';
 import '../platform.dart';
 import '../models.dart';
 import '../theme.dart';
+import '../tap_detector.dart';
 import '../widgets.dart';
+import 'spec_bar.dart';
 
 /// `sheet` is the new-session dialog body; `hero` is the empty-state composer
 /// with its settings as chips.
-enum NewSessionLayout { sheet, hero }
+enum NewSessionLayout { sheet, hero, phone }
 
 enum _Wt { fresh, here, existing }
 
@@ -93,6 +95,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
   final List<PickedLocalFile> _files = [];
 
   bool get _sheet => widget.layout == NewSessionLayout.sheet;
+  bool get _phone => widget.layout == NewSessionLayout.phone;
 
   @override
   void initState() {
@@ -1148,8 +1151,170 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
     }
   }
 
+  /// SE-05 phone page: bar B, then one 16 radius card with the context chips
+  /// (36 visual, 44 hit), the prompt and the Start row.
+  Widget _phoneCard() {
+    final canSend = !_starting && _input.text.trim().isNotEmpty;
+    final current = _current;
+    Widget pill(String icon, String label, VoidCallback onTap, {Key? key}) =>
+        Semantics(
+          key: key,
+          button: true,
+          label: label,
+          child: ExcludeSemantics(
+            child: TapDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onTap,
+              child: SizedBox(
+                height: 44,
+                child: Center(
+                  child: Container(
+                    height: 36,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                        color: AppColors.surface2,
+                        borderRadius: BorderRadius.circular(18)),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      AppIcon(icon, size: 16, color: AppColors.fg2),
+                      const SizedBox(width: 6),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 180),
+                        child: Text(label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(12.5, color: AppColors.fg1)),
+                      ),
+                    ]),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+    final profileLabel = current?.name ?? _agentName;
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      body: SafeArea(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          SpecBar(
+              title: 'New session',
+              onBack: widget.onCancel ?? () => Navigator.of(context).maybePop()),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 330),
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                decoration: BoxDecoration(
+                    color: AppColors.surface1,
+                    borderRadius: BorderRadius.circular(16)),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SizedBox(
+                        height: 44,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: [
+                            pill('folder', _folderLabel, _pickFolder,
+                                key: _folderKey),
+                            const SizedBox(width: 6),
+                            Builder(
+                                builder: (a) => pill('sliders', profileLabel,
+                                    () => _pickProfile(a))),
+                          ],
+                        ),
+                      ),
+                      if (_startError != null) _startFailure(_startError!),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(
+                            minHeight: 120, maxHeight: 200),
+                        child: TextField(
+                          controller: _input,
+                          focusNode: _focus,
+                          minLines: 5,
+                          maxLines: null,
+                          style: sans(15, height: 1.5, color: AppColors.fg1),
+                          cursorColor: AppColors.fg1,
+                          decoration: InputDecoration(
+                            isCollapsed: true,
+                            border: InputBorder.none,
+                            hintText: 'What should it do?',
+                            hintStyle: sans(15, color: AppColors.fg3),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(children: [
+                        if (widget.onStartWithFiles != null)
+                          Semantics(
+                            button: true,
+                            label: 'Add context',
+                            child: ExcludeSemantics(
+                              child: TapDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: _addFiles,
+                                child: SizedBox(
+                                    width: 48,
+                                    height: 48,
+                                    child: Center(
+                                        child: AppIcon('plus',
+                                            size: 20, color: AppColors.fg2))),
+                              ),
+                            ),
+                          ),
+                        const Spacer(),
+                        Semantics(
+                          button: true,
+                          enabled: canSend,
+                          label: 'Start',
+                          child: ExcludeSemantics(
+                            child: TapDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: canSend ? _start : null,
+                              child: Container(
+                                width: 120,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                    color: canSend
+                                        ? AppColors.fg1
+                                        : AppColors.surface3,
+                                    borderRadius: BorderRadius.circular(10)),
+                                child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      _starting
+                                          ? const Spinner(size: 14)
+                                          : AppIcon('arrow-right',
+                                              size: 16,
+                                              color: canSend
+                                                  ? AppColors.bg
+                                                  : AppColors.fg3),
+                                      const SizedBox(width: 6),
+                                      Text('Start',
+                                          style: sans(14,
+                                              weight: W.label,
+                                              color: canSend
+                                                  ? AppColors.bg
+                                                  : AppColors.fg3)),
+                                    ]),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ]),
+                    ]),
+              ),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_phone) return _phoneCard();
     if (!_sheet) return _hero();
     return CallbackShortcuts(
       bindings: {
