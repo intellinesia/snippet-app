@@ -359,8 +359,8 @@ class _AgentLanesView extends StatelessWidget {
         bottom: -1,
         child: Container(
           key: ValueKey('lane-badge-${lane.id}'),
-          width: _needs(lane) ? 10 : 12,
-          height: _needs(lane) ? 10 : 12,
+          width: _needs(lane) ? 6 : 12,
+          height: _needs(lane) ? 6 : 12,
           decoration: BoxDecoration(
               color: tone,
               shape: BoxShape.circle,
@@ -383,12 +383,12 @@ class _AgentLanesView extends StatelessWidget {
       subLines = 2;
       tag = 'Failed';
       tagColor = AppColors.fg1;
-      rest = _firstSentence(lane.error ?? lane.summary);
+      rest = 'Needs you · ${_firstSentence(lane.error ?? lane.summary)}';
       if (canAct) {
         trailing = _RetryPill(client: c, session: session, lane: lane);
       }
     } else if (lane.status == 'paused') {
-      rest = 'Paused at its time limit';
+      rest = 'Needs you · Paused at its time limit';
     } else if (lane.running) {
       final act = (lane.activity ?? '').trim();
       rest = act.isEmpty ? 'Working' : act;
@@ -653,7 +653,14 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
             : cancelled || paused
                 ? Tone.neutral
                 : Tone.ok;
-    final (toneFg, _) = toneColors(tone);
+    var (toneFg, _) = toneColors(tone);
+    if (!kMobile) {
+      toneFg = failed
+          ? AppColors.fg1
+          : cancelled || paused
+              ? AppColors.fg3
+              : AppColors.fg2;
+    }
     final status = lane.running
         ? 'running · ${_elapsed(lane.startedAt)}'
         : failed
@@ -771,7 +778,11 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
   /// grouped cards under quiet section labels.
   Widget _detailView(BuildContext context,
       {required Tone tone, required String status}) {
-    final (toneFg, toneBg) = toneColors(tone);
+    var (toneFg, toneBg) = toneColors(tone);
+    if (!kMobile) {
+      toneFg = lane.status == 'failed' ? AppColors.fg1 : AppColors.fg2;
+      toneBg = AppColors.surface2;
+    }
     final pill = lane.running
         ? 'In progress'
         : switch (lane.status) {

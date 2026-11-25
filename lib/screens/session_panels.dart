@@ -439,14 +439,15 @@ class _DeskLanesState extends State<_DeskLanes> {
         ? l.activity!.trim()
         : laneFirstSentence((l.summary ?? l.handoff ?? '').trim(), 60);
     final elapsed = _elapsed(l.startedAt);
+    final needs = failed || l.status == 'paused';
     final (word, fg, bg) = running
         ? (
-            elapsed.isEmpty ? 'Running' : elapsed,
+            elapsed.isEmpty ? 'Running' : 'Running · $elapsed',
             AppColors.fg2,
             AppColors.surface2
           )
-        : failed
-            ? ('Failed', AppColors.fg1, AppColors.surface2)
+        : needs
+            ? ('Needs you', AppColors.fg2, AppColors.surface2)
             : stopped
                 ? (
                     l.status == 'paused' ? 'Paused' : 'Cancelled',
@@ -474,18 +475,16 @@ class _DeskLanesState extends State<_DeskLanes> {
             child: Center(
               child: running
                   ? const RunSpinner(size: 12)
-                  : AppIcon(
-                      failed
-                          ? 'x'
-                          : stopped
-                              ? 'minus'
-                              : 'check',
-                      size: 14,
-                      color: failed
-                          ? AppColors.fg1
-                          : stopped
-                              ? AppColors.fg4
-                              : AppColors.fg2),
+                  : needs
+                      ? Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                              color: AppColors.run, shape: BoxShape.circle),
+                        )
+                      : AppIcon(stopped ? 'minus' : 'check',
+                          size: 14,
+                          color: stopped ? AppColors.fg4 : AppColors.fg2),
             ),
           ),
           const SizedBox(width: 10),

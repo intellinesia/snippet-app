@@ -365,7 +365,6 @@ class _TaskListViewState extends State<TaskListView> {
           _BarBtn(
               label: 'New task',
               icon: PhIcons.plus,
-              primary: true,
               onTap: () => setState(() => _creating = true)),
         ]),
       );
@@ -546,19 +545,14 @@ class _TaskListViewState extends State<TaskListView> {
 }
 
 class _BarBtn extends StatelessWidget {
-  const _BarBtn(
-      {required this.label,
-      required this.icon,
-      this.primary = false,
-      this.onTap});
+  const _BarBtn({required this.label, required this.icon, this.onTap});
   final String label;
   final IconData icon;
-  final bool primary;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final fg = primary ? AppColors.accentFg : AppColors.fg2;
+    final fg = AppColors.fg2;
     return TapDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -566,15 +560,13 @@ class _BarBtn extends StatelessWidget {
         height: 28,
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
-          color: primary ? AppColors.accentFill : Colors.transparent,
+          color: AppColors.surface2,
           borderRadius: BorderRadius.circular(R.sm),
-          border: Border.all(color: primary ? AppColors.accentFill : taskHairline),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           Icon(icon, size: 13, color: fg),
           const SizedBox(width: 6),
-          Text(label,
-              style: sans(12, weight: W.label, color: fg)),
+          Text(label, style: sans(12, weight: W.label, color: fg)),
         ]),
       ),
     );
