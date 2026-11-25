@@ -5,6 +5,8 @@ import 'highlight.dart';
 import 'platform.dart';
 import 'theme.dart';
 
+export 'chat/ask_kit.dart';
+
 /// An approval's `title` as a question: `?` is added unless it already ends
 /// in `?`, `.` or `!`. Null when the daemon sent none.
 String? approvalTitle(Object? raw) {

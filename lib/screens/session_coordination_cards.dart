@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../markdown_preview.dart' show plainPreview;
+import '../chat/ask_kit.dart';
 import '../platform.dart';
-import '../settings_form.dart' show Grouped;
 import '../transcript_card.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -334,16 +334,16 @@ class MissionEnvelopeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (tone, icon, tag) = switch (envelope.eventKind) {
-            'working' => (Tone.run, 'activity', 'Working'),
-            'done' => (Tone.ok, 'check', 'Done'),
-            'blocked' => (Tone.danger, 'alert-triangle', 'Blocked'),
-            'failed' => (Tone.danger, 'x-circle', 'Failed'),
-            'stalled' => (Tone.run, 'alert-triangle', 'Stalled'),
-            'cancelled' => (Tone.neutral, 'x-circle', 'Cancelled'),
-            'message' => (Tone.neutral, 'message', 'Message'),
-            'update' => (Tone.neutral, 'info', 'Update'),
-            _ => (Tone.accent, 'inbox', 'New task'),
-          };
+      'working' => (Tone.run, 'activity', 'Working'),
+      'done' => (Tone.ok, 'check', 'Done'),
+      'blocked' => (Tone.danger, 'alert-triangle', 'Blocked'),
+      'failed' => (Tone.danger, 'x-circle', 'Failed'),
+      'stalled' => (Tone.run, 'alert-triangle', 'Stalled'),
+      'cancelled' => (Tone.neutral, 'x-circle', 'Cancelled'),
+      'message' => (Tone.neutral, 'message', 'Message'),
+      'update' => (Tone.neutral, 'info', 'Update'),
+      _ => (Tone.accent, 'inbox', 'New task'),
+    };
     if (envelope.review.isNotEmpty) {
       final findings = envelope.review == 'findings';
       final round = envelope.round.isEmpty ? '' : ' · round ${envelope.round}';
@@ -728,41 +728,63 @@ class WorkerQuestionCard extends StatelessWidget {
   final WorkerQuestion question;
 
   @override
-  Widget build(BuildContext context) => ChatCard(children: [
-        ChatCardHeader(
-          title: question.question.trim(),
-          subtitle: question.task.trim(),
-          trailing: const ChatCardPill('1 of 1'),
+  Widget build(BuildContext context) {
+    if (!kMobile) {
+      return DesktopAskCard(
+        title: question.question.trim(),
+        meta: question.task.trim().isEmpty
+            ? 'Lane question'
+            : 'Lane question from ${question.task.trim()}',
+        payload: Text('Lead answers from your brief, or pings you',
+            style: sans(12, height: 17 / 12, color: AppColors.fg2)),
+        actions: [
+          AskButton('Answer for Lead',
+              variant: AskButtonVariant.primary,
+              onTap: () => DraftSink.use('Answer for Lead: ')),
+          AskButton('Forward to me', variant: AskButtonVariant.secondary,
+              onTap: () {
+            Clipboard.setData(ClipboardData(text: question.question.trim()));
+            toast(context, 'Question copied');
+          }),
+        ],
+      );
+    }
+    return ChatCard(children: [
+      ChatCardHeader(
+        title: question.question.trim(),
+        subtitle: question.task.trim(),
+        trailing: const ChatCardPill('1 of 1'),
+      ),
+      ChatCardBody(
+        child: Text(
+          'Lead answers from your brief, or pings you',
+          style: sans(TranscriptCard.metaSize, color: AppColors.fg3),
         ),
-        ChatCardBody(
-          child: Text(
-            'Lead answers from your brief, or pings you',
-            style: sans(TranscriptCard.metaSize, color: AppColors.fg3),
+      ),
+      if (kMobile)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+          child: Builder(
+            builder: (context) => Row(children: [
+              Expanded(
+                child: _workerBtn('Answer for Lead', true, () {
+                  // Opens the composer with the answer started for Lead.
+                  DraftSink.use('Answer for Lead: ');
+                }),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _workerBtn('Forward to me', false, () {
+                  Clipboard.setData(
+                      ClipboardData(text: question.question.trim()));
+                  toast(context, 'Question copied');
+                }),
+              ),
+            ]),
           ),
         ),
-        if (kMobile)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-            child: Builder(
-              builder: (context) => Row(children: [
-                Expanded(
-                  child: _workerBtn('Answer for Lead', true, () {
-                    // Opens the composer with the answer started for Lead.
-                    DraftSink.use('Answer for Lead: ');
-                  }),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _workerBtn('Forward to me', false, () {
-                    Clipboard.setData(
-                        ClipboardData(text: question.question.trim()));
-                    toast(context, 'Question copied');
-                  }),
-                ),
-              ]),
-            ),
-          ),
-      ]);
+    ]);
+  }
 
   Widget _workerBtn(String label, bool outlined, VoidCallback onTap) =>
       Semantics(

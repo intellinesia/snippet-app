@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
 import 'call_tracking.dart';
+import 'chat/ask_kit.dart';
 import 'platform.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
 /// In-app surface for a pending call prompt, or the tracking state with Stop.
 class CallPromptCard extends StatefulWidget {
-  const CallPromptCard({super.key, required this.status, required this.onAction});
+  const CallPromptCard(
+      {super.key, required this.status, required this.onAction});
   final CallStatus status;
   final Future<bool> Function(String action) onAction;
 
@@ -39,6 +41,55 @@ class _CallPromptCardState extends State<CallPromptCard> {
     final auto = tracking && widget.status.auto;
     final autoLabel = widget.status.label.trim();
     final pad = kMobile ? 14.0 : 12.0;
+    if (!kMobile) {
+      final body = tracking
+          ? (auto
+              ? (autoLabel.isEmpty ? 'Recording' : 'Recording under $autoLabel')
+              : 'Taking notes')
+          : widget.status.body;
+      return DesktopAskCard(
+        title: tracking ? body : widget.status.title,
+        needsYou: !tracking,
+        meta: tracking ? null : 'Call',
+        payload: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!tracking && body.trim().isNotEmpty)
+              Text(body,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(12, height: 17 / 12, color: AppColors.fg2)),
+            if (_failed)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Row(children: [
+                  AskIcon('x', size: 12, color: AppColors.fg1),
+                  const SizedBox(width: 5),
+                  Text('Could not reach Snippet. Try again.',
+                      style: sans(12, height: 17 / 12, color: AppColors.fg1)),
+                ]),
+              ),
+          ],
+        ),
+        actions: [
+          if (tracking)
+            AskButton(_busy ? 'Stopping' : 'Stop',
+                variant: AskButtonVariant.secondary,
+                busy: _busy,
+                onTap: () => _run(callActionStop))
+          else ...[
+            AskButton('Accept',
+                variant: AskButtonVariant.primary,
+                busy: _busy,
+                onTap: () => _run(callActionTrack)),
+            AskButton('Decline',
+                variant: AskButtonVariant.secondary,
+                onTap: _busy ? null : () => _run(callActionIgnore)),
+          ],
+        ],
+      );
+    }
     return Material(
       color: kMobile ? AppColors.surface2 : AppColors.surface1,
       elevation: 6,
@@ -58,7 +109,9 @@ class _CallPromptCardState extends State<CallPromptCard> {
                 width: 8,
                 height: 8,
                 decoration: BoxDecoration(
-                    color: tracking ? (kMobile ? AppColors.fg1 : AppColors.danger) : AppColors.accent,
+                    color: tracking
+                        ? (kMobile ? AppColors.fg1 : AppColors.danger)
+                        : AppColors.accent,
                     shape: BoxShape.circle),
               ),
               SizedBox(width: S.s8),
@@ -111,7 +164,8 @@ class _CallPromptCardState extends State<CallPromptCard> {
               Padding(
                 padding: EdgeInsets.only(top: S.s6, left: S.s16),
                 child: Text("Couldn't reach Snippet. Try again.",
-                    style: sans(12, color: kMobile ? AppColors.fg2 : AppColors.danger)),
+                    style: sans(12,
+                        color: kMobile ? AppColors.fg2 : AppColors.danger)),
               ),
           ],
         ),

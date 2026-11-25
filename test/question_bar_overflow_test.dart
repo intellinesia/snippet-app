@@ -25,9 +25,8 @@ void main() {
         body: Align(
           alignment: Alignment.bottomCenter,
           child: ConstrainedBox(
-            constraints: BoxConstraints(
-                maxHeight: paneHeight * 0.6,
-                maxWidth: 700),
+            constraints:
+                BoxConstraints(maxHeight: paneHeight * 0.6, maxWidth: 700),
             child: bar,
           ),
         ),
@@ -97,8 +96,8 @@ void main() {
     await tester.pump();
 
     expect(tester.takeException(), isNull);
-    // Approve/Deny are the decision; they must not be pushed off the edge.
-    expect(find.text('Approve'), findsOneWidget);
+    // Allow/Deny are the decision; they must not be pushed off the edge.
+    expect(find.text('Allow once'), findsOneWidget);
     expect(find.text('Deny'), findsOneWidget);
     final reject = tester.getRect(find.text('Deny'));
     final pane = tester.getRect(find.byType(Scaffold));

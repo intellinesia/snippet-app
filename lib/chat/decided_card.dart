@@ -4,9 +4,18 @@ import '../platform.dart';
 import '../mochi.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'ask_kit.dart';
 
 /// How a desk request ended.
-enum DecidedKind { approved, denied, answered, skipped, outdated, expired }
+enum DecidedKind {
+  approved,
+  denied,
+  answered,
+  skipped,
+  outdated,
+  expired,
+  superseded,
+}
 
 extension DecidedKindLook on DecidedKind {
   String get label => switch (this) {
@@ -16,15 +25,17 @@ extension DecidedKindLook on DecidedKind {
         DecidedKind.skipped => 'Skipped',
         DecidedKind.outdated => 'Outdated',
         DecidedKind.expired => 'Expired',
+        DecidedKind.superseded => 'Superseded',
       };
 
   Tone get tone => Tone.neutral;
 
   String get icon => switch (this) {
-        DecidedKind.approved || DecidedKind.answered => 'check',
+        DecidedKind.approved || DecidedKind.answered => 'check-circle',
         DecidedKind.denied => 'x',
         DecidedKind.skipped => 'x',
         DecidedKind.outdated || DecidedKind.expired => 'clock',
+        DecidedKind.superseded => 'layers',
       };
 
   Color get iconColor => switch (this) {
@@ -32,7 +43,8 @@ extension DecidedKindLook on DecidedKind {
         DecidedKind.denied => AppColors.fg1,
         DecidedKind.skipped ||
         DecidedKind.outdated ||
-        DecidedKind.expired =>
+        DecidedKind.expired ||
+        DecidedKind.superseded =>
           AppColors.fg3,
       };
 }
@@ -46,6 +58,8 @@ class DecidedCard extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.code = false,
+    this.actionLabel,
+    this.onAction,
   });
 
   final DecidedKind kind;
@@ -54,6 +68,8 @@ class DecidedCard extends StatelessWidget {
 
   /// The title is a command, shown in the code face.
   final bool code;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -61,6 +77,59 @@ class DecidedCard extends StatelessWidget {
         kind == DecidedKind.skipped ||
         kind == DecidedKind.expired;
     final titleColor = dim ? AppColors.fg3 : AppColors.fg1;
+    if (!kMobile) {
+      final shownTitle =
+          title.trim().toLowerCase().startsWith(kind.label.toLowerCase())
+              ? title
+              : title.trim().isEmpty
+                  ? kind.label
+                  : '${kind.label} $title';
+      return Container(
+        width: double.infinity,
+        margin: EdgeInsets.symmetric(vertical: S.s2),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: AppIcon(kind.icon, size: 14, color: AppColors.fg2),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(shownTitle,
+                    style: code
+                        ? codeMono(13,
+                            height: 19 / 13,
+                            weight: FontWeight.w500,
+                            color: AppColors.fg1)
+                        : sans(13,
+                            height: 19 / 13,
+                            weight: FontWeight.w500,
+                            color: AppColors.fg1)),
+                if (subtitle != null && subtitle!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(subtitle!,
+                        style: sans(12, height: 17 / 12, color: AppColors.fg2)),
+                  ),
+              ],
+            ),
+          ),
+          if (actionLabel != null) ...[
+            const SizedBox(width: 10),
+            AskButton(actionLabel!,
+                variant: AskButtonVariant.ghost, onTap: onAction),
+          ],
+        ]),
+      );
+    }
     return Container(
       width: double.infinity,
       margin: EdgeInsets.symmetric(vertical: S.s2),

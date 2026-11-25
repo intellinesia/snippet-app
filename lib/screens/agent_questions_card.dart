@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../chat/ask_kit.dart';
 import '../chat/chat_card.dart';
 import '../chat/decided_card.dart';
 import '../models.dart';
@@ -432,6 +433,7 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
 
   @override
   Widget build(BuildContext context) {
+    if (!kMobile) return Builder(builder: _build);
     return ChatCardAccent(
       color: null,
       child: Builder(builder: _build),
@@ -453,6 +455,17 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
         kind: DecidedKind.outdated,
         title: _questionText(qs.first),
         subtitle: 'No longer waiting on this',
+      );
+    }
+    if (dOutcome == 'expired' ||
+        dOutcome == 'timeout' ||
+        outcomeState == 'expired' ||
+        outcomeState == 'timeout') {
+      return DecidedCard(
+        kind: DecidedKind.expired,
+        title:
+            qs.length > 1 ? '${qs.length} questions' : _questionText(qs.first),
+        subtitle: 'The question expired',
       );
     }
     if (dOutcome == 'skipped') {
@@ -497,6 +510,59 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
     final showActions = !(closed && _error == null);
     final canNext = interactive && _draft(q, step) != null;
     final canSend = interactive && _allAnswered;
+    if (!kMobile) {
+      final title = qs.length == 1
+          ? _questionText(q)
+          : (widget.event.body.trim().isNotEmpty
+              ? widget.event.body.trim()
+              : '${qs.length} questions');
+      return DesktopAskCard(
+        title: title,
+        meta: _askMeta(),
+        payload: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < qs.length; i++) ...[
+              if (i > 0) const SizedBox(height: 12),
+              if (qs.length > 1)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(_questionText(qs[i]),
+                      style: sans(12,
+                          height: 17 / 12,
+                          weight: FontWeight.w500,
+                          color: AppColors.fg2)),
+                ),
+              _desktopInputFor(qs[i], i, interactive: interactive),
+            ],
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Row(children: [
+                  AskIcon('x', size: 12, color: AppColors.fg1),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Text(_error!,
+                        style: sans(12, height: 17 / 12, color: AppColors.fg1)),
+                  ),
+                ]),
+              ),
+          ],
+        ),
+        actions: showActions
+            ? [
+                AskButton('Skip',
+                    variant: AskButtonVariant.ghost,
+                    onTap: interactive ? _skip : null),
+                AskButton(_sending ? 'Sending' : 'Send',
+                    variant: AskButtonVariant.primary,
+                    busy: _sending,
+                    onTap: canSend ? _send : null),
+              ]
+            : const [],
+      );
+    }
     return ChatCard(
         border: kMobile && !closed ? AppColors.run : null,
         children: [
@@ -556,7 +622,8 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
   }
 
   /// Phone: a lone single-choice question reads "Answer Option A".
-  String _sendLabel(List<Map<String, dynamic>> qs, Map<String, dynamic> q, int i) {
+  String _sendLabel(
+      List<Map<String, dynamic>> qs, Map<String, dynamic> q, int i) {
     if (!kMobile || qs.length != 1) return 'Send';
     final v = _single[_key(q, i)];
     if (v == null) return 'Send';
@@ -611,6 +678,64 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
       return tokens.join(', ');
     }
     return v is List ? v.join(', ') : '$v';
+  }
+
+  String _askMeta() {
+    final actor = widget.event.actorId.trim();
+    final at = DateTime.tryParse(widget.event.createdAt)?.toLocal();
+    final time = at == null
+        ? ''
+        : '${at.hour.toString().padLeft(2, '0')}:${at.minute.toString().padLeft(2, '0')}';
+    return [if (actor.isNotEmpty) actor, if (time.isNotEmpty) time].join(' · ');
+  }
+
+  Widget _desktopInputFor(
+    Map<String, dynamic> q,
+    int i, {
+    required bool interactive,
+  }) {
+    final key = _key(q, i);
+    final kind = _kindOf(q);
+    switch (kind) {
+      case 'single_choice':
+      case 'yes_no':
+      case 'confirm':
+        final choices = _choicesFor(q);
+        return Wrap(spacing: 8, runSpacing: 8, children: [
+          for (final c in choices)
+            AskChoicePill(
+              label: c.label,
+              selected: _single[key] == c.value,
+              disabled: !interactive,
+              onTap: () => _pick(i, c, false),
+            ),
+        ]);
+      case 'multi_choice':
+        final choices = _choicesFor(q);
+        final picked = _multi[key] ?? const <String>{};
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final c in choices)
+              AskCheckboxRow(
+                label: c.label,
+                selected: picked.contains(c.value),
+                onTap: interactive ? () => _pick(i, c, true) : null,
+              ),
+            Padding(
+              padding: const EdgeInsets.only(left: 7, top: 3),
+              child: Text('${picked.length} of ${choices.length} selected',
+                  style: sans(11.5, height: 16 / 11.5, color: AppColors.fg2)),
+            ),
+          ],
+        );
+      default:
+        return AskTextInput(
+          controller: _controllerFor(key),
+          enabled: interactive,
+        );
+    }
   }
 
   Widget _inputFor(

@@ -64,7 +64,8 @@ List<McNeed> mcNeeds(
       title: t.title,
       sub: '${review ? 'Review' : 'Blocked'} · task · ${mcAge(at)}',
       icon: review ? 'file' : 'alert-circle',
-      tint: review ? AppColors.accent : AppColors.run,
+      tint:
+          kMobile ? (review ? AppColors.accent : AppColors.run) : AppColors.fg2,
       at: at,
       open: (c) => openTaskDetail(c, client, t.id),
     ));
@@ -84,7 +85,9 @@ List<McNeed> mcNeeds(
       title: s.title.isEmpty ? 'Session' : s.title,
       sub: '$kind · session · ${mcAge(at)}',
       icon: kind == 'Review' ? 'file' : 'help-circle',
-      tint: kind == 'Review' ? AppColors.accent : AppColors.run,
+      tint: kMobile
+          ? (kind == 'Review' ? AppColors.accent : AppColors.run)
+          : AppColors.fg2,
       at: at,
       open: (c) => mcOpenSession(c, client, s.id, s.title),
     ));
@@ -125,6 +128,51 @@ class McNeedsYou extends StatelessWidget {
       }
       rows.add(_NeedRow(n, flat: carded));
     }
+    if (!kMobile) {
+      return Padding(
+        padding: carded
+            ? const EdgeInsets.fromLTRB(14, 20, 14, 0)
+            : const EdgeInsets.fromLTRB(10, 8, 10, 8),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                height: 20,
+                child: Row(children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                        color: AppColors.run, shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: 7),
+                  Text('Needs you',
+                      style: sans(12,
+                          height: 16 / 12,
+                          weight: FontWeight.w500,
+                          color: AppColors.fg2)),
+                  const Spacer(),
+                  Text('${needs.length}',
+                      style: sans(11, height: 15 / 11, color: AppColors.fg2)),
+                ]),
+              ),
+              const SizedBox(height: 6),
+              for (var i = 0; i < needs.length; i++) ...[
+                if (i > 0) const SizedBox(height: 4),
+                _NeedRow(needs[i], flat: true),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
     if (carded) {
       return Padding(
         padding: const EdgeInsets.fromLTRB(14, 20, 14, 0),
@@ -154,8 +202,7 @@ class McNeedsYou extends StatelessWidget {
             ),
             clipBehavior: Clip.antiAlias,
             child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: rows),
+                crossAxisAlignment: CrossAxisAlignment.stretch, children: rows),
           ),
         ]),
       );
@@ -203,6 +250,35 @@ class _NeedRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!kMobile) {
+      return Material(
+        color: AppColors.surface2,
+        borderRadius: BorderRadius.circular(6),
+        child: InkWell(
+          onTap: () => n.open(context),
+          borderRadius: BorderRadius.circular(6),
+          child: SizedBox(
+            height: 32,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(children: [
+                AppIcon(n.icon, size: 13, color: AppColors.fg2),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(n.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style:
+                          sans(12.5, height: 17 / 12.5, color: AppColors.fg1)),
+                ),
+                const SizedBox(width: 8),
+                AppIcon('chevron-right', size: 14, color: AppColors.fg3),
+              ]),
+            ),
+          ),
+        ),
+      );
+    }
     return Material(
       color: flat ? Colors.transparent : AppColors.surface2,
       child: InkWell(
