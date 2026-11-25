@@ -54,7 +54,8 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('desktop lists agents above sessions and keeps the footer tools',
+  testWidgets(
+      'desktop uses the agent rail as the sidebar and keeps the footer tools',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     DaemonClient.wsConnector =
@@ -74,8 +75,10 @@ void main() {
     final before = tester.state(find.byType(ShellSplitView));
     expect(find.byTooltip('Back'), findsOneWidget);
     expect(find.byTooltip('Forward'), findsOneWidget);
-    // Desktop always lists agents above sessions.
-    expect(find.byType(AgentsSidebarPanel), findsOneWidget);
+    // The agent list itself is the desktop sidebar; sessions are reached
+    // from Home's View all.
+    final agentsPanel = find.byWidgetPredicate((w) => w is AgentsSidebarPanel);
+    expect(agentsPanel, findsOneWidget);
 
     // The footer band is pinned in the sidebar column, under the body.
     expect(
@@ -86,9 +89,7 @@ void main() {
     expect(tester.state(find.byType(ShellSplitView)), same(before));
 
     // A row opens the agent beside the chat, not the phone route.
-    tester
-            .widget<AgentsSidebarPanel>(find.byType(AgentsSidebarPanel))
-            .onOpenAgent!(
+    tester.widget<AgentsSidebarPanel>(agentsPanel).onOpenAgent!(
         CoordinationAgent.fromJson(
             {'id': 'scout', 'display_name': 'Scout', 'handle': 'scout'}));
     await _pump(tester);

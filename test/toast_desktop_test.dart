@@ -45,16 +45,17 @@ void main() {
       for (final e in find.byType(Tooltip).evaluate()) {
         final f = find.byWidget(e.widget);
         final r = tester.getRect(f);
-        if (r.top < 48 && r.width > 0) {
+        if (r.top < 66 && r.width > 0) {
           out['${(e.widget as Tooltip).message}'] = r;
         }
       }
       expect(out, isNotEmpty);
       // ignore: avoid_print
       print('DESKTOP ${size.width.toInt()} toasts=0 chrome=$out');
-      // Anchor for the call card, the one overlay desktop can show: top 52.
+      // Anchor for the call card, the one overlay desktop can show: top 66
+      // (34 title row + 32 tab strip).
       for (final e in out.entries) {
-        expect(e.value.bottom, lessThanOrEqualTo(52), reason: e.key);
+        expect(e.value.bottom, lessThanOrEqualTo(66), reason: e.key);
       }
       foregroundNotifications.drain();
       await tester.pumpWidget(const SizedBox.shrink());
