@@ -5,10 +5,16 @@ import '../widgets.dart';
 
 /// Width of the sidebar column. The nested navigation strip centres its icons
 /// over this column, and the panel below uses it exactly.
-const double kSidebarWidth = 248;
+const double kSidebarWidth = 240;
+const double kSidebarNarrowWidth = 232;
 const double kSidebarMinWidth = 220;
 const double kSidebarMaxWidth = 380;
 const String kSidebarWidthPref = 'sidebar_width';
+
+/// Default sidebar width for a window: 240, or 232 under 1100 wide. A width
+/// the user dragged to (persisted under [kSidebarWidthPref]) wins over this.
+double sidebarWidthFor(double windowWidth) =>
+    windowWidth < 1100 ? kSidebarNarrowWidth : kSidebarWidth;
 
 /// The sidebar work areas. The strip selects which panel the sidebar
 /// shows; it never changes the conversation in the main pane.

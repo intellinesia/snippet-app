@@ -90,7 +90,8 @@ void main() {
       expect(prefs.getDouble(kSidebarWidthPref), kSidebarMinWidth);
     });
 
-    // Double-click resets to default (kSidebarWidth = 248) and persists.
+    // Double-click resets to the window default (240 at 1440) and drops the
+    // stored width so the default keeps following the window.
     final handleCenter = tester.getCenter(handleFinder);
     await tester.tapAt(handleCenter);
     await tester.pump(const Duration(milliseconds: 50));
@@ -102,7 +103,7 @@ void main() {
     );
     await tester.runAsync(() async {
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getDouble(kSidebarWidthPref), kSidebarWidth);
+      expect(prefs.getDouble(kSidebarWidthPref), isNull);
     });
 
     await unmountShell(tester);
