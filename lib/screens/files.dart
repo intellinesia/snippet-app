@@ -601,14 +601,15 @@ class _FileExplorerState extends State<FileExplorer> {
               muted: true,
               onTap: () => _up(listing)),
         if (entries.isEmpty)
-          Padding(
-            padding: EdgeInsets.only(top: S.s40),
-            child: Text(
-                _filter.isEmpty
-                    ? 'This folder is empty.'
-                    : 'No matching files.',
-                textAlign: TextAlign.center,
-                style: TS.ui(AppColors.fg3)),
+          EmptyState(
+            icon: _filter.isEmpty ? 'file-text' : 'search',
+            title: _filter.isEmpty ? 'This folder is empty' : 'No matches',
+            body: _filter.isEmpty
+                ? 'Files appear as agents write them.'
+                : 'No files match "$_filter".',
+            action: _filter.isEmpty && listing.parent != null
+                ? StateButton('Go up', onTap: () => _up(listing))
+                : null,
           ),
         ...entries.map((e) => _Row(
               isDir: e.isDir,
@@ -788,14 +789,15 @@ class _FileExplorerState extends State<FileExplorer> {
         ]),
         SizedBox(height: S.s20),
         if (entries.isEmpty)
-          Padding(
-            padding: EdgeInsets.only(top: S.s24),
-            child: Text(
-                _filter.isEmpty
-                    ? 'This folder is empty.'
-                    : 'No matching files.',
-                textAlign: TextAlign.center,
-                style: TS.ui(AppColors.fg3)),
+          EmptyState(
+            icon: _filter.isEmpty ? 'file-text' : 'search',
+            title: _filter.isEmpty ? 'This folder is empty' : 'No matches',
+            body: _filter.isEmpty
+                ? 'Files appear as agents write them.'
+                : 'No files match "$_filter".',
+            action: _filter.isEmpty && listing.parent != null
+                ? StateButton('Go up', onTap: () => _up(listing))
+                : null,
           ),
         if (folders.isNotEmpty)
           SettingsGroup(

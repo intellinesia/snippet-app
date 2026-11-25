@@ -882,7 +882,7 @@ class Skeleton extends StatelessWidget {
 /// Static placeholder rows that appear only if loading takes over 400 ms, so a
 /// fast load never flashes and nothing sweeps or pulses.
 class ListSkeleton extends StatefulWidget {
-  const ListSkeleton({super.key, this.rows = 3, this.subtitle = true});
+  const ListSkeleton({super.key, this.rows = 4, this.subtitle = true});
 
   final int rows;
   final bool subtitle;
@@ -912,62 +912,54 @@ class _ListSkeletonState extends State<ListSkeleton> {
   int get rows => widget.rows;
   bool get subtitle => widget.subtitle;
 
+  // Widths from the v17 frame: title bars shrink 182.7 to 88.7, sub bars
+  // 117.5 to 78.3, repeating after four rows.
+  static const _title = [182.7, 151.4, 120.1, 88.7];
+  static const _sub = [117.5, 104.4, 91.3, 78.3];
+
   @override
   Widget build(BuildContext context) => !_shown
       ? const SizedBox.expand()
       : Semantics(
-        label: 'Loading',
-        child: PageBody(children: [
-          Material(
-            color: SurfaceScope.groupOf(context),
-            borderRadius: BorderRadius.circular(R.md),
-            clipBehavior: Clip.antiAlias,
+          label: 'Loading',
+          container: true,
+          child: ExcludeSemantics(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              for (var i = 0; i < rows; i++) ...[
-                if (i > 0)
-                  Divider(height: 1, thickness: 1, color: AppColors.line),
-                ConstrainedBox(
-                  constraints:
-                      BoxConstraints(minHeight: kMobile ? M.rowHeight : 44),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                        horizontal: S.s12, vertical: S.s12),
-                    child: Row(children: [
-                      Skeleton(
-                          width: 20,
-                          height: 20,
-                          radius: R.sm,
-                          color: AppColors.hover),
-                      SizedBox(width: S.s12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            FractionallySizedBox(
-                              widthFactor: i.isEven ? 0.55 : 0.4,
-                              child:
-                                  Skeleton(height: 12, color: AppColors.hover),
-                            ),
-                            if (subtitle) ...[
-                              SizedBox(height: S.s6),
-                              FractionallySizedBox(
-                                widthFactor: i.isEven ? 0.35 : 0.5,
-                                child: Skeleton(
-                                    height: 10, color: AppColors.hover),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ]),
-                  ),
+              for (var i = 0; i < rows; i++)
+                SizedBox(
+                  height: 56,
+                  child: Row(children: [
+                    const SizedBox(width: 24),
+                    Skeleton(
+                        width: 28,
+                        height: 28,
+                        radius: 14,
+                        color: AppColors.surface2),
+                    const SizedBox(width: 12),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Skeleton(
+                            width: _title[i % 4],
+                            height: 8,
+                            radius: 4,
+                            color: AppColors.surface2),
+                        if (subtitle) ...[
+                          const SizedBox(height: 6),
+                          Skeleton(
+                              width: _sub[i % 4],
+                              height: 6,
+                              radius: 3,
+                              color: AppColors.surface1),
+                        ],
+                      ],
+                    ),
+                  ]),
                 ),
-              ],
             ]),
           ),
-        ]),
-      );
+        );
 }
 
 class PageBody extends StatelessWidget {

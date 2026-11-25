@@ -243,34 +243,13 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
       return root(ListView(children: [
         bar,
         if (w.offline != null) w.offline!,
-        Padding(
-          padding: const EdgeInsets.fromLTRB(kGutter, 24, kGutter, 12),
-          child: Text('No agents yet',
-              style: sans(14, weight: FontWeight.w500, color: AppColors.fg1)),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: kGutter),
-          child: Semantics(
-            button: true,
-            label: 'New agent',
-            excludeSemantics: true,
-            child: TapDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: w.onNewAgent ?? w.onNew,
-              child: Container(
+        EmptyState(
+            icon: 'users',
+            title: 'No agents yet',
+            body: 'Create one to start delegating work.',
+            action: StateButton('New agent',
                 key: const ValueKey('empty-new-agent'),
-                constraints: const BoxConstraints(minHeight: 48),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                    color: AppColors.fg1,
-                    borderRadius: BorderRadius.circular(24)),
-                child: Text('New agent',
-                    style: sans(14,
-                        weight: FontWeight.w500, color: AppColors.bg)),
-              ),
-            ),
-          ),
-        ),
+                onTap: w.onNewAgent ?? w.onNew)),
       ]));
     }
 

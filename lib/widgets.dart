@@ -2278,44 +2278,88 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Theme.of(context); // Rebuild on theme change
-    // Fills the box it is handed and centers inside it. Call sites give this the
-    // whole body of a pane or an `Expanded`, and a shrink-wrapping child there
-    // aligns to the top-left instead of the middle — so the centering has to
-    // live here rather than be repeated at every call site.
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: S.of(44), horizontal: S.of(28)),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              // Separation by surface step, not a hairline — the design
-              // language's first rule. surface2 is the ladder's "quiet raised
-              // content" step, which is what this tile is; the border was
-              // standing in for a step that already existed.
-              color: AppColors.surface2,
-              borderRadius: BorderRadius.circular(R.md),
+    // Fills the box it is handed and centres inside it: call sites give this a
+    // whole pane body, and a shrink-wrapping child there sits top-left. The
+    // block scrolls rather than clips when large text outgrows the body.
+    // A failure uses the neutral alert-circle in fg3, never amber: a failed
+    // load is not a request for the user's decision.
+    final glyph = icon == 'alert-triangle' ? 'alert-circle' : icon;
+    Widget block(bool bounded) {
+      final inner = Padding(
+          padding: EdgeInsets.symmetric(vertical: S.of(44), horizontal: 36),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            ExcludeSemantics(
+                child: AppIcon(glyph, size: 24, color: AppColors.fg3)),
+            const SizedBox(height: 14),
+            Semantics(
+              header: true,
+              child: Text(title,
+                  textAlign: TextAlign.center,
+                  style: sans(15, weight: FontWeight.w500, color: AppColors.fg1)),
             ),
-            // Quiet: a failure is the amber hand, never a warning triangle.
-            child: icon == 'alert-triangle'
-                ? AppIcon('hand', size: 24, color: AppColors.run, filled: true)
-                : AppIcon(icon, size: 24, color: AppColors.fg3),
-          ),
-          SizedBox(height: S.s12),
-          Text(title, style: TS.sectionTitle()),
-          if (body != null) ...[
-            SizedBox(height: S.s8),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 240),
-              child: Text(body!, textAlign: TextAlign.center, style: TS.meta()),
-            ),
-          ],
-          if (action != null) ...[SizedBox(height: S.s16), action!],
-        ]),
-      ),
-    );
+            if (body != null) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: Text(body!,
+                    textAlign: TextAlign.center,
+                    style: sans(13, height: 17.6 / 13, color: AppColors.fg2)),
+              ),
+            ],
+            if (action != null) ...[const SizedBox(height: 16), action!],
+          ]));
+      return Center(
+          child: bounded ? SingleChildScrollView(child: inner) : inner);
+    }
+
+    // Inside a list the height is unbounded and the page scrolls; a bounded
+    // body scrolls the block itself.
+    return LayoutBuilder(
+        builder: (_, c) => block(c.maxHeight.isFinite));
   }
+}
+
+/// The one button an empty or error block offers: 44 high, surface2 with a
+/// hairline, label 13/500 that clamps the text scaler at 1.35 and grows in
+/// width rather than wrapping.
+class StateButton extends StatelessWidget {
+  const StateButton(this.label, {super.key, required this.onTap});
+  final String label;
+  final VoidCallback? onTap;
+  @override
+  Widget build(BuildContext context) => MediaQuery.withClampedTextScaling(
+        maxScaleFactor: 1.35,
+        child: Semantics(
+          button: true,
+          enabled: onTap != null,
+          label: label,
+          excludeSemantics: true,
+          child: Material(
+            color: AppColors.surface2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: BorderSide(color: AppColors.line, width: 1),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: onTap,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 44),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Center(
+                    widthFactor: 1,
+                    child: Text(label,
+                        maxLines: 1,
+                        style: sans(13,
+                            weight: FontWeight.w500, color: AppColors.fg1)),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
 }
 
 /// Custom app bar matching the handoff (back + title/mono-subtitle + right + ⋯).

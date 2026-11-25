@@ -379,14 +379,25 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
 
   Widget _body(List<ArtifactCard> shown) {
     if (_error != null) {
-      return _message('Artifacts unavailable: $_error',
-          action: 'Retry', onAction: _load);
+      return EmptyState(
+          icon: 'alert-circle',
+          title: "Couldn't load artifacts",
+          body: 'Check that your Mac is on, then try again.',
+          action: StateButton('Retry', onTap: _load));
     }
     if (_all == null) return const Center(child: DelayedSpinner(size: 22));
     if (shown.isEmpty) {
-      return _message(_all!.isEmpty
-          ? 'Nothing here yet. Create a canvas, or ask an agent to make one.'
-          : 'Nothing matches.');
+      return _all!.isEmpty
+          ? EmptyState(
+              icon: 'layers',
+              title: 'No artifacts',
+              body: 'Agents will share canvases and files here.',
+              action: StateButton('Ask an agent',
+                  onTap: () => Navigator.of(context).maybePop()))
+          : const EmptyState(
+              icon: 'search',
+              title: 'No matches',
+              body: 'Nothing matches your search.');
     }
     return ListView.builder(
       padding: EdgeInsets.fromLTRB(S.s8, S.s4, S.s8, S.s24),
@@ -456,30 +467,4 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
       ),
     );
   }
-
-  Widget _message(String text, {String? action, VoidCallback? onAction}) =>
-      Center(
-        child: Padding(
-          padding: EdgeInsets.all(S.s24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(text,
-                  textAlign: TextAlign.center,
-                  style: sans(13, color: AppColors.fg3)),
-              if (action != null) ...[
-                SizedBox(height: S.s12),
-                SizedBox(
-                  height: 44,
-                  child: TextButton(
-                    onPressed: onAction,
-                    child: Text(action,
-                        style: sans(13, weight: W.label, color: AppColors.fg1)),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      );
 }

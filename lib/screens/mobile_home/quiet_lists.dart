@@ -111,11 +111,13 @@ class _QuietTasksScreenState extends State<QuietTasksScreen> {
         children.addAll(done.map(row));
       }
       if (active.isEmpty && todo.isEmpty && done.isEmpty) {
-        children.add(Padding(
-            padding: EdgeInsets.all(S.s32),
-            child: Text('No tasks yet.',
-                textAlign: TextAlign.center,
-                style: sans(14, color: AppColors.fg3))));
+        children.add(EmptyState(
+            icon: 'list',
+            title: 'No tasks yet',
+            body: 'Ask an agent to create one, or add your own.',
+            action: StateButton('New task', onTap: () async {
+              if (await showCreateTask(context, widget.client)) _load();
+            })));
       }
     }
     children.add(SizedBox(height: S.s24));
