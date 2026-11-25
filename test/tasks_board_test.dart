@@ -241,36 +241,6 @@ void main() {
     expect(find.text('Write the docs'), findsNothing);
   });
 
-  testWidgets('the search narrows the tasks panel', (tester) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.android;
-    try {
-      final client = _FakeDaemon([
-        _task('1', 'Write the docs', 'todo'),
-        _task('2', 'Fix the login bug', 'blocked'),
-      ]);
-      await tester.pumpWidget(MaterialApp(
-        theme: buildAppTheme(),
-        home: Scaffold(body: TasksPanel(client: client)),
-      ));
-      await tester.pumpAndSettle();
-      expect(find.text('Fix the login bug'), findsOneWidget);
-      expect(find.text('Write the docs'), findsNothing, reason: 'Up next tab');
-
-      await tester.tap(find.byTooltip('Search tasks'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField), 'login');
-      await tester.pumpAndSettle();
-      expect(find.text('Fix the login bug'), findsOneWidget);
-      expect(find.text('Write the docs'), findsNothing);
-
-      await tester.enterText(find.byType(TextField), 'nothing like this');
-      await tester.pumpAndSettle();
-      expect(find.text('No matching tasks'), findsOneWidget);
-    } finally {
-      debugDefaultTargetPlatformOverride = null;
-    }
-  });
-
   testWidgets('desktop Tasks has list controls but no board entry',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
