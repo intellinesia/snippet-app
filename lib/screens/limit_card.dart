@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
-import '../transcript_card.dart';
+import '../state_cards.dart';
+import '../theme.dart';
+import '../toast.dart';
 import '../widgets.dart';
 import 'routing_screen.dart' show limitLabel;
+
+/// The limit window is not sent with the event, so the progress track assumes
+/// the common five hour window.
+const _window = Duration(hours: 5);
 
 class LimitCard extends StatefulWidget {
   const LimitCard({
@@ -31,7 +37,7 @@ class _LimitCardState extends State<LimitCard> {
   String? _busy;
 
   Future<void> _act(String action, {String? profile}) async {
-    setState(() => _busy = profile ?? action);
+    setState(() => _busy = action);
     try {
       await widget.client
           .resolveLimit(widget.session, action, profile: profile);
@@ -42,9 +48,34 @@ class _LimitCardState extends State<LimitCard> {
     }
   }
 
+  Future<void> _pickProfile() async {
+    final p = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.surface1,
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          for (final o in widget.options)
+            ListTile(
+              minTileHeight: 52,
+              title: Text(o, style: sans(15, color: AppColors.fg1)),
+              onTap: () => Navigator.pop(ctx, o),
+            ),
+        ]),
+      ),
+    );
+    if (p != null && mounted) _act('switch', profile: p);
+  }
+
+  static String _in(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes % 60;
+    return h > 0 ? '${h}h ${m}m' : '${m}m';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final reset = widget.resetsAt > 0 ? limitLabel(widget.resetsAt) : null;
+    final has = widget.resetsAt > 0;
+    final reset = has ? limitLabel(widget.resetsAt) : null;
     if (widget.settled) {
       return NoteLine(
           reset == null
@@ -52,28 +83,90 @@ class _LimitCardState extends State<LimitCard> {
               : '${widget.profile} hit its usage limit. Resets at $reset.',
           icon: 'clock');
     }
-    return TranscriptCard(
-      icon: 'clock',
-      tone: Tone.run,
-      kind: 'Usage limit',
-      status: 'Paused',
-      title: '${widget.profile} hit its usage limit',
-      body: reset == null
-          ? 'Continue on another model now, or wait for it to reset.'
-          : 'It resets at $reset. Continue on another model now, or wait and this chat picks up then.',
-      footer: Wrap(spacing: 8, runSpacing: 8, children: [
-        for (final (i, p) in widget.options.take(3).indexed)
-          Btn(_busy == p ? 'Switching…' : 'Continue on $p',
-              small: true,
-              variant: i == 0 ? BtnVariant.primary : BtnVariant.secondary,
-              disabled: _busy != null,
-              onTap: () => _act('switch', profile: p)),
-        Btn(reset == null ? 'Wait' : 'Wait until $reset',
-            small: true,
-            variant: BtnVariant.secondary,
-            disabled: _busy != null,
-            onTap: () => _act('wait')),
-      ]),
-    );
+    final left = has
+        ? DateTime.fromMillisecondsSinceEpoch(widget.resetsAt * 1000)
+            .difference(DateTime.now())
+        : Duration.zero;
+    final share =
+        has ? (1 - left.inSeconds / _window.inSeconds).clamp(0.0, 1.0) : 0.0;
+    final one = widget.options.length == 1;
+    final busy = _busy != null;
+    final switchLabel = _busy == 'switch'
+        ? 'Switching...'
+        : one
+            ? 'Continue on ${widget.options.first}'
+            : 'Switch profile';
+    return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Container(
+          key: const ValueKey('limit-card'),
+          padding: const EdgeInsets.all(16),
+          constraints: const BoxConstraints(minHeight: 206),
+          decoration: BoxDecoration(
+              color: AppColors.surface1,
+              borderRadius: BorderRadius.circular(12)),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: AppIcon('clock', size: 16, color: AppColors.fg2)),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Semantics(
+                        header: true,
+                        child: Text('${widget.profile} usage limit reached',
+                            style: sans(15,
+                                weight: FontWeight.w500, color: AppColors.fg1)),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                          has
+                              ? 'Resets at $reset, in ${_in(left.isNegative ? Duration.zero : left)}.'
+                              : 'It resets later. Continue on another model now, or wait.',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              sans(13, height: 18 / 13, color: AppColors.fg2)),
+                    ]),
+              ),
+            ]),
+            if (has) ...[
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: SizedBox(
+                  key: const ValueKey('limit-track'),
+                  height: 4,
+                  width: double.infinity,
+                  child: Stack(children: [
+                    Positioned.fill(
+                        child: ColoredBox(color: AppColors.surface3)),
+                    Positioned.fill(
+                        child: FractionallySizedBox(
+                            alignment: Alignment.centerLeft,
+                            widthFactor: share,
+                            child: ColoredBox(color: AppColors.fg2))),
+                  ]),
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            if (widget.options.isNotEmpty)
+              PanelButton(switchLabel,
+                  primary: true,
+                  onTap: busy
+                      ? null
+                      : (one
+                          ? () => _act('switch', profile: widget.options.first)
+                          : _pickProfile)),
+            if (widget.options.isNotEmpty) const SizedBox(height: 8),
+            PanelButton(_busy == 'wait' ? 'Waiting...' : 'Wait for reset',
+                primary: false, onTap: busy ? null : () => _act('wait')),
+          ]),
+        ));
   }
 }

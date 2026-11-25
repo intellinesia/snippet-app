@@ -6,6 +6,7 @@ import 'theme.dart';
 import 'tool_activity.dart';
 import 'widgets.dart';
 import 'platform.dart';
+import 'state_cards.dart';
 import 'tap_detector.dart';
 
 // The daemon can evolve independently of the client. Keep malformed or newer
@@ -239,14 +240,19 @@ Widget toolDetailView(BuildContext context,
   final running = result == null;
 
   if (status == 'error' && errMsg != null && tool == 'bash') {
-    return _wrap(_bashView(a, null, running: false, error: errMsg));
+    final cmd = (a?['label'] ?? a?['command'] ?? 'Command').toString().trim();
+    return _wrap([
+      ToolErrorPanel(
+          title: '${cmd.split('\n').first} failed',
+          output: _displayText(errMsg))
+    ]);
   }
 
   final rows = <Widget>[];
   if (status == 'error' && errMsg != null) {
     // Errors are sentences: wrap them so the whole message reads.
     rows.add(Text(_displayText(errMsg).trim(),
-        style: sans(_bodySize, height: 1.45, color: AppColors.danger)));
+        style: sans(_bodySize, height: 1.45, color: AppColors.fg2)));
     rows.add(SizedBox(height: S.s8));
   }
 
