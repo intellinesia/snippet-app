@@ -4,7 +4,6 @@ import 'dart:ui' show lerpDouble;
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/gestures.dart' show Drag;
 import 'package:flutter/material.dart';
-import 'package:flutter/physics.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
@@ -13,6 +12,10 @@ import 'gesture_physics.dart';
 import 'platform.dart';
 import 'theme.dart';
 import 'widgets.dart';
+
+/// Named sheet sizes (spec DL-03): small fits content up to 40 percent, medium
+/// is 60 percent, large reaches safe-area top plus 16; auto fits up to 85.
+enum SheetSize { auto, small, medium, large }
 
 /// Global rect of the widget behind [context], for [showMorphSheet]'s origin.
 Rect? globalRectOf(BuildContext context) {
@@ -47,7 +50,7 @@ Future<T?> showMorphSheet<T>(
     title: title,
     subtitle: subtitle,
     builder: builder,
-    origin: origin,
+    origin: null, // spec G: no shared-element morph
     instant: reduceMotion(context),
   ));
 }
@@ -75,15 +78,13 @@ class _MorphRoute<T> extends PopupRoute<T> {
   String? get barrierLabel => 'Close';
   @override
   Duration get transitionDuration =>
-      instant ? Duration.zero : const Duration(milliseconds: 250);
+      instant ? Duration.zero : const Duration(milliseconds: 200);
 
   @override
   Widget buildPage(BuildContext context, Animation<double> animation,
       Animation<double> secondaryAnimation) {
     final t = CurvedAnimation(
-        parent: animation,
-        curve: Curves.easeOutCubic,
-        reverseCurve: Curves.easeInCubic);
+        parent: animation, curve: Curves.easeOut, reverseCurve: Curves.easeOut);
     final mq = MediaQuery.of(context);
     final bottom = math.max(mq.viewInsets.bottom, mq.padding.bottom) + S.s8;
     return AnimatedBuilder(
@@ -128,10 +129,9 @@ class _SheetFrameState extends State<_SheetFrame> {
     return Transform.translate(
       offset: Offset(0, _dy),
       child: Material(
-        color: AppColors.surface2,
+        color: AppColors.surface1,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: AppColors.border),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -206,7 +206,8 @@ class _MorphBox extends SingleChildRenderObjectWidget {
   final Color color;
 
   @override
-  RenderObject createRenderObject(BuildContext context) => _RenderMorph(t, origin, bottomInset, topInset, color);
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderMorph(t, origin, bottomInset, topInset, color);
 
   @override
   void updateRenderObject(BuildContext context, _RenderMorph r) {
@@ -220,8 +221,8 @@ class _MorphBox extends SingleChildRenderObjectWidget {
 }
 
 class _RenderMorph extends RenderShiftedBox {
-  _RenderMorph(this._t, this._origin, this._bottomInset, this._topInset,
-      this._color)
+  _RenderMorph(
+      this._t, this._origin, this._bottomInset, this._topInset, this._color)
       : super(null);
 
   double _t;
@@ -275,7 +276,8 @@ class _RenderMorph extends RenderShiftedBox {
             maxHeight: math.max(120, size.height - _bottomInset - _topInset)),
         parentUsesSize: true);
     final pd = c.parentData as BoxParentData;
-    pd.offset = Offset((size.width - w) / 2, size.height - _bottomInset - c.size.height);
+    pd.offset = Offset(
+        (size.width - w) / 2, size.height - _bottomInset - c.size.height);
   }
 
   @override
@@ -321,9 +323,11 @@ Future<T?> showSpringSheet<T>(
   BuildContext context, {
   required Widget Function(BuildContext context, ScrollController scroll)
       builder,
+  SheetSize size = SheetSize.auto,
 }) {
   final nav = Navigator.of(context);
   return nav.push<T>(AppSheetRoute<T>(
+    size: size,
     builder: builder,
     capturedThemes: InheritedTheme.capture(from: context, to: nav.context),
     instant: reduceMotion(context),
@@ -336,6 +340,7 @@ Future<T?> showSpringSheet<T>(
 /// page behind back to 0.94 with rounded corners.
 class AppSheetRoute<T> extends PopupRoute<T> {
   AppSheetRoute({
+    this.size = SheetSize.auto,
     required this.builder,
     required this.capturedThemes,
     this.instant = false,
@@ -347,66 +352,44 @@ class AppSheetRoute<T> extends PopupRoute<T> {
   final Widget Function(BuildContext context, ScrollController scroll) builder;
   final CapturedThemes capturedThemes;
   final bool instant;
+  final SheetSize size;
 
   static const SpringDescription presentSpring =
       SpringDescription(mass: 1, stiffness: 300, damping: 32);
   static const SpringDescription dismissSpring =
       SpringDescription(mass: 1, stiffness: 340, damping: 38);
   static const double halfDetent = 0.52;
-  static const double fullCap = 0.92;
+  static const double fullCap = 0.85;
   static const double behindScale = 0.94;
   static const double behindRadius = 18;
   static const double behindDrop = 10;
-  static const double scrim = 0.38;
+  static const double scrim = 0.58;
   static const double rubberDim = 120;
   static const double projectSeconds = 0.18;
   static const double closeFling = 1100;
 
-  static Simulation _sim(
-          SpringDescription s, double from, double to, double v) =>
-      SpringSimulation(s, from, to, v,
-          snapToEnd: true,
-          tolerance: const Tolerance(distance: 0.001, velocity: 0.01));
-
-  // Route units per second, handed from a drag-to-close to the dismiss spring.
-  double _popVelocity = 0;
   final ValueNotifier<double> _extra = ValueNotifier<double>(0);
   _SheetBodyState? _body;
 
   AnimationController? get _sheetController => controller;
 
   @override
-  Color? get barrierColor => Colors.black.withValues(alpha: scrim);
+  Color? get barrierColor => AppColors.scrim;
   @override
   bool get barrierDismissible => true;
   @override
   String? get barrierLabel => 'Close';
   @override
   Duration get transitionDuration =>
-      instant ? Duration.zero : const Duration(milliseconds: 400);
+      instant ? Duration.zero : const Duration(milliseconds: 200);
   @override
   Duration get reverseTransitionDuration =>
-      instant ? Duration.zero : const Duration(milliseconds: 300);
-
-  @override
-  TickerFuture didPush() {
-    final linear = super.didPush();
-    final c = controller;
-    if (instant || c == null) return linear;
-    return c.animateWith(_sim(presentSpring, c.value, 1, 0));
-  }
+      instant ? Duration.zero : const Duration(milliseconds: 200);
 
   @override
   bool didPop(T? result) {
-    final popped = super.didPop(result);
-    final c = controller;
-    final v = _popVelocity;
-    _popVelocity = 0;
     _body?._settleExtra(0, 0);
-    if (!instant && c != null && !c.isDismissed) {
-      c.animateBackWith(_sim(dismissSpring, c.value, 0, v));
-    }
-    return popped;
+    return super.didPop(result);
   }
 
   @override
@@ -424,29 +407,8 @@ class AppSheetRoute<T> extends PopupRoute<T> {
     Animation<double> secondaryAnimation,
     bool allowSnapshotting,
     Widget? child,
-  ) {
-    if (child == null) return null;
-    if (reduceMotion(context)) return child;
-    // One fixed structure at every value, so the page below never remounts.
-    return AnimatedBuilder(
-      animation: secondaryAnimation,
-      child: child,
-      builder: (context, child) {
-        final t = secondaryAnimation.value.clamp(0.0, 1.0);
-        return Transform.translate(
-          offset: Offset(0, behindDrop * t),
-          child: Transform.scale(
-            scale: 1 - (1 - behindScale) * t,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(behindRadius * t),
-              clipBehavior: t > 0 ? Clip.antiAlias : Clip.none,
-              child: child,
-            ),
-          ),
-        );
-      },
-    );
-  }
+  ) =>
+      child; // spec G: the page behind stays still
 
   @override
   Widget buildPage(BuildContext context, Animation<double> animation,
@@ -454,7 +416,8 @@ class AppSheetRoute<T> extends PopupRoute<T> {
       capturedThemes.wrap(MediaQuery.removePadding(
         context: context,
         removeTop: true,
-        child: _SheetBody<T>(route: this),
+        child: _SheetBody<T>(
+            route: this, topPad: MediaQuery.paddingOf(context).top),
       ));
 
   @override
@@ -464,8 +427,9 @@ class AppSheetRoute<T> extends PopupRoute<T> {
 }
 
 class _SheetBody<T> extends StatefulWidget {
-  const _SheetBody({required this.route});
+  const _SheetBody({required this.route, required this.topPad});
   final AppSheetRoute<T> route;
+  final double topPad;
 
   @override
   State<_SheetBody<T>> createState() => _SheetBodyState<T>();
@@ -475,6 +439,10 @@ class _SheetBodyState<T> extends State<_SheetBody<T>>
     with SingleTickerProviderStateMixin {
   late final AnimationController _extraC;
   late final _SheetScrollController _scroll;
+  late final Animation<double> _curved = CurvedAnimation(
+      parent: _route.animation!,
+      curve: Curves.easeOut,
+      reverseCurve: Curves.easeOut);
 
   // Laid-out heights: the lowest detent and the full height.
   double _base = 0;
@@ -596,7 +564,6 @@ class _SheetBodyState<T> extends State<_SheetBody<T>>
         (a, b) => (b - projected).abs() < (a - projected).abs() ? b : a);
     if (velocity > AppSheetRoute.closeFling) to = 0;
     if (to == 0) {
-      _route._popVelocity = -velocity / _base;
       Navigator.of(context).pop();
       return true;
     }
@@ -616,8 +583,8 @@ class _SheetBodyState<T> extends State<_SheetBody<T>>
     if (_route.instant || reduceMotion(context)) {
       c.value = to;
     } else {
-      c.animateWith(
-          AppSheetRoute._sim(AppSheetRoute.presentSpring, c.value, to, v));
+      c.animateTo(to,
+          duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
     }
   }
 
@@ -628,7 +595,9 @@ class _SheetBodyState<T> extends State<_SheetBody<T>>
     return Padding(
       padding: EdgeInsets.only(bottom: keyboard),
       child: _SpringSheetFrame(
-        progress: _route.animation!,
+        progress: _curved,
+        size: _route.size,
+        topInset: widget.topPad,
         extra: _route._extra,
         screenHeight: media.size.height - keyboard,
         onMetrics: _metrics,
@@ -654,8 +623,13 @@ class _SpringSheetFrame extends SingleChildRenderObjectWidget {
     required this.extra,
     required this.screenHeight,
     required this.onMetrics,
+    required this.size,
+    required this.topInset,
     required super.child,
   });
+
+  final SheetSize size;
+  final double topInset;
 
   final Animation<double> progress;
   final ValueListenable<double> extra;
@@ -664,7 +638,8 @@ class _SpringSheetFrame extends SingleChildRenderObjectWidget {
 
   @override
   _RenderSpringSheetFrame createRenderObject(BuildContext context) =>
-      _RenderSpringSheetFrame(progress, extra, screenHeight, onMetrics);
+      _RenderSpringSheetFrame(
+          progress, extra, screenHeight, onMetrics, size, topInset);
 
   @override
   void updateRenderObject(BuildContext context, _RenderSpringSheetFrame r) {
@@ -672,14 +647,19 @@ class _SpringSheetFrame extends SingleChildRenderObjectWidget {
       ..progress = progress
       ..extra = extra
       ..screenHeight = screenHeight
+      ..sheetSize = size
+      ..topInset = topInset
       ..onMetrics = onMetrics;
   }
 }
 
 class _RenderSpringSheetFrame extends RenderShiftedBox {
-  _RenderSpringSheetFrame(
-      this._progress, this._extra, this._screenHeight, this.onMetrics)
+  _RenderSpringSheetFrame(this._progress, this._extra, this._screenHeight,
+      this.onMetrics, this.sheetSize, this.topInset)
       : super(null);
+
+  SheetSize sheetSize;
+  double topInset;
 
   Animation<double> _progress;
   ValueListenable<double> _extra;
@@ -727,13 +707,24 @@ class _RenderSpringSheetFrame extends RenderShiftedBox {
     size = constraints.biggest;
     final c = child;
     if (c == null) return;
-    final cap = math.min(size.height, _screenHeight * AppSheetRoute.fullCap);
-    c.layout(BoxConstraints(maxWidth: size.width, maxHeight: cap),
+    final screen = math.min(size.height, _screenHeight);
+    final cap = switch (sheetSize) {
+      SheetSize.small => screen * 0.40,
+      SheetSize.medium => screen * 0.60,
+      SheetSize.large => screen - (topInset + 16),
+      SheetSize.auto => screen * AppSheetRoute.fullCap,
+    };
+    final fixed = sheetSize == SheetSize.medium || sheetSize == SheetSize.large;
+    c.layout(
+        BoxConstraints(
+            minWidth: size.width,
+            maxWidth: size.width,
+            minHeight: fixed ? cap : 0,
+            maxHeight: cap),
         parentUsesSize: true);
     final full = c.size.height;
-    final half = _screenHeight * AppSheetRoute.halfDetent;
-    // A half stop only when it hides a real share of the content.
-    final base = full > half + 48 ? half : full;
+    // One detent: the named size. No half stop.
+    final base = full;
     onMetrics(base, full);
     final visible = _progress.value * base + _extra.value;
     (c.parentData! as BoxParentData).offset =

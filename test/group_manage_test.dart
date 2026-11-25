@@ -112,6 +112,8 @@ void main() {
     expect(find.byKey(const ValueKey('remove-human')), findsNothing);
     await tester.tap(find.text('Delete group'));
     await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), _group().title);
+    await tester.pump();
     await tester.tap(find.text('Delete group').last);
     await tester.pumpAndSettle();
     expect(client.deleted, isTrue);

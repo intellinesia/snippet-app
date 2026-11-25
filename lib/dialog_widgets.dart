@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'platform.dart';
 import 'glass.dart';
-import 'morph_sheet.dart' show showSpringSheet;
+import 'morph_sheet.dart' show showSpringSheet, SheetSize;
 import 'app_dialog.dart';
 import 'app_popover.dart';
 import 'theme.dart';
@@ -580,6 +580,10 @@ Future<T?> showAppSheet<T>(
   // Desktop dialogs default to a comfortable 460px column rather than phone width.
   double maxWidth = 460,
   double maxHeight = 600,
+  SheetSize size = SheetSize.auto,
+
+  /// Medium and large sheets: a primary action pinned above the safe area.
+  Widget? pinned,
 }) {
   if (!kMobile) {
     return showPointPopover<T>(
@@ -631,8 +635,23 @@ Future<T?> showAppSheet<T>(
       ),
     );
   }
+  if (size == SheetSize.medium || size == SheetSize.large) {
+    return showSpringSheet<T>(
+      context,
+      size: size,
+      builder: (sheetContext, scroll) => Material(
+        type: MaterialType.transparency,
+        child: AppSheetSurface(
+          expand: true,
+          child: _SizedSheetBody(
+              title: title, scroll: scroll, pinned: pinned, child: child),
+        ),
+      ),
+    );
+  }
   return showSpringSheet<T>(
     context,
+    size: size,
     builder: (sheetContext, scroll) {
       final media = MediaQuery.of(sheetContext);
       // The route lifts the sheet above the keyboard itself.
@@ -974,4 +993,107 @@ class _FieldWellState extends State<FieldWell> {
           child: widget.child,
         ),
       );
+}
+
+/// Medium and large sheet content: 56 high header (title 16/500 at x20, 48
+/// close), hairline once the body has scrolled, scrolling body, pinned action.
+class _SizedSheetBody extends StatefulWidget {
+  const _SizedSheetBody(
+      {required this.title,
+      required this.scroll,
+      required this.child,
+      this.pinned});
+  final String title;
+  final ScrollController scroll;
+  final Widget child;
+  final Widget? pinned;
+  @override
+  State<_SizedSheetBody> createState() => _SizedSheetBodyState();
+}
+
+class _SizedSheetBodyState extends State<_SizedSheetBody> {
+  bool _scrolled = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.paddingOf(context).bottom;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Container(
+        height: 56,
+        padding: const EdgeInsets.only(left: 20, right: 8),
+        decoration: BoxDecoration(
+            border: Border(
+                bottom: BorderSide(
+                    color: _scrolled ? AppColors.line : Colors.transparent))),
+        child: Row(children: [
+          Expanded(
+            child: Semantics(
+              header: true,
+              child: Text(widget.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style:
+                      sans(16, weight: FontWeight.w500, color: AppColors.fg1)),
+            ),
+          ),
+          Semantics(
+            button: true,
+            label: 'Close',
+            excludeSemantics: true,
+            child: InkWell(
+              onTap: () => Navigator.of(context).maybePop(),
+              splashFactory: NoSplash.splashFactory,
+              child: SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: Center(
+                      child: AppIcon('x', size: 20, color: AppColors.fg2))),
+            ),
+          ),
+        ]),
+      ),
+      Expanded(
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (n) {
+            if (n.depth == 0 && n.metrics.axis == Axis.vertical) {
+              final v = n.metrics.pixels > 1;
+              if (v != _scrolled) setState(() => _scrolled = v);
+            }
+            return false;
+          },
+          child: SingleChildScrollView(
+            controller: widget.scroll,
+            padding: EdgeInsets.fromLTRB(
+                16, 4, 16, widget.pinned == null ? 12 + bottom : 12),
+            child: SurfaceScope(group: Colors.transparent, child: widget.child),
+          ),
+        ),
+      ),
+      if (widget.pinned != null)
+        Stack(clipBehavior: Clip.none, children: [
+          Positioned(
+            left: 0,
+            right: 0,
+            top: -12,
+            height: 12,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                      AppColors.surface1.withValues(alpha: 0),
+                      AppColors.surface1
+                    ])),
+              ),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottom),
+            child: SizedBox(width: double.infinity, child: widget.pinned),
+          ),
+        ]),
+    ]);
+  }
 }

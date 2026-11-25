@@ -229,7 +229,8 @@ class SheetGrabHandle extends StatelessWidget {
             width: 36,
             height: 4,
             decoration: BoxDecoration(
-                color: AppColors.surface3, borderRadius: BorderRadius.circular(2)),
+                color: AppColors.surface3,
+                borderRadius: BorderRadius.circular(2)),
           ),
         ),
       );
@@ -238,7 +239,11 @@ class SheetGrabHandle extends StatelessWidget {
 /// The one phone sheet surface: [R.sheetTop] top corners, raised fill, grab
 /// handle. [child] gets the remaining height.
 class AppSheetSurface extends StatelessWidget {
-  const AppSheetSurface({super.key, required this.child, this.color});
+  const AppSheetSurface(
+      {super.key, required this.child, this.color, this.expand = false});
+
+  /// Fill the height the route gives (medium and large sheets).
+  final bool expand;
 
   final Widget child;
   final Color? color;
@@ -251,9 +256,12 @@ class AppSheetSurface extends StatelessWidget {
         color: fill, // spec G: opaque, no backdrop blur
       ),
       child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [const SheetGrabHandle(), Flexible(child: child)]),
+          children: [
+            const SheetGrabHandle(),
+            expand ? Expanded(child: child) : Flexible(child: child)
+          ]),
     );
     return ClipRRect(
       borderRadius: BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
