@@ -463,118 +463,60 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     if (_isLead) {
       return _mcStageHeader(s, stuck);
     }
-    // Stays the same with the keyboard up: swapping headers made it jump.
-    if (!offline && _me != null) {
-      final agent = (_meAgentName ?? '').trim().isEmpty
-          ? (_me!.displayAgentId ?? 'Snippet')
-          : _meAgentName!;
-      final needsYou =
-          s?.pendingQuestion != null || s?.status == 'waiting_for_input';
-      final plan = _me!.plan;
-      final step = plan != null && plan.total > 0 && plan.done < plan.total
-          ? 'plan ${(plan.done + 1).clamp(1, plan.total)} of ${plan.total}'
-          : '';
-      // Scrolled away from the working row: the header carries it.
-      final dock = _dockRun;
-      final workingAway =
-          !_stickToBottom && dock != null && s?.status == 'running';
-      final word = needsYou
-          ? 'waiting on you'
-          : s?.status == 'in_review'
-              ? 'in review'
-              : workingAway
-                  ? 'working · ${formatWorkDuration(DateTime.now().difference(dock.startedAt))}'
-                  : step;
-      final lanesPill = lanePillLabel(s?.lanes ?? const <LaneInfo>[]);
-      return MobileBackBar(
-        title: _title.isEmpty ? 'Session' : _title,
-        subtitle: word.isEmpty ? agent : '$agent · $word',
-        onBack: back,
-        keepBack: true,
-        onTitleTap: () => _openActionsDrawer(s),
-        onTitleTapHint: 'Session actions',
-        trailing: [
-          if (lanesPill != null)
-            GestureDetector(
-              onTap: _showLanes,
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: S.s8),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                          color: AppColors.fg2, shape: BoxShape.circle)),
-                  SizedBox(width: S.s6),
-                  Text(lanesPill,
-                      style: TextStyle(fontSize: 12, color: AppColors.fg2)),
-                ]),
-              ),
-            ),
-          RoundBtn(
-            icon: 'more-horizontal',
-            tooltip: 'Session actions',
-            onTap: () => _openActionsDrawer(s),
-          ),
-        ],
-      );
-    }
-    final ws = s?.workspace.trim() ?? '';
+    // SE-03 bar B: back 48x48 at x0, title 16/500 at x56, subtitle "<state> - <branch>".
+    final needsYou =
+        s?.pendingQuestion != null || s?.status == 'waiting_for_input';
+    final stateWord = offline
+        ? 'Offline'
+        : needsYou
+            ? 'Needs you'
+            : s?.status == 'running'
+                ? 'Running'
+                : s?.compacting == true
+                    ? 'Tidying up'
+                    : s?.status == 'in_review'
+                        ? 'In review'
+                        : s?.status == 'failed' || s?.status == 'error'
+                            ? 'Failed'
+                            : _settled
+                                ? 'Settled'
+                                : 'Idle';
+    final branch = (_me?.branch ?? '').trim();
+    final ws = (s?.workspace.trim().isNotEmpty == true)
+        ? s!.workspace.trim()
+        : (_me?.folder.trim() ?? '');
     final folder = ws.isEmpty ? '' : lastPathSegment(ws, ifEmpty: ws);
-    String joinFolder(String state) =>
-        folder.isNotEmpty ? '$state · $folder' : state;
-
-    String sub = folder;
-    Widget? subView = offline ? _mobileConnectionLine() : null;
-    if (!offline && s != null) {
-      if (s.status == 'running') {
-        final started = DateTime.tryParse(s.turnStartedAt ?? '');
-        final mins =
-            started == null ? 0 : DateTime.now().difference(started).inMinutes;
-        final label = joinFolder(mins >= 1 ? 'Working ${mins}m' : 'Working');
-        sub = '';
-        subView = Row(mainAxisSize: MainAxisSize.min, children: [
-          WorkingDots(size: 3, color: AppColors.fg2),
-          SizedBox(width: S.of(5)),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style:
-                  TS.caption(AppColors.fg2).copyWith(fontSize: 12, height: 1.2),
+    final where = branch.isNotEmpty ? branch : folder;
+    final subtitle = where.isNotEmpty ? '$stateWord - $where' : stateWord;
+    final title = _title.trim().isNotEmpty
+        ? _title.trim()
+        : (folder.isEmpty ? 'Session' : 'New session in $folder');
+    final lanesPill = lanePillLabel(s?.lanes ?? const <LaneInfo>[]);
+    return SpecBar(
+      title: title,
+      subtitle: subtitle,
+      onBack: back,
+      actions: [
+        if (lanesPill != null)
+          GestureDetector(
+            onTap: _showLanes,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: S.s8),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                        color: AppColors.fg2, shape: BoxShape.circle)),
+                SizedBox(width: S.s6),
+                Text(lanesPill,
+                    style: TextStyle(fontSize: 12, color: AppColors.fg2)),
+              ]),
             ),
           ),
-        ]);
-      } else if (s.compacting) {
-        sub = joinFolder('Tidying up');
-      } else if (s.pendingQuestion != null || s.status == 'waiting_for_input') {
-        sub = joinFolder('Needs you');
-      } else if (s.status == 'in_review') {
-        sub = joinFolder('In review');
-      }
-    }
-    final working = s?.status == 'running';
-    return StageBar(
-      framed: false,
-      members: [
-        if ((_me?.displayAgentId ?? '').isNotEmpty)
-          StageMember(_me!.displayAgentId!),
+        SpecIconAction('more-horizontal', 'Session actions',
+            stuck ? _retryNow : () => _openActionsDrawer(s)),
       ],
-      avatarSize: 30,
-      titleSize: 15,
-      title: _title.isEmpty ? 'Session' : _title,
-      subtitle: working ? null : (sub.isEmpty ? null : sub),
-      below: subView,
-      onBack: back,
-      onTap: stuck ? _retryNow : () => _openActionsDrawer(s),
-      trailing: RoundBtn(
-        icon: 'terminal',
-        tooltip: 'Shell',
-        size: 44,
-        iconSize: 18,
-        onTap: _openTerm,
-      ),
     );
   }
 
@@ -843,17 +785,15 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
 
   /// Hand the session to another agent: pick one, optional note, done.
   void _showHandOff() {
-    showAppSheet(context,
-        title: 'Hand off',
-        subtitle: 'Pass this session to another agent',
-        maxWidth: 400,
-        maxHeight: 560,
-        child: SessionHandOffSheet(
-          client: widget.client,
-          sessionId: widget.sessionId,
-          onHandedOff: (name, pending) => _toast(
-              pending ? 'Hands to $name after this turn' : 'Handed to $name'),
-        ));
+    showHandOffSheet(
+      context,
+      client: widget.client,
+      sessionId: widget.sessionId,
+      ownerId: _me?.ownerAgentId ?? _me?.displayAgentId,
+      sessionTitle: _title.isEmpty ? 'Session' : _title,
+      onHandedOff: (name, pending) => _toast(
+          pending ? 'Hands to $name after this turn' : 'Handed to $name'),
+    );
   }
 
   void _openAutonomy() {
@@ -1562,34 +1502,6 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       _setState(() => _connError = _SessionScreenState._reconnecting);
     }
     _connect();
-  }
-
-  Widget _mobileConnectionLine() {
-    final stuck = _connError == _SessionScreenState._unreachable;
-    final queued = _outbox.length;
-    final text = [
-      stuck ? _SessionScreenState._unreachable : 'Reconnecting',
-      if (queued > 0) '$queued queued',
-      if (stuck) 'tap to retry',
-    ].join(' · ');
-    return Semantics(
-      liveRegion: true,
-      label: text,
-      excludeSemantics: true,
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        StatusDot(
-            status: stuck ? 'offline' : 'checking',
-            size: 6,
-            color: stuck ? AppColors.danger : AppColors.fg2),
-        SizedBox(width: S.s6),
-        Flexible(
-          child: Text(text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: sans(12, color: AppColors.fg3)),
-        ),
-      ]),
-    );
   }
 
   /// Open the full-screen actions panel (slides in from the right).

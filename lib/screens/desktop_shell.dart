@@ -1527,6 +1527,25 @@ class _DesktopShellState extends State<DesktopShell>
             rethrow;
           }
         },
+        onStartWithFiles: (folder, workspace, profile, text, files) async {
+          try {
+            final id = await c.openSession(folder,
+                workspace: workspace, profile: profile, newConversation: true);
+            if (page.mounted) Navigator.of(page).pop();
+            _openSession(id, 'New session', profile,
+                share: SharedInbound(
+                  type: files.isEmpty ? 'text' : 'file',
+                  text: text,
+                  paths: [for (final f in files) f.path],
+                  names: [for (final f in files) f.name],
+                  send: true,
+                ));
+            _loadSessions();
+          } catch (e) {
+            if (mounted) toast(context, '$e', danger: true);
+            rethrow;
+          }
+        },
       ),
     ));
   }

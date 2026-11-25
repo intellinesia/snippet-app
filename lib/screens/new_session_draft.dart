@@ -1244,25 +1244,35 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                           ),
                         ),
                       ),
+                      if (_files.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            for (var i = 0; i < _files.length; i++)
+                              _fileChip(i),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 12),
                       Row(children: [
-                        if (widget.onStartWithFiles != null)
-                          Semantics(
-                            button: true,
-                            label: 'Add context',
-                            child: ExcludeSemantics(
-                              child: TapDetector(
-                                behavior: HitTestBehavior.opaque,
-                                onTap: _addFiles,
-                                child: SizedBox(
-                                    width: 48,
-                                    height: 48,
-                                    child: Center(
-                                        child: AppIcon('plus',
-                                            size: 20, color: AppColors.fg2))),
-                              ),
+                        Semantics(
+                          button: true,
+                          label: 'Add context',
+                          child: ExcludeSemantics(
+                            child: TapDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: _addFiles,
+                              child: SizedBox(
+                                  width: 48,
+                                  height: 48,
+                                  child: Center(
+                                      child: AppIcon('plus',
+                                          size: 20, color: AppColors.fg2))),
                             ),
                           ),
+                        ),
                         const Spacer(),
                         Semantics(
                           button: true,

@@ -102,6 +102,7 @@ import 'mobile_voice_page.dart' show startMobileVoice;
 import 'session_panels.dart';
 import 'session_coordination_cards.dart';
 import 'session_handoff.dart';
+import 'spec_bar.dart';
 import 'lead/widgets/autonomy_panel.dart';
 import '../tap_detector.dart';
 import 'lead/lead_state.dart'
@@ -1027,7 +1028,8 @@ class _SessionScreenState extends State<SessionScreen>
             ),
           ),
           SizedBox(width: S.s8),
-          Btn('Wake', small: true, variant: BtnVariant.secondary, onTap: _wake),
+          Btn('Wake',
+              small: !kMobile, variant: BtnVariant.secondary, onTap: _wake),
         ]),
       );
 

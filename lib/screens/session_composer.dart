@@ -1171,7 +1171,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
             label: 'Hand off',
             subtitle: 'To another agent, after this turn',
             chevron: true,
-            onTap: () => _tray.show('handoff')),
+            onTap: () => kMobile ? run(_showHandOff) : _tray.show('handoff')),
         ComposerTrayRow(
             icon: 'git-branch',
             label: 'Fork from here',

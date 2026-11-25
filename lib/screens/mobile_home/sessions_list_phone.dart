@@ -370,6 +370,11 @@ class _ChipRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
     final scaler = mq.textScaler.clamp(maxScaleFactor: 1.35);
+    final visible = [
+      for (final f in SessionsFilter.values)
+        if (f != SessionsFilter.needs || (counts[f] ?? 0) > 0 || f == filter)
+          f,
+    ];
     return MediaQuery(
       data: mq.copyWith(textScaler: scaler),
       child: SizedBox(
@@ -378,9 +383,10 @@ class _ChipRow extends StatelessWidget {
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           children: [
-            for (final f in SessionsFilter.values) ...[
-              if (f != SessionsFilter.all) const SizedBox(width: 8),
-              _Chip(f, counts[f] ?? 0, f == filter, () => onSelect(f)),
+            for (var i = 0; i < visible.length; i++) ...[
+              if (i > 0) const SizedBox(width: 8),
+              _Chip(visible[i], counts[visible[i]] ?? 0, visible[i] == filter,
+                  () => onSelect(visible[i])),
             ],
           ],
         ),

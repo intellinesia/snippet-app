@@ -111,17 +111,21 @@ class AppDialogButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(6),
           splashFactory: NoSplash.splashFactory,
           highlightColor: Colors.transparent,
-          child: ConstrainedBox(
+          child: Container(
             constraints: const BoxConstraints(minHeight: 48),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              child: Center(
-                widthFactor: 1,
-                child: Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  style: sans(14, weight: FontWeight.w500, color: fg),
-                ),
+            decoration: primary || !enabled
+                ? null
+                : BoxDecoration(
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppColors.line),
+                  ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            child: Center(
+              widthFactor: 1,
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: sans(14, weight: FontWeight.w500, color: fg),
               ),
             ),
           ),
@@ -200,7 +204,7 @@ class AppDialogCard extends StatelessWidget {
   Widget build(BuildContext context) {
     Theme.of(context);
     return Material(
-      color: AppColors.surface2,
+      color: AppColors.surface1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
