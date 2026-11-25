@@ -34,7 +34,6 @@ import '../share_inbound.dart';
 import '../shells.dart';
 import '../store.dart';
 import '../term.dart' show SessionTermView;
-import '../tap_detector.dart';
 import '../theme.dart';
 import '../media_views.dart';
 import '../widgets.dart';
@@ -85,13 +84,14 @@ import 'shell_pane_view.dart';
 import 'shell_rail.dart';
 import 'shell_rail_tools.dart';
 import 'shell_shortcuts.dart';
-import 'sidebar.dart' show SidebarBrand;
 import 'sidebar_mode.dart';
 import 'shell_sidebar_host.dart';
 import 'shell_split_view.dart';
+import 'shell_status_bar.dart';
 import 'shell_welcome.dart';
 import 'desktop_home.dart';
 import 'shell_window_bar.dart';
+import 'usage.dart' show usageProviderTitle;
 import '../motion.dart';
 import '../window_background.dart';
 
@@ -262,6 +262,8 @@ class _DesktopShellState extends State<DesktopShell>
   // The tab to return to when the settings tab's back row is used.
   String? _preSettingsKey;
   double _sidebarWidth = kSidebarWidth;
+  List<ShellUsageItem> _usageItems = const [];
+  String? _activeProfileName;
 
   /// Secondary-pane width, dragged by its handle. Width-driven rather than a
   /// flex ratio because a flex ratio cannot be dragged and has no natural size.
@@ -485,9 +487,14 @@ class _DesktopShellState extends State<DesktopShell>
     try {
       final cfg = await c.getConfig();
       if (!mounted) return;
-      setState(() => _tabProviders = {
-            for (final p in cfg.profiles) p.name: p.provider,
-          });
+      final configured = cfg.active?.trim() ?? '';
+      final active = configured.isNotEmpty
+          ? configured
+          : cfg.profiles.where((p) => p.active).firstOrNull?.name;
+      setState(() {
+        _tabProviders = {for (final p in cfg.profiles) p.name: p.provider};
+        _activeProfileName = active;
+      });
     } catch (_) {
       _tabProvidersFor = null;
     }
@@ -1329,6 +1336,7 @@ class _DesktopShellState extends State<DesktopShell>
   }
 
   Future<void> _refreshHealth() async {
+    unawaited(_refreshUsage());
     await Future.wait(_instances.map((i) async {
       final ok = await DaemonClient(i.url, i.token).health();
       if (mounted && _health[i.url] != ok) setState(() => _health[i.url] = ok);
@@ -1436,6 +1444,37 @@ class _DesktopShellState extends State<DesktopShell>
           send: true,
         ));
     _loadSessions();
+  }
+
+  void _startHomeSession(String text, {String? agentId, String? folder}) {
+    final c = _client;
+    final trimmed = text.trim();
+    if (c == null || trimmed.isEmpty) return;
+    final recent = (_sessions ?? const <SessionInfo>[]).toList()
+      ..sort((a, b) => b.lastActive.compareTo(a.lastActive));
+    final lastUsed = recent
+        .map((s) => s.projectFolder.trim().isNotEmpty
+            ? s.projectFolder.trim()
+            : s.folder.trim())
+        .where((f) => f.isNotEmpty)
+        .firstOrNull;
+    final target = (folder ?? lastUsed ?? '').trim();
+    if (target.isEmpty) return;
+    unawaited(() async {
+      String? profile;
+      if (agentId != null && agentId.isNotEmpty) {
+        try {
+          final agents = await c.coordinationAgents();
+          profile = agents.where((a) => a.id == agentId).firstOrNull?.profile;
+        } catch (_) {}
+      }
+      var mode = WorkspaceMode.folder;
+      try {
+        final repo = await c.worktrees(target);
+        if (repo.repo != null) mode = WorkspaceMode.worktree;
+      } catch (_) {}
+      await _startSheet(c, target, mode, profile, trimmed, const []);
+    }());
   }
 
   void _showNewMenu(BuildContext anchor) {
@@ -1556,6 +1595,7 @@ class _DesktopShellState extends State<DesktopShell>
       _client = DaemonClient(inst.url, inst.token);
       _sessions = null;
       _liveStatus.clear();
+      _usageItems = const [];
     });
     // See `_onInboundShare`: must follow the setState block.
     _shells.setClient(_client);
@@ -1563,6 +1603,7 @@ class _DesktopShellState extends State<DesktopShell>
     _startOnChats();
     _connectEventsWatch();
     _loadSessions();
+    unawaited(_refreshUsage());
   }
 
   void _openSession(String id, String title, String? profile,

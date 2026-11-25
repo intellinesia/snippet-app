@@ -1,6 +1,4 @@
-import '../quiet.dart' show QuietHand;
 import 'package:flutter/gestures.dart';
-import '../desktop_look.dart';
 import 'package:flutter/material.dart';
 
 import '../chat/agent_cluster.dart';
@@ -10,7 +8,6 @@ import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'shell_models.dart';
-import 'shell_nav.dart';
 import '../tap_detector.dart';
 
 /// Top-level workspace tab chip that appears when dragging a tab.
@@ -86,196 +83,182 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
   bool _hover = false;
   bool _focus = false;
 
-  Widget _icon(String? status, bool working) {
+  String get _label {
+    final t = widget.tab;
+    if (t.isHome) return 'Home';
+    if (t.isLead) return 'Lead';
+    return t.title.isEmpty ? '(untitled)' : t.title;
+  }
+
+  Widget _icon() {
     final t = widget.tab;
     final active = widget.isActive;
+    final color = active ? AppColors.fg1 : AppColors.fg2;
     final groupIds = tabGroupAgentIds(t);
     final hasProvider =
         widget.provider != null && providerLogoAsset(widget.provider) != null;
-    // Amber hand for needs-you and a spinner for running replace the face;
-    // amber is for needs-you only.
-    if (!t.isLead && working) {
-      return SizedBox.square(
-          dimension: 16,
-          child: Center(
-              child: status == 'running'
-                  ? Spinner(size: 13)
-                  : const QuietHand(size: 14)));
-    }
-    if (t.isPrs) return AppIcon('pull-request', size: 13, color: AppColors.fg2);
-    if (t.isBoard) {
-      return AppIcon('list',
-          size: 14, color: active ? AppColors.fg2 : AppColors.fg4);
-    }
-    if (groupIds != null) return AgentCluster(ids: groupIds, size: 17);
+    if (t.isHome) return AppIcon('home', size: 12, color: color);
+    if (t.isLead) return AgentMochi('lead', size: 16);
+    if (t.isPrs) return AppIcon('pull-request', size: 12, color: color);
+    if (t.isBoard) return AppIcon('kanban', size: 12, color: color);
+    if (groupIds != null) return AgentCluster(ids: groupIds, size: 16);
     if (widget.agentId != null && widget.agentId!.isNotEmpty) {
       return ClipRRect(
-          borderRadius: BorderRadius.circular(R.of(4)),
-          child: AgentMochi(widget.agentId!, size: 16));
+          borderRadius: BorderRadius.circular(R.of(3)),
+          child: AgentMochi(widget.agentId!, size: 14));
     }
-    if (hasProvider) return ProviderLogo(widget.provider, size: 13);
-    return SessionStateIcon(
-      status: working ? null : status,
-      icon: tabIconKind(t),
-      size: 13,
-    );
+    if (hasProvider) return ProviderLogo(widget.provider, size: 12);
+    return AppIcon(tabIconKind(t), size: 12, color: color);
+  }
+
+  Widget? _marker() {
+    final status = widget.status;
+    final needsInput = status == 'waiting_for_input' ||
+        status == 'in_review' ||
+        (widget.tab.isLead && widget.attentionCount > 0);
+    if (needsInput) {
+      return Tooltip(
+        message: 'Needs you',
+        child: Container(
+          width: 6,
+          height: 6,
+          decoration:
+              BoxDecoration(color: AppColors.run, shape: BoxShape.circle),
+        ),
+      );
+    }
+    if (widget.unread) {
+      return Tooltip(
+        message: 'Unread',
+        child: Container(
+          width: 6,
+          height: 6,
+          decoration:
+              BoxDecoration(color: AppColors.fg1, shape: BoxShape.circle),
+        ),
+      );
+    }
+    if (status == 'running') {
+      return Tooltip(
+        message: 'Running',
+        child: const Spinner(size: 11),
+      );
+    }
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
     final t = widget.tab;
     final active = widget.isActive;
-    final title = t.title.isEmpty ? '(untitled)' : t.title;
-    final status = widget.status;
-    final needsInput = status == 'waiting_for_input' || status == 'in_review';
-    final working = status == 'running' || needsInput;
+    final marker = _marker();
     final closable = widget.canClose && widget.onClose != null;
-    final bg = active
-        ? AppColors.surface3
-        : (_hover ? AppColors.surface2 : Colors.transparent);
-
-    Widget cell(Widget child, {required double width}) =>
-        FocusableActionDetector(
-          onShowFocusHighlight: (v) => setState(() => _focus = v),
-          actions: {
-            ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) {
-              widget.onTap();
-              return null;
-            }),
-          },
-          child: MouseRegion(
-            cursor: SystemMouseCursors.click,
-            onEnter: (_) => setState(() => _hover = true),
-            onExit: (_) => setState(() => _hover = false),
-            child: TapDetector(
-              onTap: widget.onTap,
-              child: Tactile(
-                radius: BorderRadius.circular(R.of(8)),
-                enabled: widget.isActive,
-                child: AnimatedContainer(
-                  key: widget.chipKey,
-                  duration: Motion.quick,
-                  curve: const Cubic(.23, 1, .32, 1),
-                  height: 28,
-                  width: width,
-                  decoration: BoxDecoration(
-                    color: bg,
-                    borderRadius: BorderRadius.circular(R.of(8)),
-                  ),
-                  child: child,
-                ),
-              ),
-            ),
-          ),
-        );
-    Widget ring(Widget c) => Stack(fit: StackFit.passthrough, clipBehavior: Clip.none, children: [
-          c,
-          if (_focus)
-            Positioned(
-              left: -4,
-              top: -4,
-              right: -4,
-              bottom: -4,
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(R.of(8) + 2),
-                    border: Border.all(color: AppColors.fg1, width: 2),
-                  ),
-                ),
-              ),
-            ),
-        ]);
-
-    if (t.isLead || t.isHome) {
-      return Tooltip(
-        message: title,
-        waitDuration: const Duration(milliseconds: 600),
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          onEnter: (_) => setState(() => _hover = true),
-          onExit: (_) => setState(() => _hover = false),
-          child: TapDetector(
-            onTap: widget.onTap,
-            child: AnimatedContainer(
-              key: widget.chipKey,
-              duration: Motion.quick,
-              curve: const Cubic(.23, 1, .32, 1),
-              height: 28,
-              padding: EdgeInsets.symmetric(horizontal: S.s8),
-              decoration: BoxDecoration(
-                color: bg,
-                borderRadius: BorderRadius.circular(R.of(8)),
-              ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                if (t.isHome)
-                  AppIcon('home', size: 16, color: AppColors.fg2)
-                else
-                  AgentMochi('lead', size: 18),
-                if (t.isLead && widget.attentionCount > 0) ...[
-                  SizedBox(width: S.s6),
-                  Text('${widget.attentionCount}',
-                      style: mono(10.5, color: AppColors.run)),
-                ],
-              ]),
-            ),
-          ),
-        ),
-      );
-    }
-
-    final f = widget.folder?.trim();
-    final tip = f != null && f.isNotEmpty ? '$title\n$f' : title;
     final showClose = closable && (active || _hover);
-    final chip = ring(cell(
-      Stack(children: [
-        // Fill the cell so the row centres vertically.
-        Positioned.fill(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(S.of(10), 0, S.s8, 0),
-            child: Row(children: [
-              _icon(status, working),
-              SizedBox(width: S.of(7)),
-              Expanded(
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(12.5,
-                      weight: active ? W.label : W.body,
-                      color: active
-                          ? AppColors.fg1
-                          : (_hover ? AppColors.fg1 : AppColors.fg2)),
-                ),
-              ),
-              if (widget.unread && !active && !showClose)
-                Container(
-                  width: 6,
-                  height: 6,
-                  margin: const EdgeInsets.only(right: 9),
-                  decoration: BoxDecoration(
-                      color: AppColors.fg2, shape: BoxShape.circle),
-                ),
-              if (closable && (showClose || !widget.unread || active))
-                Opacity(
-                  opacity: showClose ? 1 : 0,
-                  child: TapDetector(
-                    onTap: showClose ? widget.onClose : null,
-                    behavior: HitTestBehavior.opaque,
-                    child: SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: Center(
-                          child: AppIcon('x', size: 11, color: AppColors.fg3)),
+    final folder = widget.folder?.trim();
+    final tip = folder != null && folder.isNotEmpty && !t.isHome && !t.isLead
+        ? '$_label\n$folder'
+        : _label;
+
+    final chip = FocusableActionDetector(
+      onShowFocusHighlight: (v) => setState(() => _focus = v),
+      actions: {
+        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) {
+          widget.onTap();
+          return null;
+        }),
+      },
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          child: SizedBox(
+            key: widget.chipKey,
+            height: 32,
+            width: widget.width,
+            child: Stack(children: [
+              if ((_hover && !active) || (_focus && !active))
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 4,
+                  height: 28,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: _focus ? AppColors.surface3 : AppColors.surface2,
+                      borderRadius: BorderRadius.circular(R.of(6)),
                     ),
                   ),
+                ),
+              if (_focus)
+                Positioned(
+                  left: 0,
+                  top: 2,
+                  bottom: 2,
+                  width: 2,
+                  child: ColoredBox(color: AppColors.fg1),
+                ),
+              Positioned.fill(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 4, 0),
+                  child: Row(children: [
+                    SizedBox(width: 12, child: Center(child: _icon())),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(12,
+                            weight: active ? W.label : W.body,
+                            color: active ? AppColors.fg1 : AppColors.fg2),
+                      ),
+                    ),
+                    if (marker != null) ...[
+                      const SizedBox(width: 2),
+                      SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: Center(child: marker),
+                      ),
+                    ],
+                    if (closable)
+                      Opacity(
+                        opacity: showClose ? 1 : 0,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: showClose ? widget.onClose : null,
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: Center(
+                              child:
+                                  AppIcon('x', size: 10, color: AppColors.fg3),
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      const SizedBox(width: 6),
+                  ]),
+                ),
+              ),
+              if (active)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 2,
+                  child: ColoredBox(color: AppColors.fg1),
                 ),
             ]),
           ),
         ),
-      ]),
-      width: widget.width,
-    ));
+      ),
+    );
+
     return Tooltip(
       message: tip,
       waitDuration: const Duration(milliseconds: 600),
@@ -336,8 +319,6 @@ class MainTabsStrip extends StatefulWidget {
 }
 
 class _MainTabsStripState extends State<MainTabsStrip> {
-  static const _maxTab = 180.0;
-  static const _minTab = 140.0;
   static const _gap = 2.0;
   final _moreKey = GlobalKey();
   // Tabs closed but still shrinking out, with the slot they held.
@@ -407,30 +388,86 @@ class _MainTabsStripState extends State<MainTabsStrip> {
     );
   }
 
+  double _tabWidth(BuildContext context, ShellTab t) {
+    final title = t.isHome
+        ? 'Home'
+        : t.isLead
+            ? 'Lead'
+            : (t.title.isEmpty ? '(untitled)' : t.title);
+    final painter = TextPainter(
+      text: TextSpan(text: title, style: sans(12, weight: W.label)),
+      maxLines: 1,
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout();
+    return (painter.width + 62).clamp(112.0, 210.0).toDouble();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final mc = widget.tabs.where((t) => t.isLead || t.isHome).toList()
-      ..sort((a, b) => (b.isHome ? 1 : 0) - (a.isHome ? 1 : 0));
+    int fixedRank(ShellTab t) => t.isHome ? 0 : 1;
+    final fixed = widget.tabs.where((t) => t.isLead || t.isHome).toList()
+      ..sort((a, b) => fixedRank(a).compareTo(fixedRank(b)));
     final rest = widget.tabs.where((t) => !t.isLead && !t.isHome).toList();
     return LayoutBuilder(builder: (context, box) {
       const plusW = 28.0 + _gap;
-      const moreW = 64.0 + _gap;
-      // The MC chip grows with its attention count; budget for it, plus a
-      // little slack, so the strip never overruns the bar.
-      final count = widget.mcAttentionCount;
-      final mcChip = 46.0 + (count > 0 ? 8.0 + 7.0 * '$count'.length : 0);
-      final mcW = mc.length * (mcChip + _gap);
-      final room = box.maxWidth - mcW - plusW - 6;
-      var visibleCount = rest.length;
-      var overflow = false;
-      if (rest.length * (_minTab + _gap) > room) {
-        overflow = true;
-        visibleCount = ((room - moreW) / (_minTab + _gap)).floor();
-        if (visibleCount < 1) visibleCount = rest.isEmpty ? 0 : 1;
-        if (visibleCount > rest.length) visibleCount = rest.length;
+      const moreW = 40.0 + _gap;
+      final naturalWidths = <String, double>{
+        for (final t in widget.tabs) t.key: _tabWidth(context, t),
+      };
+      final fixedW = fixed.fold<double>(
+          0, (sum, t) => sum + (naturalWidths[t.key] ?? 168) + _gap);
+      final room = box.maxWidth - fixedW - plusW - 6;
+
+      double naturalTotal() => rest.fold<double>(
+          0, (sum, t) => sum + (naturalWidths[t.key] ?? 168) + _gap);
+
+      Map<String, double> widthsFor(double available) {
+        final natural = naturalTotal();
+        if (rest.isEmpty || natural <= available) return naturalWidths;
+        final widthSum = rest.fold<double>(
+            0, (sum, t) => sum + (naturalWidths[t.key] ?? 168));
+        final gapSum = rest.length * _gap;
+        final scale = ((available - gapSum) / widthSum).clamp(0.0, 1.0);
+        return {
+          ...naturalWidths,
+          for (final t in rest)
+            t.key: ((naturalWidths[t.key] ?? 168) * scale)
+                .clamp(112.0, naturalWidths[t.key] ?? 168)
+                .toDouble(),
+        };
       }
-      var visible = rest.take(visibleCount).toList();
-      var hidden = rest.skip(visibleCount).toList();
+
+      var displayWidths = widthsFor(room);
+      var displayTotal = rest.fold<double>(
+          0, (sum, t) => sum + (displayWidths[t.key] ?? 168) + _gap);
+      final reserveOverflow = displayTotal > room;
+      if (reserveOverflow) {
+        displayWidths = widthsFor(room - moreW);
+        displayTotal = rest.fold<double>(
+            0, (sum, t) => sum + (displayWidths[t.key] ?? 168) + _gap);
+      }
+      double widthOf(ShellTab t) => displayWidths[t.key] ?? 168;
+
+      List<ShellTab> visible = [];
+      List<ShellTab> hidden = [];
+      void pack(double available) {
+        visible = [];
+        hidden = [];
+        var used = 0.0;
+        for (final t in rest) {
+          final need = widthOf(t) + _gap;
+          if (visible.isEmpty || used + need <= available) {
+            visible.add(t);
+            used += need;
+          } else {
+            hidden.add(t);
+          }
+        }
+      }
+
+      pack(reserveOverflow ? room - moreW : room);
+      final overflow = hidden.isNotEmpty;
       final active = widget.activeTab;
       if (overflow &&
           active != null &&
@@ -440,10 +477,6 @@ class _MainTabsStripState extends State<MainTabsStrip> {
         visible.add(active);
         hidden = [swapped, ...hidden.where((t) => t != active)];
       }
-      final avail = room - (overflow ? moreW : 0);
-      final tabW = visible.isEmpty
-          ? _maxTab
-          : (avail / visible.length - _gap).clamp(_minTab, _maxTab);
 
       Widget chip(ShellTab t, {bool leaving = false}) => _TabSlot(
           key: ValueKey('slot-${t.key}'),
@@ -454,10 +487,11 @@ class _MainTabsStripState extends State<MainTabsStrip> {
           },
           child: Padding(
             padding: const EdgeInsets.only(right: _gap),
-            child: Center(
+            child: Align(
+              alignment: Alignment.centerLeft,
               child: TopWorkspaceTabChip(
                 tab: t,
-                width: tabW,
+                width: widthOf(t),
                 provider: widget.providerFor?.call(t),
                 agentId: widget.agentFor?.call(t),
                 folder: widget.folderFor?.call(t),
@@ -491,7 +525,7 @@ class _MainTabsStripState extends State<MainTabsStrip> {
             scrollDirection: Axis.horizontal,
             physics: const NeverScrollableScrollPhysics(),
             child: Row(children: [
-              for (final t in mc) chip(t),
+              for (final t in fixed) chip(t),
               ...shown,
               if (overflow)
                 Padding(
@@ -509,7 +543,7 @@ class _MainTabsStripState extends State<MainTabsStrip> {
           child: IconBtn(
             'plus',
             size: 28,
-            iconSize: 14,
+            iconSize: 13,
             tooltip: 'New session',
             onTap: widget.onNewSession,
           ),
@@ -622,17 +656,15 @@ class _MoreButtonState extends State<_MoreButton> {
       child: TapDetector(
         onTap: widget.onTap,
         child: Container(
-          height: 28,
-          padding: EdgeInsets.symmetric(horizontal: S.s8),
+          width: 40,
+          height: 24,
+          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: _hover ? AppColors.surface3 : AppColors.surface2,
-            borderRadius: BorderRadius.circular(R.sm),
+            borderRadius: BorderRadius.circular(R.of(6)),
           ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Text('+${widget.count}', style: sans(12, color: AppColors.fg2)),
-            SizedBox(width: S.s4),
-            AppIcon('chevron-down', size: 11, color: AppColors.fg3),
-          ]),
+          child: Text('+${widget.count}',
+              style: sans(12, weight: W.label, color: AppColors.fg1)),
         ),
       ),
     );
@@ -884,7 +916,6 @@ class MacWindowBar extends StatelessWidget {
   final VoidCallback onNavigateBack;
   final VoidCallback onNavigateForward;
   final Widget tabsRow;
-  final VoidCallback onOpenSettings;
   final List<Widget> tools;
   final bool reserveWindowControls;
 
@@ -897,70 +928,105 @@ class MacWindowBar extends StatelessWidget {
     required this.onNavigateBack,
     required this.onNavigateForward,
     required this.tabsRow,
-    required this.onOpenSettings,
     this.tools = const [],
     this.reserveWindowControls = true,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (kMobile) {
+      return Container(
+        height: 44,
+        padding: EdgeInsets.fromLTRB(S.s8, 0, S.of(10), 0),
+        decoration: BoxDecoration(
+          color: AppColors.windowBg,
+          border: Border(
+              bottom:
+                  BorderSide(color: AppColors.line.withValues(alpha: 0.65))),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                if (sidebarHidden) ...[
+                  if (reserveWindowControls) const SizedBox(width: 80),
+                  if (onToggleSidebar != null)
+                    IconBtn('sidebar',
+                        size: 28,
+                        iconSize: 15,
+                        tooltip: kMacOS
+                            ? 'Show sidebar (⌘B)'
+                            : 'Show sidebar (Ctrl+B)',
+                        onTap: onToggleSidebar),
+                ],
+                IconBtn('chevron-left',
+                    size: 28,
+                    iconSize: 15,
+                    tooltip: 'Back',
+                    onTap: canNavigateBack ? onNavigateBack : null),
+                IconBtn('chevron-right',
+                    size: 28,
+                    iconSize: 15,
+                    tooltip: 'Forward',
+                    onTap: canNavigateForward ? onNavigateForward : null),
+                SizedBox(width: S.s4),
+              ]),
+            ),
+            Expanded(
+                child: Align(alignment: Alignment.centerLeft, child: tabsRow)),
+            SizedBox(width: S.s8),
+            Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final tool in tools) ...[
+                    tool,
+                    SizedBox(width: S.s2),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
-      // 36 under the card's 8 px top inset centres it at 26, with the sidebar.
-      height: kMobile ? 44 : 40,
-      padding: EdgeInsets.fromLTRB(S.s8, 0, S.of(10), 0),
-      decoration: kMobile
-          ? BoxDecoration(
-              color: AppColors.windowBg,
-              border: Border(
-                  bottom: BorderSide(
-                      color: AppColors.line.withValues(alpha: 0.65))),
-            )
-          : null,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Center(
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              if (sidebarHidden) ...[
-                if (reserveWindowControls) const SizedBox(width: 80),
-                if (onToggleSidebar != null)
-                  IconBtn('sidebar',
-                      size: 28,
-                      iconSize: 15,
-                      tooltip: kMacOS
-                          ? 'Show sidebar (⌘B)'
-                          : 'Show sidebar (Ctrl+B)',
-                      onTap: onToggleSidebar),
-              ],
+      height: 32,
+      decoration: BoxDecoration(
+        color: AppColors.windowBg,
+        border: Border(bottom: BorderSide(color: AppColors.line)),
+      ),
+      child: Row(children: [
+        if (sidebarHidden)
+          SizedBox(
+            width: 232,
+            child: Row(children: [
+              if (reserveWindowControls) const SizedBox(width: 70),
+              if (onToggleSidebar != null)
+                IconBtn('sidebar',
+                    size: 28,
+                    iconSize: 14,
+                    tooltip:
+                        kMacOS ? 'Show sidebar (⌘B)' : 'Show sidebar (Ctrl+B)',
+                    onTap: onToggleSidebar),
               IconBtn('chevron-left',
                   size: 28,
-                  iconSize: 15,
+                  iconSize: 13,
                   tooltip: 'Back',
                   onTap: canNavigateBack ? onNavigateBack : null),
               IconBtn('chevron-right',
                   size: 28,
-                  iconSize: 15,
+                  iconSize: 13,
                   tooltip: 'Forward',
                   onTap: canNavigateForward ? onNavigateForward : null),
-              SizedBox(width: S.s4),
             ]),
-          ),
-          Expanded(
-              child: Align(alignment: Alignment.centerLeft, child: tabsRow)),
-          SizedBox(width: S.s8),
-          Center(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final tool in tools) ...[
-                  tool,
-                  SizedBox(width: S.s2),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
+          )
+        else
+          const SizedBox(width: 8),
+        Expanded(child: tabsRow),
+      ]),
     );
   }
 }
