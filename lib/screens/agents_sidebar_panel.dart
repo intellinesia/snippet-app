@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'package:flutter/foundation.dart' show ValueListenable;
-
 import 'package:flutter/material.dart';
 
 import '../api.dart';
@@ -23,6 +21,7 @@ import 'lead_card.dart';
 import '../pull_refresh.dart';
 import '../message_reactions.dart' show isReactionEvent;
 import '../motion.dart';
+import '../phosphor_icons.dart';
 import '../swr.dart';
 import '../tap_detector.dart';
 
@@ -69,6 +68,7 @@ class AgentsSidebarPanel extends StatefulWidget {
     this.sessions,
     this.onOpenSession,
     this.embedded = false,
+    this.onAgentCountChanged,
   });
 
   /// Desktop: opens a nested live session under the selected agent or group.
@@ -110,6 +110,10 @@ class AgentsSidebarPanel extends StatefulWidget {
   /// two mounted instances don't share one entry's notifications.
   final String? groupsKey;
 
+  /// Reports the total loaded agent count so the pinned desktop header can
+  /// keep its count visible after the asynchronous refresh completes.
+  final ValueChanged<int>? onAgentCountChanged;
+
   @override
   State<AgentsSidebarPanel> createState() => AgentsSidebarPanelState();
 }
@@ -134,6 +138,41 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
   bool loading = true;
   bool busy = false;
   late final Swr<List<GroupSummary>> _groups;
+  final Set<String> _expandedAgentRows = <String>{};
+  final Set<String> _expandedGroupRows = <String>{};
+
+  bool agentRowExpanded(String id) => _expandedAgentRows.contains(id);
+  bool groupRowExpanded(String id) => _expandedGroupRows.contains(id);
+
+  void setAgentRowExpanded(String id, bool expanded) =>
+      _setRowExpanded(_expandedAgentRows, id, expanded);
+
+  void setGroupRowExpanded(String id, bool expanded) =>
+      _setRowExpanded(_expandedGroupRows, id, expanded);
+
+  void toggleAgentRowExpanded(String id) =>
+      setAgentRowExpanded(id, !_expandedAgentRows.contains(id));
+
+  void toggleGroupRowExpanded(String id) =>
+      setGroupRowExpanded(id, !_expandedGroupRows.contains(id));
+
+  void _setRowExpanded(Set<String> rows, String id, bool expanded) {
+    if (expanded) {
+      rows.add(id);
+    } else {
+      rows.remove(id);
+    }
+    if (mounted) setState(() {});
+  }
+
+  void _notifyAgentCount() {
+    final callback = widget.onAgentCountChanged;
+    if (callback == null) return;
+    final count = agents.length;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) callback(count);
+    });
+  }
 
   void _onPinsChanged() {
     if (mounted) setState(() {});
@@ -166,6 +205,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
     }
     // Seeded rows were already seen; don't replay the entrance.
     if (agents.isNotEmpty) _shownAt = DateTime.fromMillisecondsSinceEpoch(0);
+    _notifyAgentCount();
     refresh();
   }
 
@@ -183,6 +223,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
       await widget.client.deleteAgent(agent.id);
       if (!mounted) return;
       setState(() => agents = agents.where((a) => a.id != agent.id).toList());
+      _notifyAgentCount();
       toast(context, 'Deleted $name');
       refresh();
     } catch (e) {
@@ -322,6 +363,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
         error = null;
       });
       _remember();
+      _notifyAgentCount();
       unawaited(_loadDmLast());
     } catch (e) {
       if (mounted) setState(() => error = '$e');
@@ -429,6 +471,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
             return;
           }
           setState(() => agents = latest);
+          _notifyAgentCount();
         } catch (_) {}
       }
       if (mounted) {
@@ -543,7 +586,11 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
       });
     final offlineHost = error == null ? null : hostOf(widget.client.baseUrl);
     Widget agentTile(CoordinationAgent a,
-            {CrewEntry? crew, AgentGroup? group}) =>
+            {CrewEntry? crew,
+            AgentGroup? group,
+            bool expandable = false,
+            bool expanded = false,
+            VoidCallback? onToggleExpansion}) =>
         ValueListenableBuilder<String?>(
             key: ValueKey('agent-card-${a.id}'),
             valueListenable: openAgentTab,
@@ -561,6 +608,9 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                   onDelete: () => _deleteAgent(a),
                   onChanged: refresh,
                   offlineHost: offlineHost,
+                  expandable: expandable,
+                  expanded: expanded,
+                  onToggleExpansion: onToggleExpansion,
                 ));
 
     String agentName(String id) {
@@ -579,7 +629,10 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
       return '${names.join(', ')} and you';
     }
 
-    Widget groupTile(GroupSummary g) {
+    Widget groupTile(GroupSummary g,
+        {bool expandable = false,
+        bool expanded = false,
+        VoidCallback? onToggleExpansion}) {
       final pinned = _isPinnedGroup(g);
       if (!kMobile) {
         final needsCount = [
@@ -617,6 +670,9 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
             needsCount: needsCount,
             unread: g.unread > 0,
             offlineHost: offlineHost,
+            expandable: expandable,
+            expanded: expanded,
+            onToggleExpansion: onToggleExpansion,
           ),
         );
       }
@@ -715,16 +771,8 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
             return out;
           }
 
-          Widget nestFor(ValueListenable<String?> sel, String id,
-                  List<SessionInfo> Function() list) =>
-              ValueListenableBuilder<String?>(
-                valueListenable: sel,
-                builder: (_, open, __) {
-                  if (open != id) return const SizedBox.shrink();
-                  final l = list();
-                  return l.isEmpty ? const SizedBox.shrink() : nested(l);
-                },
-              );
+          Widget? nestFor(bool expanded, List<SessionInfo> list) =>
+              expanded && list.isNotEmpty ? nested(list) : null;
           final ranked = <({
             Widget row,
             DateTime? at,
@@ -739,22 +787,34 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
               final live = c != null && c.state != CrewState.standingBy
                   ? seen(c.lead?.lastActive)
                   : null;
+              final liveSessions = liveOf([item.id]);
+              final expanded = agentRowExpanded(item.id);
               ranked.add((
-                row: agentTile(item, crew: c, group: bucketOf(item)),
+                row: agentTile(item,
+                    crew: c,
+                    group: bucketOf(item),
+                    expandable: liveSessions.isNotEmpty || expanded,
+                    expanded: expanded,
+                    onToggleExpansion: () => toggleAgentRowExpanded(item.id)),
                 at: latest(e.at, live),
                 pinnedAt: e.pinnedAt,
                 i: ranked.length,
-                nest: nestFor(openAgentTab, item.id, () => liveOf([item.id])),
+                nest: nestFor(expanded, liveSessions),
               ));
             } else {
               // Groups sit in the same list, ranked by their last event.
+              final group = item as GroupSummary;
+              final liveSessions = liveOf(group.agentIds);
+              final expanded = groupRowExpanded(group.id);
               ranked.add((
-                row: groupTile(item as GroupSummary),
+                row: groupTile(group,
+                    expandable: liveSessions.isNotEmpty || expanded,
+                    expanded: expanded,
+                    onToggleExpansion: () => toggleGroupRowExpanded(group.id)),
                 at: e.at,
                 pinnedAt: e.pinnedAt,
                 i: ranked.length,
-                nest:
-                    nestFor(openGroupTab, item.id, () => liveOf(item.agentIds)),
+                nest: nestFor(expanded, liveSessions),
               ));
             }
           }
@@ -1426,7 +1486,10 @@ class _NestedSessionState extends State<_NestedSession> {
           ),
           padding: const EdgeInsets.only(left: 36, right: 10),
           child: Row(children: [
-            AppIcon('chat', size: 12, color: AppColors.fg3),
+            Icon(PhIcons.chatText,
+                key: const ValueKey('nested-session-chat-icon'),
+                size: 12,
+                color: AppColors.fg3),
             const SizedBox(width: 6),
             Expanded(
               child: Text(title,

@@ -7,6 +7,7 @@ import 'package:snippet/crew_status.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/agent_card.dart';
 import 'package:snippet/swr.dart';
+import 'package:snippet/widgets.dart';
 
 class _Client extends DaemonClient {
   _Client() : super('https://daemon.invalid', 'test-token');
@@ -24,7 +25,8 @@ CoordinationAgent _agent({Map<String, dynamic>? last, int working = 0}) =>
       if (last != null) 'last_message': last,
     });
 
-CoordinationAgent _scout(Map<String, dynamic>? last) => CoordinationAgent.fromJson({
+CoordinationAgent _scout(Map<String, dynamic>? last) =>
+    CoordinationAgent.fromJson({
       'id': 'x-scout',
       'display_name': 'X Scout',
       'handle': 'x_scout',
@@ -34,7 +36,8 @@ CoordinationAgent _scout(Map<String, dynamic>? last) => CoordinationAgent.fromJs
 Future<void> _pump(WidgetTester t, CoordinationAgent a) async {
   debugDefaultTargetPlatformOverride = TargetPlatform.android;
   await t.pumpWidget(MaterialApp(
-      home: Scaffold(body: AgentCard(client: _Client(), agent: a, onOpen: () {}))));
+      home: Scaffold(
+          body: AgentCard(client: _Client(), agent: a, onOpen: () {}))));
   await t.pump();
   debugDefaultTargetPlatformOverride = null;
 }
@@ -50,8 +53,11 @@ void main() {
 
   testWidgets('a working agent keeps its last message and its character works',
       (t) async {
-    await _pump(t,
-        _agent(last: {'text': 'Claimed the plan task', 'from': 'agent'}, working: 1));
+    await _pump(
+        t,
+        _agent(
+            last: {'text': 'Claimed the plan task', 'from': 'agent'},
+            working: 1));
     expect(find.text('Claimed the plan task'), findsOneWidget);
     expect(find.text('Working'), findsNothing);
     expect(find.byKey(const ValueKey('agent-avatar-working')), findsOneWidget);
@@ -107,9 +113,11 @@ void main() {
     expect(find.text('No messages yet'), findsNothing);
   });
 
-  test('agentRowTime: now under a minute, clock time today, weekday this week', () {
+  test('agentRowTime: now under a minute, clock time today, weekday this week',
+      () {
     final n = DateTime(2026, 11, 13, 9, 30);
-    expect(agentRowTime(n.subtract(const Duration(seconds: 20)), now: n), 'now');
+    expect(
+        agentRowTime(n.subtract(const Duration(seconds: 20)), now: n), 'now');
     expect(agentRowTime(DateTime(2026, 11, 13, 8, 5), now: n), '8:05 am');
     expect(agentRowTime(DateTime(2026, 11, 12, 18, 36), now: n), 'Thu');
     expect(agentRowTime(DateTime(2026, 10, 2, 18, 36), now: n), '2 Oct');
@@ -119,7 +127,11 @@ void main() {
     final a = CoordinationAgent.fromJson({
       'id': 'scout',
       'display_name': 'X Scout',
-      'last_message': {'text': 'Posted.', 'from': 'agent', 'at': '2026-11-13T08:00:00Z'},
+      'last_message': {
+        'text': 'Posted.',
+        'from': 'agent',
+        'at': '2026-11-13T08:00:00Z'
+      },
     });
     final dm = a.withLastMessage(AgentLastMessage(
         text: 'can you look at this?',
@@ -134,17 +146,134 @@ void main() {
   });
 
   test('an idle agent shows its last message instead of what it finished', () {
-    final e = deriveCrew([_scout({'text': 'Draft is ready.', 'from': 'agent', 'at': '2026-11-08T10:00:00Z'})], const []).single;
+    final e = deriveCrew([
+      _scout({
+        'text': 'Draft is ready.',
+        'from': 'agent',
+        'at': '2026-11-08T10:00:00Z'
+      })
+    ], const []).single;
     expect(e.line, 'Draft is ready.');
   });
 
   test('your own last message is marked as yours', () {
-    final e = deriveCrew([_scout({'text': 'Check the 320px layout', 'from': 'user'})], const []).single;
+    final e = deriveCrew([
+      _scout({'text': 'Check the 320px layout', 'from': 'user'})
+    ], const []).single;
     expect(e.line, 'You: Check the 320px layout');
   });
 
   test('no preview falls back to the old line', () {
     expect(deriveCrew([_scout(null)], const []).single.line, 'Standing by');
-    expect(deriveCrew([_scout({'text': '  ', 'from': 'agent'})], const []).single.line, 'Standing by');
+    expect(
+        deriveCrew([
+          _scout({'text': '  ', 'from': 'agent'})
+        ], const []).single.line,
+        'Standing by');
+  });
+
+  testWidgets(
+      'desktop row pitch, avatar, status line and expansion chevron match H3',
+      (t) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    var toggles = 0;
+    var opened = false;
+    await t.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: 224,
+            child: AgentRowShell(
+              avatar: const SizedBox.square(
+                  key: ValueKey('test-avatar'), dimension: 28),
+              name: 'Sashy',
+              preview: 'Running visual QA',
+              time: 'now',
+              onTap: () => opened = true,
+              statusKind: AgentRowStatusKind.running,
+              expandable: true,
+              onToggleExpansion: () => toggles++,
+            ),
+          ),
+        ),
+      ),
+    ));
+    await t.pump();
+
+    final rowFinder = find.descendant(
+        of: find.byType(AgentRowShell),
+        matching: find.byType(AnimatedContainer));
+    expect(rowFinder, findsOneWidget);
+    final row = t.getRect(rowFinder);
+    expect(row.height, 40);
+    final avatar = t.getRect(find.byKey(const ValueKey('test-avatar')));
+    expect(avatar.width, 28);
+    expect(avatar.height, 28);
+    expect(avatar.top - row.top, 6);
+    final status = t.getRect(find.text('Running visual QA'));
+    expect(status.top - row.top, closeTo(21, 0.1));
+
+    expect(
+        find.byKey(const ValueKey('agent-expansion-toggle')), findsOneWidget);
+    await t.tap(find.byKey(const ValueKey('agent-expansion-toggle')));
+    await t.pump();
+    expect(toggles, 1);
+    expect(opened, isFalse);
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets(
+      'desktop working rows show live work and a spinner, not stale chat',
+      (t) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    final a = _agent(
+        last: {'text': 'Old direct message', 'from': 'agent'}, working: 1);
+    final running = SessionInfo.fromJson({
+      'id': 'run-1',
+      'title': 'Quiet Build QA',
+      'agent_id': 'growth',
+      'status': 'running',
+      'running': true,
+      'last_active': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+    });
+    final crew = deriveCrew([a], [running]).single;
+    await t.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: AgentCard(
+          client: _Client(),
+          agent: a,
+          crew: crew,
+          group: AgentGroup.working,
+          onOpen: () {},
+        ),
+      ),
+    ));
+    await t.pump();
+
+    expect(find.text('Quiet Build QA'), findsOneWidget);
+    expect(find.text('Old direct message'), findsNothing);
+    expect(find.byType(Spinner), findsOneWidget);
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('needs-you count always uses the words needs you', (t) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    await t.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: AgentRowShell(
+          avatar: const SizedBox.square(dimension: 28),
+          name: 'Buddy',
+          preview: '',
+          onTap: () {},
+          statusKind: AgentRowStatusKind.needsYou,
+          needsCount: 3,
+        ),
+      ),
+    ));
+    await t.pump();
+    expect(find.text('3 needs you'), findsOneWidget);
+    expect(find.text('3 need you'), findsNothing);
+    debugDefaultTargetPlatformOverride = null;
   });
 }
