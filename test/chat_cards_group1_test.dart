@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/chat/chat_card.dart';
-import 'package:snippet/plan_card.dart';
 import 'package:snippet/theme.dart';
 
 // Spec C CH-13, CH-04 card shell: full width, plan steps at 44, track 4 high.
@@ -24,13 +23,6 @@ void main() {
             body: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(children: [
-                PlanProgressCard(steps: [
-                  for (var i = 0; i < 7; i++)
-                    {
-                      'step': 'Step $i',
-                      'status': i < 4 ? 'completed' : (i == 4 ? 'in_progress' : 'pending')
-                    }
-                ]),
                 const ChatCard(children: [
                   ChatCardHeader(title: 'Title', subtitle: 'sub'),
                 ]),
@@ -39,16 +31,10 @@ void main() {
           ),
         ));
         final w = vw - 32;
-        final plan = t.getRect(find.byType(PlanProgressCard));
         final card = t.getRect(find.byType(ChatCard));
-        final row = t.getSize(find.text('Step 0'));
         // ignore: avoid_print
-        print('W $vw x$scale plan=${plan.width} card=${card.width} left=${card.left}');
-        expect(plan.width, w);
-        expect(plan.left, 16);
+        print('W $vw x$scale card=${card.width} left=${card.left}');
         expect(card.width, w);
-        expect(find.text('4 of 7 steps'), findsOneWidget);
-        expect(row.height, greaterThan(0));
         expect(t.takeException(), isNull);
         debugDefaultTargetPlatformOverride = null;
       });

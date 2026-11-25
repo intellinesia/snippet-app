@@ -2494,7 +2494,6 @@ class DaemonClient {
     required String title,
     required String sessionId,
     String prompt = '',
-    String? planPath,
     required String schedule,
   }) async {
     final body = <String, dynamic>{
@@ -2503,7 +2502,6 @@ class DaemonClient {
       'brief': prompt,
       'schedule': schedule,
     };
-    if (planPath != null) body['plan_path'] = planPath;
     final r = await _post(_uri('/wakes'), headers: _json, body: jsonEncode(body));
     _recurringCache = null;
     if (r.statusCode != 200) throw _err('create recurring job', r);
@@ -2515,14 +2513,12 @@ class DaemonClient {
     String id, {
     String? title,
     String? prompt,
-    String? planPath,
     String? schedule,
     bool? enabled,
   }) async {
     final body = <String, dynamic>{};
     if (title != null) body['title'] = title;
     if (prompt != null) body['brief'] = prompt;
-    if (planPath != null) body['plan_path'] = planPath;
     if (schedule != null) body['schedule'] = schedule;
     if (enabled != null) body['enabled'] = enabled;
     final r = await _patch(_uri('/wakes/${Uri.encodeComponent(id)}'),

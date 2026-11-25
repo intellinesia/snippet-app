@@ -6,7 +6,6 @@ import 'package:snippet/chat/chat_style.dart';
 import 'package:snippet/chat/stage_bar.dart';
 import 'package:snippet/chat/stage_header.dart';
 import 'package:snippet/chat/decided_card.dart';
-import 'package:snippet/plan_card.dart';
 import 'package:snippet/screens/session_coordination_cards.dart';
 import 'package:snippet/screens/lead/lead_state.dart' show WorkerQuestion;
 import 'package:snippet/theme.dart';
@@ -91,14 +90,6 @@ void main() {
                     subtitle: 'Option A'),
                 ApprovalDecideButtons(
                     onAllowOnce: () {}, onAlways: () {}, onDeny: () {}),
-                // CH-13 plan
-                PlanProgressCard(steps: [
-                  for (var i = 0; i < 7; i++)
-                    {
-                      'step': 'Step $i',
-                      'status': i < 4 ? 'completed' : 'pending'
-                    }
-                ]),
                 // CH-15 changes
                 TurnChangesCard(event: const {
                   'total_files': 7,
@@ -119,7 +110,6 @@ void main() {
         for (final type in [
           ChatCard,
           DecidedCard,
-          PlanProgressCard,
           TurnChangesCard,
           WorkerQuestionCard
         ]) {
