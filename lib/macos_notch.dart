@@ -888,7 +888,6 @@ class MacosNotch {
 const _notchHiddenTools = {
   'ask_user',
   'present_file',
-  'update_plan',
   'set_session_title'
 };
 final _imageExt = RegExp(r'\.(png|jpe?g|gif|webp|heic)$', caseSensitive: false);

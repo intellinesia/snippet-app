@@ -270,19 +270,6 @@ class TaskList extends StatelessWidget {
 
 /// One task. Desktop gets a single dense line; a phone adds the first line of
 /// the description, so a row says what the work is without opening it.
-/// "Plan 3/5 · now: `step`" for an open task whose worker has laid out a plan.
-String? workPlanLine(TaskItem task) {
-  if (task.workPlan.isEmpty ||
-      const {TaskStatus.done, TaskStatus.failed, TaskStatus.cancelled}
-          .contains(task.status)) {
-    return null;
-  }
-  final done = task.workPlan.where((s) => s.done).length;
-  final now =
-      task.workPlan.where((s) => s.current).map((s) => s.step).firstOrNull;
-  return 'Plan $done/${task.workPlan.length}${now == null ? '' : ' · now: $now'}';
-}
-
 /// Rows with a "Show N more" fold under them.
 class FoldedTasks extends StatefulWidget {
   const FoldedTasks({super.key, required this.visible, required this.hidden});
@@ -425,13 +412,6 @@ class TaskRow extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: sans(12, color: AppColors.fg4)),
-                  if (!kMobile && task.planTotal > 0) ...[
-                    SizedBox(height: S.s4),
-                    TaskPlanProgress(
-                        done: task.planDone,
-                        total: task.planTotal,
-                        compact: true),
-                  ],
                 ],
               ),
             ),
@@ -549,19 +529,10 @@ class PhoneTaskRow extends StatelessWidget {
             ? task.createdById[0].toUpperCase() + task.createdById.substring(1)
             : '');
     final line = (note?.line ?? '').trim();
-    final plan = task.workPlan;
-    String? planLine;
-    if (plan.isNotEmpty && task.status == TaskStatus.inProgress) {
-      final cur = plan.indexWhere((s) => s.current);
-      final n = cur >= 0 ? cur + 1 : plan.where((s) => s.done).length;
-      planLine = 'Plan $n of ${plan.length}'
-          '${cur >= 0 ? ' · ${plan[cur].step}' : ''}';
-    }
     if (task.status == TaskStatus.inReview) {
       final p = [who, line].where((e) => e.isNotEmpty).join(' · ');
       if (p.isNotEmpty) return p;
     }
-    if (planLine != null) return planLine;
     if (line.isNotEmpty) return line;
     if (who.isNotEmpty) return who;
     final at = DateTime.tryParse(task.updatedAt);

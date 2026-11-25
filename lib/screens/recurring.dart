@@ -17,8 +17,7 @@ import 'shell_nav.dart';
 
 /// Recurring goals — list, create, pause, and delete jobs that SetGoal a
 /// session. The daemon detects `~/.snippet/recurring/<id>.json`. If that
-/// session is already on a goal, the fire queues and starts immediately after
-/// `complete_goal`.
+/// session is busy, the fire queues and starts when it is free.
 class RecurringScreen extends StatefulWidget {
   final DaemonClient client;
   final VoidCallback? onClose;
@@ -72,7 +71,6 @@ class RecurringScreenState extends State<RecurringScreen>
   bool _submitting = false;
   final _titleCtrl = TextEditingController();
   final _promptCtrl = TextEditingController();
-  final _planCtrl = TextEditingController();
   final _dailyCtrl = TextEditingController(text: '09:00');
   final _customEveryCtrl = TextEditingController();
   String _mode = 'preset';
@@ -97,7 +95,6 @@ class RecurringScreenState extends State<RecurringScreen>
     _eventsSub?.cancel();
     _titleCtrl.dispose();
     _promptCtrl.dispose();
-    _planCtrl.dispose();
     _dailyCtrl.dispose();
     _customEveryCtrl.dispose();
     super.dispose();
@@ -146,7 +143,6 @@ class RecurringScreenState extends State<RecurringScreen>
       setState(() {
         _titleCtrl.clear();
         _promptCtrl.clear();
-        _planCtrl.clear();
         _dailyCtrl.text = '09:00';
         _customEveryCtrl.clear();
         _mode = 'preset';
@@ -159,7 +155,6 @@ class RecurringScreenState extends State<RecurringScreen>
     }
     final title = TextEditingController();
     final prompt = TextEditingController();
-    final plan = TextEditingController();
     final daily = TextEditingController(text: '09:00');
     final customEvery = TextEditingController();
     var sessionId = _boundSessionId;
@@ -167,30 +162,11 @@ class RecurringScreenState extends State<RecurringScreen>
     var mode = 'preset'; // preset | custom | daily | onceAt | onceIn
     final saved = await showAppSheet<bool>(
       context,
-      title: 'Schedule a goal or message',
+      title: 'Schedule a wake',
       maxWidth: 480,
       maxHeight: 680,
       child: StatefulBuilder(
         builder: (ctx, setSheet) {
-          Future<void> pickPlan() async {
-            final start = (widget.workspace?.trim().isNotEmpty == true)
-                ? widget.workspace
-                : null;
-            final picked = await presentScreen<String>(
-              context,
-              builder: (_, close) => FileExplorer(
-                client: widget.client,
-                title: 'Plan file',
-                start: start,
-                onClose: close,
-                onPickFile: (path) {},
-              ),
-            );
-            if (picked != null && picked.trim().isNotEmpty) {
-              plan.text = picked.trim();
-              setSheet(() {});
-            }
-          }
 
           return Column(
                   mainAxisSize: MainAxisSize.min,
@@ -263,30 +239,12 @@ class RecurringScreenState extends State<RecurringScreen>
                     ],
                     SizedBox(height: S.s12),
                     AppField(
-                        label: 'Goal',
+                        label: 'Prompt',
                         controller: prompt,
                         hint: 'The piece of work to complete',
                         minLines: 3,
                         maxLines: 6),
                     SizedBox(height: S.s12),
-                    AppField(
-                        label: 'Plan file (optional)',
-                        controller: plan,
-                        mono: true,
-                        hint: 'notes/plan.md — pick or type a path',
-                        rightSlot: IconBtn('folder',
-                            size: 32,
-                            iconSize: 16,
-                            tooltip: 'Pick file',
-                            onTap: pickPlan)),
-                    SizedBox(height: S.s12),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: S.s4),
-                      child: Text(
-                        'The first run fires immediately, then repeats per the schedule. Minimum interval is 5 minutes. A plan file is reread each fire.',
-                        style: TS.caption(),
-                      ),
-                    ),
                     SizedBox(height: S.s16),
                     Row(children: [
                       Expanded(
@@ -308,7 +266,6 @@ class RecurringScreenState extends State<RecurringScreen>
     );
     final t = title.text.trim();
     final p = prompt.text.trim();
-    final planPath = plan.text.trim();
     final sched = switch (mode) {
       'daily' => 'daily ${daily.text.trim()}',
       'onceAt' => 'at ${daily.text.trim()}',
@@ -316,10 +273,8 @@ class RecurringScreenState extends State<RecurringScreen>
       'custom' => _customSchedule(customEvery.text),
       _ => schedule,
     };
-    const label = 'Goal';
     title.dispose();
     prompt.dispose();
-    plan.dispose();
     daily.dispose();
     customEvery.dispose();
     if (saved != true) return;
@@ -327,9 +282,9 @@ class RecurringScreenState extends State<RecurringScreen>
       if (mounted) toast(context, 'Title is required', danger: true);
       return;
     }
-    if (p.isEmpty && planPath.isEmpty) {
+    if (p.isEmpty) {
       if (mounted) {
-        toast(context, '$label or plan file is required', danger: true);
+        toast(context, 'A prompt is required', danger: true);
       }
       return;
     }
@@ -345,7 +300,6 @@ class RecurringScreenState extends State<RecurringScreen>
         title: t,
         sessionId: sessionId,
         prompt: p,
-        planPath: planPath.isEmpty ? null : planPath,
         schedule: sched,
       );
       _refresh();
@@ -429,7 +383,6 @@ class RecurringScreenState extends State<RecurringScreen>
     if (_submitting) return;
     final t = _titleCtrl.text.trim();
     final p = _promptCtrl.text.trim();
-    final planPath = _planCtrl.text.trim();
     final sched = switch (_mode) {
       'daily' => 'daily ${_dailyCtrl.text.trim()}',
       'onceAt' => 'at ${_dailyCtrl.text.trim()}',
@@ -441,9 +394,9 @@ class RecurringScreenState extends State<RecurringScreen>
       if (mounted) toast(context, 'Title is required', danger: true);
       return;
     }
-    if (p.isEmpty && planPath.isEmpty) {
+    if (p.isEmpty) {
       if (mounted) {
-        toast(context, 'Goal or plan file is required', danger: true);
+        toast(context, 'A prompt is required', danger: true);
       }
       return;
     }
@@ -461,32 +414,11 @@ class RecurringScreenState extends State<RecurringScreen>
         title: t,
         sessionId: _boundSessionId,
         prompt: p,
-        planPath: planPath.isEmpty ? null : planPath,
         schedule: sched,
       );
       _refresh();
     } catch (e) {
       if (mounted) toast(context, "Couldn't create $t: $e", danger: true);
-    }
-  }
-
-  Future<void> _pickPlanInline() async {
-    final start =
-        (widget.workspace?.trim().isNotEmpty == true) ? widget.workspace : null;
-    final picked = await presentScreen<String>(
-      context,
-      builder: (_, close) => FileExplorer(
-        client: widget.client,
-        title: 'Plan file',
-        start: start,
-        onClose: close,
-        onPickFile: (path) {},
-      ),
-    );
-    if (picked != null && picked.trim().isNotEmpty && mounted) {
-      setState(() {
-        _planCtrl.text = picked.trim();
-      });
     }
   }
 
@@ -505,7 +437,7 @@ class RecurringScreenState extends State<RecurringScreen>
             children: [
               Expanded(
                 child: Text(
-                  'Schedule a goal or message',
+                  'Schedule a wake',
                   style: TS.label(AppColors.fg1),
                 ),
               ),
@@ -594,23 +526,11 @@ class RecurringScreenState extends State<RecurringScreen>
           ],
           SizedBox(height: S.of(10)),
           AppField(
-            label: 'Goal',
+            label: 'Prompt',
             controller: _promptCtrl,
             hint: 'The piece of work to complete',
             minLines: 2,
             maxLines: 5,
-          ),
-          SizedBox(height: S.of(10)),
-          AppField(
-            label: 'Plan file (optional)',
-            controller: _planCtrl,
-            mono: true,
-            hint: 'notes/plan.md — pick or type a path',
-            rightSlot: IconBtn('folder',
-                size: 28,
-                iconSize: 14,
-                tooltip: 'Pick file',
-                onTap: _pickPlanInline),
           ),
           SizedBox(height: S.of(14)),
           Row(
@@ -637,7 +557,6 @@ class RecurringScreenState extends State<RecurringScreen>
       _selId = job.id;
       _titleCtrl.text = job.title;
       _promptCtrl.text = job.prompt;
-      _planCtrl.text = job.planPath ?? '';
       _dailyCtrl.text = '09:00';
       _customEveryCtrl.clear();
       _mode = 'keep';
@@ -655,7 +574,6 @@ class RecurringScreenState extends State<RecurringScreen>
     if (_submitting) return;
     final t = _titleCtrl.text.trim();
     final p = _promptCtrl.text.trim();
-    final planPath = _planCtrl.text.trim();
     final sched = switch (_mode) {
       'keep' => job.scheduleLabel,
       'daily' => 'daily ${_dailyCtrl.text.trim()}',
@@ -668,8 +586,8 @@ class RecurringScreenState extends State<RecurringScreen>
       toast(context, 'Title is required', danger: true);
       return;
     }
-    if (p.isEmpty && planPath.isEmpty) {
-      toast(context, 'Goal or plan file is required', danger: true);
+    if (p.isEmpty) {
+      toast(context, 'A prompt is required', danger: true);
       return;
     }
     if (sched == null) {
@@ -683,7 +601,6 @@ class RecurringScreenState extends State<RecurringScreen>
         job.id,
         title: t,
         prompt: p,
-        planPath: planPath,
         schedule: _mode == 'keep' ? null : sched,
       );
       _refresh();
@@ -771,23 +688,11 @@ class RecurringScreenState extends State<RecurringScreen>
                 ],
                 SizedBox(height: S.s12),
                 AppField(
-                    label: 'Goal',
+                    label: 'Prompt',
                     controller: _promptCtrl,
                     hint: 'The piece of work to complete',
                     minLines: 3,
                     maxLines: 6),
-                SizedBox(height: S.s12),
-                AppField(
-                  label: 'Plan file (optional)',
-                  controller: _planCtrl,
-                  mono: true,
-                  hint: 'notes/plan.md — pick or type a path',
-                  rightSlot: IconBtn('folder',
-                      size: 28,
-                      iconSize: 14,
-                      tooltip: 'Pick file',
-                      onTap: _pickPlanInline),
-                ),
               ]),
         ),
       ],
@@ -900,7 +805,7 @@ class RecurringScreenState extends State<RecurringScreen>
             SettingsHeader(
               back: SettingsBack('Scheduled', onTap: _cancelAdd),
               title: 'New scheduled job',
-              subtitle: 'Schedule a goal or message.',
+              subtitle: 'Schedule a wake.',
               actions: [
                 Btn('Save job',
                     small: true, disabled: _submitting, onTap: _saveInline),
@@ -1087,7 +992,7 @@ class RecurringScreenState extends State<RecurringScreen>
 
   String _nextIn(RecurringJob job) {
     if (!_enabled(job)) return 'paused';
-    if (job.queued) return 'queued — next after current goal';
+    if (job.queued) return 'queued — next after current run';
     if (job.nextRunAt <= 0) return '';
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final secs = job.nextRunAt - now;
@@ -1129,11 +1034,9 @@ class RecurringScreenState extends State<RecurringScreen>
     final paused = !_enabled(job);
     final target = _targetLabel(job);
     final bits = <String>[
-      if (!job.delivery) 'message',
       job.scheduleLabel,
       target,
       _nextIn(job),
-      if (job.planPath != null) job.planPath!,
     ];
     final sub = bits.where((s) => s.isNotEmpty).join(' · ');
     final error = job.lastError?.trim() ?? '';

@@ -9,26 +9,21 @@ import '../tap_detector.dart';
 /// Desktop "/" command popover: pure parse/filter logic, a controller driven
 /// by the composer input, and the popover widget. Phone never mounts it.
 
-enum SlashCmd { goal, compact, fork, handoff, wakes, resume, settle, warm }
+enum SlashCmd { compact, fork, handoff, wakes, resume, settle, warm }
 
-/// A "/query" token found before the caret. [rest] only carries text for
-/// "/goal some text" so the goal can be set without the editor.
+/// A "/query" token found before the caret.
 class SlashQuery {
-  const SlashQuery(this.start, this.end, this.query, [this.rest = '']);
+  const SlashQuery(this.start, this.end, this.query);
   final int start; // offset of the '/'
   final int end; // caret
   final String query;
-  final String rest;
 }
 
 final _slashRe = RegExp(r'(?:^|\s)/([\w\-]*)$');
-final _goalRe = RegExp(r'^/goal[ \t]+([^\n]*)$');
 
 SlashQuery? parseSlash(String text, int caret) {
   if (caret < 0 || caret > text.length) return null;
   final before = text.substring(0, caret);
-  final g = _goalRe.firstMatch(before);
-  if (g != null) return SlashQuery(0, caret, 'goal', g.group(1)!);
   final m = _slashRe.firstMatch(before);
   if (m == null) return null;
   final slash = before.lastIndexOf('/');
@@ -47,15 +42,12 @@ class SlashItem {
 }
 
 List<SlashItem> slashItems({
-  required bool goalOngoing,
   required bool isMc,
   required String resumeMode,
   required bool settleOn,
   bool? warmOn,
 }) =>
     [
-      SlashItem(SlashCmd.goal, goalOngoing ? 'Cancel goal' : 'Set goal',
-          '/goal', 'goal'),
       const SlashItem(SlashCmd.compact, 'Compact history', '/compact', 'wrap'),
       const SlashItem(SlashCmd.fork, 'Fork from here', '/fork', 'git-fork'),
       if (!isMc)
@@ -93,7 +85,6 @@ String formatTokens(int n) => n >= 1000 ? '~${(n / 1000).round()}k' : '~$n';
 /// Live session facts and actions the controller needs; refreshed each build.
 class SlashEnv {
   const SlashEnv({
-    required this.goalOngoing,
     required this.isMc,
     required this.resumeMode,
     required this.settleOn,
@@ -106,12 +97,11 @@ class SlashEnv {
     this.handoffAgents,
     this.onHandOff,
   });
-  final bool goalOngoing;
   final bool isMc;
   final String resumeMode;
   final bool settleOn;
   final int? resumeTokens;
-  final void Function(SlashCmd cmd, String rest) onCommand;
+  final void Function(SlashCmd cmd) onCommand;
   final void Function(String mode) onResume;
   final void Function(bool on) onSettle;
 
@@ -147,7 +137,6 @@ class SlashController extends ChangeNotifier {
     if (e == null || _q == null) return const [];
     return filterSlash(
         slashItems(
-            goalOngoing: e.goalOngoing,
             isMc: e.isMc,
             resumeMode: e.resumeMode,
             settleOn: e.settleOn,
@@ -183,7 +172,7 @@ class SlashController extends ChangeNotifier {
     final q = v.selection.isValid && v.selection.isCollapsed
         ? parseSlash(v.text, v.selection.baseOffset)
         : null;
-    final changed = q?.query != _q?.query || q?.rest != _q?.rest;
+    final changed = q?.query != _q?.query;
     if (q == null || (changed && q.query != _q?.query)) _dismissed = false;
     _q = q;
     if (changed) index = 0;
@@ -267,7 +256,6 @@ class SlashController extends ChangeNotifier {
     final items = rootItems;
     if (i < 0 || i >= items.length) return;
     final item = items[i];
-    final rest = _q!.rest.trim();
     _removeToken();
     if (item.drill) {
       _sub = item.cmd;
@@ -279,7 +267,7 @@ class SlashController extends ChangeNotifier {
     _dismissed = true;
     _q = null;
     notifyListeners();
-    e.onCommand(item.cmd, rest);
+    e.onCommand(item.cmd);
   }
 
   /// Returns true when the key was consumed by the open menu.

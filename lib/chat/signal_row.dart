@@ -386,9 +386,6 @@ EnvelopeSignal envelopeSignal(CoordinationEnvelope env, String sender) {
     case 'owed_reply':
       return EnvelopeSignal(
           'clock', SignalTone.run, '$who is waiting on a reply');
-    case 'task_plan':
-      return EnvelopeSignal(
-          'list', SignalTone.neutral, '$who shared a plan for $subject');
   }
   final what = env.tag.replaceAll('_', ' ');
   return EnvelopeSignal('message', SignalTone.neutral, '$who sent a $what',

@@ -727,15 +727,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   Map<String, String> titles = const {};
 
-  Widget _goalLine(TaskItem t) => Padding(
-        padding: EdgeInsets.only(top: S.s2),
-        child: Text('Goal: ${t.goalTitle}',
-            key: const ValueKey('task-goal'),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: sans(13, color: AppColors.fg3)),
-      );
-
   TaskNote _note(TaskItem t) => taskNote(
         status: t.status.wire,
         statusReason: t.statusReason,
@@ -827,7 +818,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 weight: FontWeight.w600,
                 spacing: -0.2,
                 color: AppColors.fg1)),
-        if (t?.goalTitle != null) _goalLine(t!),
       ]),
     );
   }
@@ -1203,10 +1193,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       const SizedBox(height: 10),
                       _reportCard(report),
                     ],
-                    if (t.workPlan.isNotEmpty) ...[
-                      const SizedBox(height: 18),
-                      _WorkPlan(steps: t.workPlan),
-                    ],
                     if (t.status == TaskStatus.inReview) ...[
                       const SizedBox(height: 18),
                       _paneVerdict(),
@@ -1253,10 +1239,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                           if (stands != null && report != null)
                             const SizedBox(height: 10),
                           if (report != null) _reportCard(report),
-                        ],
-                        if (t.workPlan.isNotEmpty) ...[
-                          const SizedBox(height: 18),
-                          _WorkPlan(steps: t.workPlan),
                         ],
                         if (turns.isNotEmpty) _turnsSection(),
                         const SizedBox(height: 18),
@@ -1377,13 +1359,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     sans(14, color: inReview ? AppColors.run : AppColors.fg3)),
           ),
         ]),
-        if (t.goalTitle != null) ...[
-          SizedBox(height: S.s4),
-          Text('Goal: ${t.goalTitle}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: sans(13, color: AppColors.fg3)),
-        ],
         if (inReview) ...[
           SizedBox(height: S.of(14)),
           Row(children: [
@@ -1455,13 +1430,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               ? Text('No brief yet.', style: sans(15, color: AppColors.fg4))
               : _Description(markdown: brief, size: 13, clamp: true),
         ),
-        if (t.workPlan.isNotEmpty) ...[
-          _v5Label('Plan'),
-          _v5Card(
-            padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.s12),
-            child: _WorkPlan(steps: t.workPlan, header: false),
-          ),
-        ],
         if (_detailRows(t).isNotEmpty) ...[
           _v5Label('Details'),
           _v5Card(
@@ -1656,10 +1624,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             SizedBox(height: S.s6),
             _byline(t),
             SizedBox(height: S.s16),
-          ],
-          if (t.goalTitle != null && !kMobile && !widget.pane) ...[
-            _goalLine(t),
-            SizedBox(height: S.s8),
           ],
           _keyCard(_keyRows(t)),
           if (!kMobile)
@@ -2200,24 +2164,16 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   }
 
   Widget _planTab(TaskItem t) {
-    if (t.workPlan.isEmpty && turns.isEmpty) {
+    if (turns.isEmpty) {
       return const EmptyState(
         icon: 'task',
-        title: 'No plan yet',
-        body: 'The agent’s plan and its turns show up here.',
+        title: 'No turns yet',
+        body: 'Agent turns show up here.',
       );
     }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (t.workPlan.isNotEmpty) ...[
-          _WorkPlan(steps: t.workPlan),
-          if (turns.isNotEmpty) SizedBox(height: S.of(14)),
-        ],
-        _turnsSection(),
-      ],
-    );
+    return _turnsSection();
   }
+
 
   Widget _logTab() => log.isEmpty
       ? const EmptyState(
@@ -2304,12 +2260,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     final color = on ? AppColors.fg1 : AppColors.fg3;
     final (icon, label) = switch (i) {
       0 => ('layers', 'Summary'),
-      1 => ('task', 'Plan'),
+      1 => ('task', 'Turns'),
       2 => ('history', 'Log'),
       _ => ('file-diff', 'Changes'),
     };
     final count = switch (i) {
-      1 => t.workPlan.isEmpty ? turns.length : t.workPlan.length,
+      1 => turns.length,
       2 => log.length,
       3 => _changedFiles().length,
       _ => null,
@@ -2622,64 +2578,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             ),
           ),
         );
-}
-
-/// The worker's plan for the task, as it ticks steps off.
-class _WorkPlan extends StatelessWidget {
-  const _WorkPlan({required this.steps, this.header = true});
-  final List<WorkStep> steps;
-
-  /// The phone puts "Plan" above the card, so it drops the count line.
-  final bool header;
-
-  @override
-  Widget build(BuildContext context) {
-    final done = steps.where((s) => s.done).length;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (header) ...[
-          Text('Plan · $done/${steps.length}',
-              style: sans(13, weight: FontWeight.w500, color: AppColors.fg3)),
-          SizedBox(height: S.s8),
-        ],
-        for (final s in steps)
-          Padding(
-            padding: EdgeInsets.only(bottom: S.s6),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Padding(
-                padding: EdgeInsets.only(top: S.s2),
-                child: s.done
-                    ? AppIcon('check', size: 14, color: AppColors.ok)
-                    : Container(
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: s.current ? AppColors.accentBg : null,
-                          border: Border.all(
-                              color:
-                                  s.current ? AppColors.accent : AppColors.fg4,
-                              width: 1.5),
-                        ),
-                      ),
-              ),
-              SizedBox(width: S.of(10)),
-              Expanded(
-                child: Text(s.step,
-                    style: sans(13,
-                        height: 19 / 13,
-                        color: s.done
-                            ? AppColors.fg3
-                            : s.current
-                                ? AppColors.fg1
-                                : AppColors.fg2)),
-              ),
-            ]),
-          ),
-      ],
-    );
-  }
 }
 
 class _Description extends StatefulWidget {

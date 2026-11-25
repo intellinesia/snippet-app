@@ -1,6 +1,4 @@
 import 'group_rail.dart';
-import '../goal_models.dart';
-import 'mobile_home/mission_phone.dart';
 import '../composer/desktop_composer.dart' show DeskIconButton;
 import 'agent_transcript_head.dart';
 import '../quiet.dart' show QuietHand;
@@ -1011,9 +1009,6 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   final GlobalKey _inputFieldKey = GlobalKey();
 
   Map<String, CoordinationAgent> _agents = const {};
-  GoalDetail? _mission;
-  final GlobalKey _missionKey = GlobalKey();
-  double _missionH = 0;
 
   /// The `@query` under the cursor, when the completion list should show.
   ({int start, String query})? _mention;
@@ -1049,11 +1044,6 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   @override
   void initState() {
     super.initState();
-    if (kMobile) {
-      missionForGroup(widget.client, widget.group.id).then((m) {
-        if (mounted && m != null && m.plan.isNotEmpty) setState(() => _mission = m);
-      });
-    }
     DraftSink.register(this, (t) {
       _input.text = t;
       _input.selection = TextSelection.collapsed(offset: t.length);
@@ -1361,10 +1351,6 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_mission != null) {
-      // The mission bar is laid over the stage; the list reserves its height.
-      WidgetsBinding.instance.addPostFrameCallback((_) => _syncMission());
-    }
     // Desktop: the tab, bar and panel carry the identity; no stage.
     final hideChrome = widget.embedded || !kMobile;
     return _kit.dropTarget(Material(
@@ -1396,28 +1382,6 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                           right: 0,
                           child: _header(),
                         ),
-                      if (!hideChrome && _mission != null)
-                        Positioned(
-                          top: StageBar.height,
-                          left: 0,
-                          right: 0,
-                          child: NotificationListener<SizeChangedLayoutNotification>(
-                            onNotification: (_) {
-                              WidgetsBinding.instance
-                                  .addPostFrameCallback((_) => _syncMission());
-                              return true;
-                            },
-                            child: SizeChangedLayoutNotifier(
-                              child: MissionBar(
-                              key: _missionKey,
-                              detail: _mission!,
-                              onTap: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                      builder: (_) =>
-                                          MissionPage(detail: _mission!)))),
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                 ),
@@ -1427,14 +1391,6 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
           ),
           hideChrome),
     ));
-  }
-
-  void _syncMission() {
-    final h = (_missionKey.currentContext?.findRenderObject() as RenderBox?)
-            ?.size
-            .height ??
-        0;
-    if (mounted && (h - _missionH).abs() > 0.5) setState(() => _missionH = h);
   }
 
   Widget _header() {
@@ -1712,7 +1668,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   }
 
   Widget _body({required bool hideChrome}) {
-    final topPad = (hideChrome ? 12.0 : StageBar.height) + _missionH;
+    final topPad = hideChrome ? 12.0 : StageBar.height;
     if (_loading) {
       return const Center(child: Spinner(size: 24));
     }

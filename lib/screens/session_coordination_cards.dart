@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 
 import '../markdown_preview.dart' show plainPreview;
 import '../platform.dart';
-import '../plan_card.dart';
 import '../settings_form.dart' show Grouped;
 import '../transcript_card.dart';
 import '../theme.dart';
@@ -334,9 +333,7 @@ class MissionEnvelopeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (tone, icon, tag) = envelope.isPlan
-        ? (Tone.accent, 'list', 'Plan')
-        : switch (envelope.eventKind) {
+    final (tone, icon, tag) = switch (envelope.eventKind) {
             'working' => (Tone.run, 'activity', 'Working'),
             'done' => (Tone.ok, 'check', 'Done'),
             'blocked' => (Tone.danger, 'alert-triangle', 'Blocked'),
@@ -360,41 +357,14 @@ class MissionEnvelopeCard extends StatelessWidget {
         body: envelope.summary,
       );
     }
-    if (envelope.isPlan) {
-      final steps = parsePlanSteps(envelope.summary);
-      if (steps.isNotEmpty) {
-        return PlanProgressCard(steps: [
-          for (final (t, st) in steps)
-            {
-              'step': t,
-              'status': switch (st) {
-                PlanStep.done => 'completed',
-                PlanStep.now => 'in_progress',
-                PlanStep.todo => 'pending',
-              },
-            },
-        ]);
-      }
-      return _ThreadCard(
-        icon: 'list',
-        tone: Tone.accent,
-        kind: 'Worker plan',
-        reference: envelope.taskId.isEmpty ? null : _short(envelope.taskId),
-        title: envelope.title.isEmpty ? 'Task' : envelope.title,
-        status: 'Plan',
-        body: '',
-      );
-    }
     return _ThreadCard(
       icon: icon,
       tone: tone,
       kind: envelope.isRecurring
           ? 'Scheduled run'
-          : envelope.isPlan
-              ? 'Worker plan'
-              : envelope.isReport
-                  ? 'Task report'
-                  : 'Lead',
+          : envelope.isReport
+              ? 'Task report'
+              : 'Lead',
       reference: envelope.taskId.isEmpty ? null : _short(envelope.taskId),
       title: envelope.title.isEmpty
           ? (envelope.isRecurring ? 'Scheduled run' : 'Task')

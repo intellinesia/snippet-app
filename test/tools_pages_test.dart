@@ -9,7 +9,6 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'package:snippet/api.dart';
 import 'package:snippet/github_models.dart';
-import 'package:snippet/goal_models.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/theme.dart';
@@ -25,12 +24,6 @@ Map<String, dynamic> _task(String id, String title, String agent, String status,
       'id': id, 'title': title, 'description': 'Readiness probe fails on cold starts. Raise the startup grace and verify with rolling restarts.',
       'status': status, 'session_id': 's-$id', 'thread_id': 'th-$id', 'created_by_kind': 'agent', 'created_by_id': agent,
       'created_at': _ago(const Duration(hours: 3)), 'updated_at': _ago(const Duration(minutes: 9)),
-      if (goal != null) ...{'goal_id': 'g1', 'goal_title': goal},
-      'work_plan': [
-        {'step': 'Reproduce the cold-start failure', 'status': 'done'},
-        {'step': 'Raise startup grace to 15 s', 'status': 'done'},
-        {'step': 'Verify 3 rolling restarts', 'status': 'in_progress'},
-      ],
     };
 
 Map<String, dynamic> _pr(int n, String title, String author, List<String> checks, String review) => {
@@ -152,27 +145,6 @@ class _Daemon extends DaemonClient {
   @override
   Future<List<CoordinationAgent>> coordinationAgents() async => const [];
 
-  @override
-  Future<GoalDetail> goal(String id) async => GoalDetail.fromJson({
-        'id': 'g1', 'title': 'Staging stays green on deploy', 'outcome': 'Deploys never page', 'status': 'open', 'requester': 'boss',
-        'created_at': _ago(const Duration(days: 2)), 'closed_at': null,
-        'progress': {'done': 2, 'total': 3}, 'evidence': {'have': 1, 'total': 2}, 'attention': null,
-        'acceptance': [
-          {'criterion': 'Deploys pass readiness on a cold pool', 'method': 'rolling restarts', 'evidence': 'T-244 rolling restarts'},
-          {'criterion': 'Alert fires within 2 min of a failed probe', 'method': 'probe test', 'evidence': null},
-        ],
-        'plan': [
-          {'n': 1, 'task_id': 't-241', 'title': 'Probe timings', 'depends_on': []},
-          {'n': 2, 'task_id': 't-244', 'title': 'Startup grace', 'depends_on': [1]},
-          {'n': 3, 'task_id': 't-253', 'title': 'Probe alert', 'depends_on': [2]},
-        ],
-        'tasks': [
-          {'id': 't-241', 'slice': 1, 'title': 'Probe timings', 'status': 'done', 'agent': 'moss'},
-          {'id': 't-244', 'slice': 2, 'title': 'Startup grace', 'status': 'done', 'agent': 'moss'},
-          {'id': 't-253', 'slice': 3, 'title': 'Probe alert', 'status': 'todo', 'agent': 'moss', 'waiting_on': ['t-244']},
-        ],
-        'blockers': [],
-      });
 }
 
 const _gh = GithubStatus(available: true, repo: 'intellinesia/snippet-mobile', viewer: 'me', permission: 'ADMIN');

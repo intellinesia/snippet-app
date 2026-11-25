@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/composer/slash_menu.dart';
 
-List<SlashItem> items({bool goal = false, bool mc = false}) => slashItems(
-    goalOngoing: goal, isMc: mc, resumeMode: 'ask', settleOn: true);
+List<SlashItem> items({bool mc = false}) =>
+    slashItems(isMc: mc, resumeMode: 'ask', settleOn: true);
 
 void main() {
   group('parseSlash', () {
@@ -18,13 +18,6 @@ void main() {
       expect(parseSlash('/fork now', 9), isNull);
       expect(parseSlash('/fork', 0), isNull);
     });
-    test('goal text is split off', () {
-      final q = parseSlash('/goal ship it', 13)!;
-      expect(q.query, 'goal');
-      expect(q.rest, 'ship it');
-      expect(q.start, 0);
-      expect(parseSlash('/goal ', 6)!.rest, '');
-    });
   });
 
   group('filterSlash', () {
@@ -33,10 +26,9 @@ void main() {
       expect(filterSlash(items(), 'resume').single.cmd, SlashCmd.resume);
       expect(filterSlash(items(), 'zzz'), isEmpty);
     });
-    test('wakes only for Lead; goal label flips', () {
+    test('wakes only for Lead', () {
       expect(items().any((i) => i.cmd == SlashCmd.wakes), isFalse);
       expect(items(mc: true).any((i) => i.cmd == SlashCmd.wakes), isTrue);
-      expect(items(goal: true).first.label, 'Cancel goal');
     });
   });
 

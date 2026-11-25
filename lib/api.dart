@@ -16,7 +16,6 @@ import 'presence.dart';
 import 'swr.dart';
 import 'mochi.dart';
 import 'models.dart';
-import 'goal_models.dart';
 import 'wake_models.dart';
 import 'github_models.dart';
 import 'reach_models.dart';
@@ -2278,26 +2277,6 @@ class DaemonClient {
         jsonDecode(r.body) as Map<String, dynamic>);
   }
 
-  /// GET /goals — [status] is open, closed, cancelled or all.
-  Future<List<Goal>> goals({String status = 'open'}) async {
-    final r = await _get(_uri('/goals', {'status': status}));
-    if (r.statusCode != 200) throw _err('list goals', r);
-    final body = jsonDecode(r.body);
-    final list = body is Map ? body['goals'] : body;
-    return [
-      if (list is List)
-        for (final e in list)
-          if (e is Map) Goal.fromJson(Map<String, dynamic>.from(e))
-    ];
-  }
-
-  /// GET /goals/{id} — a goal with its acceptance, plan, tasks and blockers.
-  Future<GoalDetail> goal(String id) async {
-    final r = await _get(_uri('/goals/${Uri.encodeComponent(id)}'));
-    if (r.statusCode != 200) throw _err('get goal', r);
-    return GoalDetail.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
-  }
-
   /// GET /coordination/tasks/{id} — one task.
   Future<TaskItem> getTask(String id) async {
     final r =
@@ -2515,7 +2494,6 @@ class DaemonClient {
     required String title,
     required String sessionId,
     String prompt = '',
-    String? planPath,
     required String schedule,
   }) async {
     final body = <String, dynamic>{
@@ -2524,7 +2502,6 @@ class DaemonClient {
       'brief': prompt,
       'schedule': schedule,
     };
-    if (planPath != null) body['plan_path'] = planPath;
     final r = await _post(_uri('/wakes'), headers: _json, body: jsonEncode(body));
     _recurringCache = null;
     if (r.statusCode != 200) throw _err('create recurring job', r);
@@ -2536,14 +2513,12 @@ class DaemonClient {
     String id, {
     String? title,
     String? prompt,
-    String? planPath,
     String? schedule,
     bool? enabled,
   }) async {
     final body = <String, dynamic>{};
     if (title != null) body['title'] = title;
     if (prompt != null) body['brief'] = prompt;
-    if (planPath != null) body['plan_path'] = planPath;
     if (schedule != null) body['schedule'] = schedule;
     if (enabled != null) body['enabled'] = enabled;
     final r = await _patch(_uri('/wakes/${Uri.encodeComponent(id)}'),

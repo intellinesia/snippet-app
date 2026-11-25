@@ -65,7 +65,6 @@ void main() {
       'status': 'idle',
       'last_active': 1700000000,
     });
-    expect(older.plan, isNull);
     expect(older.lanes, isNull);
     expect(older.nextWakeAt, isNull);
     expect(older.pr, isNull);
@@ -74,11 +73,7 @@ void main() {
       'id': 't1',
       'title': 'Build D2',
       'status': 'in_progress',
-      'plan_done': 2,
-      'plan_total': 5,
     });
-    expect(task.planDone, 2);
-    expect(task.planTotal, 5);
   });
 
 }

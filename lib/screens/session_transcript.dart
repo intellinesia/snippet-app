@@ -200,8 +200,6 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
     ]);
 
     final quietWakes = quietWakeRuns(events);
-    // A plan is drawn once, at its latest update, not once per update.
-    final lastPlan = events.lastIndexWhere((e) => e['kind'] == 'plan_updated');
     final staleStalls = supersededStalls(events);
 
     final resultOf = <int, int>{};
@@ -738,21 +736,6 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
               key,
               NoteLine(_s(e['error']),
                   error: true, label: 'Invalid call · ${_s(e['tool_name'])}'));
-        case 'plan_updated':
-          endTools(key);
-          final steps =
-              (e['steps'] as List? ?? const []).whereType<Map>().toList();
-          if (steps.isNotEmpty && idx == lastPlan) {
-            // Clear air around it, so it never reads as a step of the
-            // activity cards on either side.
-            addEvent(
-                key,
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: PlanProgressCard(
-                      steps: steps, explanation: _s(e['explanation'])),
-                ));
-          }
         case 'system_decision':
           // Watch lines are part of the work, so they join the open fold.
           if (const {'watch_added', 'watch_removed', 'file_watch'}
@@ -1005,7 +988,6 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
         case 'tool_call':
         case 'tool_result':
         case 'invalid_tool_call':
-        case 'plan_updated':
         case 'file_presented':
         case 'artifact_presented':
         case 'user_question':
@@ -1048,11 +1030,9 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
 
   bool _isMetaTool(String raw) {
     final n = toolBaseName(raw);
-    return n == 'update_plan' ||
-        n == 'ask_user' ||
+    return         n == 'ask_user' ||
         n == 'delegate_task' ||
         n == 'cancel_delegated_task' ||
-        n == 'complete_goal' ||
         n == 'monitor' ||
         n == 'present_file';
   }

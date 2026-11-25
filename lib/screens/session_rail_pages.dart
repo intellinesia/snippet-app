@@ -186,9 +186,7 @@ extension _RailPages on _SessionRailState {
         ),
       ];
     }
-    final plan = _SessionRailState._plan(s);
     final t = _tasks.where((t) => t.sessionId == widget.sessionId).firstOrNull;
-    final goalOn = (s?.goal?.ongoing ?? false) || _editingGoal;
     final git = _git;
     final gitFiles =
         git != null && git.ok ? git.files : const <GitFile>[];
@@ -197,33 +195,13 @@ extension _RailPages on _SessionRailState {
         : const <FileChange>[];
     final ws = (s?.workspace ?? '').trim();
     final wsLabel = ws.isEmpty ? '' : lastPathSegment(ws, ifEmpty: ws);
-    final doneCount = plan == null
-        ? 0
-        : plan.where((p) => _SessionRailState._stepState(p) == 2).length;
     return [
       head,
-      if (goalOn) ...[
-        _goalCard(),
-        const SizedBox(height: 16),
-      ],
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _flatSectionHead(
-              'Plan',
-              meta: plan != null && plan.isNotEmpty
-                  ? '$doneCount of ${plan.length}'
-                  : null,
-            ),
-            if (plan != null && plan.isNotEmpty)
-              ..._planRows(plan)
-            else
-              Text(
-                'No plan yet. $agentLabel writes one when the work has steps.',
-                style: sans(12, height: 1.4, color: AppColors.fg2),
-              ),
             _flatSectionHead(
               'Changes',
               top: 20,
@@ -305,9 +283,7 @@ extension _RailPages on _SessionRailState {
                         style: sans(13, height: 1.35, color: AppColors.fg1)),
                     const SizedBox(height: 4),
                     Text(
-                      t.workPlan.isEmpty
-                          ? t.status.label
-                          : '${t.workPlan.where((p) => p.done).length} of ${t.workPlan.length} done',
+                      t.status.label,
                       style: sans(12, color: AppColors.fg2),
                     ),
                   ],

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import '../platform.dart';
 
 import '../api.dart';
-import '../goal_models.dart';
 import '../mochi.dart';
 import '../models.dart';
 import '../task_reason.dart';
@@ -12,7 +11,6 @@ import '../theme.dart';
 import '../widgets.dart';
 import '../swr.dart';
 
-import 'goals/goal_widgets.dart';
 import 'shell_models.dart' show RightTab;
 import '../tap_detector.dart';
 
@@ -47,7 +45,6 @@ class MissionBoardPanel extends StatefulWidget {
 class _MissionBoardPanelState extends State<MissionBoardPanel> {
   List<LeadTask> _tasks = const [];
   List<RecurringJob> _jobs = const [];
-  List<Goal> _goals = const [];
   bool _loaded = false;
   Revalidator? _live;
   _BoardFilter _filter = _BoardFilter.active;
@@ -90,13 +87,8 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
       try {
         jobs = await widget.client.recurringJobs();
       } catch (_) {}
-      List<Goal> goals = const [];
-      try {
-        goals = await widget.client.goals();
-      } catch (_) {}
       if (!mounted) return;
       setState(() {
-        _goals = goals;
         _tasks = o.recentTasks.where((t) => !t.archived).toList();
         _jobs = jobs.where((j) => j.enabled && j.nextRunAt > 0).toList()
           ..sort((a, b) => a.nextRunAt.compareTo(b.nextRunAt));
@@ -142,11 +134,6 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
         'in_review' => ('In review', AppColors.accent, AppColors.accentBg),
         'blocked' => ('Blocked', AppColors.danger, AppColors.dangerBg),
         'done' => ('Done', AppColors.ok, AppColors.okBg),
-        _ when t.planTotal > 0 => (
-            'Plan ${t.planDone.clamp(1, t.planTotal)} of ${t.planTotal}',
-            AppColors.run,
-            AppColors.runBg
-          ),
         _ => ('Working', AppColors.run, AppColors.runBg),
       };
 
@@ -243,13 +230,6 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                         onTap: open),
                   ],
                 ]),
-                if (t.status != 'done' && t.planTotal > 0) ...[
-                  SizedBox(height: S.of(10)),
-                  Progress(
-                      pct: 100 * t.planDone / t.planTotal,
-                      height: 4,
-                      color: AppColors.run),
-                ],
               ],
             ),
           ),
@@ -446,10 +426,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
               padding: EdgeInsets.only(bottom: S.s24),
               children: [
                 _headerBar(),
-                if (doing.isEmpty &&
-                    _jobs.isEmpty &&
-                    done.isEmpty &&
-                    _goals.isEmpty)
+                if (doing.isEmpty && _jobs.isEmpty && done.isEmpty)
                   Padding(
                     padding: EdgeInsets.fromLTRB(S.s24, 120, S.s24, 0),
                     child: Column(children: [
@@ -464,20 +441,6 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                           style: sans(13, height: 1.5, color: AppColors.fg4)),
                     ]),
                   ),
-                if (showFlight && _goals.isNotEmpty) ...[
-                  _label('Goals'),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: S.of(10)),
-                    child: Column(children: [
-                      for (final g in _goals.take(6))
-                        GoalRow(
-                          goal: g,
-                          onTap: () =>
-                              openGoalDetail(context, widget.client, g.id),
-                        ),
-                    ]),
-                  ),
-                ],
                 if (_tasks.isNotEmpty) _filterBar(),
                 if (showReview && review.isNotEmpty) ...[
                   _label('Needs review'),

@@ -6,60 +6,11 @@ import 'shell_components.dart';
 import 'shell_models.dart';
 import 'shell_rail.dart' show RailIcon;
 
-/// Shows an anchored goal popup beneath [anchorContext].
-Future<void> showGoalPopover({
-  required BuildContext context,
-  required BuildContext anchorContext,
-  required ValueChanged<String> onSetGoal,
-  String? agentName,
-}) async {
-  final box = anchorContext.findRenderObject() as RenderBox?;
-  if (box == null) return;
-  final origin = box.localToGlobal(Offset.zero);
-  const width = 360.0;
-  final screen = MediaQuery.sizeOf(context).width;
-  final left =
-      (origin.dx + box.size.width - width).clamp(8.0, screen - width - 8);
-  await showGeneralDialog(
-    context: context,
-    barrierDismissible: true,
-    barrierLabel: 'goal',
-    barrierColor: Colors.transparent,
-    transitionDuration: Motion.press,
-    pageBuilder: (_, __, ___) => Stack(children: [
-      Positioned(
-        left: left,
-        top: origin.dy + box.size.height + 6,
-        width: width,
-        child: Material(
-          color: AppColors.overlay,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(R.lg),
-              side: BorderSide(color: AppColors.line)),
-          elevation: 4,
-          shadowColor: Colors.black.withValues(alpha: 0.4),
-          child: Padding(
-            padding: EdgeInsets.all(S.of(14)),
-            child: GoalPopover(
-              agentName: agentName,
-              onSet: (text) {
-                Navigator.pop(context);
-                onSetGoal(text);
-              },
-            ),
-          ),
-        ),
-      ),
-    ]),
-  );
-}
-
 /// Builds the activity rail action tools for the active tab.
 List<Widget> buildShellRailTools({
   required ShellTab? activeTab,
   required MacSessionStatus? macSessionStatus,
   required void Function(String action, [String? extra]) onSessionAction,
-  required void Function(BuildContext ctx) onOpenGoalPopover,
   void Function(String action)? onAgentAction,
 }) {
   final tab = activeTab;
@@ -69,7 +20,6 @@ List<Widget> buildShellRailTools({
   // Lead's options live in its docked details panel.
   if (mc) return const [];
   final s = macSessionStatus?.state;
-  final goalRunning = s?.goal?.ongoing ?? false;
   if (tab != null && tab.isDraft) return const [];
   final lanes = s?.lanes.where((l) => l.running).length ?? 0;
 
@@ -179,10 +129,6 @@ List<Widget> buildShellRailTools({
           item('book-marked', 'Memory', () => onSessionAction('memory')),
           item('pull-request', 'Pull requests',
               () => onSessionAction('pull_requests')),
-          const PopupMenuDivider(),
-          goalRunning
-              ? item('goal', 'Cancel goal', () => onSessionAction('goal'))
-              : item('goal', 'Set goal', () => onOpenGoalPopover(ctx)),
         ],
         if (win <= 0 || used <= 0)
           item('wrap', 'Compact history', () => onSessionAction('compact')),
@@ -205,7 +151,6 @@ List<Widget> buildShellRailTools({
         'more-horizontal',
         tooltip: 'Session actions',
         badge: lanes > 0 ? '$lanes' : null,
-        active: goalRunning,
         onTap: tab == null ? null : () => openMenu(ctx),
       ),
     ),

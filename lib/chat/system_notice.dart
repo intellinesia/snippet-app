@@ -166,8 +166,9 @@ int? _findClosingTagEnd(String text, String tag, int start) {
 String _joinParts(List<String> parts) =>
     [for (final p in parts) if (p.trim().isNotEmpty) p.trim()].join('\n\n');
 
-SystemNotice _parseSingleNotice(String text) {
+SystemNotice? _parseSingleNotice(String text) {
   final kind = envelopeKind(text)!;
+  if (kind == 'goal') return null;
   String f(String name) => envelopeField(text, name);
   final note = envelopeBody(text);
   final attr = f('kind');
@@ -274,10 +275,6 @@ SystemNotice _parseSingleNotice(String text) {
           'eye',
           name.isEmpty ? 'Watch triggered' : 'Watch: $name',
           note.isNotEmpty ? note : _plain(text));
-    case 'goal':
-      final title = f('title').isNotEmpty ? f('title') : f('goal_text');
-      return SystemNotice(
-          'sparkles', title.isEmpty ? 'Goal update' : 'Goal: $title', note);
     case 'routing':
       return SystemNotice('transfer', 'Model route switched',
           note.isNotEmpty ? note : _plain(text));
@@ -325,8 +322,12 @@ SystemNotice _parseSingleNotice(String text) {
 SystemNotice? parseSystemNotice(String raw) {
   final envelopes = _splitEnvelopes(raw);
   if (envelopes == null || envelopes.isEmpty) return null;
-  if (envelopes.length == 1) return _parseSingleNotice(envelopes.first);
-  final notices = [for (final e in envelopes) _parseSingleNotice(e)];
+  final notices = [
+    for (final e in envelopes)
+      if (_parseSingleNotice(e) case final notice?) notice,
+  ];
+  if (notices.isEmpty) return null;
+  if (notices.length == 1) return notices.first;
   return SystemNotice(
     notices.first.icon,
     [for (final n in notices) n.summary].join(' · '),

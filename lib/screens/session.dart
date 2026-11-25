@@ -59,7 +59,6 @@ import '../tool_views.dart';
 import '../transcript.dart';
 import '../term.dart';
 import '../panel.dart';
-import '../plan_card.dart';
 import '../settings_form.dart';
 import 'session_actions_page.dart';
 import '../share_inbound.dart';
@@ -1629,11 +1628,6 @@ class _SessionScreenState extends State<SessionScreen>
                                                 onSend: _sendDecision,
                                                 agentId: _me?.displayAgentId,
                                                 agentName: _meAgentName,
-                                                stepLabel: _me?.plan != null &&
-                                                        _me!.plan!.total > 0
-                                                    ? sessionStepLabel(
-                                                        _me!.plan!)
-                                                    : null,
                                                 showApproveAll:
                                                     _pendingApprovalTotal(
                                                             events) >

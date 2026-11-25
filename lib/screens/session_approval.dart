@@ -1023,9 +1023,6 @@ class _Attachment {
 
 class _SessionActionsPanel extends StatefulWidget {
   final HarnessState? session;
-  final void Function(String text) onSetGoal;
-  final VoidCallback onCancelGoal;
-  final VoidCallback onResumeGoal;
   final VoidCallback onLanes;
   final VoidCallback? onGiveWork;
   final VoidCallback? onAutonomy;
@@ -1079,9 +1076,6 @@ class _SessionActionsPanel extends StatefulWidget {
     this.ownAgent,
     this.ownProfile,
     this.providers = const {},
-    required this.onSetGoal,
-    required this.onCancelGoal,
-    required this.onResumeGoal,
     required this.onLanes,
     this.onGiveWork,
     this.onAutonomy,
@@ -1119,14 +1113,6 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
   ({String title, Widget Function(BuildContext, VoidCallback) body})? _sub;
   late bool? _auto = widget.autoSettle;
   late String? _resume = widget.resumeMode;
-  late final TextEditingController _goalCtl = TextEditingController();
-
-  @override
-  void dispose() {
-    _goalCtl.dispose();
-    super.dispose();
-  }
-
   void _toggle(String id) => setState(() => _open = _open == id ? null : id);
 
   Widget _group(String label, List<Widget> rows) =>
@@ -1154,49 +1140,6 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
         trailing: trailing,
         child: child,
       );
-
-  Widget _mobileGoalRow(HarnessState? s, bool goalOn) {
-    final goal = s?.goal;
-    if (goalOn && goal != null) {
-      return _row(
-        icon: 'goal',
-        label: 'Goal',
-        detail: goal.text,
-        value: goal.paused ? 'Paused' : 'Working',
-        id: 'goal',
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: Btn(goal.paused ? 'Resume goal' : 'Cancel goal',
-              small: true,
-              variant: BtnVariant.secondary,
-              onTap: goal.paused ? widget.onResumeGoal : widget.onCancelGoal),
-        ),
-      );
-    }
-    return _row(
-      icon: 'goal',
-      label: 'Set a goal',
-      detail: 'Something to work toward on its own',
-      id: 'goal',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AppField(
-              controller: _goalCtl,
-              hint: 'What should the agent work toward?',
-              minLines: 2,
-              maxLines: 4),
-          SizedBox(height: S.of(10)),
-          Btn('Set goal', full: true, onTap: () {
-            final t = _goalCtl.text.trim();
-            if (t.isEmpty) return;
-            widget.onSetGoal(t);
-            _goalCtl.clear();
-          }),
-        ],
-      ),
-    );
-  }
 
   Widget? _autoSettleRow() {
     final on = _auto;
@@ -1250,47 +1193,6 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
         _ => 'Ask',
       };
 
-  Widget _goalCard(HarnessState? s) {
-    final goal = s!.goal!;
-    return Container(
-      padding: EdgeInsets.all(S.of(14)),
-      decoration: BoxDecoration(
-        color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(R.of(20)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            AppIcon('goal', size: 15, color: AppColors.accent),
-            SizedBox(width: S.s8),
-            Text('Goal', style: sans(13, color: AppColors.fg3)),
-            const Spacer(),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s2),
-              decoration: BoxDecoration(
-                color: (goal.paused ? AppColors.run : AppColors.ok)
-                    .withValues(alpha: 0.13),
-                borderRadius: BorderRadius.circular(R.of(8)),
-              ),
-              child: Text(goal.paused ? 'Paused' : 'Working',
-                  style: sans(12,
-                      weight: W.label,
-                      color: goal.paused ? AppColors.run : AppColors.ok)),
-            ),
-          ]),
-          SizedBox(height: S.s8),
-          Text(goal.text, style: sans(15, color: AppColors.fg1)),
-          SizedBox(height: S.s12),
-          Btn(goal.paused ? 'Resume goal' : 'Cancel goal',
-              small: true,
-              variant: BtnVariant.secondary,
-              onTap: goal.paused ? widget.onResumeGoal : widget.onCancelGoal),
-        ],
-      ),
-    );
-  }
-
   /// A drill-in: a pushed page on phones (so back steps out one level), the
   /// panel's own content on desktop where a popover has no route stack.
   void _drill(BuildContext context, String title,
@@ -1298,7 +1200,7 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
     if (kMobile) {
       pushActionsSubPage(context,
           title: title,
-          padded: !(title == 'Goal' || title == 'Set a goal' || title == 'Behaviour'),
+          padded: title != 'Behaviour',
           body: body);
     } else {
       setState(() => _sub = (title: title, body: body));
@@ -1326,8 +1228,6 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
 
   Widget _pageBuild(BuildContext context) {
     final s = widget.session;
-    final goal = s?.goal;
-    final goalOn = (goal?.ongoing ?? false) && goal != null;
     final lanes = s?.lanes ?? const <LaneInfo>[];
     final running = lanes.where((l) => l.running).length;
     final counts = s?.counts ?? const SessionCounts();
@@ -1373,36 +1273,6 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
             value: running > 0 ? '$running running' : 'All finished',
             chevron: true,
             onTap: widget.onLanes),
-      if (!widget.hideGoal)
-        goalOn
-            ? _prow(
-                'goal',
-                'Goal',
-                goal.text,
-                () => _drill(
-                    context,
-                    'Goal',
-                    (_, back) => SessionGoalPage(
-                        goal: goal,
-                        onSet: widget.onSetGoal,
-                        onCancel: widget.onCancelGoal,
-                        onResume: widget.onResumeGoal,
-                        onDone: back)),
-                value: goal.paused ? 'Paused' : 'Working')
-            : _prow(
-                'goal',
-                'Set a goal',
-                'Something to work toward on its own',
-                () => _drill(
-                    context,
-                    'Set a goal',
-                    (_, back) => SessionGoalPage(
-                        goal: null,
-                        onSet: widget.onSetGoal,
-                        onCancel: widget.onCancelGoal,
-                        onResume: widget.onResumeGoal,
-                        onDone: back)),
-                accent: true),
       if (widget.onAutonomy != null)
         _prow('activity', 'Automated wakes',
             'Keeps the work moving while you are away', widget.onAutonomy),
@@ -1547,7 +1417,6 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
   Widget build(BuildContext context) {
     if (widget.page) return _pageBuild(context);
     final s = widget.session;
-    final goalOn = (s?.goal?.ongoing ?? false) && s?.goal != null;
     final runningLanes = s?.lanes.where((l) => l.running).length ?? 0;
     final showLanes = !widget.hideGoal && (s?.lanes.isNotEmpty ?? false);
 
@@ -1591,7 +1460,6 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
           onTap: widget.onCompact),
     ];
     final sessionRows = <Widget>[
-      if (!widget.hideGoal && !goalOn) _mobileGoalRow(s, false),
       if (widget.onAutonomy != null)
         _row(
             icon: 'activity',
@@ -1633,10 +1501,6 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (widget.header != null) widget.header!,
-        if (!widget.hideGoal && goalOn) ...[
-          SizedBox(height: S.s8),
-          _goalCard(s),
-        ],
         if (tiles.isNotEmpty) ...[
           SizedBox(height: S.s8),
           IntrinsicHeight(

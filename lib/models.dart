@@ -154,27 +154,6 @@ class CatalogModel {
         reasoning = j['reasoning'] as bool?;
 }
 
-class SessionPlan {
-  final int done;
-  final int total;
-  final String? current;
-  final int? stepStartedAt;
-
-  const SessionPlan({
-    required this.done,
-    required this.total,
-    this.current,
-    this.stepStartedAt,
-  });
-
-  factory SessionPlan.fromJson(Map<String, dynamic> j) => SessionPlan(
-        done: (j['done'] as num?)?.toInt() ?? 0,
-        total: (j['total'] as num?)?.toInt() ?? 0,
-        current: _optText(j['current']),
-        stepStartedAt: (j['step_started_at'] as num?)?.toInt(),
-      );
-}
-
 class SessionLaneItem {
   final String id;
   final String title;
@@ -320,13 +299,9 @@ class SessionInfo {
   /// made from, and the worktree's branch.
   final String? originFolder;
   final String? branch;
-  final SessionPlan? plan;
   final SessionLanes? lanes;
   final int? nextWakeAt;
   final SessionPr? pr;
-
-  /// An active or paused /goal; older daemons omit it.
-  final GoalInfo? goal;
 
   /// The folder a person knows this session by: the project, not the
   /// generated worktree directory.
@@ -394,19 +369,14 @@ class SessionInfo {
             : null,
         originFolder = j['origin_folder'] as String?,
         branch = j['branch'] as String?,
-        plan = j['plan'] is Map
-            ? SessionPlan.fromJson((j['plan'] as Map).cast<String, dynamic>())
-            : null,
         lanes = j['lanes'] is Map
             ? SessionLanes.fromJson((j['lanes'] as Map).cast<String, dynamic>())
             : null,
         nextWakeAt = (j['next_wake_at'] as num?)?.toInt(),
         pr = j['pr'] is Map
             ? SessionPr.fromJson((j['pr'] as Map).cast<String, dynamic>())
-            : null,
-        goal = j['goal'] is Map
-            ? GoalInfo.fromJson((j['goal'] as Map).cast<String, dynamic>())
             : null;
+
 
   SessionInfo _copy({String? title, String? status, int? seenAt}) =>
       SessionInfo._(
@@ -438,11 +408,9 @@ class SessionInfo {
         attention: attention,
         originFolder: originFolder,
         branch: branch,
-        plan: plan,
         lanes: lanes,
         nextWakeAt: nextWakeAt,
         pr: pr,
-        goal: goal,
       );
 
   SessionInfo withTitle(String title) => _copy(title: title);
@@ -483,11 +451,9 @@ class SessionInfo {
     this.attention,
     this.originFolder,
     this.branch,
-    this.plan,
     this.lanes,
     this.nextWakeAt,
     this.pr,
-    this.goal,
   });
 }
 
@@ -792,7 +758,6 @@ class HarnessState {
   final RateWindow? ratePrimary;
   final RateWindow? rateSecondary;
   final List<Checkpoint> checkpoints;
-  final GoalInfo? goal; // an active autonomous /goal, if any
   final bool compacting; // a history-compaction pass is running
   final String? turnStartedAt; // RFC3339 when the current running turn began
   final String?
@@ -821,7 +786,6 @@ class HarnessState {
     required this.ratePrimary,
     required this.rateSecondary,
     required this.checkpoints,
-    required this.goal,
     this.compacting = false,
     this.turnStartedAt,
     this.compactingStartedAt,
@@ -884,9 +848,6 @@ class HarnessState {
       ratePrimary: win('primary'),
       rateSecondary: win('secondary'),
       checkpoints: mapList(j['checkpoints']).map(Checkpoint.fromJson).toList(),
-      goal: (j['goal'] is Map)
-          ? GoalInfo.fromJson((j['goal'] as Map).cast<String, dynamic>())
-          : null,
       compacting: j['compacting'] == true,
       turnStartedAt: asString(j['turn_started_at']),
       compactingStartedAt: asString(j['compacting_started_at']),
@@ -938,7 +899,6 @@ class HarnessState {
       // missing field deserializes to [] and would wipe history after rewind.
       checkpoints:
           d.containsKey('checkpoints') ? base.checkpoints : checkpoints,
-      goal: d.containsKey('goal') ? base.goal : goal,
       compacting: base.compacting,
       turnStartedAt: base.turnStartedAt,
       compactingStartedAt: base.compactingStartedAt,
@@ -972,7 +932,6 @@ class HarnessState {
         ratePrimary: ratePrimary,
         rateSecondary: rateSecondary,
         checkpoints: checkpoints,
-        goal: goal,
         compacting: compacting,
         turnStartedAt: turnStartedAt,
         compactingStartedAt: compactingStartedAt,
@@ -999,7 +958,6 @@ class HarnessState {
         ratePrimary: ratePrimary,
         rateSecondary: rateSecondary,
         checkpoints: checkpoints,
-        goal: goal,
         compacting: compacting,
         turnStartedAt: turnStartedAt,
         compactingStartedAt: compactingStartedAt,
@@ -1118,25 +1076,6 @@ class LaneActivity {
         kind: j['kind'] as String? ?? '',
         text: j['text'] as String? ?? '',
       );
-}
-
-/// An active autonomous `/goal` the agent is driving toward.
-class GoalInfo {
-  final String text;
-  final String dir; // the agent's .snippet/goals/… workspace
-  final String status; // active | paused | complete | cancelled
-  final int autonomousTurns;
-  final int
-      resumeAt; // unix secs a paused (rate-limited) goal can resume (0 = unknown)
-  GoalInfo.fromJson(Map<String, dynamic> j)
-      : text = j['text'] as String? ?? '',
-        dir = j['dir'] as String? ?? '',
-        status = j['status'] as String? ?? 'active',
-        autonomousTurns = (j['autonomous_turns'] as num?)?.toInt() ?? 0,
-        resumeAt = (j['resume_at'] as num?)?.toInt() ?? 0;
-  bool get active => status == 'active';
-  bool get paused => status == 'paused';
-  bool get ongoing => active || paused;
 }
 
 /// Human label for a rate-limit window length (mirrors the TUI).
@@ -1800,8 +1739,6 @@ class LeadTask {
   final List<String> waitingOn;
   final String? currentStep;
   final String? supersededBy;
-  final int planDone;
-  final int planTotal;
 
   LeadTask.preview(LeadTask o)
       : id = o.id,
@@ -1817,8 +1754,6 @@ class LeadTask {
         waitingOn = o.waitingOn,
         currentStep = o.currentStep,
         supersededBy = o.supersededBy,
-        planDone = o.planDone,
-        planTotal = o.planTotal,
         summary = false;
 
   LeadTask.fromJson(Map<String, dynamic> j)
@@ -1838,9 +1773,7 @@ class LeadTask {
         statusReason = _optText(j['status_reason']),
         waitingOn = _textList(j['waiting_on']),
         currentStep = _optText(j['current_step']),
-        supersededBy = _optText(j['superseded_by']),
-        planDone = (j['plan_done'] as num?)?.toInt() ?? 0,
-        planTotal = (j['plan_total'] as num?)?.toInt() ?? 0;
+        supersededBy = _optText(j['superseded_by']);
 
   bool get isActive =>
       !archived && (status == 'pending' || status == 'in_progress');
@@ -1887,10 +1820,8 @@ class RecurringJob {
   final String title;
   final String sessionId;
   final String prompt;
-  final String? planPath;
   final String scheduleKind; // interval | daily | once
   final String scheduleLabel;
-  final bool delivery; // true = goal, false = plain message
   final bool enabled;
   final bool queued;
   final int nextRunAt;
@@ -1904,15 +1835,11 @@ class RecurringJob {
         title = j['title'] as String? ?? '',
         sessionId = j['session_id'] as String? ?? '',
         prompt = j['prompt'] as String? ?? j['brief'] as String? ?? '',
-        planPath = (j['plan_path'] as String?)?.trim().isEmpty == true
-            ? null
-            : j['plan_path'] as String?,
         scheduleKind = (j['schedule'] is Map
                 ? (j['schedule'] as Map)['kind'] as String?
                 : null) ??
             '',
         scheduleLabel = _scheduleLabel(j['schedule']),
-        delivery = (j['delivery'] as String? ?? 'goal') != 'message',
         enabled = j['enabled'] as bool? ?? true,
         queued = j['queued'] as bool? ?? false,
         nextRunAt = (j['next_run_at'] as num?)?.toInt() ?? 0,
@@ -2076,23 +2003,12 @@ class TaskTurn {
             (j['commits'] as List?)?.whereType<String>().toList() ?? const [];
 }
 
-/// One step of the working plan the session doing a task keeps.
-class WorkStep {
-  final String step;
-  final String status;
-  const WorkStep(this.step, this.status);
-  bool get done => status == 'done';
-  bool get current => status == 'in_progress';
-}
-
 class TaskItem {
   final String id;
   final String title;
   final String description;
   final String plan;
 
-  /// The worker's own plan, mirrored from its session as it ticks steps off.
-  final List<WorkStep> workPlan;
   final TaskStatus status;
   final int priority;
   final String createdByKind;
@@ -2109,22 +2025,12 @@ class TaskItem {
   final List<String> waitingOn;
   final String? currentStep;
   final String? supersededBy;
-  final String? goalId;
-  final String? goalTitle;
-  final int planDone;
-  final int planTotal;
 
   TaskItem.fromJson(Map<String, dynamic> j)
       : id = j['id'] as String? ?? '',
         title = j['title'] as String? ?? '',
         description = j['description'] as String? ?? '',
         plan = j['plan'] as String? ?? '',
-        workPlan = ((j['work_plan'] as List?) ?? const [])
-            .whereType<Map>()
-            .map((e) => WorkStep(
-                (e['step'] ?? '').toString(), (e['status'] ?? '').toString()))
-            .where((s) => s.step.trim().isNotEmpty)
-            .toList(),
         status = TaskStatus.parse(j['status'] as String?),
         priority = (j['priority'] as num?)?.toInt() ?? 0,
         createdByKind = j['created_by_kind'] as String? ?? '',
@@ -2137,19 +2043,7 @@ class TaskItem {
         statusReason = _optText(j['status_reason']),
         waitingOn = _textList(j['waiting_on']),
         currentStep = _optText(j['current_step']),
-        supersededBy = _optText(j['superseded_by']),
-        goalId = _optText(j['goal_id']),
-        goalTitle = _optText(j['goal_title']),
-        planDone = (j['plan_done'] as num?)?.toInt() ??
-            ((j['work_plan'] as List?) ?? const [])
-                .whereType<Map>()
-                .where((e) => e['status'] == 'done')
-                .length,
-        planTotal = (j['plan_total'] as num?)?.toInt() ??
-            ((j['work_plan'] as List?) ?? const [])
-                .whereType<Map>()
-                .where((e) => (e['step'] ?? '').toString().trim().isNotEmpty)
-                .length;
+        supersededBy = _optText(j['superseded_by']);
 
   /// This task in another column, for showing a move before the daemon
   /// confirms it.
@@ -2160,7 +2054,6 @@ class TaskItem {
         title = t.title,
         description = t.description,
         plan = t.plan,
-        workPlan = t.workPlan,
         status = to,
         priority = t.priority,
         createdByKind = t.createdByKind,
@@ -2173,11 +2066,7 @@ class TaskItem {
         statusReason = t.statusReason,
         waitingOn = t.waitingOn,
         currentStep = t.currentStep,
-        supersededBy = t.supersededBy,
-        goalId = t.goalId,
-        goalTitle = t.goalTitle,
-        planDone = t.planDone,
-        planTotal = t.planTotal;
+        supersededBy = t.supersededBy;
 }
 
 String? _optText(dynamic v) {

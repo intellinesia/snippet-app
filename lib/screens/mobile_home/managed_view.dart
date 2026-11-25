@@ -173,7 +173,6 @@ class _RunningTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = session;
     final title = s.title.trim().isEmpty ? 'Untitled session' : s.title.trim();
-    final plan = s.plan != null && s.plan!.total > 0 ? s.plan : null;
     final branch = (s.branch ?? '').trim();
     return Semantics(
       button: true,
@@ -225,15 +224,6 @@ class _RunningTile extends StatelessWidget {
                       ),
                     ],
                   ]),
-                  if (plan != null) ...[
-                    SizedBox(height: S.s4),
-                    Text(_planLine(plan),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(13, color: AppColors.fg2)),
-                    SizedBox(height: S.s8),
-                    _Segments(done: plan.done, total: plan.total, colour: colour),
-                  ],
                 ],
               ),
             ),
@@ -243,36 +233,4 @@ class _RunningTile extends StatelessWidget {
     );
   }
 
-  static String _planLine(SessionPlan p) {
-    final at = (p.done + 1).clamp(1, p.total);
-    final step = p.current?.trim() ?? '';
-    return 'Plan $at of ${p.total}${step.isEmpty ? '' : ' · $step'}';
-  }
-}
-
-class _Segments extends StatelessWidget {
-  const _Segments(
-      {required this.done, required this.total, required this.colour});
-
-  final int done;
-  final int total;
-  final Color colour;
-
-  @override
-  Widget build(BuildContext context) => ExcludeSemantics(
-        child: Row(children: [
-          for (var i = 0; i < total; i++) ...[
-            if (i > 0) const SizedBox(width: 4),
-            Expanded(
-              child: Container(
-                height: 4,
-                decoration: BoxDecoration(
-                  color: i < done ? colour : AppColors.fg1.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-          ],
-        ]),
-      );
 }
