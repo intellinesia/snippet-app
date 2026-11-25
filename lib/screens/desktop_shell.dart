@@ -960,7 +960,6 @@ class _DesktopShellState extends State<DesktopShell>
         cmd(id, icon, title, () => _dispatchSessionAction(id, extra),
             kind: PaletteKind.session, shortcut: shortcut, keywords: keywords);
 
-    final goalOn = state?.goal?.ongoing ?? false;
     final manual = state?.approvalMode == 'manual';
     final github = tab != null && (_githubReady[tab.key] ?? false);
     final openSessionIds = {
@@ -981,9 +980,6 @@ class _DesktopShellState extends State<DesktopShell>
               keywords: const ['pr', 'github', 'review', 'merge']),
         act('artifacts', 'clipboard', 'Artifacts & files',
             keywords: const ['deliverables', 'shared']),
-        goalOn
-            ? act('goal', 'goal', 'Cancel goal')
-            : act('goal', 'goal', 'Set a goal', keywords: const ['autonomous']),
         manual
             ? act('approval', 'check-circle', 'Approval: Yolo',
                 extra: 'auto', keywords: const ['yolo', 'auto', 'mode'])

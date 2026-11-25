@@ -578,7 +578,6 @@ class _TaskCardState extends State<_TaskCard> {
         t.status == TaskStatus.blocked || t.status == TaskStatus.failed;
     final folder = widget.folder ?? '';
     final hot = _hover || widget.lifted;
-    final done = t.planDone >= t.planTotal;
     final showActions = widget.needsYou && t.status == TaskStatus.inReview;
     return MouseRegion(
       cursor: SystemMouseCursors.grab,
@@ -638,32 +637,6 @@ class _TaskCardState extends State<_TaskCard> {
                       overflow: TextOverflow.ellipsis,
                       style: sans(12, height: 1.4, color: AppColors.fg3)),
                 ),
-              ],
-              if (t.planTotal > 0) ...[
-                const SizedBox(height: 9),
-                Row(children: [
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(2),
-                      child: SizedBox(
-                        height: 4,
-                        child: Stack(fit: StackFit.expand, children: [
-                          ColoredBox(color: AppColors.surface3),
-                          FractionallySizedBox(
-                            alignment: Alignment.centerLeft,
-                            widthFactor:
-                                (t.planDone / t.planTotal).clamp(0.0, 1.0),
-                            child: ColoredBox(
-                                color: done ? AppColors.ok : AppColors.fg2),
-                          ),
-                        ]),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text('${done ? t.planTotal : t.planDone + 1}/${t.planTotal}',
-                      style: mono(11, color: AppColors.fg3)),
-                ]),
               ],
               const SizedBox(height: 10),
               Row(children: [
@@ -758,14 +731,6 @@ class _TaskCardState extends State<_TaskCard> {
                 style: sans(13,
                     weight: W.label, height: 1.35, color: AppColors.fg1),
               ),
-              if (t.planTotal > 0) ...[
-                const SizedBox(height: 6),
-                TaskPlanProgress(
-                  done: t.planDone,
-                  total: t.planTotal,
-                  compact: true,
-                ),
-              ],
               if (widget.step.isNotEmpty) ...[
                 SizedBox(height: S.s6),
                 Text(

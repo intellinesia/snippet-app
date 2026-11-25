@@ -283,9 +283,7 @@ extension _RailPages on _SessionRailState {
                         style: sans(13, height: 1.35, color: AppColors.fg1)),
                     const SizedBox(height: 4),
                     Text(
-                      t.workPlan.isEmpty
-                          ? t.status.label
-                          : '${t.workPlan.where((p) => p.done).length} of ${t.workPlan.length} done',
+                      t.status.label,
                       style: sans(12, color: AppColors.fg2),
                     ),
                   ],

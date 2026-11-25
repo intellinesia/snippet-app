@@ -408,17 +408,10 @@ class _AgentCardState extends State<AgentCard> {
               : busy
                   ? AgentCharacterState.working
                   : AgentCharacterState.sleeping;
-      final plan = busy ? lead?.plan : null;
-      final hasPlan = plan != null && plan.total > 0;
-      final step = hasPlan ? (plan.done + 1).clamp(1, plan.total) : 0;
-      final sub = [
-        status,
-        if (hasPlan && !status.contains(' of ${plan.total}'))
-          'plan $step of ${plan.total}',
-      ].join(' · ');
+      final sub = status;
       final subStyle = TeamRow.subtitleStyle();
       return TeamRow(
-        tall: hasPlan,
+        tall: false,
         onTap: () {
           tapHaptic();
           widget.onOpen();
@@ -476,21 +469,6 @@ class _AgentCardState extends State<AgentCard> {
                     if (time.isNotEmpty && !busy)
                       Text(', $time', maxLines: 1, style: subStyle),
                   ]),
-                  if (hasPlan) ...[
-                    SizedBox(height: S.s6),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(2),
-                      child: SizedBox(
-                        height: 3,
-                        child: LinearProgressIndicator(
-                          key: const ValueKey('agent-plan-bar'),
-                          value: (plan.done / plan.total).clamp(0.0, 1.0),
-                          backgroundColor: AppColors.surface1,
-                          color: AppColors.accent,
-                        ),
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),

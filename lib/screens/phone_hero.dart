@@ -206,15 +206,10 @@ class _PhoneHeroState extends State<PhoneHero> {
     return prs.firstOrNull;
   }
 
-  /// Running sessions following a plan, newest first; the hero is where their
-  /// progress shows, not the chat header or the session list.
+  /// Running sessions with delegated lanes, newest first.
   List<SessionInfo> _running() {
     final run = _live
-        .where((s) =>
-            sessionBusy(s) &&
-            ((s.plan != null && s.plan!.total > 0) ||
-                (s.goal?.ongoing ?? false) ||
-                (s.lanes?.running ?? 0) > 0))
+        .where((s) => sessionBusy(s) && (s.lanes?.running ?? 0) > 0)
         .toList()
       ..sort((a, b) => b.lastActive.compareTo(a.lastActive));
     return run.take(2).toList();
@@ -634,25 +629,13 @@ class _PhoneHeroState extends State<PhoneHero> {
   Widget _runLine(SessionInfo s) {
     final owner = s.displayAgentId ?? 'snippet';
     final title = s.title.trim().isEmpty ? '(untitled)' : s.title.trim();
-    final plan = s.plan != null && s.plan!.total > 0 ? s.plan : null;
-    final total = plan?.total ?? 0;
-    final finished = plan != null && plan.current == null && plan.done >= total;
-    final parts = <String>[];
-    final goal = s.goal;
-    if (goal != null && goal.ongoing && goal.text.trim().isNotEmpty) {
-      parts.add('${goal.paused ? 'Goal paused' : 'Goal'} · ${goal.text.trim()}');
-    }
-    if (plan != null) {
-      final stepNum = finished ? total : (plan.done + 1).clamp(1, total);
-      final step = plan.current?.trim() ?? '';
-      final where = finished ? 'Plan done' : 'Plan $stepNum of $total';
-      parts.add(step.isEmpty || finished || parts.isNotEmpty ? where : '$where · $step');
-    }
     final lanes = s.lanes?.running ?? 0;
-    if (lanes > 0) parts.add(lanes == 1 ? '1 lane' : '$lanes lanes');
-    final detail = parts.isEmpty ? 'Working' : parts.join(' · ');
-    final since = sessionDuration(plan?.stepStartedAt ?? s.runningSince);
-    final tint = heroAgentColor(owner);
+    final detail = lanes == 0
+        ? 'Working'
+        : lanes == 1
+            ? '1 lane'
+            : '$lanes lanes';
+    final since = sessionDuration(s.runningSince);
     final label = '${_name(owner)}, $title, $detail';
     return _line(
       s,
@@ -683,21 +666,15 @@ class _PhoneHeroState extends State<PhoneHero> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: sans(12, color: AppColors.fg3)),
-                if (plan != null) SizedBox(height: S.s6),
-                if (plan != null)
-                  _PlanBar(
-                      done: finished ? total : plan.done,
-                      total: total,
-                      color: tint),
               ],
             ),
           ),
         ),
-        SizedBox(width: S.s4),
       ],
       label,
     );
   }
+
 
   Widget _wakeLine(SessionInfo s) {
     final at = s.nextWakeAt!;
@@ -852,34 +829,6 @@ class _SleepMarksState extends State<_SleepMarks> {
 }
 
 /// Plan progress as one segment per step: done steps filled, the rest faint.
-class _PlanBar extends StatelessWidget {
-  const _PlanBar({required this.done, required this.total, required this.color});
-
-  final int done;
-  final int total;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final n = total.clamp(1, 12);
-    final filled = total <= 12 ? done : (done * 12 / total).round();
-    return Row(children: [
-      for (var i = 0; i < n; i++) ...[
-        if (i > 0) const SizedBox(width: 3),
-        Expanded(
-          child: Container(
-            height: 3,
-            decoration: BoxDecoration(
-              color: i < filled ? color : AppColors.fg1.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        ),
-      ],
-    ]);
-  }
-}
-
 class _HeroButton extends StatelessWidget {
   const _HeroButton(
       {required this.label, this.icon, this.color, this.ink, this.onTap});

@@ -246,7 +246,6 @@ class _TaskSheetState extends State<TaskSheet> {
       if (who.isNotEmpty) who,
       if (folder.isNotEmpty) folder,
     ].join(' · ');
-    final plan = t.workPlan;
     final entries = log.take(8).toList();
     final commits = {for (final x in turns) ...x.commits}.length;
     final files = {for (final x in turns) ...x.files}.length;
@@ -284,10 +283,6 @@ class _TaskSheetState extends State<TaskSheet> {
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
           child: Text(meta, style: sans(14, color: AppColors.fg3)),
         ),
-      if (plan.isNotEmpty) ...[
-        _h2(who.isEmpty ? 'What was done' : 'What $who did', 26),
-        for (final s in plan) _step(s),
-      ],
       _Wave(),
       _h2('Decisions and updates', 26),
       if (entries.isEmpty)
@@ -351,54 +346,6 @@ class _TaskSheetState extends State<TaskSheet> {
             style: sans(15, weight: W.label, color: AppColors.fg1)),
       );
 
-  Widget _step(WorkStep s) {
-    final Widget mark;
-    if (s.done) {
-      mark = Container(
-        width: 20,
-        height: 20,
-        decoration:
-            BoxDecoration(color: AppColors.fg3, shape: BoxShape.circle),
-        child: Icon(PhIcons.check, size: 12, color: AppColors.bg),
-      );
-    } else if (s.current) {
-      mark = Container(
-        width: 20,
-        height: 20,
-        decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.accent, width: 1.5)),
-        child: Center(
-          child: Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                  color: AppColors.accent, shape: BoxShape.circle)),
-        ),
-      );
-    } else {
-      mark = Container(
-        width: 20,
-        height: 20,
-        decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.fg4, width: 1.5)),
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Padding(padding: const EdgeInsets.only(top: 2), child: mark),
-        SizedBox(width: 14),
-        Expanded(
-          child: Text(s.step,
-              style: sans(16,
-                  height: 23 / 16,
-                  color: s.current ? AppColors.fg1 : AppColors.fg2)),
-        ),
-      ]),
-    );
-  }
 
   Widget _update(BoardEntry e) {
     final text = e.summary.trim();

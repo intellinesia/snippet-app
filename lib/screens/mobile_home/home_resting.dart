@@ -12,17 +12,14 @@ import 'home_style.dart';
 
 const int _maxWorking = 3;
 
-/// The working session of [agentId] that has plan progress, else any busy one.
+/// The working session of [agentId], if one is busy.
 SessionInfo? workingSessionOf(String agentId, Iterable<SessionInfo> sessions) {
-  SessionInfo? busy;
   for (final s in sessions) {
     if (!sessionBusy(s)) continue;
     final owner = managedOwner(s) ?? s.displayAgentId;
-    if (owner != agentId) continue;
-    if (s.plan != null && s.plan!.total > 0) return s;
-    busy ??= s;
+    if (owner == agentId) return s;
   }
-  return busy;
+  return null;
 }
 
 /// Round 7 resting screen when nothing needs the user: Lead and one
@@ -229,14 +226,11 @@ class HomeWorkingBlock extends StatelessWidget {
     );
   }
 
-  ({SessionInfo? s, SessionPlan? plan, String task, int count}) _facts(
-      AgentRow r) {
+  ({SessionInfo? s, String task, int count}) _facts(AgentRow r) {
     final s = workingSessionOf(r.agent.id, sessions);
-    final plan = s?.plan;
     return (
       s: s,
-      plan: plan,
-      task: plan?.current ?? s?.title ?? r.line,
+      task: s?.title ?? r.line,
       count: managed[r.agent.id]?.length ?? 0,
     );
   }
@@ -280,7 +274,6 @@ class HomeWorkingBlock extends StatelessWidget {
 
   Widget _card(AgentRow r) {
     final f = _facts(r);
-    final plan = f.plan;
     return _tap(
       r,
       '${r.agent.displayName}, ${f.task}',
@@ -325,18 +318,6 @@ class HomeWorkingBlock extends StatelessWidget {
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 style: sans(16, height: 1.4, color: AppColors.fg2)),
-            if (plan != null && plan.total > 0) ...[
-              const SizedBox(height: 14),
-              _SegBar(done: plan.done, total: plan.total),
-              const SizedBox(height: 9),
-              Text(
-                  plan.done >= plan.total
-                      ? 'All ${plan.total} done'
-                      : plan.done == 0
-                          ? 'Step 1 of ${plan.total}'
-                          : '${plan.done} of ${plan.total} done',
-                  style: sans(13, color: AppColors.fg3)),
-            ],
           ],
         ),
       ),
@@ -345,7 +326,6 @@ class HomeWorkingBlock extends StatelessWidget {
 
   Widget _row(AgentRow r) {
     final f = _facts(r);
-    final plan = f.plan;
     return _tap(
       r,
       '${r.agent.displayName}, ${f.task}',
@@ -373,83 +353,9 @@ class HomeWorkingBlock extends StatelessWidget {
                 ],
               ),
             ),
-            if (plan != null && plan.total > 0) ...[
-              const SizedBox(width: 8),
-              Text('${plan.done}/${plan.total}',
-                  style: codeMono(12, color: AppColors.fg3)),
-            ],
           ]),
         ),
       ),
-    );
-  }
-}
-
-/// Segmented plan progress, 4 pt high and 150 pt wide.
-/// One segment per step (capped at 12): done filled, the current one breathing.
-class _SegBar extends StatefulWidget {
-  const _SegBar({required this.done, required this.total});
-
-  final int done;
-  final int total;
-
-  @override
-  State<_SegBar> createState() => _SegBarState();
-}
-
-class _SegBarState extends State<_SegBar> with SingleTickerProviderStateMixin {
-  late final AnimationController _pulse =
-      AnimationController(vsync: this, duration: Motion.pulse * 2);
-
-  bool get _active => widget.done < widget.total;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    if (_active && !still) {
-      if (!_pulse.isAnimating) _pulse.repeat(reverse: true);
-    } else {
-      _pulse.stop();
-    }
-  }
-
-  @override
-  void dispose() {
-    _pulse.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final total = widget.total;
-    final n = total.clamp(1, 12);
-    final filled = (widget.done * n / total).round().clamp(0, n);
-    final current = _active ? filled.clamp(0, n - 1) : -1;
-    return SizedBox(
-      width: double.infinity,
-      height: 4,
-      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        for (var i = 0; i < n; i++) ...[
-          if (i > 0) const SizedBox(width: 2),
-          Expanded(
-            child: AnimatedBuilder(
-              animation: _pulse,
-              builder: (_, __) => DecoratedBox(
-                decoration: BoxDecoration(
-                  color: i < filled
-                      ? AppColors.ok
-                      : i == current
-                          ? AppColors.ok
-                              .withValues(alpha: 0.25 + 0.35 * _pulse.value)
-                          : AppColors.fg1.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ]),
     );
   }
 }

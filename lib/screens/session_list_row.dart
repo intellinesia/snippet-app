@@ -88,29 +88,12 @@ bool sessionCameBack(SessionInfo s) => s.cameBack && !sessionNeedsYou(s);
   return (label: 'Needs input', icon: 'message');
 }
 
-String sessionStepLabel(SessionPlan plan) {
-  if (plan.current == null && plan.total > 0 && plan.done >= plan.total) {
-    return 'plan done';
-  }
-  final stepNum = plan.current != null
-      ? (plan.done + 1).clamp(1, plan.total)
-      : plan.done.clamp(0, plan.total);
-  return 'plan $stepNum/${plan.total}';
-}
-
 /// "Plan 2 of 4 · Integrate lanes · 2 lanes" for a busy session, or null.
+/// Lane progress for a busy session, or null.
 String? sessionProgressLabel(SessionInfo s) {
-  final parts = <String>[];
-  final plan = s.plan;
-  if (plan != null && plan.total > 0 && plan.done < plan.total) {
-    final step = (plan.done + 1).clamp(1, plan.total);
-    parts.add('Plan $step of ${plan.total}');
-    final current = plan.current?.trim() ?? '';
-    if (current.isNotEmpty) parts.add(current);
-  }
   final lanes = s.lanes?.running ?? 0;
-  if (lanes > 0) parts.add(lanes == 1 ? '1 lane' : '$lanes lanes');
-  return parts.isEmpty ? null : parts.join(' · ');
+  if (lanes == 0) return null;
+  return lanes == 1 ? '1 lane' : '$lanes lanes';
 }
 
 String sessionDuration(int? unixSec) {

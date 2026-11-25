@@ -183,9 +183,6 @@ class _LiveSessionCardState extends State<LiveSessionCard> {
     final cameBack = sessionCameBack(s);
     final agent = s.displayAgentId?.trim() ?? '';
     final colour = agent.isEmpty ? AppColors.accent : heroAgentColor(agent);
-    final plan = !needsYou && !cameBack && s.plan != null && s.plan!.total > 0
-        ? s.plan
-        : null;
     final att = s.attention ?? const <String, dynamic>{};
     final isApproval =
         needsYou && att['type'] == 'approval' && approvalOf(att) != null;
@@ -202,17 +199,12 @@ class _LiveSessionCardState extends State<LiveSessionCard> {
     if (needsYou || cameBack) {
       age = relativeTime(s.lastActive);
     } else {
-      age = sessionDuration(plan != null
-          ? (plan.stepStartedAt ?? s.runningSince)
-          : s.runningSince);
+      age = sessionDuration(s.runningSince);
     }
     final name = agent.isEmpty ? '' : _cap(agent);
     final String footLeft;
     if (cameBack) {
       footLeft = name.isEmpty ? 'Finished' : '$name · finished';
-    } else if (plan != null) {
-      final step = _cap(sessionStepLabel(plan));
-      footLeft = name.isEmpty ? step : '$step · $name';
     } else {
       final base = needsYou ? sessionAttentionState(s).label : 'Working';
       footLeft = name.isEmpty ? base : '$base · $name';
@@ -243,9 +235,7 @@ class _LiveSessionCardState extends State<LiveSessionCard> {
             height: 8,
             decoration:
                 BoxDecoration(color: AppColors.fg2, shape: BoxShape.circle)),
-        text: plan?.current?.trim().isNotEmpty == true
-            ? plan!.current!.trim()
-            : 'Working',
+        text: 'Working',
       );
     }
 
@@ -368,19 +358,6 @@ class _LiveSessionCardState extends State<LiveSessionCard> {
                             style: sans(13, color: AppColors.fg3)),
                       ),
                     ]),
-                  ],
-                  if (plan != null) ...[
-                    SizedBox(height: S.s12),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(3),
-                      child: LinearProgressIndicator(
-                        key: const Key('card-progress'),
-                        value: (plan.done / plan.total).clamp(0.0, 1.0),
-                        minHeight: 6,
-                        backgroundColor: AppColors.surface3,
-                        valueColor: AlwaysStoppedAnimation(colour),
-                      ),
-                    ),
                   ],
                   if (canDecide) ...[
                     SizedBox(height: S.s12),

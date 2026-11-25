@@ -637,7 +637,6 @@ class RecurringScreenState extends State<RecurringScreen>
       _selId = job.id;
       _titleCtrl.text = job.title;
       _promptCtrl.text = job.prompt;
-      _planCtrl.text = job.planPath ?? '';
       _dailyCtrl.text = '09:00';
       _customEveryCtrl.clear();
       _mode = 'keep';
@@ -1129,11 +1128,9 @@ class RecurringScreenState extends State<RecurringScreen>
     final paused = !_enabled(job);
     final target = _targetLabel(job);
     final bits = <String>[
-      if (!job.delivery) 'message',
       job.scheduleLabel,
       target,
       _nextIn(job),
-      if (job.planPath != null) job.planPath!,
     ];
     final sub = bits.where((s) => s.isNotEmpty).join(' · ');
     final error = job.lastError?.trim() ?? '';
