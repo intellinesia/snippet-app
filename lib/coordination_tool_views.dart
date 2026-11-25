@@ -94,7 +94,9 @@ String _statusTitle(String status) {
 
 String _typedTag(String kind, String urgency) {
   final k = kind.replaceAll('_', ' ');
-  if (urgency == 'urgent' && k != 'interrupt') return k.isEmpty ? 'urgent' : '$k, urgent';
+  if (urgency == 'urgent' && k != 'interrupt') {
+    return k.isEmpty ? 'urgent' : '$k, urgent';
+  }
   return k;
 }
 
@@ -158,7 +160,9 @@ String _count(int n, String one, String many) => '$n ${n == 1 ? one : many}';
           done: 'Looked at');
     case 'read_coordination_board':
       return (
-        running ? 'Reading the coordination board' : 'Read the coordination board',
+        running
+            ? 'Reading the coordination board'
+            : 'Read the coordination board',
         ''
       );
     case 'read_coordination_thread':
@@ -169,7 +173,8 @@ String _count(int n, String one, String many) => '$n ${n == 1 ? one : many}';
         ''
       );
     case 'read_agent_thread':
-      final peer = arg('agent_id').isNotEmpty ? arg('agent_id') : arg('peer_id');
+      final peer =
+          arg('agent_id').isNotEmpty ? arg('agent_id') : arg('peer_id');
       return peer.isEmpty
           ? (running ? 'Reading an agent thread' : 'Read an agent thread', '')
           : (running ? 'Reading thread with' : 'Read thread with', peer);
@@ -181,10 +186,15 @@ String _count(int n, String one, String many) => '$n ${n == 1 ? one : many}';
       final tag = _typedTag(arg('kind'), arg('urgency'));
       return to.isEmpty
           ? (running ? 'Messaging an agent' : 'Messaged an agent', tag)
-          : (running ? 'Messaging' : 'Messaged', tag.isEmpty ? to : '$to · $tag');
+          : (
+              running ? 'Messaging' : 'Messaged',
+              tag.isEmpty ? to : '$to · $tag'
+            );
     case 'post_coordination_message':
       return (
-        running ? 'Posting to the coordination thread' : 'Posted to the coordination thread',
+        running
+            ? 'Posting to the coordination thread'
+            : 'Posted to the coordination thread',
         ''
       );
     case 'post_task_coordination':
@@ -195,7 +205,10 @@ String _count(int n, String one, String many) => '$n ${n == 1 ? one : many}';
     case 'message_lead':
       return (running ? 'Messaging Lead' : 'Messaged Lead', '');
     case 'record_coordination_note':
-      return (running ? 'Recording a note' : 'Recorded a coordination note', '');
+      return (
+        running ? 'Recording a note' : 'Recorded a coordination note',
+        ''
+      );
     case 'create_recurring_job':
       return (running ? 'Scheduling' : 'Scheduled', arg('title'));
     case 'assign_task_agent':
@@ -215,8 +228,14 @@ String _count(int n, String one, String many) => '$n ${n == 1 ? one : many}';
         'post' => (running ? 'Posting to group' : 'Posted to group', title),
         'list' => (running ? 'Listing groups' : 'Listed groups', ''),
         'read' => (running ? 'Reading group' : 'Read group', title),
-        'add_member' => (running ? 'Adding to group' : 'Added to group', arg('agent')),
-        'set_lead' => (running ? 'Setting group lead' : 'Set group lead', arg('agent')),
+        'add_member' => (
+            running ? 'Adding to group' : 'Added to group',
+            arg('agent')
+          ),
+        'set_lead' => (
+            running ? 'Setting group lead' : 'Set group lead',
+            arg('agent')
+          ),
         _ => (running ? 'Updating group' : 'Updated group', title),
       };
     case 'chats':
@@ -230,32 +249,54 @@ String _count(int n, String one, String many) => '$n ${n == 1 ? one : many}';
           ? (running ? 'Messaging lane' : 'Messaged lane', _short(title))
           : (running ? 'Starting lane' : 'Started lane', title);
     case 'cancel_delegated_task':
-      return (running ? 'Stopping lane' : 'Stopped lane', _short(arg('lane_id')));
+      return (
+        running ? 'Stopping lane' : 'Stopped lane',
+        _short(arg('lane_id'))
+      );
     case 'task_ledger':
       return (running ? 'Reading the task ledger' : 'Read the task ledger', '');
     case 'update_task_state':
-      return (running ? 'Updating the task ledger' : 'Updated the task ledger', '');
+      return (
+        running ? 'Updating the task ledger' : 'Updated the task ledger',
+        ''
+      );
     case 'view_task_board':
-      return (running ? 'Checking the task board' : 'Checked the task board', '');
+      return (
+        running ? 'Checking the task board' : 'Checked the task board',
+        ''
+      );
     case 'pass_turn':
-      return (running ? 'Passing the turn to' : 'Passed the turn to', arg('to_agent_id'));
+      return (
+        running ? 'Passing the turn to' : 'Passed the turn to',
+        arg('to_agent_id')
+      );
     case 'invite_task_agent':
       return (running ? 'Inviting' : 'Invited', arg('agent_id'));
     case 'submit_review':
       return (
         running ? 'Reviewing' : 'Reviewed',
-        arg('verdict') == 'approve' ? 'approved' : arg('verdict') == 'changes' ? 'changes requested' : ''
+        arg('verdict') == 'approve'
+            ? 'approved'
+            : arg('verdict') == 'changes'
+                ? 'changes requested'
+                : ''
       );
     case 'file_follow_up_task':
       return (running ? 'Filing follow-up' : 'Filed follow-up', arg('title'));
     case 'hand_off_session':
-      return (running ? 'Handing the session to' : 'Handed the session to', arg('to_agent'));
+      return (
+        running ? 'Handing the session to' : 'Handed the session to',
+        arg('to_agent')
+      );
     case 'report_progress':
       return (running ? 'Logging progress' : 'Logged progress', '');
     case 'wake_schedule':
       final name = arg('name');
       return switch (arg('action')) {
-        'set' => (running ? 'Scheduling' : 'Scheduled', [name, arg('schedule')].where((v) => v.isNotEmpty).join(' · ')),
+        'set' => (
+            running ? 'Scheduling' : 'Scheduled',
+            [name, arg('schedule')].where((v) => v.isNotEmpty).join(' · ')
+          ),
         'clear' => (running ? 'Clearing wake' : 'Cleared wake', name),
         _ => (running ? 'Checking wakes' : 'Checked wakes', name),
       };
@@ -398,14 +439,14 @@ List<Widget>? coordinationToolBody(
         if (arg('risks').isNotEmpty) _Section('Risks', _Markdown(arg('risks'))),
       ];
     case 'submit_review':
-      final findings = a?['findings'] is List ? a!['findings'] as List : const [];
-      return [_Markdown([for (final f in findings) '- $f'].join('\n'))];
+      final findings =
+          a?['findings'] is List ? a!['findings'] as List : const [];
+      return [
+        _Markdown([for (final f in findings) '- $f'].join('\n'))
+      ];
     case 'create_recurring_job':
       return [
-        _Header(
-            title: '',
-            status: '',
-            meta: arg('schedule')),
+        _Header(title: '', status: '', meta: arg('schedule')),
         if (arg('prompt').isNotEmpty)
           _Section('Prompt', _Markdown(arg('prompt'))),
       ];
@@ -419,15 +460,35 @@ List<Map> _maps(dynamic v) =>
     v is List ? v.whereType<Map>().toList() : const <Map>[];
 
 /// Tone for the daemon's statuses: tasks, sessions, agents and board kinds.
-Color _statusColor(String status) => switch (status) {
-      'done' || 'reported' || 'default' || 'active' => AppColors.ok,
-      'in_progress' || 'running' || 'dispatched' || 'draining' || 'progress' =>
-        AppColors.run,
-      'failed' || 'blocked' || 'cancelled' => AppColors.danger,
-      'todo' || 'waiting_for_input' => AppColors.accent,
-      _ when status.endsWith('unread') => AppColors.accent,
+/// Desktop chat chrome is neutral; the status word beside the dot carries the
+/// state. Phone keeps the legacy semantic colours.
+Color _statusColor(String status) {
+  if (!kMobile) {
+    return switch (status) {
+      'failed' || 'blocked' || 'cancelled' => AppColors.fg1,
+      'in_progress' ||
+      'running' ||
+      'dispatched' ||
+      'draining' ||
+      'progress' =>
+        AppColors.fg2,
       _ => AppColors.fg3,
     };
+  }
+  return switch (status) {
+    'done' || 'reported' || 'default' || 'active' => AppColors.ok,
+    'in_progress' ||
+    'running' ||
+    'dispatched' ||
+    'draining' ||
+    'progress' =>
+      AppColors.run,
+    'failed' || 'blocked' || 'cancelled' => AppColors.danger,
+    'todo' || 'waiting_for_input' => AppColors.accent,
+    _ when status.endsWith('unread') => AppColors.accent,
+    _ => AppColors.fg3,
+  };
+}
 
 String _statusLabel(String status) => status.replaceAll('_', ' ');
 
@@ -514,38 +575,36 @@ class _Header extends StatelessWidget {
       return Text.rich(TextSpan(children: [
         if (status.isNotEmpty)
           TextSpan(
-              text: _statusLabel(status),
-              style: _label(_statusColor(status))),
+              text: _statusLabel(status), style: _label(_statusColor(status))),
         if (status.isNotEmpty && meta.isNotEmpty)
           TextSpan(text: ' · ', style: _label(AppColors.fg3)),
-        if (meta.isNotEmpty)
-          TextSpan(text: meta, style: _label(AppColors.fg3)),
+        if (meta.isNotEmpty) TextSpan(text: meta, style: _label(AppColors.fg3)),
       ]));
     }
     return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Expanded(
-              child: Text(title,
-                  style: sans(kMobile ? 14 : 13,
-                      weight: W.label, color: AppColors.fg1)),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(
+            child: Text(title,
+                style: sans(kMobile ? 14 : 13,
+                    weight: W.label, color: AppColors.fg1)),
+          ),
+          if (status.isNotEmpty) ...[
+            SizedBox(width: S.of(10)),
+            Padding(
+              padding: EdgeInsets.only(top: S.of(3)),
+              child: Text(_statusLabel(status),
+                  style: _label(_statusColor(status))),
             ),
-            if (status.isNotEmpty) ...[
-              SizedBox(width: S.of(10)),
-              Padding(
-                padding: EdgeInsets.only(top: S.of(3)),
-                child: Text(_statusLabel(status),
-                    style: _label(_statusColor(status))),
-              ),
-            ],
-          ]),
-          if (meta.isNotEmpty) ...[
-            SizedBox(height: S.s2),
-            Text(meta, style: _label(AppColors.fg3)),
           ],
+        ]),
+        if (meta.isNotEmpty) ...[
+          SizedBox(height: S.s2),
+          Text(meta, style: _label(AppColors.fg3)),
         ],
-      );
+      ],
+    );
   }
 }
 
@@ -661,5 +720,4 @@ class _Messages extends StatelessWidget {
   }
 }
 
-TextStyle _label(Color c) =>
-    kMobile ? sans(13, color: c) : mono(10, color: c);
+TextStyle _label(Color c) => kMobile ? sans(13, color: c) : mono(10, color: c);
