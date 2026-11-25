@@ -64,7 +64,8 @@ Future<void> saveSessionRailFraction() async {
   await p.setDouble(kSessionRailFractionPref, sessionRailFraction.value);
 }
 
-final ValueNotifier<bool> sessionRailCollapsed = ValueNotifier<bool>(false);
+// Closed by default; the chat header (XO-03) opens it.
+final ValueNotifier<bool> sessionRailCollapsed = ValueNotifier<bool>(true);
 
 /// The panel as a floating card, for windows too narrow to dock it.
 final ValueNotifier<bool> sessionRailFloating = ValueNotifier<bool>(false);
@@ -78,7 +79,7 @@ Future<void> loadSessionRailPref() async {
   if (_railPrefLoaded) return;
   _railPrefLoaded = true;
   final p = await SharedPreferences.getInstance();
-  sessionRailCollapsed.value = p.getBool(kSessionRailCollapsedPref) ?? false;
+  sessionRailCollapsed.value = p.getBool(kSessionRailCollapsedPref) ?? true;
   sessionRailFraction.value =
       p.getDouble(kSessionRailFractionPref) ?? kSessionRailDefaultFraction;
 }

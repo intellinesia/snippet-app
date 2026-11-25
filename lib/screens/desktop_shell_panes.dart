@@ -60,7 +60,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     }
     if (t.isReadout) {
       final origin = t.readoutOrigin;
-      return Container(
+      return _withChatHeader(t, Container(
         key: ValueKey('body-${t.key}'),
         color: kMobile ? AppColors.pageBg : Colors.transparent,
         child: _rightTabBody(
@@ -69,9 +69,10 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           origin == null ? null : _macSessionControls[origin],
           deskTrailing: null,
           onDeskInfo: t.readout!.isAgent ? _showAgentInfo : null,
-          onAgentAction: t.readout!.isAgent ? _agentAction : null,
+          // The XO-03 header carries the agent; no pinned head inside.
+          onAgentAction: null,
         ),
-      );
+      ));
     }
     if (t.isDraft) {
       return NewSessionDraft(
@@ -167,7 +168,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         onClose: primary ? () => _closeTabByKey(t.key) : null,
       );
     }
-    return SessionScreen(
+    return _withChatHeader(t, SessionScreen(
       onTogglePanel: null,
       onDeskInfo: t.isLead ? _showAgentInfo : null,
       deskActions: primary
@@ -212,8 +213,145 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       onOpenDiffTab: !kMobile
           ? (f) => _openDiffTab(t.client, t.instanceUrl, t.sessionId!, f)
           : null,
+    ));
+  }
+
+  /// Desktop chat tabs (Lead, session, agent, group) sit under the XO-03
+  /// header bar; everything else is returned untouched.
+  Widget _withChatHeader(_ShellTab t, Widget body) {
+    if (kMobile) return body;
+    return LayoutBuilder(builder: (context, box) {
+      final header = _chatHeaderFor(t, box.maxWidth);
+      if (header == null) return body;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [header, Expanded(child: body)],
+      );
+    });
+  }
+
+  String _agentModel(CoordinationAgent a) {
+    final m = (a.deskModel ?? '').trim();
+    if (m.isNotEmpty) return prettyModel(m);
+    final p = (a.deskProfile ?? a.profile ?? '').trim();
+    return p.isEmpty ? '' : prettyProfile(p);
+  }
+
+  String _agentState(CoordinationAgent a, {MacSessionStatus? mac}) {
+    if (a.needsYou > 0 || mac?.state?.pendingQuestion != null) {
+      return 'Needs you';
+    }
+    if ((mac?.running ?? false) || (a.presence?.live ?? false)) {
+      return 'Working';
+    }
+    if (!a.available) return 'Asleep';
+    return 'Ready';
+  }
+
+  String _sessionProfileLabel(_ShellTab t) {
+    final s = _sessions?.where((x) => x.id == t.sessionId).firstOrNull;
+    final p = (s?.profile ?? t.profile ?? '').trim();
+    return p.isEmpty ? '' : prettyProfile(p);
+  }
+
+  static String _line(List<String> parts) =>
+      parts.where((p) => p.trim().isNotEmpty).join(' - ');
+
+  Widget? _chatHeaderFor(_ShellTab t, double width) {
+    final readout = t.readout;
+    final agent = readout?.agent ?? (t.isLead ? _mcAgent : null);
+    if (agent != null) {
+      final name = agent.displayName.trim().isEmpty
+          ? agent.id
+          : agent.displayName.trim();
+      final mac = t.isLead ? _macSessionStatuses[t.key] : null;
+      final sessions = [
+        for (final s in _sessions ?? const <SessionInfo>[])
+          if (s.displayAgentId == agent.id) s
+      ];
+      return ChatHeaderBar(
+        agentIds: [agent.id],
+        title: name,
+        subtitle: _line([
+          _agentState(agent, mac: mac),
+          _agentModel(agent).isNotEmpty
+              ? _agentModel(agent)
+              : _sessionProfileLabel(t),
+          if (sessions.isNotEmpty)
+            '${sessions.length} ${sessions.length == 1 ? 'session' : 'sessions'}',
+        ]),
+        actions: [_panelButton('info', 'agent info')],
+      );
+    }
+    final request = readout?.request;
+    if (request != null) {
+      if (!request.id.startsWith('group:') || request.sidePanel == null) {
+        return null;
+      }
+      final ids = request.iconAgentIds ?? const <String>[];
+      final names = [
+        for (final id in ids)
+          _coordinationAgents
+                  .where((a) => a.id == id)
+                  .map((a) => a.displayName.trim())
+                  .where((n) => n.isNotEmpty)
+                  .firstOrNull ??
+              id,
+      ];
+      return ChatHeaderBar(
+        agentIds: ids,
+        title: (request.title ?? '').trim().isEmpty ? 'Group' : request.title!,
+        subtitle: names.isEmpty ? '' : '${names.join(', ')} and you',
+        actions: [_panelButton('users', 'members')],
+      );
+    }
+    if (!t.isSessionChat || readout != null) return null;
+    final s = _sessions?.where((x) => x.id == t.sessionId).firstOrNull;
+    final mac = _macSessionStatuses[t.key];
+    final running = mac?.running ?? s?.running ?? false;
+    final needs = mac?.state?.pendingQuestion != null ||
+        (s != null && sessionNeedsYou(s));
+    final profile = (s?.profile ?? t.profile ?? '').trim();
+    return ChatHeaderBar(
+      agentIds: [s?.displayAgentId ?? 'snippet'],
+      title: t.title.trim().isEmpty ? 'Session' : t.title.trim(),
+      subtitle: _line([
+        needs ? 'Needs you' : (running ? 'Running' : 'Ready'),
+        if (profile.isNotEmpty) prettyProfile(profile),
+      ]),
+      actions: [_sessionPanelButton(width)],
     );
   }
+
+  /// The agent, Lead or group panel: opened only from the chat header.
+  Widget _panelButton(String icon, String what) => IconBtn(icon,
+      size: 28,
+      iconSize: 14,
+      active: !_panelHidden,
+      tooltip: _panelHidden ? 'Show $what' : 'Hide $what',
+      onTap: _togglePanel);
+
+  /// The session panel: docked when the pane is wide enough, else floating.
+  Widget _sessionPanelButton(double width) => ListenableBuilder(
+        listenable: Listenable.merge([sessionRailCollapsed, sessionRailFloating]),
+        builder: (_, __) {
+          final docked = width >= kSessionRailMinColumn;
+          final on =
+              docked ? !sessionRailCollapsed.value : sessionRailFloating.value;
+          return IconBtn('sidebar',
+              size: 28,
+              iconSize: 14,
+              active: on,
+              tooltip: on ? 'Hide session panel' : 'Show session panel',
+              onTap: () {
+            if (docked) {
+              setSessionRailCollapsed(on);
+            } else {
+              sessionRailFloating.value = !on;
+            }
+          });
+        },
+      );
 
   bool _isAuxiliary(_ShellTab t) =>
       t.isTerminal ||
@@ -627,10 +765,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         onAutonomy: mc ? () => _dispatchSessionAction('autonomy') : null,
         sessionId: mc ? tab.sessionId : null,
         onModel: mc ? () => _dispatchSessionAction('model') : null,
-        railSessions: [
-          for (final s in _sessions ?? const <SessionInfo>[])
-            if (s.displayAgentId == agent.id) s
-        ],
         onOpenSession: (s) => _openSession(s.id, s.title, s.profile),
         onAllSessions: SidebarState.showAllSessions,
         client: tab.client,
@@ -819,12 +953,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
                 sessionRailFloating.value = !on;
               }
             });
-            if (!(docked && on)) {
-              return Row(mainAxisSize: MainAxisSize.min, children: [
-                toggle,
-                SizedBox(width: S.s6),
-              ]);
-            }
+            // Closed, the panel opens from the chat header (XO-03).
+            if (!(docked && on)) return const SizedBox.shrink();
             return Container(
               width: sessionRailOuterWidth(width),
               // Full strip height so the divider meets the panel's below.
@@ -966,29 +1096,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         AgentViewSwitch(agentId: a.id),
         SizedBox(width: S.s6),
       ],
-      IconBtn('sidebar',
-          size: 30,
-          iconSize: 15,
-          active: !_panelHidden,
-          tooltip: _panelHidden ? 'Show agent panel' : 'Hide agent panel',
-          onTap: _togglePanel),
-    ]);
-  }
-
-  /// Group tabs: the panel toggle in the window bar. Working shows in the
-  /// transcript and the sidebar, as for agents.
-  Widget? _groupBarTools(_ShellTab? t) {
-    final r = t?.readout?.request;
-    if (r == null || !r.id.startsWith('group:') || r.sidePanel == null) {
-      return null;
-    }
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      IconBtn('sidebar',
-          size: 30,
-          iconSize: 15,
-          active: !_panelHidden,
-          tooltip: _panelHidden ? 'Show group panel' : 'Hide group panel',
-          onTap: _togglePanel),
     ]);
   }
 
@@ -1345,14 +1452,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
                 sessionBarTools.of(_activeTab?.sessionId) ??
                 const SizedBox.shrink()),
         if (_activeTab?.readout?.agent != null) _agentBarTools(_activeTab!),
-        if (_activeTab?.readout == null && _activeAgent?.isLead == true)
-          IconBtn('sidebar',
-              size: 28,
-              iconSize: 15,
-              active: !_panelHidden,
-              tooltip: _panelHidden ? 'Show Lead panel' : 'Hide Lead panel',
-              onTap: _togglePanel),
-        if (_groupBarTools(_activeTab) case final w?) w,
       ];
 
   Widget _macWindowBar() => MacWindowBar(

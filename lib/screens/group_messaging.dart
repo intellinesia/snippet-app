@@ -1,5 +1,3 @@
-import '../composer/desktop_composer.dart' show DeskIconButton;
-import 'agent_transcript_head.dart';
 import '../quiet.dart' show QuietHand;
 import 'dart:async';
 
@@ -1364,8 +1362,6 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
             bottom: false,
             child: Column(
               children: [
-                // Desktop: the group's identity stays above the conversation.
-                if (!kMobile && !widget.embedded) _deskHead(),
                 Expanded(
                   child: Stack(
                     clipBehavior: Clip.none,
@@ -1462,33 +1458,6 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
 
   /// Desktop: the group's identity pinned over the conversation, like an
   /// agent page: stacked faces, name, one meta line, a dots menu.
-  Widget _deskHead() {
-    final ids = _group.agentIds;
-    final body = AgentTranscriptHead(
-      agentId: ids.isEmpty ? 'snippet' : ids.first,
-      agentIds: ids,
-      name: _title,
-      meta: _stageSubtitle(),
-      actions: [
-        DeskIconButton('more-horizontal',
-            tooltip: 'Group options',
-            iconSize: 16,
-            onTap: () => unawaited(showGroupInfo(
-                  context,
-                  client: widget.client,
-                  group: _group,
-                  onOpenTasks: () => openTasksPage(context, widget.client,
-                      agentIds: _groupAgentIds),
-                  onChanged: () => unawaited(_reloadGroup()),
-                ))),
-      ],
-    );
-    return ColoredBox(
-      color: kMobile ? AppColors.bg : AppColors.panelBg,
-      child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0), child: body),
-    );
-  }
 
   /// Who is typing, replying or holding the turn stands first on the stage.
   List<String> _activeIds() {

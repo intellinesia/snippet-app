@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:snippet/screens/session_rail.dart'
+    show sessionRailCollapsed, sessionRailFloating;
 import 'package:snippet/chat/activity_dock.dart';
 import 'package:snippet/chat/ledger_line.dart';
 import 'package:snippet/api.dart';
@@ -111,6 +113,9 @@ Future<_FakeSocket> _pumpSession(
   DaemonClient.wsConnector = (uri, {connectTimeout, pingInterval}) => socket;
   addTearDown(() => DaemonClient.wsConnector = null);
   SharedPreferences.setMockInitialValues({});
+  // Rail state is global; these cases were written against the docked panel.
+  sessionRailCollapsed.value = false;
+  sessionRailFloating.value = false;
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = size;
   addTearDown(tester.view.reset);
