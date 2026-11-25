@@ -20,11 +20,11 @@ enum SessionsFilter { all, working, needs, done }
 
 /// Failed is shown only when the payload says so; today the daemon reports
 /// status 'failed' or 'error' for a turn that ended badly.
-bool sessionFailed(SessionInfo s) => s.status == 'failed' || s.status == 'error';
+bool sessionFailed(SessionInfo s) =>
+    s.status == 'failed' || s.status == 'error';
 
 /// Done = settled, completed or failed (and not needing the user).
-bool sessionDone(SessionInfo s) =>
-    !sessionNeedsYou(s) && !sessionBusy(s);
+bool sessionDone(SessionInfo s) => !sessionNeedsYou(s) && !sessionBusy(s);
 
 /// Title rule: title, else "New session in FOLDER". The sessions payload
 /// carries no first user message, so that middle step is not available.
@@ -144,8 +144,8 @@ class _QuietSessionsScreenState extends State<QuietSessionsScreen> {
           );
       Widget label(String t) => Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Text(t,
-                style: sans(12, weight: W.label, color: AppColors.fg3)),
+            child:
+                Text(t, style: sans(12, weight: W.label, color: AppColors.fg3)),
           );
       return Column(mainAxisSize: MainAxisSize.min, children: [
         label('Sort'),
@@ -429,8 +429,8 @@ class _Chip extends StatelessWidget {
                       color: selected ? AppColors.bg : AppColors.fg2)),
               const SizedBox(width: 6),
               Text('$count',
-                  style: sans(13,
-                      color: selected ? AppColors.bg : AppColors.fg3)),
+                  style:
+                      sans(13, color: selected ? AppColors.bg : AppColors.fg3)),
             ]),
           ),
         ),
@@ -632,35 +632,13 @@ class _Empty extends StatelessWidget {
     final sub = none
         ? 'Start one from a folder on your Mac.'
         : 'No ${_filterLabel(filter).toLowerCase()} sessions.';
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 48, 16, 8),
-      child: Column(children: [
-        AppIcon('layers', size: 24, color: AppColors.fg3),
-        const SizedBox(height: 12),
-        Text(head, style: sans(15, weight: W.label, color: AppColors.fg1)),
-        const SizedBox(height: 4),
-        Text(sub,
-            textAlign: TextAlign.center,
-            style: sans(13, color: AppColors.fg2)),
-        if (none && onNew != null) ...[
-          const SizedBox(height: 16),
-          TapDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onNew,
-            child: Container(
-              constraints: const BoxConstraints(minWidth: 111, minHeight: 44),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                  color: AppColors.surface2,
-                  border: Border.all(color: AppColors.border),
-                  borderRadius: BorderRadius.circular(10)),
-              child: Text('New session',
-                  style: sans(13, weight: W.label, color: AppColors.fg1)),
-            ),
-          ),
-        ],
-      ]),
+    return EmptyState(
+      icon: none ? 'chat' : 'layers',
+      title: head,
+      body: sub,
+      action: none && onNew != null
+          ? StateButton('New session', onTap: onNew)
+          : null,
     );
   }
 }
