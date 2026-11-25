@@ -24,9 +24,30 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
     }
   }
 
-  Future<void> _attachVoiceTake(Uint8List bytes, String name) => _ingest([
-        (name: name, localPath: null, readBytes: () async => bytes)
-      ]);
+  Future<void> _attachVoiceTake(Uint8List bytes, String name) =>
+      _ingest([(name: name, localPath: null, readBytes: () async => bytes)]);
+
+  Future<void> _pickDesktopPhoto() async {
+    final path = await pickLocalImage();
+    if (path == null) return;
+        final name = path.split('/').last.split('\\').last;
+    await _ingest([
+      (name: name, localPath: path, readBytes: () => File(path).readAsBytes())
+    ]);
+  }
+
+  Future<void> _newCanvasFromComposer() async {
+    final draft = _input.text.trim();
+    final title = draft.isEmpty ? 'Untitled canvas' : draft;
+    try {
+      final canvas = await widget.client.postCanvas(title);
+      final id = canvas['canvas_id'] as String?;
+      if (!mounted) return;
+      openCanvas(context, canvasId: id, title: title);
+    } catch (e) {
+      if (mounted) _toast('canvas failed: $e');
+    }
+  }
 
   Widget _ctxOption(String icon, String label, String value) {
     return Expanded(
@@ -334,7 +355,9 @@ class _SessionFilePickerState extends State<_SessionFilePicker> {
                       title: name,
                       sub: dir.isEmpty ? null : dir,
                       leading: AppIcon(
-                          ComposerAttachmentController.isImageName(name) ? 'image' : 'file',
+                          ComposerAttachmentController.isImageName(name)
+                              ? 'image'
+                              : 'file',
                           size: 20,
                           color: AppColors.fg2),
                       onTap: () => Navigator.pop(context, f),
