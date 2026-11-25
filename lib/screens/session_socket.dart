@@ -19,6 +19,7 @@ extension _SessionScreenSocketExt on _SessionScreenState {
     _serverSupportsHeartbeat = false;
     _decodeQueue = null;
     _packed.reset();
+    _inflater.reset();
     _lastAttachRevision = 0;
     final resume = _noResume ? null : _resumePoint();
     final ch = widget.client.attach(
@@ -52,7 +53,10 @@ extension _SessionScreenSocketExt on _SessionScreenState {
         try {
           if (msg is List<int> && isPackedFrame(msg)) {
             final frame = _packed.add(msg);
-            if (frame != null) _queuePackedFrame(ch, frame);
+            if (frame != null) {
+              _queuePackedFrame(
+                  ch, frame.stream ? _inflater.inflate(frame.bytes) : frame);
+            }
             return;
           }
           // web_socket_channel can deliver either a String or binary bytes for
@@ -342,6 +346,7 @@ extension _SessionScreenSocketExt on _SessionScreenState {
         cache.remove(cache.keys.first);
       }
       cache[_cacheKey] = (next, _transcriptStart);
+      SessionDiskCache.save(_cacheKey, next, _transcriptStart);
       // A tab opened hidden with nothing cached connects for its first
       // snapshot; without this it stays attached until shown and hidden again.
       if (wire == 'snapshot' && !_live && !_parked) {
@@ -462,12 +467,18 @@ extension _SessionScreenSocketExt on _SessionScreenState {
     return (_transcriptStart + events.length, at);
   }
 
-  void _queuePackedFrame(WebSocketChannel ch, PackedFrame frame) {
+  void _queuePackedFrame(WebSocketChannel ch, Object frame) {
     late final Future<void> queued;
     queued = (_decodeQueue ?? Future<void>.value()).then((_) async {
-      final decoded = frame.length < _kInlinePackedLimit
-          ? decodePackedFrame(frame)
-          : await compute(decodePackedFrame, frame);
+      final decoded = switch (frame) {
+        final Uint8List b when b.length < _kInlineDecodeLimit =>
+          decodeJsonBytes(b),
+        final Uint8List b => await compute(decodeJsonBytes, b),
+        final PackedFrame f when f.length < _kInlinePackedLimit =>
+          decodePackedFrame(f),
+        final PackedFrame f => await compute(decodePackedFrame, f),
+        _ => null,
+      };
       if (identical(ch, _channel)) _applyFrame(ch, decoded);
     }).catchError((Object _) {
       if (identical(ch, _channel)) _resync(ch);

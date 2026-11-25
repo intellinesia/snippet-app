@@ -216,7 +216,7 @@ class DaemonClient {
         'token': token,
         'compact': '1',
         'stream_delta': '1',
-        if (packed) 'enc': 'gzip',
+        if (packed) 'enc': 'zstream',
         if (resumeFrom != null && resumeAt != null) ...{
           'from': '$resumeFrom',
           'at': '$resumeAt',
