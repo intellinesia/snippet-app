@@ -10,7 +10,7 @@ import '../widgets.dart';
 /// them only lay out their content row.
 ///
 ///   +-------------------+---------------------------------------------+
-///   | ShellTitleRow 34  | ShellTabStripFrame 32 (tabs | tools)        |
+///   | ShellTitleRow 40  | ShellTabStripFrame 36 (tabs | tools)        |
 ///   +-------------------+---------------------------------------------+
 ///   | sidebar body      | centre panes (bg, no card, gaps 0)          |
 ///   | (s1, right edge   |                                             |
@@ -21,8 +21,8 @@ import '../widgets.dart';
 ///   +-------------------+---------------------------------------------+
 ///   | ShellStatusBarFrame 22, full width, s1, hairline top            |
 ///   +-----------------------------------------------------------------+
-const double kShellTitleRowHeight = 34;
-const double kShellTabStripHeight = 32;
+const double kShellTitleRowHeight = 40;
+const double kShellTabStripHeight = 36;
 const double kShellStatusBarHeight = 22;
 const double kShellFooterHeight = 30;
 
@@ -159,7 +159,7 @@ class ShellCollapsedNavCluster extends StatelessWidget {
   }
 }
 
-/// Centre-column tab strip band: 32 high, hairline at the bottom. [tabs]
+/// Centre-column tab strip band: 36 high, hairline at the bottom. [tabs]
 /// fills the space between [leading] (collapsed-sidebar cluster) and
 /// [trailing] (per-tab tools).
 class ShellTabStripFrame extends StatelessWidget {
@@ -186,7 +186,7 @@ class ShellTabStripFrame extends StatelessWidget {
         children: [
           if (leading != null) leading!,
           Expanded(
-            child: Align(alignment: Alignment.bottomLeft, child: tabs),
+            child: Align(alignment: Alignment.centerLeft, child: tabs),
           ),
           if (trailing.isNotEmpty)
             Padding(

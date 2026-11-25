@@ -79,6 +79,7 @@ void main() {
     // from Home's View all.
     final agentsPanel = find.byWidgetPredicate((w) => w is AgentsSidebarPanel);
     expect(agentsPanel, findsOneWidget);
+    expect(find.text('Automations'), findsNothing);
 
     // The footer band is pinned in the sidebar column, under the body.
     expect(
