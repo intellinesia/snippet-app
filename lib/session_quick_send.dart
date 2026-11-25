@@ -67,7 +67,7 @@ Future<bool> quickSend({
   final nonce =
       'q${++_nonceCounter}-${DateTime.now().microsecondsSinceEpoch}';
   try {
-    final ch = client.attach(session);
+    final ch = client.attach(session, packed: true);
     await ch.ready.timeout(timeout);
     ch.sink.add(jsonEncode(action.frame(nonce)));
     // Wait for the first server frame so the send is flushed before closing.

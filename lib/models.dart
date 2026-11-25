@@ -747,10 +747,27 @@ class HarnessState {
       turnStartedAt: base.turnStartedAt,
       compactingStartedAt: base.compactingStartedAt,
       watchCount: base.watchCount,
-      lanes: d.containsKey('lanes') ? base.lanes : lanes,
+      lanes: d.containsKey('lanes')
+          ? base.lanes
+          : (d['lane_ids'] is List ? _patchLanes(d) : lanes),
       queuedInputs:
           d.containsKey('queued_inputs') ? base.queuedInputs : queuedInputs,
     );
+  }
+
+  List<LaneInfo> _patchLanes(Map<String, dynamic> d) {
+    final byId = {for (final lane in lanes) lane.id: lane};
+    final patch = d['lanes_patch'];
+    if (patch is List) {
+      for (final raw in patch.whereType<Map>()) {
+        final lane = LaneInfo.fromJson(raw.cast<String, dynamic>());
+        byId[lane.id] = lane;
+      }
+    }
+    return [
+      for (final id in d['lane_ids'] as List)
+        if (byId[id] case final lane?) lane,
+    ];
   }
 
   HarnessState replaceEvent(int index, Map<String, dynamic> event) =>
