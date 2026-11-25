@@ -11,6 +11,7 @@ import '../../widgets.dart';
 import 'create_task_form.dart';
 import 'task_detail_screen.dart';
 import 'task_phone_detail.dart';
+import 'task_phone_new.dart';
 
 /// The live task list for one machine, shared by every task surface.
 ///
@@ -199,6 +200,7 @@ Future<void> openTaskDetail(
 
 /// File a new task. Returns whether one was created.
 Future<bool> showCreateTask(BuildContext context, DaemonClient client) async {
+  if (kMobile) return showNewTaskSheet(context, client);
   final created = await showAppSheet<bool>(
     context,
     title: 'New task',
