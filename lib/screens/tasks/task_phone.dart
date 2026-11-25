@@ -38,17 +38,32 @@ String shortAgo(String iso, {DateTime? now}) {
 
 /// The owner is the task's session agent. Nothing is invented: Lead only when
 /// Lead created it, otherwise no owner.
-String? taskOwner(TaskItem t, Map<String, SessionInfo> sessions,
-    Map<String, String> agentNames) {
+({String? id, String name})? taskOwnerAgent(TaskItem t,
+    Map<String, SessionInfo> sessions, Map<String, String> agentNames) {
   final s = sessions[t.sessionId];
   for (final id in [s?.agentId, s?.workerAgentId, s?.ownerAgentId]) {
     if (id == null || id.isEmpty) continue;
     final n = agentNames[id];
-    if (n != null && n.trim().isNotEmpty) return n.trim();
+    if (n != null && n.trim().isNotEmpty) return (id: id, name: n.trim());
   }
-  if (t.createdById.toLowerCase() == 'lead') return 'Lead';
+  if (t.createdById.toLowerCase() == 'lead') return (id: 'lead', name: 'Lead');
   return null;
 }
+
+String? taskOwner(TaskItem t, Map<String, SessionInfo> sessions,
+        Map<String, String> agentNames) =>
+    taskOwnerAgent(t, sessions, agentNames)?.name;
+
+/// The state word shown on the detail tag and the board.
+String taskStateWord(TaskStatus s) => switch (s) {
+      TaskStatus.inProgress => 'Doing',
+      TaskStatus.todo => 'Todo',
+      TaskStatus.inReview => 'Review',
+      TaskStatus.blocked => 'Blocked',
+      TaskStatus.failed => 'Failed',
+      TaskStatus.done => 'Done',
+      TaskStatus.cancelled => 'Cancelled',
+    };
 
 /// Round 28 (or [size]) initial on surface2.
 class OwnerAvatar extends StatelessWidget {

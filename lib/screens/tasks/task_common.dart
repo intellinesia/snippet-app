@@ -10,7 +10,7 @@ import '../../theme.dart';
 import '../../widgets.dart';
 import 'create_task_form.dart';
 import 'task_detail_screen.dart';
-import 'task_sheet.dart';
+import 'task_phone_detail.dart';
 
 /// The live task list for one machine, shared by every task surface.
 ///
@@ -185,7 +185,7 @@ Future<void> openTaskDetail(
     openTaskInTab!(client, taskId);
     return Future.value();
   }
-  if (kMobile) return showTaskSheet(context, client, taskId);
+  if (kMobile) return openTaskPhoneDetail(context, client, taskId);
   return presentScreen<void>(
     context,
     style: PanelStyle.drawer,
