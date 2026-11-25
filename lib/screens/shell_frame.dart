@@ -19,11 +19,11 @@ import '../widgets.dart';
 ///   | ShellFooterFrame  |                                             |
 ///   | 30, hairline top  |                                             |
 ///   +-------------------+---------------------------------------------+
-///   | ShellStatusBarFrame 22, full width, s1, hairline top            |
+///   | ShellStatusBarFrame 26, full width, s1, hairline top            |
 ///   +-----------------------------------------------------------------+
 const double kShellTitleRowHeight = 40;
 const double kShellTabStripHeight = 36;
-const double kShellStatusBarHeight = 22;
+const double kShellStatusBarHeight = 26;
 const double kShellFooterHeight = 30;
 
 /// Space the macOS traffic lights (10 at x16/34/52) take at the row start.
@@ -222,7 +222,7 @@ class ShellFooterFrame extends StatelessWidget {
   }
 }
 
-/// Status bar band: 22 high, full window width, s1, hairline top.
+/// Status bar band: 26 high, full window width, s1, hairline top.
 class ShellStatusBarFrame extends StatelessWidget {
   const ShellStatusBarFrame({super.key, this.child});
   final Widget? child;
@@ -242,9 +242,9 @@ class ShellStatusBarFrame extends StatelessWidget {
   }
 }
 
-/// Hit/layout box behind [ShellStatusBarFrame]. The visible band is 22 high,
-/// while the content row is 24 high and bottom-aligned so its targets reach 2pt
-/// above the band; the frame still owns the band's fill, hairline and padding.
+/// Hit/layout box behind [ShellStatusBarFrame]. The visible band is 26 high,
+/// while the content row is 24 high and vertically centred inside it; the frame
+/// still owns the band's fill, hairline and padding.
 class _StatusBarHitFrame extends SingleChildRenderObjectWidget {
   const _StatusBarHitFrame({
     super.key,
@@ -276,7 +276,7 @@ class _RenderStatusBarHitFrame extends RenderAligningShiftedBox {
       : _fill = fill,
         _line = line,
         super(
-          alignment: Alignment.bottomCenter,
+          alignment: Alignment.center,
           textDirection: TextDirection.ltr,
         );
 
