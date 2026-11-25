@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../morph_sheet.dart';
 import '../theme.dart';
-import '../widgets.dart';
 import '../tap_detector.dart';
 
 /// "Fork this conversation" sheet. Resolves true for "From this message",
@@ -38,79 +37,88 @@ class SessionForkPanel extends StatefulWidget {
 }
 
 class _SessionForkPanelState extends State<SessionForkPanel> {
-  bool _fromHere = true;
+  final _title = TextEditingController();
 
-  Widget _row(bool value, String title, String sub) {
-    final on = _fromHere == value;
-    return Semantics(
-      inMutuallyExclusiveGroup: true,
-      checked: on,
-      label: title,
-      child: TapDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => setState(() => _fromHere = value),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 56),
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: on ? AppColors.accentBg : Colors.transparent,
-            borderRadius: BorderRadius.circular(R.md),
-            border: Border.all(color: on ? AppColors.accent : AppColors.border),
-          ),
-          child: Row(children: [
-            Container(
-              width: 18,
-              height: 18,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                    color: on ? AppColors.accent : AppColors.border2, width: 1.5),
-              ),
-              child: on
-                  ? Center(
-                      child: Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                              color: AppColors.accent, shape: BoxShape.circle)))
-                  : null,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: sans(14, weight: W.label, color: AppColors.fg1)),
-                  const SizedBox(height: 2),
-                  Text(sub,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(12, color: AppColors.fg3)),
-                ],
-              ),
-            ),
-          ]),
-        ),
-      ),
-    );
+  @override
+  void dispose() {
+    _title.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final total = widget.total;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _row(true, 'From this message',
-            'Keeps everything up to "${widget.fromLabel}"'),
-        _row(false, 'Full history',
-            total == null ? 'All messages' : 'All $total messages'),
-        const SizedBox(height: 4),
-        Btn('Fork',
-            full: true, onTap: () => widget.onChoose(_fromHere)),
+        Container(
+          constraints: const BoxConstraints(minHeight: 64),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(10)),
+          child: Text(widget.fromLabel,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: sans(13, color: AppColors.fg2)),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+              color: AppColors.surface3,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.border)),
+          alignment: Alignment.center,
+          child: TextField(
+            controller: _title,
+            style: sans(15, color: AppColors.fg1),
+            cursorColor: AppColors.fg1,
+            decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                hintText: 'Fork title',
+                hintStyle: sans(15, color: AppColors.fg3)),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Semantics(
+          button: true,
+          label: 'Fork',
+          child: ExcludeSemantics(
+            child: TapDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => widget.onChoose(true),
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 48),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                    color: AppColors.surface2,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppColors.border)),
+                child: Text('Fork',
+                    style: sans(15, weight: W.label, color: AppColors.fg1)),
+              ),
+            ),
+          ),
+        ),
+        Semantics(
+          button: true,
+          label: 'Fork from the start instead',
+          child: ExcludeSemantics(
+            child: TapDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => widget.onChoose(false),
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 48),
+                alignment: Alignment.center,
+                child: Text('Fork from the start instead',
+                    style: sans(15, color: AppColors.fg2)),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }

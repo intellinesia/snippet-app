@@ -174,7 +174,9 @@ class SpecSelectRow extends StatelessWidget {
   final double minHeight, barHeight;
 
   @override
-  Widget build(BuildContext context) => Semantics(
+  Widget build(BuildContext context) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Semantics(
         button: true,
         selected: selected,
         label: selected ? '$label, Selected' : label,
@@ -183,7 +185,6 @@ class SpecSelectRow extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             onTap: onTap,
             child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 8),
               constraints: BoxConstraints(minHeight: minHeight),
               decoration: BoxDecoration(
                   color: selected ? AppColors.surface2 : Colors.transparent,
@@ -230,5 +231,5 @@ class SpecSelectRow extends StatelessWidget {
             ),
           ),
         ),
-      );
+      ));
 }

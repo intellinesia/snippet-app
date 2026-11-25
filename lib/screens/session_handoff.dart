@@ -4,6 +4,9 @@ import '../api.dart';
 import '../models.dart';
 import '../mochi.dart';
 import '../morph_sheet.dart';
+import '../motion_routes.dart';
+import '../platform.dart';
+import 'spec_bar.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import '../tap_detector.dart';
@@ -57,7 +60,11 @@ class SessionHandOffPanel extends StatefulWidget {
     this.ownerId,
     this.onHandedOff,
     this.list = false,
+    this.spec = false,
   });
+
+  /// SE-06 phone page layout: 56 high rows, note box, 48 high Hand off.
+  final bool spec;
 
   final DaemonClient client;
   final String sessionId;
@@ -152,6 +159,7 @@ class _SessionHandOffPanelState extends State<SessionHandOffPanel> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.spec) return _specBuild(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -211,6 +219,87 @@ class _SessionHandOffPanelState extends State<SessionHandOffPanel> {
         ],
       ],
     );
+  }
+
+  Widget _specBuild(BuildContext context) {
+    if (_loading) {
+      return const Padding(
+          padding: EdgeInsets.symmetric(vertical: 24),
+          child: Center(child: Spinner(size: 18)));
+    }
+    if (_agents.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(_error ?? 'No other agents to hand off to.',
+            style: sans(13, color: AppColors.fg3)),
+      );
+    }
+    final enabled = _selected != null && !_busy;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const SpecLabel('Hand off to', top: 16),
+      for (final a in _agents)
+        SpecSelectRow(
+          label: a.displayName,
+          sub: 'Agent - personal',
+          selected: _selected == a.id,
+          minHeight: 56,
+          barHeight: 48,
+          leading: AgentMochi(a.id, size: 24),
+          onTap: _busy ? () {} : () => setState(() => _selected = a.id),
+        ),
+      const SpecLabel('Note for Lead'),
+      Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        constraints: const BoxConstraints(minHeight: 92),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+            color: AppColors.surface2, borderRadius: BorderRadius.circular(10)),
+        child: TextField(
+          controller: _note,
+          minLines: 3,
+          maxLines: 6,
+          style: sans(15, color: AppColors.fg1),
+          cursorColor: AppColors.fg1,
+          decoration: InputDecoration(
+              isDense: true,
+              border: InputBorder.none,
+              hintText: 'Optional',
+              hintStyle: sans(15, color: AppColors.fg3)),
+        ),
+      ),
+      if (_error != null)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Text(_error!, style: TS.meta(AppColors.danger)),
+        ),
+      const SizedBox(height: 16),
+      Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Semantics(
+            button: true,
+            enabled: enabled,
+            label:
+                _pickedName == null ? 'Hand off' : 'Hand off to $_pickedName',
+            child: ExcludeSemantics(
+              child: TapDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: enabled ? _handOff : null,
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 48),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                      color: enabled ? AppColors.fg1 : AppColors.surface3,
+                      borderRadius: BorderRadius.circular(6)),
+                  child: Text('Hand off',
+                      style: sans(15,
+                          weight: W.label,
+                          color: enabled ? AppColors.bg : AppColors.fg3)),
+                ),
+              ),
+            ),
+          )),
+      const SizedBox(height: 24),
+    ]);
   }
 
   String? get _pickedName =>
@@ -305,24 +394,53 @@ class _SessionHandOffPanelState extends State<SessionHandOffPanel> {
   }
 }
 
-/// Opens the hand-off sheet, growing out of [origin] on phones.
+/// Opens hand off: a bar B page on phones (SE-06), a morph sheet elsewhere.
 Future<void> showHandOffSheet(
   BuildContext context, {
   required DaemonClient client,
   required String sessionId,
   String? ownerId,
+  String? sessionTitle,
   void Function(String name, bool pending)? onHandedOff,
   Rect? origin,
-}) =>
-    showMorphSheet<void>(
-      context,
-      title: 'Hand off to',
-      subtitle: 'They take this session after the current turn.',
-      origin: origin,
-      builder: (_) => SessionHandOffSheet(
-        client: client,
-        sessionId: sessionId,
-        ownerId: ownerId,
-        onHandedOff: onHandedOff,
+}) {
+  if (kMobile) {
+    return Navigator.of(context).push<void>(AppPageRoute<void>(
+      builder: (page) => Material(
+        color: AppColors.pageBg,
+        child: SafeArea(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            SpecBar(title: 'Hand off session', subtitle: sessionTitle),
+            Expanded(
+              child: SingleChildScrollView(
+                child: SessionHandOffPanel(
+                  client: client,
+                  sessionId: sessionId,
+                  ownerId: ownerId,
+                  spec: true,
+                  onHandedOff: (name, pending) {
+                    Navigator.pop(page);
+                    onHandedOff?.call(name, pending);
+                  },
+                ),
+              ),
+            ),
+          ]),
+        ),
       ),
-    );
+    ));
+  }
+  return showMorphSheet<void>(
+    context,
+    title: 'Hand off to',
+    subtitle: 'They take this session after the current turn.',
+    origin: origin,
+    builder: (_) => SessionHandOffSheet(
+      client: client,
+      sessionId: sessionId,
+      ownerId: ownerId,
+      onHandedOff: onHandedOff,
+    ),
+  );
+}
