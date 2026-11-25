@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../motion.dart' show WorkingBars;
 import '../ambient_loop.dart';
+import '../crew_status.dart';
 import '../models.dart';
 import '../notification_text.dart' show approvalOf;
 import '../platform.dart';
@@ -50,6 +51,29 @@ bool sessionNeedsYou(SessionInfo s) =>
     (s.status == 'waiting_for_input' ||
         s.status == 'in_review' ||
         s.attention != null);
+
+/// Status-bar attention count: waiting sessions plus agents the daemon says
+/// have open asks. An agent already represented by a waiting session is not
+/// counted a second time.
+int shellNeedsYouCount(
+  Iterable<SessionInfo> sessions,
+  Iterable<CoordinationAgent> agents,
+) {
+  final waiting = [
+    for (final s in sessions)
+      if (sessionNeedsYou(s)) s,
+  ];
+  final waitingOwners = <String>{};
+  for (final s in waiting) {
+    final owner = crewOwner(s);
+    if (owner != null) waitingOwners.add(owner);
+  }
+  var count = waiting.length;
+  for (final a in agents) {
+    if (a.needsYou > 0 && !waitingOwners.contains(a.id)) count++;
+  }
+  return count;
+}
 
 /// Finished while the user was away and not yet opened — the "Came back"
 /// section. Needs-you still wins when a session is both.

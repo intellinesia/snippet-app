@@ -28,6 +28,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   Widget _originTabBody(_ShellTab t,
       {required bool primary, required bool visible}) {
     if (t.isHome) {
+      final project = _lastUsedProjectFolder;
       return DesktopHome(
         key: ValueKey('body-${t.key}'),
         client: t.client,
@@ -35,6 +36,11 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         onOpenSession: (s) => _openSession(s.id, s.title, s.profile),
         onOpenAgent: _openRightAgent,
         onRefresh: _loadSessions,
+        onStart: _startHomeSession,
+        onOpenAllSessions: SidebarState.showAllSessions,
+        profileLabel: _activeProfileName,
+        projectLabel:
+            project == null ? null : lastPathSegment(project, ifEmpty: project),
       );
     }
     if (t.isSettings) {
@@ -180,9 +186,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       acceptDrops: primary,
       live: visible,
       mobileActive: !kMobile ||
-          (_appForeground &&
-              !_mobileChatsOpen &&
-              _mobileHome.isSessionsHome),
+          (_appForeground && !_mobileChatsOpen && _mobileHome.isSessionsHome),
       onTitle: (title) => _onSessionTitle(t.sessionId!, title),
       onDeleted: primary ? () => _onSessionDeleted(t.sessionId!) : null,
       onMenu: kMobile ? _showMobileChats : null,
@@ -218,7 +222,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       (kMobile && t.isBoard) ||
       t.isTask ||
       // Desktop: session views opened from + live in the session's inner strip.
-      (!kMobile && (t.isReadout || t.isWorkspace || t.isPrs) &&
+      (!kMobile &&
+          (t.isReadout || t.isWorkspace || t.isPrs) &&
           t.groupSessionKey != null);
 
   List<_ShellTab> get _mainTabs => [
@@ -375,6 +380,12 @@ extension _DesktopShellPanesExt on _DesktopShellState {
 
   Widget _bodyRow({required bool topInset}) => _splitView(topInset: topInset);
 
+  String? _relToWorkspace(String path, String workspace) {
+    final root = workspace.replaceAll(RegExp(r'/+$'), '');
+    if (root.isEmpty || !path.startsWith('$root/')) return null;
+    return path.substring(root.length + 1);
+  }
+
   Widget _splitView({required bool topInset}) => ShellSplitView(
         key: const ValueKey('shell-split'),
         sidebarHidden: _sidebarHidden,
@@ -392,14 +403,15 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           child: KeyedSubtree(
             key: _panelScopeKey,
             child: Swap(
-            stateKey: _activeTab?.isSettings == true
-                ? 'settings'
-                : _effectiveSection,
-            fill: true,
-            child: _activeTab?.isSettings == true
-                ? _settingsSidebar()
-                : _sidebar(topInset: topInset),
-          )),
+              stateKey: _activeTab?.isSettings == true
+                  ? 'settings'
+                  : _effectiveSection,
+              fill: true,
+              child: _activeTab?.isSettings == true
+                  ? _settingsSidebar()
+                  : _sidebar(topInset: topInset),
+            ),
+          ),
         ),
         sidebarTop: _sidebarTop(),
         mainHeader: kMobile ? _macWindowBar() : _tabStripBand(),
@@ -477,10 +489,97 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             : sessionRailOuterWidth(width),
       );
 
+  String? get _lastUsedProjectFolder {
+    final recent = (_sessions ?? const <SessionInfo>[]).toList()
+      ..sort((a, b) => b.lastActive.compareTo(a.lastActive));
+    for (final s in recent) {
+      if (s.projectFolder.trim().isNotEmpty) return s.projectFolder;
+      if (s.folder.trim().isNotEmpty) return s.folder;
+    }
+    return null;
+  }
+
+  Future<void> _refreshUsage() async {
+    if (kMobile) return;
+    final c = _client;
+    if (c == null) {
+      if (_usageItems.isNotEmpty) _setState(() => _usageItems = const []);
+      return;
+    }
+    try {
+      final summary = await c.getUsage();
+      if (!mounted || !identical(c, _client)) return;
+      final byProvider = <String, ShellUsageItem>{};
+      for (final provider in summary.providers) {
+        final live = provider.rateLimits.where((r) => !r.isExpired).toList();
+        if (live.isEmpty) continue;
+        live.sort((a, b) => b.usedPercent.compareTo(a.usedPercent));
+        final window = live.first;
+        final label = usageProviderTitle(provider.provider);
+        final item = ShellUsageItem(
+          label: label,
+          usedPercent: window.usedPercent,
+          resetsAt: window.resetsAt <= 0
+              ? null
+              : DateTime.fromMillisecondsSinceEpoch(window.resetsAt * 1000),
+        );
+        final prior = byProvider[label];
+        if (prior == null || item.usedPercent > prior.usedPercent) {
+          byProvider[label] = item;
+        }
+      }
+      _setState(() => _usageItems = byProvider.values.toList());
+    } catch (_) {}
+  }
+
+  /// Full-width status band; the frame owns its height, fill and hairline.
+  Widget _statusBarBand() {
+    final hostsOnline =
+        _instances.where((i) => _health[i.url] ?? i.url == _active?.url).length;
+    final daemonDown = _client != null && _sessionsError != null;
+    return Builder(builder: (barContext) {
+      return ShellStatusBarFrame(
+        child: ShellStatusBar(
+          usage: _usageItems,
+          needsYouCount: _mcAttentionCount,
+          connected: _sessionsError == null,
+          daemonDown: daemonDown,
+          hostsOnline: hostsOnline,
+          hostsTotal: _instances.length,
+          rightPanelEnabled: _activeTab?.isHome != true,
+          onOpenUsage: _client == null
+              ? null
+              : () => showUsagePopover(barContext, _client!),
+          onRefreshUsage: _client == null ? null : _refreshUsage,
+          onOpenNeedsYou: _openHomeTab,
+          onOpenTerminal: _client == null ? null : _newGlobalShell,
+          onOpenHosts: () => _openShellSettings(SettingsPage.general),
+          onToggleRightPanel: _togglePanel,
+          onRetry: _loadSessions,
+        ),
+      );
+    });
+  }
+
+  _ShellTab? get _openRunningSessionTab {
+    for (final s in _sessions ?? const <SessionInfo>[]) {
+      if (!s.running) continue;
+      final tab = _tabs
+          .where((t) => !_isAuxiliary(t) && t.sessionId == s.id)
+          .firstOrNull;
+      if (tab != null) return tab;
+    }
+    return null;
+  }
+
+  void _locateRunningSession() {
+    final tab = _openRunningSessionTab;
+    if (tab != null) _activateTabAt(tab);
+  }
+
   _ShellTab? _innerTabHost(_ShellTab t) {
     if (!_isAuxiliary(t) || t.groupSessionKey == null) return null;
-    final root =
-        _tabs.where((x) => x.key == t.groupSessionKey).firstOrNull;
+    final root = _tabs.where((x) => x.key == t.groupSessionKey).firstOrNull;
     return root?.sessionId != null && root!.readout == null ? root : null;
   }
 
@@ -772,9 +871,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             meta: count(cps),
             onTap: () => page('checkpoints')),
         PaneAddEntry(
-            icon: 'book-marked',
-            label: 'Memory',
-            onTap: () => page('memory')),
+            icon: 'book-marked', label: 'Memory', onTap: () => page('memory')),
         PaneAddEntry(
             icon: 'git-branch',
             label: 'Lanes',
@@ -1015,7 +1112,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       });
 
   void _leaveSettings() {
-    final i = _tabs.indexWhere((t) => t.key == _preSettingsKey && !t.isSettings);
+    final i =
+        _tabs.indexWhere((t) => t.key == _preSettingsKey && !t.isSettings);
     final fallback = _tabs.indexWhere((t) => !t.isSettings && !_isAuxiliary(t));
     final target = i >= 0 ? i : fallback;
     if (target >= 0) _openMainTab(null, target);
@@ -1165,22 +1263,22 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         ]),
       ),
       if (_activeTab?.isSettings != true)
-      Padding(
-        // Right 9 puts the 16 px icons on the 16 px content edge.
-        padding: const EdgeInsets.fromLTRB(16, 0, 9, 6),
-        child: SidebarBrand(trailing: [
-          _TbBtn(
-              icon: 'search',
-              tooltip: kMacOS ? 'Search (⌘K)' : 'Search (Ctrl+K)',
-              onTap: _openCommandPalette),
-          Builder(
-            builder: (ctx) => _TbBtn(
-                icon: 'edit',
-                tooltip: 'New session',
-                onTap: () => _showNewMenu(ctx)),
-          ),
-        ]),
-      ),
+        Padding(
+          // Right 9 puts the 16 px icons on the 16 px content edge.
+          padding: const EdgeInsets.fromLTRB(16, 0, 9, 6),
+          child: SidebarBrand(trailing: [
+            _TbBtn(
+                icon: 'search',
+                tooltip: kMacOS ? 'Search (⌘K)' : 'Search (Ctrl+K)',
+                onTap: _openCommandPalette),
+            Builder(
+              builder: (ctx) => _TbBtn(
+                  icon: 'edit',
+                  tooltip: 'New session',
+                  onTap: () => _showNewMenu(ctx)),
+            ),
+          ]),
+        ),
     ]);
   }
 
@@ -1189,42 +1287,35 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       for (final s in _sessions ?? const <SessionInfo>[])
         if (sessionNeedsYou(s)) s
     ].isNotEmpty;
-    // Connected shows nothing: the gear alone.
     return ShellFooterFrame(child: _sidebarFooterRow(needsYou));
   }
 
   Widget _sidebarFooterRow(bool needsYou) {
+    final runningTab = _openRunningSessionTab;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 9),
-      // Settings on the left; tools packed at the right. Flexible children
-      // would each claim spare width, so the right group is one Expanded row.
       child: Row(children: [
         _FooterBtn(
             icon: 'settings', tooltip: 'Settings', onTap: _openShellSettings),
-        // One status line beside the gear, only while the daemon is down.
-        if (_client != null && _sessionsError != null) ...[
-          const SizedBox(width: 10),
-          AppIcon('refresh', size: 14, color: AppColors.run),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Tooltip(
-              message: 'Showing what you saw earlier',
-              child: Text('Reconnecting\u2026',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(12, color: AppColors.fg1)),
-            ),
-          ),
-          TapDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: _loadSessions,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-              child: Text('Retry',
-                  style: sans(12, weight: W.label, color: AppColors.fg1)),
-            ),
-          ),
-        ],
+        const SizedBox(width: 4),
+        _FooterBtn(
+            icon: 'help-circle',
+            tooltip: 'Keyboard shortcuts',
+            onTap: _showDesktopShortcuts),
+        const Spacer(),
+        _FooterBtn(
+            icon: 'goal',
+            tooltip: runningTab == null
+                ? 'No open running session tab'
+                : 'Locate running session',
+            onTap: runningTab == null ? null : _locateRunningSession),
+        const SizedBox(width: 4),
+        Builder(
+          builder: (ctx) => _FooterBtn(
+              icon: 'columns-3',
+              tooltip: _chatTab == null ? 'No session pane' : 'Pane layout',
+              onTap: _chatTab == null ? null : () => _showPaneAddMenu(ctx)),
+        ),
       ]),
     );
   }
@@ -1245,9 +1336,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         tabs: _mainTabsRow(),
         trailing: _windowBarTools(),
       );
-
-  /// Full-width status band. Its content row lands with the status bar lane.
-  Widget _statusBarBand() => const ShellStatusBarFrame();
 
   List<Widget> _windowBarTools() => [
         ListenableBuilder(
@@ -1274,19 +1362,18 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         onNavigateBack: _navigateBack,
         onNavigateForward: _navigateForward,
         tabsRow: _mainTabsRow(),
-        onOpenSettings: _openShellSettings,
         tools: _windowBarTools(),
         reserveWindowControls: kMacOS,
       );
 }
 
-/// The `.tb` button in the `.stop` strip: 28px, fg3 icon, surface2 hover.
+/// Compact 28 px title-row icon button.
 class _TbBtn extends StatefulWidget {
   const _TbBtn(
       {required this.icon, required this.tooltip, required this.onTap});
   final String icon;
   final String tooltip;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   State<_TbBtn> createState() => _TbBtnState();
@@ -1297,12 +1384,13 @@ class _TbBtnState extends State<_TbBtn> {
 
   @override
   Widget build(BuildContext context) {
+    final enabled = widget.onTap != null;
     return Tooltip(
       message: widget.tooltip,
       child: MouseRegion(
-        onEnter: (_) => setState(() => _hover = true),
-        onExit: (_) => setState(() => _hover = false),
-        cursor: SystemMouseCursors.click,
+        onEnter: enabled ? (_) => setState(() => _hover = true) : null,
+        onExit: enabled ? (_) => setState(() => _hover = false) : null,
+        cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
@@ -1310,12 +1398,18 @@ class _TbBtnState extends State<_TbBtn> {
             width: 28,
             height: 28,
             decoration: BoxDecoration(
-              color: _hover ? AppColors.surface2 : Colors.transparent,
-              borderRadius: BorderRadius.circular(R.md),
+              color:
+                  _hover && enabled ? AppColors.surface2 : Colors.transparent,
+              borderRadius: BorderRadius.circular(R.of(6)),
             ),
             child: Center(
               child: AppIcon(widget.icon,
-                  size: 14, color: _hover ? AppColors.fg1 : AppColors.fg3),
+                  size: 14,
+                  color: !enabled
+                      ? AppColors.fg3
+                      : _hover
+                          ? AppColors.fg1
+                          : AppColors.fg2),
             ),
           ),
         ),
@@ -1324,21 +1418,16 @@ class _TbBtnState extends State<_TbBtn> {
   }
 }
 
-/// Quiet 28 px footer icon button; [active] tints the icon accent and
-/// [badge] adds a small accent dot.
+/// Compact footer icon button: 28 x 26 target, 15 px glyph.
 class _FooterBtn extends StatefulWidget {
   const _FooterBtn({
     required this.icon,
     required this.tooltip,
     required this.onTap,
-    this.active = false,
-    this.badge = false,
   });
   final String icon;
   final String tooltip;
-  final VoidCallback onTap;
-  final bool active;
-  final bool badge;
+  final VoidCallback? onTap;
 
   @override
   State<_FooterBtn> createState() => _FooterBtnState();
@@ -1349,57 +1438,36 @@ class _FooterBtnState extends State<_FooterBtn> {
 
   @override
   Widget build(BuildContext context) {
+    final enabled = widget.onTap != null;
     return Tooltip(
       message: widget.tooltip,
       child: MouseRegion(
-        onEnter: (_) => setState(() => _hover = true),
-        onExit: (_) => setState(() => _hover = false),
-        cursor: SystemMouseCursors.click,
+        onEnter: enabled ? (_) => setState(() => _hover = true) : null,
+        onExit: enabled ? (_) => setState(() => _hover = false) : null,
+        cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            curve: const Cubic(0.23, 1, 0.32, 1),
+          child: Container(
             width: 28,
-            height: 28,
+            height: 26,
             decoration: BoxDecoration(
-              color: _hover
-                  ? AppColors.fg1.withValues(alpha: 0.07)
-                  : Colors.transparent,
+              color:
+                  _hover && enabled ? AppColors.surface2 : Colors.transparent,
               borderRadius: BorderRadius.circular(R.of(6)),
             ),
             child: Stack(alignment: Alignment.center, children: [
               AppIcon(widget.icon,
-                  size: 16,
-                  color: widget.active
-                      ? AppColors.accent
+                  size: 15,
+                  color: !enabled
+                      ? AppColors.fg3
                       : _hover
                           ? AppColors.fg1
-                          : AppColors.fg3),
-              if (widget.badge)
-                Positioned(
-                  right: 5,
-                  top: 5,
-                  child: Container(
-                    key: const ValueKey('footer-badge'),
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                        color: AppColors.accent, shape: BoxShape.circle),
-                  ),
-                ),
+                          : AppColors.fg2),
             ]),
           ),
         ),
       ),
     );
   }
-}
-
-/// The file's path inside its workspace, or null when it lives elsewhere.
-String? _relToWorkspace(String path, String workspace) {
-  if (workspace.isEmpty) return null;
-  final root = workspace.endsWith('/') ? workspace : '$workspace/';
-  return path.startsWith(root) ? path.substring(root.length) : null;
 }

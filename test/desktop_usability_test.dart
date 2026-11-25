@@ -343,7 +343,7 @@ void main() {
           ),
         ));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('All sessions').first);
+        SidebarState.showAllSessions();
         await tester.pumpAndSettle();
 
         // One flat list, newest first: gamma (4000), alpha (3000), beta
@@ -413,7 +413,7 @@ void main() {
         ),
       ));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('All sessions').first);
+      SidebarState.showAllSessions();
       await tester.pumpAndSettle();
       await tester.tap(find.text('Fix the TUI hang'),
           buttons: kSecondaryMouseButton, kind: PointerDeviceKind.mouse);
@@ -424,7 +424,10 @@ void main() {
       // Rename edits the row in place.
       await tester.tap(find.text('Rename'));
       await tester.pumpAndSettle();
-      expect(find.byType(EditableText), findsOneWidget);
+      expect(
+          find.byWidgetPredicate((w) =>
+              w is EditableText && w.controller.text == 'Fix the TUI hang'),
+          findsOneWidget);
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
 

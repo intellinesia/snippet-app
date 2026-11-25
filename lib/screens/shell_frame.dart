@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import '../platform.dart';
 import '../theme.dart';
@@ -229,18 +230,127 @@ class ShellStatusBarFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Theme.of(context);
-    return Container(
-      key: const ValueKey('shell-status-bar'),
-      height: kShellStatusBarHeight,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: AppColors.windowChrome,
-        border: Border(top: shellHairline()),
-      ),
-      child: DefaultTextStyle.merge(
-        style: sans(11, color: AppColors.fg2),
+    return DefaultTextStyle.merge(
+      style: sans(11, color: AppColors.fg2),
+      child: _StatusBarHitFrame(
+        key: const ValueKey('shell-status-bar'),
+        fill: AppColors.windowChrome,
+        line: shellHairline().color,
         child: child ?? const SizedBox.shrink(),
       ),
+    );
+  }
+}
+
+/// Hit/layout box behind [ShellStatusBarFrame]. The visible band is 22 high,
+/// while the content row is 24 high and bottom-aligned so its targets reach 2pt
+/// above the band; the frame still owns the band's fill, hairline and padding.
+class _StatusBarHitFrame extends SingleChildRenderObjectWidget {
+  const _StatusBarHitFrame({
+    super.key,
+    required this.fill,
+    required this.line,
+    required super.child,
+  });
+
+  final Color fill;
+  final Color line;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderStatusBarHitFrame(fill: fill, line: line);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderStatusBarHitFrame renderObject,
+  ) {
+    renderObject
+      ..fill = fill
+      ..line = line;
+  }
+}
+
+class _RenderStatusBarHitFrame extends RenderAligningShiftedBox {
+  _RenderStatusBarHitFrame({required Color fill, required Color line})
+      : _fill = fill,
+        _line = line,
+        super(
+          alignment: Alignment.bottomCenter,
+          textDirection: TextDirection.ltr,
+        );
+
+  static const double _targetHeight = 24;
+  static const double _horizontalPadding = 12;
+
+  Color get fill => _fill;
+  Color _fill;
+  set fill(Color value) {
+    if (value == _fill) return;
+    _fill = value;
+    markNeedsPaint();
+  }
+
+  Color get line => _line;
+  Color _line;
+  set line(Color value) {
+    if (value == _line) return;
+    _line = value;
+    markNeedsPaint();
+  }
+
+  @override
+  bool get sizedByParent => true;
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) => constraints.constrain(
+        Size(constraints.maxWidth, kShellStatusBarHeight),
+      );
+
+  @override
+  void performLayout() {
+    final width = size.width > _horizontalPadding * 2
+        ? size.width - _horizontalPadding * 2
+        : 0.0;
+    child?.layout(
+      BoxConstraints(
+        minWidth: width,
+        maxWidth: width,
+        minHeight: _targetHeight,
+        maxHeight: _targetHeight,
+      ),
+      parentUsesSize: true,
+    );
+    alignChild();
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    final bar = offset & size;
+    context.canvas.drawRect(bar, Paint()..color = fill);
+    super.paint(context, offset);
+    context.canvas.drawRect(
+      Rect.fromLTWH(offset.dx, offset.dy, size.width, 1),
+      Paint()..color = line,
+    );
+  }
+
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    if (hitTestChildren(result, position: position)) return true;
+    return size.contains(position);
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+    final child = this.child;
+    if (child == null) return false;
+    final childParentData = child.parentData! as BoxParentData;
+    return result.addWithPaintOffset(
+      offset: childParentData.offset,
+      position: position,
+      hitTest: (result, transformed) =>
+          child.hitTest(result, position: transformed),
     );
   }
 }
