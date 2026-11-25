@@ -31,6 +31,15 @@ void main() {
     expect(count, 3);
   });
 
+  test('typography baseline resolves Inter UI and Geist Mono data/code', () {
+    ThemeManager.instance.resetForTest();
+    expect(ThemeManager.defaultFont, 'Inter');
+    expect(ThemeManager.defaultMonoFont, 'GeistMono');
+    expect(sans(11).fontFamily, 'Inter');
+    expect(mono(11).fontFamily, 'GeistMono');
+    expect(codeMono(11).fontFamily, 'GeistMono');
+  });
+
   Future<void> pumpBar(WidgetTester tester, ShellStatusBar bar) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(1440, 200);
