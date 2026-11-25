@@ -402,7 +402,9 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           )),
         ),
         sidebarTop: _sidebarTop(),
-        mainHeader: _macWindowBar(),
+        mainHeader: kMobile ? _macWindowBar() : _tabStripBand(),
+        sidebarFooter: kMobile ? null : _sidebarFooter(),
+        statusBar: kMobile ? null : _statusBarBand(),
         leftStripAfter: _sessionStripAdd(),
         leftStripTrailing: _sessionStripTools(),
         sidebarHeader: _activeTab?.isSettings == true ||
@@ -436,7 +438,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         // The canvas takes the inspector's place while it has content.
         rightPanel: _tabsIn(_Pane.right).isEmpty ? _sessionSidePanel() : null,
         hideRight: _activeTab != null &&
-            (_activeTab!.isDraft ||
+            (_activeTab!.isHome ||
+                _activeTab!.isDraft ||
                 (_activeTab!.isReadout && !_dockedInfo) ||
                 _activeTab!.isPrs ||
                 _activeTab!.isSettings ||
@@ -1136,6 +1139,16 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   }
 
   Widget _sidebarTop() {
+    if (!kMobile) {
+      return ShellTitleRow(
+        onToggleSidebar: _toggleSidebar,
+        canNavigateBack: _canNavigateBack,
+        canNavigateForward: _canNavigateForward,
+        onNavigateBack: _navigateBack,
+        onNavigateForward: _navigateForward,
+        reserveWindowControls: kMacOS,
+      );
+    }
     return Column(mainAxisSize: MainAxisSize.min, children: [
       SizedBox(
         // Centred at 26, level with the traffic lights and the pane bar.
@@ -1177,14 +1190,12 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         if (sessionNeedsYou(s)) s
     ].isNotEmpty;
     // Connected shows nothing: the gear alone.
-    return Column(mainAxisSize: MainAxisSize.min, children: [
-      _sidebarFooterRow(needsYou),
-    ]);
+    return ShellFooterFrame(child: _sidebarFooterRow(needsYou));
   }
 
   Widget _sidebarFooterRow(bool needsYou) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(9, 6, 9, 10),
+      padding: const EdgeInsets.symmetric(horizontal: 9),
       // Settings on the left; tools packed at the right. Flexible children
       // would each claim spare width, so the right group is one Expanded row.
       child: Row(children: [
@@ -1218,6 +1229,43 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     );
   }
 
+  /// Desktop centre band: the tab strip, with the title-row cluster over its
+  /// left edge while the sidebar is hidden.
+  Widget _tabStripBand() => ShellTabStripFrame(
+        leading: _sidebarHidden
+            ? ShellCollapsedNavCluster(
+                onToggleSidebar: _toggleSidebar,
+                canNavigateBack: _canNavigateBack,
+                canNavigateForward: _canNavigateForward,
+                onNavigateBack: _navigateBack,
+                onNavigateForward: _navigateForward,
+                reserveWindowControls: kMacOS,
+              )
+            : const SizedBox(width: 8),
+        tabs: _mainTabsRow(),
+        trailing: _windowBarTools(),
+      );
+
+  /// Full-width status band. Its content row lands with the status bar lane.
+  Widget _statusBarBand() => const ShellStatusBarFrame();
+
+  List<Widget> _windowBarTools() => [
+        ListenableBuilder(
+            listenable: sessionBarTools,
+            builder: (_, __) =>
+                sessionBarTools.of(_activeTab?.sessionId) ??
+                const SizedBox.shrink()),
+        if (_activeTab?.readout?.agent != null) _agentBarTools(_activeTab!),
+        if (_activeTab?.readout == null && _activeAgent?.isLead == true)
+          IconBtn('sidebar',
+              size: 28,
+              iconSize: 15,
+              active: !_panelHidden,
+              tooltip: _panelHidden ? 'Show Lead panel' : 'Hide Lead panel',
+              onTap: _togglePanel),
+        if (_groupBarTools(_activeTab) case final w?) w,
+      ];
+
   Widget _macWindowBar() => MacWindowBar(
         sidebarHidden: _sidebarHidden,
         onToggleSidebar: _toggleSidebar,
@@ -1227,25 +1275,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         onNavigateForward: _navigateForward,
         tabsRow: _mainTabsRow(),
         onOpenSettings: _openShellSettings,
-        tools: [
-          ListenableBuilder(
-              listenable: sessionBarTools,
-              builder: (_, __) =>
-                  sessionBarTools.of(_activeTab?.sessionId) ??
-                  const SizedBox.shrink()),
-          if (_activeTab?.readout?.agent != null) _agentBarTools(_activeTab!),
-          if (_activeTab?.readout == null &&
-              _activeAgent?.isLead == true)
-            IconBtn('sidebar',
-                size: 30,
-                iconSize: 15,
-                active: !_panelHidden,
-                tooltip: _panelHidden
-                    ? 'Show Lead panel'
-                    : 'Hide Lead panel',
-                onTap: _togglePanel),
-          if (_groupBarTools(_activeTab) case final w?) w,
-        ],
+        tools: _windowBarTools(),
         reserveWindowControls: kMacOS,
       );
 }
