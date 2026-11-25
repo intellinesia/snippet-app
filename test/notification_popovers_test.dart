@@ -115,16 +115,17 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('desktop shows no toast; asks live on the composer',
-      (tester) async {
+  testWidgets('desktop stacks foreground notifications', (tester) async {
     _platform(TargetPlatform.linux);
-    foregroundNotifications.add({'title': 'First', 'kind': 'done', 'session': 's1'});
-    foregroundNotifications.add({'title': 'Ask', 'kind': 'waiting', 'session': 's2'});
+    foregroundNotifications
+        .add({'title': 'First', 'kind': 'done', 'session': 's1'});
+    foregroundNotifications
+        .add({'title': 'Ask', 'kind': 'waiting', 'session': 's2'});
     await tester.pumpWidget(const MaterialApp(
         home: NotificationPopovers(child: Scaffold(body: Text('Home')))));
     await tester.pumpAndSettle();
-    expect(find.text('First'), findsNothing);
-    expect(find.text('Ask'), findsNothing);
+    expect(find.text('Done: First'), findsOneWidget);
+    expect(find.text('Ask'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 10));
   });

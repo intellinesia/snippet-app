@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'api.dart';
@@ -16,6 +17,7 @@ import 'notification_banner.dart';
 import 'notification_card.dart';
 import 'top_zone.dart';
 import 'screens/phone_tool_bar.dart' show PhoneBar;
+import 'screens/shell_frame.dart' show kShellTabStripHeight;
 import 'session_quick_send.dart' show resolveInstanceForPayload;
 
 class NotificationPopovers extends StatefulWidget {
@@ -43,8 +45,10 @@ class _NotificationPopoversState extends State<NotificationPopovers>
 
   bool get _held => _pointer || _cardHold || _background;
 
-  // Desktop toast anchor, below the 44 high title bar.
-  static double get _anchorTop => 44 + S.s8;
+  /// Desktop floats begin below the centre-column tab strip. If a registered
+  /// top bar (for example an attention bar) reaches lower, it wins.
+  static double get _desktopAnchorTop =>
+      math.max(kShellTabStripHeight, TopZone.lowestBar.value) + TopZone.gap;
 
   /// Information banners leave after 6 s; a needs-you banner stays 30 s, then
   /// folds into the attention bar and does not return as a banner.
@@ -143,8 +147,6 @@ class _NotificationPopoversState extends State<NotificationPopovers>
   }
 
   void _addPending(Map<String, dynamic> payload) {
-    // Desktop shows asks on the composer and messages as sidebar marks.
-    if (!kMobile) return;
     _pending.removeWhere((old) => toastSuperseded(old, payload));
     _pending.add(payload);
   }
@@ -235,9 +237,10 @@ class _NotificationPopoversState extends State<NotificationPopovers>
         payload: payload,
         onTap: () {
           // Needs-you and message banners expand in place; others open.
-          if (cardActionFor(payload) case CardAction.approval ||
-                CardAction.answer ||
-                CardAction.reply) {
+          if (cardActionFor(payload)
+              case CardAction.approval ||
+                  CardAction.answer ||
+                  CardAction.reply) {
             HapticFeedback.selectionClick();
             setState(() => _expandedPayload = payload);
           } else {
@@ -328,21 +331,33 @@ class _NotificationPopoversState extends State<NotificationPopovers>
         ),
       ]);
     }
+    final desktopStack = call != null
+        ? banner
+        : items.isEmpty
+            ? const SizedBox.shrink()
+            : MouseRegion(
+                onEnter: (_) => _setHold(pointer: true),
+                onExit: (_) => _setHold(pointer: false),
+                child: NotificationStack(
+                  items: items,
+                  onClearAll: _clearAll,
+                  onShowAll: _showAll,
+                  cardBuilder: (payload) => _card(payload, reducedMotion),
+                ),
+              );
     return Stack(children: [
       widget.child,
-      Positioned(
-        top: _anchorTop,
-        left: S.s12,
-        right: S.s12,
-        child: SafeArea(
-          child: Align(
-            alignment: Alignment.topRight,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: banner,
-            ),
-          ),
-        ),
+      ValueListenableBuilder<double>(
+        valueListenable: TopZone.lowestBar,
+        builder: (context, _, __) {
+          final width = math.min(360.0, MediaQuery.sizeOf(context).width - 32);
+          return Positioned(
+            top: _desktopAnchorTop,
+            right: 24,
+            width: width,
+            child: SafeArea(child: desktopStack),
+          );
+        },
       ),
     ]);
   }
@@ -362,7 +377,9 @@ class NotificationListPage extends StatelessWidget {
       backgroundColor: AppColors.bg,
       body: SafeArea(
         child: Column(children: [
-          PhoneBar(title: 'Notifications', onBack: () => Navigator.maybePop(context)),
+          PhoneBar(
+              title: 'Notifications',
+              onBack: () => Navigator.maybePop(context)),
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),

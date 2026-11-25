@@ -137,8 +137,8 @@ void main() {
     expect(DeviceEvent.decode(wire)!.notification, live);
     for (final socket in eventSockets) { socket.add(wire); }
     await until(() => delivered.length == 1, 'WS decoded, ingested and queued');
-    // Desktop shows no toast; delivery is what counts.
-    expect(find.text('Observed socket alert'), findsNothing);
+    // Desktop shows the foreground banner as well as delivering the event.
+    expect(find.text('Observed socket alert'), findsOneWidget);
     expect(delivered.single['notification_id'], live['notification_id']);
     await tester.runAsync(() async {
       expect(await inbox!.db.query('inbox'), hasLength(1));
@@ -173,8 +173,8 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
     await until(() => pages > previousPages && delivered.length == 2,
         'reconnect HTTP recovery ingested and queued');
-    // Desktop shows no toast; delivery is what counts.
-    expect(find.text('Observed reconnect alert'), findsNothing);
+    // Desktop shows the foreground banner as well as delivering the event.
+    expect(find.text('Observed reconnect alert'), findsOneWidget);
     await tester.runAsync(() async {
       expect(await inbox!.db.query('inbox'), hasLength(3));
     });

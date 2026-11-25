@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'notification_banner.dart';
+import 'platform.dart';
 import 'theme.dart';
 import 'widgets.dart' show HoverSurface;
 
@@ -70,23 +71,28 @@ class _FooterAction extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-        button: true,
-        label: label,
-        excludeSemantics: true,
+  Widget build(BuildContext context) {
+    final compact = !kMobile;
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      onTap: onTap,
+      child: HoverSurface(
         onTap: onTap,
-        child: HoverSurface(
-          onTap: onTap,
-          radius: 6,
-          hoverColor: AppColors.surface3,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
-            child: Center(
-              widthFactor: 1,
-              child: Text(label,
-                  style: sans(13, weight: W.label, color: AppColors.fg2)),
-            ),
+        radius: 6,
+        hoverColor: AppColors.surface3,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+              minHeight: compact ? 28 : 48, minWidth: compact ? 24 : 48),
+          child: Center(
+            widthFactor: 1,
+            child: Text(label,
+                style: sans(compact ? 12 : 13,
+                    weight: W.label, color: AppColors.fg2)),
           ),
         ),
-      );
+      ),
+    );
+  }
 }
