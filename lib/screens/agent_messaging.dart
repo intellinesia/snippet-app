@@ -1301,7 +1301,10 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       _deskHead && widget.embedded && widget.onAgentAction != null;
 
   Widget _body() {
-    final inner = _bodyList();
+    // Rows scrolled under the strip dissolve inside the top gutter, not slice at the hairline.
+    final inner = _deskHead
+        ? TopFadeMask(clear: 0, fade: 8, child: _bodyList())
+        : _bodyList();
     if (!_pinHead) return inner;
     return Column(children: [
       _wideCap(Padding(

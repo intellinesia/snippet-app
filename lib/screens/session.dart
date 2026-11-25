@@ -1980,10 +1980,13 @@ class _SessionScreenState extends State<SessionScreen>
                                                                 ),
                                                               );
                                                               return _deskHeader
+                                                                  // Scrolled rows vanish before the strip hairline; the ramp ends at the list's top pad.
                                                                   ? TopFadeMask(
                                                                       clear:
-                                                                          _deskHeaderHeight -
-                                                                              8,
+                                                                          6,
+                                                                      fade: _deskHeaderHeight +
+                                                                          S.s8 -
+                                                                          6,
                                                                       child:
                                                                           list)
                                                                   : list;

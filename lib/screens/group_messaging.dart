@@ -1374,7 +1374,11 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                           child: kMobile
                               ? _body(hideChrome: hideChrome)
                               : hideChrome
-                                  ? _body(hideChrome: hideChrome)
+                                  // Rows dissolve inside the 12px gutter, not slice at the strip hairline.
+                                  ? TopFadeMask(
+                                      clear: 0,
+                                      fade: 12,
+                                      child: _body(hideChrome: hideChrome))
                                   : TopFadeMask(
                                       clear: StageBar.height - 24,
                                       child: _body(hideChrome: hideChrome))),
