@@ -1,22 +1,33 @@
 import 'package:flutter/material.dart';
 
 import '../envelope.dart';
+import '../phosphor_icons.dart';
+import '../platform.dart';
 import '../tap_detector.dart';
+import '../theme.dart';
 import '../widgets.dart';
 import 'signal_row.dart' show showSignalDetails;
 
 /// A daemon envelope shown as one muted line: icon, summary, full note.
 class SystemNotice {
-  const SystemNotice(this.icon, this.summary, this.detail);
+  const SystemNotice(this.icon, this.summary, this.detail,
+      {this.kind = '', this.rows = const []});
   final String icon;
   final String summary;
   final String detail;
+
+  /// The envelope tag, such as `session_stopped`; picks the desktop icon.
+  final String kind;
+
+  /// Labelled detail rows for the desktop block, such as ("Last said", ...).
+  final List<(String, String)> rows;
 }
 
-String _plain(String text) => unescapeXml(text.replaceAll(RegExp(r'<[^>]+>'), ' '))
-    .replaceAll(RegExp(r'[ \t]+'), ' ')
-    .replaceAll(RegExp(r'\s*\n\s*'), '\n')
-    .trim();
+String _plain(String text) =>
+    unescapeXml(text.replaceAll(RegExp(r'<[^>]+>'), ' '))
+        .replaceAll(RegExp(r'[ \t]+'), ' ')
+        .replaceAll(RegExp(r'\s*\n\s*'), '\n')
+        .trim();
 
 String _label(String kind) {
   final words = kind.replaceAll('_', ' ');
@@ -163,12 +174,33 @@ int? _findClosingTagEnd(String text, String tag, int start) {
   return null;
 }
 
-String _joinParts(List<String> parts) =>
-    [for (final p in parts) if (p.trim().isNotEmpty) p.trim()].join('\n\n');
+String _joinParts(List<String> parts) => [
+      for (final p in parts)
+        if (p.trim().isNotEmpty) p.trim()
+    ].join('\n\n');
+
+/// Goals and plans were removed from the service: their notices are void.
+bool _isGoalKind(String kind) => kind == 'goal' || kind.startsWith('goal_');
 
 SystemNotice? _parseSingleNotice(String text) {
   final kind = envelopeKind(text)!;
-  if (kind == 'goal') return null;
+  if (_isGoalKind(kind)) return null;
+  final n = _parseNoticeBody(text, kind);
+  if (n == null) return null;
+  String f(String name) => envelopeField(text, name).trim();
+  final rows = <(String, String)>[
+    if (kind == 'session_stopped') ...[
+      if (f('last_said').isNotEmpty) ('Last said', f('last_said')),
+      if (f('approval').isNotEmpty) ('Approval', f('approval')),
+      if (f('question').isNotEmpty) ('Question', f('question')),
+      if (envelopeBody(text).trim().isNotEmpty)
+        ('Note', envelopeBody(text).trim()),
+    ],
+  ];
+  return SystemNotice(n.icon, n.summary, n.detail, kind: kind, rows: rows);
+}
+
+SystemNotice? _parseNoticeBody(String text, String kind) {
   String f(String name) => envelopeField(text, name);
   final note = envelopeBody(text);
   final attr = f('kind');
@@ -292,8 +324,8 @@ SystemNotice? _parseSingleNotice(String text) {
       return SystemNotice('transfer',
           title.isEmpty ? 'Lane offered' : 'Lane offered: $title', note);
     case 'lane_offer_declined':
-      return SystemNotice('info', 'Lane offer declined',
-          _joinParts([f('reason'), note]));
+      return SystemNotice(
+          'info', 'Lane offer declined', _joinParts([f('reason'), note]));
     case 'lane_report':
       final subject = f('subject');
       return SystemNotice(
@@ -332,16 +364,48 @@ SystemNotice? parseSystemNotice(String raw) {
     notices.first.icon,
     [for (final n in notices) n.summary].join(' · '),
     _joinParts([for (final n in notices) n.detail]),
+    kind: notices.first.kind,
+    rows: [for (final n in notices) ...n.rows],
   );
 }
 
+/// Desktop icon per notice kind (MSG-12..18): stop, arrow right, member,
+/// clock or eye, rewind, compress; the phone keeps [SystemNotice.icon].
+IconData _deskIcon(SystemNotice n) => switch (n.kind) {
+      'session_stopped' => PhIcons.stop,
+      'routing' => PhIcons.arrowRight,
+      'group_added' => PhIcons.userPlus,
+      'wake' || 'automated_wake' => PhIcons.clock,
+      'watch' || 'file_watch' => PhIcons.eye,
+      'rewind' => PhIcons.clockCounterClockwise,
+      'compaction' || 'compacted' || 'lean_continuation' => PhIcons.arrowsIn,
+      'reflection' || 'reflect' => PhIcons.sparkle,
+      'task_cancelled' => PhIcons.xCircle,
+      'session_question' => PhIcons.question,
+      'owed_reply' || 'lane_message' || 'reaction' => PhIcons.chatText,
+      'managed_by' || 'handoff' || 'lane_offer' => PhIcons.arrowsLeftRight,
+      'session_artifact' => PhIcons.file,
+      'review_due' || 'review_request' || 'review_findings' => PhIcons.eye,
+      _ => PhIcons.info,
+    };
+
 /// The notice in a transcript; tap opens the full note when there is one.
-class SystemNoticeLine extends StatelessWidget {
+/// Desktop (MSG-11): min 28 high, icon 14 fg3 at x+7, text 12/400 fg2 lh17
+/// at x+22; a notice with detail adds a chevron and expands in place.
+class SystemNoticeLine extends StatefulWidget {
   const SystemNoticeLine({super.key, required this.notice});
   final SystemNotice notice;
 
   @override
-  Widget build(BuildContext context) {
+  State<SystemNoticeLine> createState() => _SystemNoticeLineState();
+}
+
+class _SystemNoticeLineState extends State<SystemNoticeLine> {
+  bool _open = false;
+
+  SystemNotice get notice => widget.notice;
+
+  Widget _phone() {
     final line = NoteLine(notice.summary, icon: notice.icon);
     if (notice.detail.isEmpty) return line;
     return Align(
@@ -354,4 +418,99 @@ class SystemNoticeLine extends StatelessWidget {
       ),
     );
   }
+
+  List<(String?, String)> get _rows => notice.rows.isNotEmpty
+      ? [for (final (k, v) in notice.rows) (k, v)]
+      : [
+          for (final p in notice.detail.split(RegExp(r'\n\s*\n')))
+            if (p.trim().isNotEmpty) (null, p.trim()),
+        ];
+
+  Widget _detail() {
+    final text = sans(12, height: 17 / 12, color: AppColors.fg2);
+    return Padding(
+      padding: const EdgeInsets.only(left: 22, bottom: 6),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final (k, v) in _rows)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2.5),
+                child: Text.rich(
+                  TextSpan(children: [
+                    if (k != null)
+                      TextSpan(
+                          text: '$k: ',
+                          style: text.copyWith(color: AppColors.fg3)),
+                    TextSpan(text: v),
+                  ]),
+                  maxLines: 8,
+                  overflow: TextOverflow.ellipsis,
+                  style: text,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _desk() {
+    final interactive = notice.detail.isNotEmpty || notice.rows.isNotEmpty;
+    final line = ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 28),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5.5),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const SizedBox(width: 7),
+          Padding(
+            padding: const EdgeInsets.only(top: 1.5),
+            child: Icon(_deskIcon(notice), size: 14, color: AppColors.fg3),
+          ),
+          const SizedBox(width: 1),
+          Expanded(
+            child: Text(notice.summary,
+                style: sans(12, height: 17 / 12, color: AppColors.fg2)),
+          ),
+          if (interactive) ...[
+            const SizedBox(width: 8),
+            Padding(
+              padding: const EdgeInsets.only(top: 1.5, right: 7),
+              child: Icon(_open ? PhIcons.caretDown : PhIcons.caretRight,
+                  size: 14, color: AppColors.fg3),
+            ),
+          ],
+        ]),
+      ),
+    );
+    if (!interactive) return Semantics(container: true, child: line);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Semantics(
+          button: true,
+          expanded: _open,
+          child: HoverSurface(
+            radius: 6,
+            hoverColor: AppColors.surface1,
+            onTap: () => setState(() => _open = !_open),
+            child: line,
+          ),
+        ),
+        if (_open) _detail(),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => kMobile ? _phone() : _desk();
 }

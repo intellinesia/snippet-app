@@ -134,16 +134,64 @@ class QuotedReplyLine extends StatelessWidget {
     required this.text,
     this.mine = false,
     this.onTap,
+    this.author,
+    this.deleted = false,
   });
 
   final String text;
   final bool mine;
   final VoidCallback? onTap;
 
+  /// Desktop: who wrote the original, 12/500 fg2 before the text.
+  final String? author;
+
+  /// Desktop: the original is gone; shows "Original message deleted".
+  final bool deleted;
+
+  // MSG-06: s2 card radius 8, 2pt fg3 bar, 34 high, one line.
+  Widget _desk(double maxW) => Container(
+        constraints: BoxConstraints(maxWidth: maxW),
+        height: 34,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Container(width: 2, color: AppColors.fg3),
+          const SizedBox(width: 10),
+          if (deleted) ...[
+            Icon(PhIcons.x, size: 12, color: AppColors.fg3),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text('Original message deleted',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(12, color: AppColors.fg3)),
+            ),
+          ] else ...[
+            if (author != null) ...[
+              Text(author!,
+                  maxLines: 1,
+                  style: sans(12,
+                      weight: FontWeight.w500, color: AppColors.fg2)),
+              const SizedBox(width: 6),
+            ],
+            Flexible(
+              child: Text(text,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(12, color: AppColors.fg3)),
+            ),
+          ],
+          const SizedBox(width: 10),
+        ]),
+      );
+
   @override
   Widget build(BuildContext context) {
     final maxW = mine ? (kMobile ? 280.0 : 440.0) : 460.0;
-    final row = Container(
+    final row = !kMobile ? _desk(maxW) : Container(
       constraints: BoxConstraints(maxWidth: maxW),
       padding: EdgeInsets.only(left: S.s8, top: S.s2, bottom: S.s2),
       decoration: BoxDecoration(
@@ -156,7 +204,7 @@ class QuotedReplyLine extends StatelessWidget {
         style: sans(12, height: 1.35, color: AppColors.fg3),
       ),
     );
-    if (onTap == null) return row;
+    if (onTap == null || (deleted && !kMobile)) return row;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
@@ -181,8 +229,48 @@ class PendingReplyBanner extends StatelessWidget {
   final String text;
   final VoidCallback onClear;
 
+  // MSG-07: one s2 strip, 32 high at rest, "Replying to X: ..." 12/400 fg2
+  // and a 12 x in a 28 target at the right.
+  Widget _desk() => Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 32, maxHeight: 40),
+          padding: const EdgeInsets.only(left: 12, right: 2),
+          decoration: BoxDecoration(
+            color: AppColors.surface2,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(children: [
+            Expanded(
+              child: Text('Replying to $author: $text',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(12, height: 17 / 12, color: AppColors.fg2)),
+            ),
+            Tooltip(
+              message: 'Clear reply',
+              child: Semantics(
+                button: true,
+                label: 'Clear reply',
+                child: HoverSurface(
+                  radius: 6,
+                  hoverColor: AppColors.surface3,
+                  onTap: onClear,
+                  child: SizedBox.square(
+                    dimension: 28,
+                    child: Center(
+                        child: Icon(PhIcons.x, size: 12, color: AppColors.fg3)),
+                  ),
+                ),
+              ),
+            ),
+          ]),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
+    if (!kMobile) return _desk();
     return Padding(
       padding: EdgeInsets.fromLTRB(S.s4, S.s2, S.s2, S.s6),
       child: ClipRRect(
@@ -488,20 +576,21 @@ class _SplitMenuEntry extends PopupMenuEntry<String> {
 class _SplitMenuEntryState extends State<_SplitMenuEntry> {
   void _pick(String v) => Navigator.of(context).pop(v);
 
+  // DL-02 desktop menu: flat s2 with the single overlay shadow.
   BoxDecoration _surface(double radius) => BoxDecoration(
         color: AppColors.surface2,
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: AppColors.glassBorder),
+        boxShadow: overlayShadow,
       );
 
   Widget _emoji(String emoji, {String? tip}) {
     final b = HoverSurface(
-      radius: 15,
+      radius: 6,
       hoverColor: AppColors.surface3,
       onTap: () => _pick('react:$emoji'),
       child: SizedBox(
-          width: 30,
-          height: 30,
+          width: 28,
+          height: 28,
           child: Center(child: Text(emoji, style: _emojiStyle(15)))),
     );
     return Semantics(
@@ -515,7 +604,7 @@ class _SplitMenuEntryState extends State<_SplitMenuEntry> {
     if (widget.grid) {
       return Container(
         padding: const EdgeInsets.all(4),
-        decoration: _surface(12),
+        decoration: _surface(8),
         child: Wrap(children: [
           for (final (e, label) in kMoreReactions) _emoji(e, tip: label),
         ]),
@@ -527,20 +616,20 @@ class _SplitMenuEntryState extends State<_SplitMenuEntry> {
       children: [
         if (widget.react)
           Container(
-            padding: const EdgeInsets.all(3),
-            decoration: _surface(999),
+            padding: const EdgeInsets.all(4),
+            decoration: _surface(8),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               for (final e in kMessageReactions) _emoji(e),
               Semantics(
                 label: 'More reactions',
                 button: true,
                 child: HoverSurface(
-                  radius: 15,
+                  radius: 6,
                   hoverColor: AppColors.surface3,
                   onTap: () => _pick('more'),
                   child: SizedBox(
-                      width: 30,
-                      height: 30,
+                      width: 28,
+                      height: 28,
                       child: Center(
                           child: AppIcon('plus',
                               size: 14, color: AppColors.fg4))),
@@ -554,21 +643,21 @@ class _SplitMenuEntryState extends State<_SplitMenuEntry> {
           Container(
             width: 208,
             padding: const EdgeInsets.all(4),
-            decoration: _surface(12),
+            decoration: _surface(8),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               for (final (value, icon, label) in widget.actions)
                 HoverSurface(
-                  radius: 7,
+                  radius: 6,
                   hoverColor: AppColors.surface3,
                   onTap: () => _pick(value),
                   child: SizedBox(
-                    height: 30,
+                    height: 28,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       child: Row(children: [
                         AppIcon(icon, size: 14, color: AppColors.fg3),
-                        const SizedBox(width: 10),
-                        Text(label, style: sans(13, color: AppColors.fg2)),
+                        const SizedBox(width: 8),
+                        Text(label, style: sans(12, color: AppColors.fg1)),
                       ]),
                     ),
                   ),
@@ -866,17 +955,9 @@ class _MessageBubbleInteractiveState extends State<MessageBubbleInteractive>
     });
   }
 
+  // A hold opens the focus overlay on both form factors (MSG-08); desktop
+  // sizes it to 28 targets. Right-click keeps the context menu (MSG-09).
   void _open() {
-    if (!kMobile) {
-      HapticFeedback.selectionClick();
-      showMessageActionsSheet(
-        context,
-        text: widget.text,
-        onReply: widget.onReply,
-        onReact: widget.onReact,
-      );
-      return;
-    }
     final targetCtx = _bubbleKey.currentContext ?? _contentKey.currentContext;
     final box = targetCtx?.findRenderObject() as RenderBox?;
     if (box == null || !box.hasSize) return;
@@ -1082,18 +1163,27 @@ void showReactionPeople(BuildContext context, List<ReactionGroup> reactions) {
       ]));
 }
 
-/// Desktop reaction chip: 22px, line icon where one exists, count, accent
-/// tint when it is the user's own.
+/// Desktop reaction chip (MSG-05): 24 high, radius 12, s2; icon 14 and
+/// count 12/400 fg2. Your own reaction steps up to s3 (a tone, not a
+/// colour). Hover or press shows who reacted in an s3 tooltip.
 class DeskReactionChip extends StatelessWidget {
   const DeskReactionChip({super.key, required this.group, required this.onTap})
-      : _add = false;
+      : _add = false,
+        more = 0;
   const DeskReactionChip.add({super.key, required this.onTap})
       : group = null,
-        _add = true;
+        _add = true,
+        more = 0;
+
+  /// The "+3" pill, 24 x 40, standing in for chips past the cap.
+  const DeskReactionChip.more({super.key, required this.more, required this.onTap})
+      : group = null,
+        _add = false;
 
   final ReactionGroup? group;
   final VoidCallback onTap;
   final bool _add;
+  final int more;
 
   static const _icons = {
     '\u2705': 'check',
@@ -1102,44 +1192,130 @@ class DeskReactionChip extends StatelessWidget {
     '\u2753': 'help-circle',
   };
 
+  Widget _face() {
+    final g = group;
+    if (_add) {
+      return SizedBox(
+        width: 18,
+        height: 16,
+        child: Stack(clipBehavior: Clip.none, children: [
+          Icon(Icons.sentiment_satisfied_outlined,
+              size: 14, color: AppColors.fg2),
+          Positioned(
+              right: 0,
+              top: 0,
+              child: Icon(PhIcons.plus, size: 9, color: AppColors.fg2)),
+        ]),
+      );
+    }
+    if (g == null) {
+      return Text('+$more',
+          style: sans(12, tabular: true, color: AppColors.fg2));
+    }
+    final icon = _icons[g.name];
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      if (icon != null)
+        AppIcon(icon, size: 14, color: AppColors.fg2)
+      else
+        Text(g.name, style: _emojiStyle(13)),
+      const SizedBox(width: 4),
+      Text('${g.count}',
+          style: sans(12, tabular: true, color: AppColors.fg2)),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final g = group;
     final mine = g?.mine ?? false;
-    final icon = _add ? 'plus' : _icons[g!.name];
-    final color = mine ? AppColors.accent : AppColors.fg2;
-    return Semantics(
+    final fill = mine ? AppColors.surface3 : AppColors.surface2;
+    final label = _add
+        ? 'Add reaction'
+        : g == null
+            ? '$more more reactions'
+            : '${g.name} ${g.count}';
+    Widget chip = Semantics(
       button: true,
-      label: _add ? 'Add reaction' : '${g!.name} ${g.count}',
-      child: Material(
-        color: _add
-            ? Colors.transparent
-            : (mine ? AppColors.accentBg : AppColors.surface3),
-        shape: StadiumBorder(
-            side: _add ? BorderSide(color: AppColors.line) : BorderSide.none),
-        child: InkWell(
-          customBorder: const StadiumBorder(),
-          onTap: onTap,
-          child: SizedBox(
-            height: 22,
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: _add ? 7 : 8),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                if (icon != null)
-                  AppIcon(icon, size: 12, color: color)
-                else
-                  Text(g!.name, style: _emojiStyle(12)),
-                if (!_add) ...[
-                  const SizedBox(width: 4),
-                  Text('${g!.count}',
-                      style: sans(11,
-                          tabular: true, weight: W.label, color: color)),
-                ],
-              ]),
-            ),
+      selected: mine,
+      label: label,
+      excludeSemantics: true,
+      child: HoverSurface(
+        radius: 12,
+        rest: fill,
+        hoverColor: mine ? AppColors.line : AppColors.surface3,
+        onTap: onTap,
+        child: SizedBox(
+          height: 24,
+          width: g == null && !_add ? 40 : null,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: g == null ? 0 : 8),
+            child: Center(widthFactor: 1, child: _face()),
           ),
         ),
       ),
+    );
+    if (g != null && g.actors.isNotEmpty) {
+      chip = Tooltip(
+        message: g.actors.map(reactionActorLabel).join(', '),
+        triggerMode: TooltipTriggerMode.longPress,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: AppColors.surface3,
+          borderRadius: BorderRadius.circular(6),
+          boxShadow: overlayShadow,
+        ),
+        textStyle: sans(12, height: 16 / 12, color: AppColors.fg1),
+        child: chip,
+      );
+    }
+    return chip;
+  }
+}
+
+/// Desktop reactions under a message (MSG-05): chips 8 apart, at most
+/// [cap] shown with the rest folded into a "+n" pill, then the add chip.
+class DeskReactionRow extends StatefulWidget {
+  const DeskReactionRow({
+    super.key,
+    required this.reactions,
+    required this.onReact,
+    this.cap = 5,
+    this.alignment = WrapAlignment.start,
+  });
+
+  final List<ReactionGroup> reactions;
+  final ValueChanged<String> onReact;
+  final int cap;
+  final WrapAlignment alignment;
+
+  @override
+  State<DeskReactionRow> createState() => _DeskReactionRowState();
+}
+
+class _DeskReactionRowState extends State<DeskReactionRow> {
+  bool _all = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final r = widget.reactions;
+    final fold = !_all && r.length > widget.cap;
+    final shown = fold ? r.take(widget.cap - 1).toList() : r;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: widget.alignment,
+      children: [
+        for (final g in shown)
+          DeskReactionChip(group: g, onTap: () => widget.onReact(g.name)),
+        if (fold)
+          DeskReactionChip.more(
+              more: r.length - shown.length,
+              onTap: () => setState(() => _all = true)),
+        Builder(
+            builder: (anchor) => DeskReactionChip.add(
+                onTap: () =>
+                    showReactionPicker(anchor, onReact: widget.onReact))),
+      ],
     );
   }
 }

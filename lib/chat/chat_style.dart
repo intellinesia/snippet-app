@@ -221,6 +221,27 @@ class ChatBubble extends StatelessWidget {
         ),
       );
     }
+    // MSG-01 desktop: your bubble is s2, radius 12, pad 12, at most 360 wide.
+    if (!kMobile && mine && color == null) {
+      return ChatBubbleFill(
+        fill: fill,
+        child: Builder(
+          builder: (bubbleCtx) => Container(
+            constraints: const BoxConstraints(maxWidth: 360),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: fill,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: DefaultTextStyle.merge(
+              style: chatText(mine: true, context: bubbleCtx),
+              textWidthBasis: TextWidthBasis.longestLine,
+              child: child,
+            ),
+          ),
+        ),
+      );
+    }
     return ChatBubbleFill(
       fill: fill,
       child: Builder(
