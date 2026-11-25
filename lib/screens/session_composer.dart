@@ -562,44 +562,6 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     _setState(() => _sessionAgentIds.add(agentId));
   }
 
-  /// The composer's status line: where this session runs, and how much context
-  /// is left. Sits under the card so the transcript keeps the full width.
-  Widget _goalBanner() => Container(
-        margin: EdgeInsets.only(bottom: S.of(10)),
-        padding: EdgeInsets.fromLTRB(S.of(10), kMobile ? S.s4 : S.s8,
-            kMobile ? S.s4 : S.s8, kMobile ? S.s4 : S.s8),
-        decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.border)),
-        ),
-        child: Row(children: [
-          AppIcon('goal', size: 14, color: AppColors.accent),
-          SizedBox(width: S.s8),
-          Expanded(
-            child: Text(plainInline(_state!.goal!.text),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sans(12, color: AppColors.fg2)),
-          ),
-          Text(_state!.goal!.paused ? 'paused' : 'active',
-              style: mono(10, color: AppColors.accent)),
-          SizedBox(width: S.of(5)),
-          kMobile
-              ? TapDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: _cancelGoal,
-                  child: SizedBox(
-                      width: 32,
-                      height: 28,
-                      child: Center(
-                          child: AppIcon('x', size: 14, color: AppColors.fg3))))
-              : IconBtn('x',
-                  size: 26,
-                  iconSize: 13,
-                  tooltip: 'Cancel goal',
-                  onTap: _cancelGoal),
-        ]),
-      );
-
   Map<ShortcutActivator, VoidCallback> get _composerShortcuts => {
         const SingleActivator(LogicalKeyboardKey.enter): () {
           if (_mentionMatches.isNotEmpty) {
@@ -762,7 +724,6 @@ extension _SessionScreenComposerExt on _SessionScreenState {
   SlashController get _slash {
     final c = _slashControllers[this] ??= SlashController(_input);
     c.env = SlashEnv(
-      goalOngoing: _state?.goal?.ongoing == true,
       isMc: _isLead,
       resumeMode: _resumeMode,
       settleOn: !_keepAwake,
@@ -793,10 +754,8 @@ extension _SessionScreenComposerExt on _SessionScreenState {
           if (mounted) _toast('Hand off failed: $e');
         }
       },
-      onCommand: (cmd, rest) {
+      onCommand: (cmd) {
         switch (cmd) {
-          case SlashCmd.goal:
-            _performMacAction('goal', rest.isEmpty ? null : rest);
           case SlashCmd.compact:
             _performMacAction('compact');
           case SlashCmd.fork:
@@ -945,7 +904,6 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     final hint = _isLead
         ? 'Ask Lead…'
         : (agent.isEmpty ? 'Reply to Snippet' : 'Message $agent');
-    final goal = _state?.goal?.ongoing == true;
     final rcpt = _recipientChip();
     final ownModel = _inboxAgentId(widget.sessionId) == null;
     return ChatComposer(
@@ -961,14 +919,13 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       shortcuts: _composerShortcuts,
       contentInsertion: _keyboardContent,
       fieldWrapper: (field) => SlashKeys(controller: _slash, child: field),
-      banner: goal || rcpt != null
+      banner: rcpt != null
           ? Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: kMobile
                   ? CrossAxisAlignment.stretch
                   : CrossAxisAlignment.start,
               children: [
-                if (goal) _goalBanner(),
                 if (rcpt != null) rcpt,
               ],
             )

@@ -510,13 +510,6 @@ class _DesktopShellState extends State<DesktopShell>
         activeTab: t,
         macSessionStatus: _macSessionStatuses[t.key],
         onSessionAction: _dispatchSessionAction,
-        onOpenGoalPopover: _openGoalPopover,
-      );
-
-  Future<void> _openGoalPopover(BuildContext btnCtx) => showGoalPopover(
-        context: context,
-        anchorContext: btnCtx,
-        onSetGoal: (text) => _dispatchSessionAction('goal', text),
       );
 
   @override

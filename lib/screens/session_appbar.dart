@@ -739,50 +739,6 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     _publishTerminals();
   }
 
-  // macOS keeps this row focused on the active session title. Workspace
-  // context and Git actions live in the clickable repository bar above.
-  // Set an autonomous /goal: the agent drives toward it on its own until it's
-  // done, you cancel, or it's rate-limited. Sent as a LoopInput over the socket.
-  Future<void> _setGoal({String initial = ''}) async {
-    final text = await promptText(context,
-        title: initial.isEmpty ? 'Set goal' : 'Edit goal',
-        initial: initial,
-        hint: 'What should the agent work toward?',
-        saveLabel: 'Set goal',
-        minLines: 2,
-        maxLines: 4);
-    final t = text?.trim();
-    if (t == null || t.isEmpty || t == initial.trim()) return;
-    _toast('Submitting goal…');
-    _send({'kind': 'set_goal', 'value': t});
-    _toast('Goal set — the agent will drive toward it');
-  }
-
-  void _submitGoal(String t) {
-    _send({'kind': 'set_goal', 'value': t});
-    _toast('Goal set — the agent will drive toward it');
-  }
-
-  /// Desktop writes the goal inside the panel; the phone keeps its sheet.
-  void _editGoal() {
-    if (kMobile) {
-      _setGoal();
-      return;
-    }
-    sessionGoalEditRequest.value = true;
-    _showPanel();
-  }
-
-  void _resumeGoal() {
-    _send({'kind': 'resume_goal'});
-    _toast('Resuming the goal');
-  }
-
-  void _cancelGoal() {
-    _send({'kind': 'cancel_goal'});
-    _toast('Cancelling the goal');
-  }
-
   /// Hand the session to another agent: pick one, optional note, done.
   void _showHandOff() {
     showHandOffSheet(
@@ -875,20 +831,6 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         return;
       case 'model':
         _switchModel(_modelChipKey.currentContext ?? context);
-        return;
-      case 'goal':
-        final text = extra?.trim();
-        if (text != null && text.isNotEmpty) {
-          _send({'kind': 'set_goal', 'value': text});
-          _toast('Goal set — the agent will drive toward it');
-        } else if (s?.goal?.ongoing ?? false) {
-          _cancelGoal();
-        } else {
-          _editGoal();
-        }
-        return;
-      case 'resume_goal':
-        _resumeGoal();
         return;
       case 'lanes':
         _showLanes();
@@ -1176,12 +1118,6 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       onResumeMode: (m) => _setResumeMode(m),
       onAutonomy: _isLead ? () => navigate!(_openAutonomy) : null,
       onWakes: () => run(_openWakes),
-      onSetGoal: (text) {
-        _send({'kind': 'set_goal', 'value': text});
-        _toast('Goal set — the agent will drive toward it');
-      },
-      onCancelGoal: _cancelGoal,
-      onResumeGoal: _resumeGoal,
       onLanes: () => navigate!(_showLanes),
       onGiveWork: _giveWork,
       hideShell: _isLead,
@@ -1329,7 +1265,6 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       {bool floating = false, double? column}) {
     final mc = _isLead;
     final open = widget.onOpenRightPanel;
-    final goalOn = s?.goal?.ongoing ?? false;
     final profile = (_currentProfile ?? widget.profile ?? '').trim();
     if (!_railProvidersAsked) {
       _railProvidersAsked = true;
@@ -1348,13 +1283,6 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       github: _github != null,
       onModel: () => _switchModel(_modelChipKey.currentContext ?? context),
       onWakes: _openWakes,
-      onGoal: () {
-        if (goalOn) {
-          s!.goal!.paused ? _resumeGoal() : _cancelGoal();
-        } else {
-          _setGoal();
-        }
-      },
       onCycleResume: _cycleResumeMode,
       onAnswer:
           mc ? (v) => _sendDecision({'kind': 'answer', 'value': v}) : null,
@@ -1393,7 +1321,6 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       onDelete: mc || widget.readOnly || _inboxAgentId(widget.sessionId) != null
           ? null
           : () => _deleteSession((f) => f()),
-      onSubmitGoal: mc || widget.readOnly ? null : _submitGoal,
       handOffPanel:
           mc || widget.readOnly || _inboxAgentId(widget.sessionId) != null
               ? null
@@ -1415,8 +1342,6 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
           mc || widget.readOnly || _inboxAgentId(widget.sessionId) != null
               ? null
               : () => _deleteNow((f) => f()),
-      onResumeGoal: mc || widget.readOnly ? null : _resumeGoal,
-      onEndGoal: mc || widget.readOnly ? null : _cancelGoal,
       providers: _profileProviders,
       ownProfile: profile.isEmpty ? null : profile,
       ownAgent: _me?.displayAgentId ?? 'snippet',

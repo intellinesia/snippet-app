@@ -69,10 +69,6 @@ final ValueNotifier<bool> sessionRailCollapsed = ValueNotifier<bool>(false);
 /// The panel as a floating card, for windows too narrow to dock it.
 final ValueNotifier<bool> sessionRailFloating = ValueNotifier<bool>(false);
 
-/// Set from outside the panel (the bar's goal icon) to open the goal editor
-/// in place once the panel is showing; the panel clears it.
-final ValueNotifier<bool> sessionGoalEditRequest = ValueNotifier<bool>(false);
-
 /// Asks the open panel to show a page ('usage'); cleared once taken.
 final ValueNotifier<String?> sessionRailPageRequest =
     ValueNotifier<String?>(null);
@@ -107,7 +103,6 @@ class SessionRail extends StatefulWidget {
     required this.resumeMode,
     required this.onModel,
     required this.onWakes,
-    required this.onGoal,
     required this.onCycleResume,
     this.floating = false,
     this.columnWidth,
@@ -138,9 +133,6 @@ class SessionRail extends StatefulWidget {
     this.onRecurring,
     this.onDelete,
     this.onAnswer,
-    this.onSubmitGoal,
-    this.onResumeGoal,
-    this.onEndGoal,
     this.providers = const {},
     this.ownProfile,
     this.ownAgent,
@@ -166,7 +158,6 @@ class SessionRail extends StatefulWidget {
   final bool? github;
   final VoidCallback onModel;
   final VoidCallback onWakes;
-  final VoidCallback onGoal;
   final VoidCallback onCycleResume;
   final VoidCallback? onChanges;
   final VoidCallback? onFiles;
@@ -200,11 +191,6 @@ class SessionRail extends StatefulWidget {
 
   /// Sends the answer to Lead's pending question.
   final void Function(String answer)? onAnswer;
-
-  /// Sets or replaces the goal; the editor lives inside the goal card.
-  final ValueChanged<String>? onSubmitGoal;
-  final VoidCallback? onResumeGoal;
-  final VoidCallback? onEndGoal;
 
   /// Profile name to provider, for the lane rows' marks.
   final Map<String, String> providers;
@@ -307,8 +293,6 @@ class _SessionRailState extends State<SessionRail> {
   bool _loading = true;
   bool _loadFailed = false;
 
-  bool _editingGoal = false;
-
   /// Height the docked panel was handed, so a quiet Overview can centre in it.
   double _bodyH = 0;
 
@@ -341,25 +325,18 @@ class _SessionRailState extends State<SessionRail> {
         _openAction = _openAction == key ? null : key;
         _armedRewind = null;
       });
-  final _goalText = TextEditingController();
-
   @override
   void initState() {
     super.initState();
     loadSessionRailPref();
     _load();
-    sessionGoalEditRequest.addListener(_onGoalEditRequest);
     sessionRailPageRequest.addListener(_onPageRequest);
     _onPageRequest();
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => mounted ? _onGoalEditRequest() : null);
   }
 
   @override
   void dispose() {
-    sessionGoalEditRequest.removeListener(_onGoalEditRequest);
     sessionRailPageRequest.removeListener(_onPageRequest);
-    _goalText.dispose();
     _wakeBrief.dispose();
     _wakeSched.dispose();
     super.dispose();
@@ -370,32 +347,6 @@ class _SessionRailState extends State<SessionRail> {
     if (p == null || kMobile || widget.isLead) return;
     sessionRailPageRequest.value = null;
     _go(p);
-  }
-
-  void _onGoalEditRequest() {
-    if (!sessionGoalEditRequest.value || widget.onSubmitGoal == null) return;
-    sessionGoalEditRequest.value = false;
-    _startGoalEdit();
-  }
-
-  void _startGoalEdit() {
-    final g = widget.state?.goal;
-    final initial = g != null && g.ongoing ? g.text : '';
-    _goalText.text = initial;
-    _goalText.selection =
-        TextSelection(baseOffset: 0, extentOffset: initial.length);
-    setState(() => _editingGoal = true);
-  }
-
-  void _cancelGoalEdit() => setState(() => _editingGoal = false);
-
-  void _submitGoal() {
-    final t = _goalText.text.trim();
-    if (t.isEmpty) return;
-    final g = widget.state?.goal;
-    final current = g != null && g.ongoing ? g.text.trim() : '';
-    if (t != current) widget.onSubmitGoal?.call(t);
-    setState(() => _editingGoal = false);
   }
 
   @override
@@ -683,11 +634,6 @@ class _SessionRailState extends State<SessionRail> {
               : '${widget.profileLabel} · ${ctx.round()}%');
       return out;
     }
-    final plan = _plan(s);
-    if (plan != null) {
-      final done = plan.where((p) => _stepState(p) == 2).length;
-      add('Plan', _planRows(plan), meta: '$done of ${plan.length} done');
-    }
     final lanes = [...?s?.lanes];
     final running = lanes.where((l) => l.running).length;
     add('Lanes', _laneRows(lanes),
@@ -704,230 +650,6 @@ class _SessionRailState extends State<SessionRail> {
     add('Usage', _usageRows(s), open: false);
     add('Next without you', _nextRows(), open: false);
     return out;
-  }
-
-  /// The goal sits at the top of the panel: its text, its state and what you
-  /// can do to it. The daemon has no pause; interrupting the run pauses it.
-  Widget _goalCard() {
-    final g = widget.state?.goal;
-    final key = _editingGoal && widget.onSubmitGoal != null
-        ? 'edit'
-        : g == null || !g.ongoing
-            ? 'empty'
-            : g.paused
-                ? 'paused'
-                : 'active';
-    // The card resizes while the old contents fade out, then the new fade in;
-    // overlapping them read as a smear.
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 260),
-      curve: Curves.easeInOutCubic,
-      alignment: Alignment.topCenter,
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 260),
-        switchInCurve: const Interval(0.45, 1, curve: Curves.easeOutCubic),
-        switchOutCurve: const Interval(0.45, 1, curve: Curves.easeInCubic),
-        layoutBuilder: (cur, prev) => Stack(
-            alignment: Alignment.topCenter,
-            // AnimatedSize clips, so the outgoing body shows whole while it fades.
-            clipBehavior: Clip.none,
-            children: [
-              for (final p in prev)
-                Positioned(top: 0, left: 0, right: 0, child: p),
-              if (cur != null) cur
-            ]),
-        transitionBuilder: (child, a) => FadeTransition(
-          opacity: a,
-          child: ScaleTransition(
-              scale: Tween(begin: 0.98, end: 1.0).animate(a),
-              alignment: Alignment.topCenter,
-              child: child),
-        ),
-        child: KeyedSubtree(key: ValueKey(key), child: _goalCardBody()),
-      ),
-    );
-  }
-
-  Widget _goalCardBody() {
-    final g = widget.state?.goal;
-    if (_editingGoal && widget.onSubmitGoal != null) {
-      return _goalEditor(g != null && g.ongoing);
-    }
-    if (g == null || !g.ongoing) {
-      if (widget.onSubmitGoal == null) return const SizedBox.shrink();
-      return Padding(
-        padding: EdgeInsets.fromLTRB(kMobile ? 12 : 0, 10, kMobile ? 12 : 0, 0),
-        child: InkWell(
-          onTap: _startGoalEdit,
-          borderRadius: BorderRadius.circular(R.of(kMobile ? 14 : 8)),
-          child: Container(
-            padding: kMobile
-                ? const EdgeInsets.fromLTRB(14, 11, 12, 11)
-                : const EdgeInsets.fromLTRB(8, 8, 8, 8),
-            decoration: BoxDecoration(
-              color: AppColors.surface2,
-              borderRadius: BorderRadius.circular(R.of(kMobile ? 14 : 8)),
-            ),
-            child: Row(children: [
-              AppIcon('goal', size: 15, color: AppColors.fg4),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Set a goal', style: sans(13, color: AppColors.fg2)),
-                      const SizedBox(height: 2),
-                      Text('Works toward it without you',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(11.5, color: AppColors.fg4)),
-                    ]),
-              ),
-              AppIcon('chevron-right', size: 12, color: AppColors.fg3),
-            ]),
-          ),
-        ),
-      );
-    }
-    final paused = g.paused;
-    final turns = g.autonomousTurns;
-    final state = paused ? 'Paused' : 'Active';
-    final turnsText = turns > 0 ? '$turns turn${turns == 1 ? '' : 's'}' : null;
-    final tone = paused ? AppColors.fg3 : AppColors.accent;
-    return Container(
-      margin: EdgeInsets.fromLTRB(kMobile ? 12 : 0, 10, kMobile ? 12 : 0, 0),
-      padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
-      decoration: BoxDecoration(
-        color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(R.of(kMobile ? 14 : 8)),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          AppIcon('goal', size: 12, color: AppColors.fg4),
-          const SizedBox(width: 6),
-          Text('Goal', style: sans(11.5, color: AppColors.fg4)),
-          const SizedBox(width: 8),
-          Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(color: tone, shape: BoxShape.circle)),
-          const SizedBox(width: 5),
-          Text(state, style: sans(11.5, color: tone, tabular: true)),
-          if (turnsText != null) ...[
-            const Spacer(),
-            Text(turnsText, style: mono(11.5, color: AppColors.fg4)),
-          ],
-        ]),
-        const SizedBox(height: 8),
-        Text(g.text,
-            maxLines: 4,
-            overflow: TextOverflow.ellipsis,
-            style: sans(13.5, height: 1.45, color: AppColors.fg1)),
-        const SizedBox(height: 10),
-        Row(children: [
-          if (paused && widget.onResumeGoal != null) ...[
-            _goalBtn('play', 'Resume', widget.onResumeGoal),
-            const SizedBox(width: 6),
-          ],
-          if (widget.onSubmitGoal != null) ...[
-            _goalBtn('edit', 'Edit', _startGoalEdit),
-            const SizedBox(width: 6),
-          ],
-          if (widget.onEndGoal != null)
-            _goalBtn('check', 'End goal', widget.onEndGoal, quiet: true),
-        ]),
-      ]),
-    );
-  }
-
-  /// The goal is written where it will live: the card becomes the editor.
-  /// Ctrl or Cmd+Enter sets it, Escape cancels.
-  Widget _goalEditor(bool replacing) {
-    return Container(
-      margin: EdgeInsets.fromLTRB(kMobile ? 12 : 0, 10, kMobile ? 12 : 0, 0),
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-      decoration: BoxDecoration(
-        color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(R.of(kMobile ? 14 : 8)),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          AppIcon('goal', size: 12, color: AppColors.fg4),
-          const SizedBox(width: 6),
-          Text(replacing ? 'Edit goal' : 'New goal',
-              style: sans(11.5, color: AppColors.fg4)),
-        ]),
-        const SizedBox(height: 8),
-        CallbackShortcuts(
-          bindings: {
-            const SingleActivator(LogicalKeyboardKey.escape): _cancelGoalEdit,
-            const SingleActivator(LogicalKeyboardKey.enter, control: true):
-                _submitGoal,
-            const SingleActivator(LogicalKeyboardKey.enter, meta: true):
-                _submitGoal,
-          },
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-            decoration: BoxDecoration(
-              color: AppColors.surface3,
-              borderRadius: BorderRadius.circular(R.of(10)),
-            ),
-            child: TextField(
-              controller: _goalText,
-              autofocus: true,
-              minLines: 3,
-              maxLines: 6,
-              cursorColor: AppColors.accent,
-              style: sans(13.5, height: 1.45, color: AppColors.fg1),
-              decoration: InputDecoration.collapsed(
-                  hintText: 'What should the agent work toward?',
-                  hintStyle: sans(13.5, height: 1.45, color: AppColors.fg4)),
-            ),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-            replacing
-                ? 'Replaces the current goal.'
-                : 'Works toward it without you until done or ended.',
-            style: sans(11.5, color: AppColors.fg4)),
-        const SizedBox(height: 10),
-        Row(children: [
-          const Spacer(),
-          Btn('Cancel',
-              small: true, variant: BtnVariant.surface, onTap: _cancelGoalEdit),
-          const SizedBox(width: 6),
-          ValueListenableBuilder<TextEditingValue>(
-            valueListenable: _goalText,
-            builder: (_, v, __) => Btn(replacing ? 'Save' : 'Start goal',
-                small: true,
-                disabled: v.text.trim().isEmpty,
-                onTap: _submitGoal),
-          ),
-        ]),
-      ]),
-    );
-  }
-
-  Widget _goalBtn(String icon, String label, VoidCallback? onTap,
-      {bool quiet = false}) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(R.of(9)),
-      child: Container(
-        height: 28,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: quiet ? null : AppColors.surface3,
-          borderRadius: BorderRadius.circular(R.of(9)),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          AppIcon(icon, size: 12, color: AppColors.fg3),
-          const SizedBox(width: 6),
-          Text(label, style: sans(12, color: AppColors.fg2)),
-        ]),
-      ),
-    );
   }
 
   /// The common session actions one click away; the rest behind More.
@@ -1379,7 +1101,6 @@ class _SessionRailState extends State<SessionRail> {
         ]),
       ),
       if (mc) _needsYouCard(),
-      if (!mc) _goalCard(),
       if (!mc) _actionStrip(),
       if (widget.headerChips != null)
         Padding(
@@ -1393,9 +1114,7 @@ class _SessionRailState extends State<SessionRail> {
           child: _RailRow(
             icon: 'task',
             label: t.title,
-            value: t.workPlan.isEmpty
-                ? t.status.label
-                : '${t.workPlan.where((p) => p.done).length} of ${t.workPlan.length}',
+            value: t.status.label,
             chevron: true,
             onTap: () => widget.onOpenTask!(t.id),
           ),

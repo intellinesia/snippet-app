@@ -1246,50 +1246,11 @@ class SystemRow extends StatelessWidget {
       return _SystemDivider(label: label);
     }
 
-    final isGoal = step == 'goal_set' ||
+    if (step == 'goal_set' ||
         step == 'goal_completed' ||
         step == 'goal_paused' ||
-        step == 'goal_cancelled';
-    // A goal fire is a scheduled instruction — render it like any normal
-    // user message bubble instead of a special card. End states stay as
-    // quiet one-line notes so the canvas isn't cluttered with chrome.
-    if (isGoal) {
-      if (step == 'goal_set') {
-        return Padding(
-          padding: EdgeInsets.only(top: S.s4, bottom: S.s20),
-          child: Bubble(mine: true, text: reasoning),
-        );
-      }
-      final label = switch (step) {
-        'goal_completed' => 'goal completed',
-        'goal_paused' => 'goal paused',
-        _ => 'goal cancelled',
-      };
-      // The completion summary (the agent's complete_goal report) is the
-      // outcome of the run — show it, not just a bare divider. Other end
-      // states stay quiet.
-      if (step != 'goal_completed') {
-        return _SystemDivider(label: label);
-      }
-      final detail = reasoning.trim();
-      return Padding(
-        padding: EdgeInsets.only(top: S.s4, bottom: S.s16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          _SystemDivider(label: label),
-          if (detail.isNotEmpty)
-            Padding(
-              padding: EdgeInsets.only(top: S.s8),
-              child: MarkdownBody(
-                data: detail,
-                selectable: true,
-                styleSheet: markdownStyle(context),
-                builders: {'pre': PreBlockBuilder()},
-                onTapLink: (txt, href, title) =>
-                    openMarkdownLink(href, context, txt),
-              ),
-            ),
-        ]),
-      );
+        step == 'goal_cancelled') {
+      return const SizedBox.shrink();
     }
 
     switch (step) {
@@ -1528,8 +1489,6 @@ class AgentEventRow extends StatelessWidget {
   }
 }
 
-/// Full-width card for goal events in the chat canvas — a distinct block with
-/// an accent rail and a status label, instead of a faint one-liner.
 /// Centered hairline + label — used for compaction and tool-prune boundaries.
 class _SystemDivider extends StatelessWidget {
   final String label;

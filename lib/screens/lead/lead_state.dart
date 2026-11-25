@@ -55,14 +55,11 @@ class MissionEnvelope {
     required this.status,
     required this.summary,
     this.isRecurring = false,
-    this.isPlan = false,
     this.review = '',
     this.round = '',
   });
   final bool isReport;
   final bool isRecurring;
-  final bool isPlan;
-
   /// `findings` or `request` for a review envelope, otherwise empty.
   final String review;
   final String round;
@@ -125,8 +122,7 @@ MissionEnvelope? parseMissionEnvelope(String text) {
   final t = text.trim();
   final tag = envelopeKind(t);
   final isRecurring = tag == 'recurring_run_report';
-  final isPlan = tag == 'task_plan';
-  final isReport = isRecurring || isPlan || tag == 'mission_task_report';
+  final isReport = isRecurring || tag == 'mission_task_report';
   final isTask = tag == 'lead_task';
   final review = tag == 'review_findings'
       ? 'findings'
@@ -153,31 +149,7 @@ MissionEnvelope? parseMissionEnvelope(String text) {
     );
   }
 
-  if (isPlan) {
-    final plan = envelopeChild(t, 'plan') ?? '';
-    return MissionEnvelope(
-      isReport: true,
-      isPlan: true,
-      taskId: field('task_id'),
-      title: field('title'),
-      status: 'message',
-      summary: plan
-          .trim()
-          .split('\n')
-          .where((l) => l.trim().isNotEmpty)
-          .map((l) {
-            final m = RegExp(r'^\[(\w+)\]\s*(.*)$').firstMatch(l.trim());
-            if (m == null) return '- ${l.trim()}';
-            final step = m.group(2) ?? '';
-            return switch (m.group(1)) {
-              'done' => '- ~~$step~~',
-              'in_progress' => '- **$step** · now',
-              _ => '- $step',
-            };
-          })
-          .join('\n'),
-    );
-  }
+
   return MissionEnvelope(
     isReport: isReport,
     isRecurring: isRecurring,
@@ -219,7 +191,7 @@ Set<int> supersededStalls(List<Map<String, dynamic>> events) {
     final kind = events[i]['kind'];
     if (kind != 'user_input' && kind != 'steer') continue;
     final envelope = parseMissionEnvelope(events[i]['text'] as String? ?? '');
-    if (envelope == null || !envelope.isReport || envelope.isPlan) continue;
+    if (envelope == null || !envelope.isReport) continue;
     if (envelope.taskId.isEmpty) continue;
     if (!seen.add(envelope.taskId) && envelope.status == 'stalled') out.add(i);
   }
@@ -690,13 +662,11 @@ TaskOffer? parseTaskOffer(String text) {
 class AssignmentEnvelope {
   const AssignmentEnvelope({
     required this.assignmentId,
-    required this.goalId,
     required this.agentId,
     required this.scope,
     required this.definitionOfDone,
   });
   final String assignmentId;
-  final String goalId;
   final String agentId;
   final String scope;
   final String definitionOfDone;
@@ -707,7 +677,6 @@ AssignmentEnvelope? parseAssignmentEnvelope(String text) {
   if (envelopeKind(t) != 'coordination_assignment') return null;
   return AssignmentEnvelope(
     assignmentId: envelopeField(t, 'assignment_id'),
-    goalId: envelopeField(t, 'goal_id'),
     agentId: envelopeField(t, 'agent_id'),
     scope: envelopeField(t, 'scope'),
     definitionOfDone: envelopeField(t, 'definition_of_done'),

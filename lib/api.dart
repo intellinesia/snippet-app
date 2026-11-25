@@ -16,7 +16,6 @@ import 'presence.dart';
 import 'swr.dart';
 import 'mochi.dart';
 import 'models.dart';
-import 'goal_models.dart';
 import 'wake_models.dart';
 import 'github_models.dart';
 import 'reach_models.dart';
@@ -2276,26 +2275,6 @@ class DaemonClient {
     }
     return CoordinationEvent.fromJson(
         jsonDecode(r.body) as Map<String, dynamic>);
-  }
-
-  /// GET /goals — [status] is open, closed, cancelled or all.
-  Future<List<Goal>> goals({String status = 'open'}) async {
-    final r = await _get(_uri('/goals', {'status': status}));
-    if (r.statusCode != 200) throw _err('list goals', r);
-    final body = jsonDecode(r.body);
-    final list = body is Map ? body['goals'] : body;
-    return [
-      if (list is List)
-        for (final e in list)
-          if (e is Map) Goal.fromJson(Map<String, dynamic>.from(e))
-    ];
-  }
-
-  /// GET /goals/{id} — a goal with its acceptance, plan, tasks and blockers.
-  Future<GoalDetail> goal(String id) async {
-    final r = await _get(_uri('/goals/${Uri.encodeComponent(id)}'));
-    if (r.statusCode != 200) throw _err('get goal', r);
-    return GoalDetail.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
 
   /// GET /coordination/tasks/{id} — one task.
