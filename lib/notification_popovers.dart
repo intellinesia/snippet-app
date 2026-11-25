@@ -10,40 +10,57 @@ import 'notifications.dart';
 import 'theme.dart';
 
 import 'platform.dart';
-import 'notification_card.dart';
 import 'notification_text.dart';
 import 'notification_stack.dart';
+import 'notification_banner.dart';
+import 'top_zone.dart';
+import 'screens/phone_tool_bar.dart' show PhoneBar;
 import 'session_quick_send.dart' show resolveInstanceForPayload;
 
 class NotificationPopovers extends StatefulWidget {
-  const NotificationPopovers({super.key, required this.child});
+  const NotificationPopovers(
+      {super.key, required this.child, this.navigatorKey});
   final Widget child;
+
+  /// Used to push the full notification list; this widget sits above the
+  /// navigator so it cannot look one up itself.
+  final GlobalKey<NavigatorState>? navigatorKey;
   @override
   State<NotificationPopovers> createState() => _NotificationPopoversState();
 }
 
-class _NotificationPopoversState extends State<NotificationPopovers> {
+class _NotificationPopoversState extends State<NotificationPopovers>
+    with WidgetsBindingObserver {
   StreamSubscription<Map<String, dynamic>>? _subscription;
   final List<Map<String, dynamic>> _pending = [];
   final _timers = <Map<String, dynamic>, Timer>{};
   bool _pointer = false;
   bool _cardHold = false;
-  bool _expanded = false;
+  bool _background = false;
   late final OverlayEntry _contentEntry;
 
-  bool get _held => _pointer || _cardHold || _expanded;
+  bool get _held => _pointer || _cardHold || _background;
 
-  // Slides over the header strip on phones so the 28px page title stays clear.
-  static double get _anchorTop => kMobile ? S.s4 : 44 + S.s8;
+  // Desktop toast anchor, below the 44 high title bar.
+  static double get _anchorTop => 44 + S.s8;
 
-  Duration _life(Map<String, dynamic> p) {
-    final base = kMobile ? 4 : 7;
-    return Duration(seconds: needsYou(p) ? base * 3 : base);
-  }
+  /// Information banners leave after 6 s; a needs-you banner stays 30 s, then
+  /// folds into the attention bar and does not return as a banner.
+  Duration _life(Map<String, dynamic> p) =>
+      Duration(seconds: needsYou(p) ? 30 : 6);
 
-  List<Map<String, dynamic>> get _ordered {
-    final l = _pending.reversed.toList();
-    return [...l.where(needsYou), ...l.where((p) => !needsYou(p))];
+  /// Newest first. Information kinds with an empty title show nothing.
+  List<Map<String, dynamic>> get _ordered => [
+        for (final p in _pending.reversed)
+          if (needsYou(p) || '${p['title'] ?? ''}'.trim().isNotEmpty) p
+      ];
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final away = state != AppLifecycleState.resumed;
+    if (away == _background) return;
+    _background = away;
+    _arm();
   }
 
   void _arm() {
@@ -63,10 +80,7 @@ class _NotificationPopoversState extends State<NotificationPopovers> {
     }
   }
 
-  void _afterChange() {
-    if (_pending.length < 2) _expanded = false;
-    _arm();
-  }
+  void _afterChange() => _arm();
 
   void _setHold({bool? pointer, bool? card}) {
     _pointer = pointer ?? _pointer;
@@ -133,6 +147,7 @@ class _NotificationPopoversState extends State<NotificationPopovers> {
   void initState() {
     super.initState();
     MacosNotch.ensureInitialized();
+    WidgetsBinding.instance.addObserver(this);
     _contentEntry = OverlayEntry(builder: _buildContent);
     final initial = foregroundNotifications.drain();
     initial.forEach(_addPending);
@@ -175,6 +190,7 @@ class _NotificationPopoversState extends State<NotificationPopovers> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     callTracker.state.removeListener(_callChanged);
     visibleNotificationSession.removeListener(_visibilityChanged);
     _subscription?.cancel();
@@ -192,25 +208,33 @@ class _NotificationPopoversState extends State<NotificationPopovers> {
     return Overlay(initialEntries: [_contentEntry]);
   }
 
-  Widget _card(Map<String, dynamic> payload, bool embedded, bool lifted,
-      bool reducedMotion) {
+  Widget _card(Map<String, dynamic> payload, bool reducedMotion) {
     return Dismissible(
       key: ObjectKey(payload),
-      direction: kMobile ? DismissDirection.up : DismissDirection.horizontal,
+      direction: DismissDirection.horizontal,
       movementDuration: reducedMotion ? Duration.zero : Motion.fast,
       resizeDuration: null,
       onDismissed: (_) => _remove(payload, feedback: true),
-      child: NotificationMessageCard(
-        key: ObjectKey(payload),
+      child: NotificationBanner(
         payload: payload,
-        embedded: embedded,
-        lifted: lifted,
-        onOpen: () => _remove(payload, open: true, feedback: true),
+        onTap: () => _remove(payload, open: true, feedback: true),
         onDismiss: () => _remove(payload, feedback: true),
-        onHold: (hold) => _setHold(card: hold),
-        onSent: () => _remove(payload),
       ),
     );
+  }
+
+  void _showAll() {
+    final nav = widget.navigatorKey?.currentState;
+    if (nav == null) return;
+    nav.push(MaterialPageRoute<void>(
+      builder: (_) => NotificationListPage(
+        items: _ordered,
+        onOpen: (p) {
+          nav.pop();
+          _remove(p, open: true);
+        },
+      ),
+    ));
   }
 
   Widget _buildContent(BuildContext context) {
@@ -232,80 +256,51 @@ class _NotificationPopoversState extends State<NotificationPopovers> {
               opacity: animation,
               child: SlideTransition(
                 position: Tween<Offset>(
-                        begin: kMobile
-                            ? const Offset(0, -.2)
-                            : const Offset(0, -.08),
-                        end: Offset.zero)
+                        begin: const Offset(0, -.08), end: Offset.zero)
                     .animate(animation),
-                child: kMobile
-                    ? child
-                    : ScaleTransition(
-                        alignment: Alignment.topRight,
-                        scale: Tween(begin: .96, end: 1.0).animate(animation),
-                        child: child,
-                      ),
-              ),
-            ),
-            child: items.isEmpty
-                ? const SizedBox.shrink()
-                : MouseRegion(
-                    onEnter: (_) => _setHold(pointer: true),
-                    onExit: (_) => _setHold(pointer: false),
-                    child: Listener(
-                      onPointerDown: (_) => _setHold(pointer: true),
-                      onPointerUp: (_) => _setHold(pointer: false),
-                      onPointerCancel: (_) => _setHold(pointer: false),
-                      child: Semantics(
-                        label: items.length > 1
-                            ? '${items.length} notifications'
-                            : null,
-                        child: NotificationStack(
-                          items: items,
-                          expanded: _expanded,
-                          onToggle: () => setState(() {
-                            _expanded = !_expanded;
-                            _setHold();
-                          }),
-                          onClearAll: _clearAll,
-                          cardBuilder: (payload, embedded, lifted) =>
-                              _card(payload, embedded, lifted, reducedMotion),
-                        ),
-                      ),
-                    ),
-                  ),
-          );
-    if (kMobile) {
-      // Dock phone toasts in a dedicated top band above the app so a toast
-      // can never cover any tap target on any screen or route.
-      final hasBanner = call != null || items.isNotEmpty;
-      return ColoredBox(
-        color: AppColors.bg,
-        child: Column(children: [
-          if (hasBanner)
-            SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(S.s12, S.s4, S.s12, S.s4),
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 420),
-                    child: banner,
-                  ),
+                child: ScaleTransition(
+                  alignment: Alignment.topRight,
+                  scale: Tween(begin: .96, end: 1.0).animate(animation),
+                  child: child,
                 ),
               ),
-            )
-          else
-            const SizedBox.shrink(),
-          Expanded(
-            child: MediaQuery.removePadding(
-              context: context,
-              removeTop: hasBanner,
-              child: widget.child,
             ),
+            child: const SizedBox.shrink(),
+          );
+    if (kMobile) {
+      final stack = call != null
+          ? banner
+          : items.isEmpty
+              ? const SizedBox.shrink()
+              : MouseRegion(
+                  onEnter: (_) => _setHold(pointer: true),
+                  onExit: (_) => _setHold(pointer: false),
+                  child: Listener(
+                    onPointerDown: (_) => _setHold(pointer: true),
+                    onPointerUp: (_) => _setHold(pointer: false),
+                    onPointerCancel: (_) => _setHold(pointer: false),
+                    child: NotificationStack(
+                      items: items,
+                      onClearAll: _clearAll,
+                      onShowAll: _showAll,
+                      cardBuilder: (payload) => _card(payload, reducedMotion),
+                    ),
+                  ),
+                );
+      // Banners float above the page: they never move content. The top edge
+      // is the lowest registered top bar plus 8 (TopZone).
+      return Stack(children: [
+        Positioned.fill(child: widget.child),
+        ValueListenableBuilder<double>(
+          valueListenable: TopZone.lowestBar,
+          builder: (context, _, __) => Positioned(
+            top: TopZone.floatTop(context),
+            left: 16,
+            right: 16,
+            child: stack,
           ),
-        ]),
-      );
+        ),
+      ]);
     }
     return Stack(children: [
       widget.child,
@@ -324,5 +319,37 @@ class _NotificationPopoversState extends State<NotificationPopovers> {
         ),
       ),
     ]);
+  }
+}
+
+/// "Show all": the notification list as a pushed page, rows 56 or taller
+/// carrying the banner content.
+class NotificationListPage extends StatelessWidget {
+  const NotificationListPage(
+      {super.key, required this.items, required this.onOpen});
+  final List<Map<String, dynamic>> items;
+  final void Function(Map<String, dynamic>) onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      body: SafeArea(
+        child: Column(children: [
+          PhoneBar(title: 'Notifications', onBack: () => Navigator.maybePop(context)),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              itemCount: items.length,
+              itemBuilder: (_, i) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: NotificationBanner(
+                    payload: items[i], onTap: () => onOpen(items[i])),
+              ),
+            ),
+          ),
+        ]),
+      ),
+    );
   }
 }

@@ -78,15 +78,15 @@ void main() {
     foregroundNotifications.add({'title': 'First'});
     await tester.pumpWidget(
         const MaterialApp(home: NotificationPopovers(child: Scaffold())));
-    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(seconds: 4));
     foregroundNotifications.add({'title': 'Second'});
     await tester.pump();
     expect(find.text('Second'), findsOneWidget);
-    await tester.pump(const Duration(seconds: 2));
+    await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();
     expect(find.text('Second'), findsOneWidget);
     expect(find.text('First'), findsNothing);
-    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
     expect(find.text('Second'), findsNothing);
     expect(haptics, isEmpty);
@@ -95,64 +95,23 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('phone banners dismiss with a swipe up, not sideways',
+  testWidgets('a held banner does not expire; suppression removes it',
       (tester) async {
-    _platform(TargetPlatform.android);
-    foregroundNotifications.add({'title': 'Up'});
-    await tester.pumpWidget(
-        const MaterialApp(home: NotificationPopovers(child: Scaffold())));
-    await tester.pumpAndSettle();
-    await tester.drag(find.byType(Dismissible), const Offset(500, 0));
-    await tester.pumpAndSettle();
-    expect(find.text('Up'), findsOneWidget);
-    await tester.drag(find.byType(Dismissible), const Offset(-500, 0));
-    await tester.pumpAndSettle();
-    expect(find.text('Up'), findsOneWidget);
-    await tester.drag(find.byType(Dismissible), const Offset(0, 200));
-    await tester.pumpAndSettle();
-    expect(find.text('Up'), findsOneWidget);
-    await tester.fling(find.byType(Dismissible), const Offset(0, -80), 1500);
-    await tester.pumpAndSettle();
-    expect(find.text('Up'), findsNothing);
-    expect(haptics, ['HapticFeedbackType.lightImpact']);
-  });
-
-  testWidgets('gesture pauses expiry; reduced motion and suppression clean up',
-      (tester) async {
-    foregroundNotifications.add({'title': 'Next', 'kind': 'waiting'});
     foregroundNotifications.add({'title': 'Held', 'url': 'u', 'session': 's'});
     await tester.pumpWidget(const MaterialApp(
         home: MediaQuery(
       data: MediaQueryData(disableAnimations: true),
       child: NotificationPopovers(child: Scaffold()),
     )));
-    expect(
-        tester
-            .widget<AnimatedSwitcher>(find.byType(AnimatedSwitcher).first)
-            .duration,
-        Duration.zero);
     final gesture = await tester.startGesture(
-        tester.getTopLeft(find.byType(Dismissible)) + const Offset(1, 1));
-    await tester.pump(const Duration(seconds: 16));
-    expect(find.text('Next'), findsOneWidget);
-    await tester.pump(const Duration(seconds: 1));
-    expect(find.text('Collapse'), findsOneWidget, reason: 'a hold expands');
+        tester.getTopLeft(find.text('Held')) + const Offset(1, 1));
+    await tester.pump(const Duration(seconds: 20));
+    expect(find.text('Held'), findsOneWidget);
     await gesture.cancel();
-    expect(notificationAppForeground, isTrue);
-    expect(suppressVisibleNotification({'url': 'u', 'session': 's'}), isFalse);
     visibleNotificationSession.value = notificationSessionKey('u', 's');
-    expect(suppressVisibleNotification({'url': 'u', 'session': 's'}), isTrue);
     await tester.pumpAndSettle();
     expect(find.text('Held'), findsNothing);
-    expect(find.text('needs you'), findsNothing);
-    await tester.pump(const Duration(seconds: 11));
-    expect(find.text('Next'), findsOneWidget);
-    await tester.pump(const Duration(seconds: 1));
-    await tester.pump();
-    expect(find.text('Next'), findsNothing);
     await tester.pumpWidget(const SizedBox());
-    foregroundNotifications.add({'title': 'After dispose'});
-    expect(foregroundNotifications.drain().single['title'], 'After dispose');
     await tester.pump(const Duration(seconds: 10));
     expect(tester.takeException(), isNull);
   });

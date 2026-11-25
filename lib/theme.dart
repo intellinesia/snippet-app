@@ -1004,6 +1004,12 @@ class AppColors {
   static Color get ok => currentTheme.ok;
   static Color get okBg => currentTheme.okBg;
   static Color get run => currentTheme.run;
+
+  /// Opaque amber tint for needs-you surfaces (attention bar, needs-you
+  /// banner): 342F24 on dark, E8E4D9 on light (spec 3 rule G).
+  static Color get attentionTint => currentTheme.bg.computeLuminance() > 0.18
+      ? const Color(0xFFE8E4D9)
+      : const Color(0xFF342F24);
   static Color get runBg => currentTheme.runBg;
   static Color get danger => currentTheme.danger;
   static Color get dangerBg => currentTheme.dangerBg;

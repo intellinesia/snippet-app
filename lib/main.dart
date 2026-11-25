@@ -143,6 +143,7 @@ class _SnippetAppState extends State<SnippetApp> with WidgetsBindingObserver {
       // instead of returning to the chat list. The shell now owns back
       // explicitly and reproduces the minimize-at-root behaviour itself.
       builder: (context, child) => NotificationPopovers(
+        navigatorKey: navigatorKey,
         child: AmbientEdgeGlow(child: child ?? const SizedBox.shrink()),
       ),
       home: widget.home ?? const AdaptiveHome(),

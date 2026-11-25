@@ -1,421 +1,92 @@
-import 'dart:math' as math;
-import 'dart:ui' show lerpDouble;
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'notification_card.dart' show notificationTone;
-import 'platform.dart';
+
+import 'notification_banner.dart';
 import 'theme.dart';
-import 'widgets.dart' show AppIcon, HoverSurface, Reveal;
-import 'tap_detector.dart';
+import 'widgets.dart' show HoverSurface;
 
 bool needsYou(Map<String, dynamic> p) =>
     '${p['kind'] ?? ''}'.split('.').last == 'waiting';
 
-typedef StackCardBuilder = Widget Function(
-    Map<String, dynamic> payload, bool embedded, bool lifted);
+/// Builds one card; the stack wraps it with spacing and arrival motion.
+typedef StackCardBuilder = Widget Function(Map<String, dynamic> payload);
 
+/// NT-01: plain stacked cards, newest first, at most three, with a footer
+/// when more are waiting. No pill, no ghost cards, no shadow.
 class NotificationStack extends StatelessWidget {
   const NotificationStack({
     super.key,
     required this.items,
-    required this.expanded,
-    required this.onToggle,
     required this.onClearAll,
+    required this.onShowAll,
     required this.cardBuilder,
   });
 
+  /// Newest first.
   final List<Map<String, dynamic>> items;
-  final bool expanded;
-  final VoidCallback onToggle;
   final VoidCallback onClearAll;
+  final VoidCallback onShowAll;
   final StackCardBuilder cardBuilder;
 
-  static double get _pillWidth => 300;
-  static double get _panelRadius => kMobile ? 24 : R.lg;
-  static double get _ghostRadius => kMobile ? 22 : R.card;
-  static const _peek = 9.0;
+  static const maxVisible = 3;
+  static const gap = 8.0;
 
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) return const SizedBox.shrink();
-    final calm = reduceMotion(context);
-    final single = items.length == 1;
-    final child = single
-        ? KeyedSubtree(
-            key: const ValueKey('single'),
-            child: cardBuilder(items.first, false, true))
-        : expanded
-            ? KeyedSubtree(
-                key: const ValueKey('expanded'), child: _expanded(context))
-            : KeyedSubtree(
-                key: const ValueKey('collapsed'),
-                child: _collapsed(context, calm));
-    final switcher = AnimatedSwitcher(
-      duration: calm ? Duration.zero : Motion.base,
-      reverseDuration: calm ? Duration.zero : Motion.close,
-      switchInCurve: Motion.enter,
-      switchOutCurve: Motion.exit,
-      layoutBuilder: (current, previous) => Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.topCenter,
-        children: [
-          for (final p in previous)
-            Positioned(top: 0, left: 0, right: 0, child: p),
-          if (current != null) current,
-        ],
-      ),
-      transitionBuilder: (child, animation) {
-        // On the phone the pill grows into the panel instead of swapping widths.
-        if (kMobile && child.key == const ValueKey('expanded')) {
-          return _PillReveal(
-              animation: animation, pillWidth: _pillWidth, child: child);
-        }
-        return FadeTransition(
-          opacity: animation,
-          child: ScaleTransition(
-            alignment: Alignment.topCenter,
-            scale: Tween(begin: .97, end: 1.0).animate(animation),
-            child: child,
-          ),
-        );
-      },
-      child: child,
-    );
-    // A zero-duration AnimatedSize re-dirties itself mid-layout.
+    final shown = items.take(maxVisible).toList();
+    final hasNeeds = shown.any(needsYou);
     return Material(
       type: MaterialType.transparency,
-      child: calm
-          ? switcher
-          : AnimatedSize(
-              duration: Motion.base,
-              reverseDuration: Motion.close,
-              curve: Motion.enter,
-              alignment: Alignment.topCenter,
-              child: switcher,
-            ),
-    );
-  }
-
-  void _expandByHold() {
-    if (kMobile) HapticFeedback.selectionClick();
-    onToggle();
-  }
-
-  Widget _collapsed(BuildContext context, bool calm) {
-    final ghosts = math.min(items.length - 1, 2);
-    final hidden = items.skip(1).toList();
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        LayoutBuilder(builder: (context, box) {
-          final width =
-              kMobile ? math.min(box.maxWidth, _pillWidth) : box.maxWidth;
-          final side = kMobile ? (box.maxWidth - width) / 2 : 0.0;
-          return Stack(clipBehavior: Clip.none, children: [
-            Positioned(
-              left: side,
-              right: side,
-              top: 0,
-              bottom: 0,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(kMobile ? 28 : R.card),
-                  boxShadow: overlayShadow,
-                ),
-              ),
-            ),
-            for (var i = 2; i >= 1; i--)
-              AnimatedPositioned(
-                duration: calm ? Duration.zero : Motion.base,
-                curve: Motion.enter,
-                left: side + (kMobile ? 14.0 : 10.0) * i,
-                right: side + (kMobile ? 14.0 : 10.0) * i,
-                bottom: _peek * (ghosts - math.min(i, ghosts)),
-                height: 28,
-                child: AnimatedOpacity(
-                  duration: calm ? Duration.zero : Motion.fast,
-                  opacity: i <= ghosts ? 1 : 0,
-                  child: IgnorePointer(
-                    ignoring: i > ghosts,
-                    child: TapDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: onToggle,
-                      onLongPress: _expandByHold,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: i == 1
-                              ? AppColors.surface3
-                              : Color.lerp(
-                                  AppColors.surface3, AppColors.surface1, .5),
-                          border: Border.all(color: AppColors.lineStrong),
-                          borderRadius: BorderRadius.circular(_ghostRadius),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            AnimatedPadding(
-              duration: calm ? Duration.zero : Motion.base,
-              curve: Motion.enter,
-              padding: EdgeInsets.only(bottom: _peek * ghosts),
-              child: GestureDetector(
-                onLongPress: _expandByHold,
-                child: cardBuilder(items.first, false, false),
-              ),
-            ),
-          ]);
-        }),
-        Padding(
-          padding: EdgeInsets.only(top: S.s6),
-          child: Align(
-            alignment: kMobile ? Alignment.topCenter : Alignment.topRight,
-            child: Container(
-              padding: EdgeInsets.all(S.s2),
-              decoration: BoxDecoration(
-                color: AppColors.surface2,
-                border: Border.all(color: AppColors.lineStrong),
-                borderRadius: BorderRadius.circular(R.pill),
-                boxShadow: overlayShadow,
-              ),
-              child: Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    _Toggle(
-                      label: '${hidden.length} more',
-                      icon: 'chevron-down',
-                      tones: [
-                        for (final p in hidden.take(3)) notificationTone(p)
-                      ],
-                      onTap: onToggle,
-                    ),
-                    Container(
-                        width: 1, height: 14, color: AppColors.lineStrong),
-                    _QuietButton('Clear all', onClearAll),
-                  ]),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _expanded(BuildContext context) {
-    final need = items.where(needsYou).toList();
-    final updates = items.where((p) => !needsYou(p)).toList();
-    final maxH = MediaQuery.sizeOf(context).height * .6;
-    final inset = kMobile ? 18.0 : 14.0;
-    final calm = reduceMotion(context);
-
-    Widget section(String label, List<Map<String, dynamic>> rows) {
-      final body = Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(height: S.s4),
-          for (final (i, p) in rows.indexed) ...[
-            if (i > 0)
-              Padding(
-                padding: EdgeInsets.only(left: inset + 18, right: inset),
-                child: Divider(height: 1, thickness: 1, color: AppColors.line),
-              ),
-            cardBuilder(p, true, false),
-          ],
-        ],
-      );
-      if (calm) return rows.isEmpty ? const SizedBox.shrink() : body;
-      return Reveal(show: rows.isNotEmpty, child: body);
-    }
-
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: AppColors.surface2,
-        border: Border.all(color: AppColors.lineStrong),
-        borderRadius: BorderRadius.circular(_panelRadius),
-        boxShadow: overlayShadow,
-      ),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Padding(
-          padding: EdgeInsets.fromLTRB(inset, S.s8, S.s8, S.s8),
-          child: Row(children: [
-            Text('Notifications',
-                style: sans(kMobile ? 14 : 13,
-                    weight: W.label, color: AppColors.fg1)),
-            SizedBox(width: S.s8),
-            Container(
-              padding:
-                  EdgeInsets.symmetric(horizontal: S.s6, vertical: S.of(1)),
-              decoration: BoxDecoration(
-                color: AppColors.surface3,
-                borderRadius: BorderRadius.circular(R.pill),
-              ),
-              child: Text('${items.length}',
-                  style: sans(11, color: AppColors.fg2)),
-            ),
-            const Spacer(),
-            _QuietButton('Clear all', onClearAll),
-            SizedBox(width: S.s4),
-            _Toggle(
-                label: 'Collapse',
-                icon: 'chevron-up',
-                inPanel: true,
-                onTap: onToggle),
-          ]),
-        ),
-        Divider(height: 1, thickness: 1, color: AppColors.line),
-        Flexible(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxH),
-            child: SingleChildScrollView(
-              padding: EdgeInsets.only(bottom: S.s6),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  section('NEEDS YOU', need),
-                  section('UPDATES', updates),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ]),
-    );
-  }
-}
-
-class _Toggle extends StatelessWidget {
-  const _Toggle({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-    this.tones = const [],
-    this.inPanel = false,
-  });
-
-  final String label;
-  final String icon;
-  final VoidCallback onTap;
-  final List<Color> tones;
-  final bool inPanel;
-
-  @override
-  Widget build(BuildContext context) {
-    return HoverSurface(
-      onTap: onTap,
-      radius: R.pill,
-      rest: inPanel ? AppColors.surface3 : Colors.transparent,
-      hoverColor: inPanel
-          ? Color.lerp(AppColors.surface3, AppColors.fg4, .16)
-          : AppColors.surface3,
-      child: Container(
-        constraints: BoxConstraints(minHeight: kMobile ? 36 : 26),
-        padding:
-            EdgeInsets.fromLTRB(tones.isEmpty ? S.of(10) : S.s8, 0, S.s8, 0),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          if (tones.isNotEmpty) ...[
-            SizedBox(
-              width: 8.0 + 5 * (tones.length - 1),
-              height: 10,
-              child: Stack(children: [
-                for (final (i, c) in tones.indexed.toList().reversed)
-                  Positioned(
-                    left: 5.0 * i - 1,
-                    top: 0,
-                    child: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: c,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.surface2, width: 2),
-                      ),
-                    ),
-                  ),
+      child: Semantics(
+        container: true,
+        liveRegion: true,
+        label: hasNeeds ? 'Notifications, needs you' : 'Notifications',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final (i, p) in shown.indexed) ...[
+              if (i > 0) const SizedBox(height: gap),
+              BannerArrival(key: ObjectKey(p), child: cardBuilder(p)),
+            ],
+            if (items.length > maxVisible) ...[
+              const SizedBox(height: gap),
+              Row(children: [
+                _FooterAction('Show all ${items.length}', onShowAll),
+                const Spacer(),
+                _FooterAction('Dismiss all', onClearAll),
               ]),
-            ),
-            SizedBox(width: S.s6),
+            ],
           ],
-          Text(label,
-              style: sans(kMobile ? 13 : 12,
-                  weight: W.label, color: AppColors.fg2, tabular: true)),
-          SizedBox(width: S.s4),
-          AppIcon(icon, size: 13, color: AppColors.fg3),
-        ]),
-      ),
-    );
-  }
-}
-
-class _QuietButton extends StatelessWidget {
-  const _QuietButton(this.label, this.onTap);
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return HoverSurface(
-      onTap: onTap,
-      radius: R.pill,
-      hoverColor: AppColors.surface3,
-      child: Container(
-        height: kMobile ? 36 : 26,
-        padding: EdgeInsets.symmetric(horizontal: S.of(10)),
-        child: Center(
-          widthFactor: 1,
-          child: Text(label,
-              style: sans(kMobile ? 13 : 12,
-                  weight: W.label, color: AppColors.fg3)),
         ),
       ),
     );
   }
 }
 
-/// Reveals the expanded panel from a centred pill-sized window that widens and
-/// lengthens to the full panel, so opening reads as one surface growing.
-class _PillReveal extends AnimatedWidget {
-  const _PillReveal(
-      {required Animation<double> animation,
-      required this.pillWidth,
-      required this.child})
-      : super(listenable: animation);
-
-  final double pillWidth;
-  final Widget child;
+class _FooterAction extends StatelessWidget {
+  const _FooterAction(this.label, this.onTap);
+  final String label;
+  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final t = Motion.enter.transform((listenable as Animation<double>).value);
-    return Opacity(
-      opacity: (t * 2).clamp(0.0, 1.0),
-      child: ClipRRect(
-        clipper: _RevealClipper(t, pillWidth),
-        child: child,
-      ),
-    );
-  }
-}
-
-class _RevealClipper extends CustomClipper<RRect> {
-  _RevealClipper(this.t, this.pillWidth);
-  final double t;
-  final double pillWidth;
-
-  @override
-  RRect getClip(Size size) {
-    final w = lerpDouble(math.min(pillWidth, size.width), size.width, t)!;
-    final h = lerpDouble(math.min(56, size.height), size.height, t)!;
-    final left = (size.width - w) / 2;
-    return RRect.fromRectAndRadius(
-        Rect.fromLTWH(left, 0, w, h), Radius.circular(lerpDouble(28, 24, t)!));
-  }
-
-  @override
-  bool shouldReclip(_RevealClipper old) =>
-      old.t != t || old.pillWidth != pillWidth;
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: label,
+        excludeSemantics: true,
+        onTap: onTap,
+        child: HoverSurface(
+          onTap: onTap,
+          radius: 6,
+          hoverColor: AppColors.surface3,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+            child: Center(
+              widthFactor: 1,
+              child: Text(label,
+                  style: sans(13, weight: W.label, color: AppColors.fg2)),
+            ),
+          ),
+        ),
+      );
 }
