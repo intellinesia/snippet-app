@@ -39,7 +39,6 @@ extension _DesktopShellTabsExt on _DesktopShellState {
               _chatOf(t) != null ||
               (!t.isPrs &&
                   !t.isDraft &&
-                  !t.isSettings &&
                   !t.isHome &&
                   !t.isReadout &&
                   !t.isTask &&
@@ -342,7 +341,6 @@ extension _DesktopShellTabsExt on _DesktopShellState {
           _pushMobileRoute(_MobileRoute(
             home: _mobileHome,
             agent: _mobileAgent,
-            settingsSection: _mobileSettingsSection,
             inSession: true,
             sessionTabIndex: i,
           ));
@@ -424,7 +422,6 @@ extension _DesktopShellTabsExt on _DesktopShellState {
       t.isPrs ||
       t.isDraft ||
       t.isReadout ||
-      t.isSettings ||
       t.isHome ||
       t.isBoard;
 
@@ -1035,7 +1032,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
       );
 
   String? _folderForTab(_ShellTab t) {
-    if (t.isLead || t.isBoard || t.isReadout || t.isSettings || t.isHome) {
+    if (t.isLead || t.isBoard || t.isReadout || t.isHome) {
       return null;
     }
     if (t.isDraft) {

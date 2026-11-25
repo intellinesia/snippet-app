@@ -69,8 +69,6 @@ Widget _sidebar(_Client client, {CoordinationAgent? agent}) => MaterialApp(
           topInset: false,
           mobileHome: agent == null ? MobileHome.chats : MobileHome.agents,
           onMobileHome: (_) {},
-          settingsSection: null,
-          onSettingsSection: (_) {},
           agent: agent,
           onAgent: (_) {},
         ),

@@ -1,8 +1,7 @@
 part of 'desktop_shell.dart';
 
 extension _DesktopShellMobileExt on _DesktopShellState {
-  bool get _mobileDrilledDown =>
-      _mobileSettingsSection != null || _mobileAgent != null;
+  bool get _mobileDrilledDown => _mobileAgent != null;
 
   void _pushMobileRoute(_MobileRoute route) {
     if (!kMobile) return;
@@ -10,7 +9,7 @@ extension _DesktopShellMobileExt on _DesktopShellState {
       return;
     }
     final isTopLevel =
-        !route.inSession && route.agent == null && route.settingsSection == null;
+        !route.inSession && route.agent == null;
     if (isTopLevel) {
       final existingIndex = _mobileRouteHistory.lastIndexOf(route);
       if (existingIndex >= 0) {
@@ -33,7 +32,6 @@ extension _DesktopShellMobileExt on _DesktopShellState {
       final prev = _mobileRouteHistory.last;
       _mobileHome = prev.home;
       _mobileAgent = prev.agent;
-      _mobileSettingsSection = prev.settingsSection;
       _mobileChatsOpen = !prev.inSession;
       if (prev.inSession &&
           prev.sessionTabIndex != null &&
@@ -60,7 +58,6 @@ extension _DesktopShellMobileExt on _DesktopShellState {
     _setState(() {
       _mobileHome = homeFirstTab();
       _mobileAgent = null;
-      _mobileSettingsSection = null;
       _mobileChatsOpen = true;
       _mobileRouteHistory
         ..clear()
@@ -82,19 +79,13 @@ extension _DesktopShellMobileExt on _DesktopShellState {
     });
   }
 
-  void _goMobileHome(MobileHome home,
-      {SettingsPage? section, CoordinationAgent? agent}) {
+  void _goMobileHome(MobileHome home, {CoordinationAgent? agent}) {
     FocusManager.instance.primaryFocus?.unfocus();
     _setState(() {
       _mobileHome = home;
-      _mobileSettingsSection = null;
       _mobileAgent = null;
       _mobileChatsOpen = true;
       _pushMobileRoute(_MobileRoute(home: home));
-      if (section != null) {
-        _mobileSettingsSection = section;
-        _pushMobileRoute(_MobileRoute(home: home, settingsSection: section));
-      }
       if (agent != null) {
         _mobileAgent = agent;
         _pushMobileRoute(_MobileRoute(home: home, agent: agent));
@@ -116,9 +107,9 @@ extension _DesktopShellMobileExt on _DesktopShellState {
           case MobileMenuPick.artifacts:
             openArtifactsList(context);
           case MobileMenuPick.usage:
-            _goMobileHome(MobileHome.settings, section: SettingsPage.usage);
+            _openShellSettings(SettingsPage.usage);
           case MobileMenuPick.machines:
-            _goMobileHome(MobileHome.settings, section: SettingsPage.general);
+            _openShellSettings(SettingsPage.general);
         }
       },
     );
@@ -162,7 +153,6 @@ extension _DesktopShellMobileExt on _DesktopShellState {
               _pushMobileRoute(_MobileRoute(
                 home: _mobileHome,
                 agent: _mobileAgent,
-                settingsSection: _mobileSettingsSection,
                 inSession: true,
                 sessionTabIndex: _activeIndex,
               ));
@@ -192,7 +182,6 @@ extension _DesktopShellMobileExt on _DesktopShellState {
       onMobileHome: (home) {
         _setState(() {
           _mobileHome = home;
-          _mobileSettingsSection = null;
           _mobileAgent = null;
           _pushMobileRoute(_MobileRoute(home: home));
         });
@@ -204,7 +193,6 @@ extension _DesktopShellMobileExt on _DesktopShellState {
             _pushMobileRoute(_MobileRoute(
               home: _mobileHome,
               agent: _mobileAgent,
-              settingsSection: _mobileSettingsSection,
               inSession: true,
               sessionTabIndex: _activeIndex,
             ));
@@ -221,14 +209,12 @@ extension _DesktopShellMobileExt on _DesktopShellState {
 class _MobileRoute {
   final MobileHome home;
   final CoordinationAgent? agent;
-  final SettingsPage? settingsSection;
   final bool inSession;
   final int? sessionTabIndex;
 
   const _MobileRoute({
     required this.home,
     this.agent,
-    this.settingsSection,
     this.inSession = false,
     this.sessionTabIndex,
   });
@@ -240,11 +226,10 @@ class _MobileRoute {
           runtimeType == other.runtimeType &&
           home == other.home &&
           agent?.id == other.agent?.id &&
-          settingsSection == other.settingsSection &&
           inSession == other.inSession &&
           sessionTabIndex == other.sessionTabIndex;
 
   @override
   int get hashCode =>
-      Object.hash(home, agent?.id, settingsSection, inSession, sessionTabIndex);
+      Object.hash(home, agent?.id, inSession, sessionTabIndex);
 }

@@ -23,8 +23,7 @@ enum MobileHome {
   home('Home', 'home'),
   chats('Sessions', 'layers'),
   tasks('Tasks', 'task'),
-  agents('Agents', 'users'),
-  settings('Settings', 'settings');
+  agents('Agents', 'users');
 
   const MobileHome(this.label, this.icon);
   final String label;
@@ -90,27 +89,10 @@ class ShellTab {
   RightTab? readout;
   String? readoutOrigin;
 
-  /// Set only for the settings tab: the `SettingsPage` name it shows.
-  String? settingsSection;
-  String settingsIcon = 'settings';
-
   /// The Home place: Needs you, Working, Earlier today.
   bool isHome = false;
 
   bool get isReadout => readout != null;
-  bool get isSettings => settingsSection != null;
-
-  static ShellTab settings({
-    required DaemonClient client,
-    required String instanceUrl,
-    required String section,
-    required String title,
-    required String icon,
-  }) =>
-      ShellTab.session(
-          client: client, instanceUrl: instanceUrl, sessionId: null, title: title)
-        ..settingsSection = section
-        ..settingsIcon = icon;
 
   static ShellTab home({
     required DaemonClient client,
@@ -306,7 +288,6 @@ class ShellTab {
       !isHome &&
       !isDraft &&
       !isReadout &&
-      !isSettings &&
       !isTask &&
       !isBoard &&
       !isPrs &&
@@ -317,8 +298,6 @@ class ShellTab {
       isLeadTab(sessionId: sessionId, title: title);
   String get key => isHome
       ? '$instanceUrl|home'
-      : isSettings
-      ? '$instanceUrl|settings'
       : isReadout
       ? '$instanceUrl|readout|${readout!.key}'
       : isTask
@@ -352,8 +331,6 @@ List<String>? tabGroupAgentIds(ShellTab t) {
 /// tab (top bar, desktop strip, split header, tab menu) cannot drift.
 String tabIconKind(ShellTab t) => t.isHome
     ? 'home'
-    : t.isSettings
-    ? t.settingsIcon
     : t.isReadout
     ? t.readout!.icon
     : t.isTask

@@ -65,7 +65,7 @@ import 'session_list_row.dart' show sessionNeedsYou, shellNeedsYouCount;
 import 'artifact_viewer.dart' show SessionDeliverables;
 import 'wakes_screen.dart';
 import 'workspace_tab.dart';
-import 'desktop_settings_page.dart';
+import 'settings_overlay.dart';
 import 'file_changes.dart' show sessionChangeSteps;
 import '../tool_activity.dart' show fileChanges;
 import 'pane_add_menu.dart';
@@ -211,12 +211,11 @@ class _DesktopShellState extends State<DesktopShell>
   /// to Chats. Desktop navigates with the sidebar rail, so this is phone-only.
   _MobileHome _mobileHome = homeFirstTab();
 
-  /// Phone drill-down: which settings section is open, and which agent's detail.
+  /// Phone drill-down: which agent's detail page is open.
   ///
-  /// Both live HERE rather than inside their own screens because two things
-  /// outside them must read them: the back handler (to unwind one level at a
+  /// Lives HERE rather than inside the agent screen because two things
+  /// outside it must read it: the back handler (to unwind one level at a
   /// time) and the bar's visibility (to hide itself while drilled down).
-  _SettingsPage? _mobileSettingsSection;
   CoordinationAgent? _mobileAgent;
 
   final List<_MobileRoute> _mobileRouteHistory = [
@@ -262,8 +261,6 @@ class _DesktopShellState extends State<DesktopShell>
   bool _sidebarGit = false;
   bool _sidebarHidden = false;
   bool _settingsOpen = false;
-  // The tab to return to when the settings tab's back row is used.
-  String? _preSettingsKey;
 
   /// The user's dragged width; null follows [sidebarWidthFor] the window.
   double? _sidebarWidthPref;
@@ -1676,7 +1673,6 @@ class _DesktopShellState extends State<DesktopShell>
         if (fromNotification) {
           _mobileHome = homeFirstTab();
           _mobileAgent = null;
-          _mobileSettingsSection = null;
           _mobileRouteHistory
             ..clear()
             ..add(_MobileRoute(home: _mobileHome));
@@ -1685,7 +1681,6 @@ class _DesktopShellState extends State<DesktopShell>
         _pushMobileRoute(_MobileRoute(
           home: _mobileHome,
           agent: _mobileAgent,
-          settingsSection: _mobileSettingsSection,
           inSession: true,
           sessionTabIndex: _activeIndex,
         ));
@@ -1842,22 +1837,9 @@ class _DesktopShellState extends State<DesktopShell>
         onMobileMenu: kMobile ? _openMobileMenu : null,
         onMobileHome: (h) => setState(() {
           _mobileHome = h;
-          _mobileSettingsSection = null;
           _mobileAgent = null;
           _pushMobileRoute(_MobileRoute(home: h));
         }),
-        mobileSettingsSection: _mobileSettingsSection,
-        onSettingsSection: (s) {
-          if (s == null) {
-            _handleMobileBack();
-          } else {
-            setState(() {
-              _mobileSettingsSection = s;
-              _pushMobileRoute(
-                  _MobileRoute(home: _MobileHome.settings, settingsSection: s));
-            });
-          }
-        },
         mobileAgent: _mobileAgent,
         onMobileAgent: (a) {
           if (a == null) {
@@ -1865,9 +1847,6 @@ class _DesktopShellState extends State<DesktopShell>
           } else {
             _openMobileAgent(a);
           }
-        },
-        onSettingsClose: () {
-          _handleMobileBack();
         },
       );
 
@@ -2075,4 +2054,3 @@ class _DesktopShellState extends State<DesktopShell>
   }
 }
 
-typedef _SettingsPage = SettingsPage;
