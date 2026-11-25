@@ -157,3 +157,137 @@ class ColdChip extends StatelessWidget {
     );
   }
 }
+
+/// Desktop CMP-10 cold state. The composer card is replaced by words and one
+/// 28-high action; the action opens the same resume-depth choice as the chip.
+class DeskColdComposerStrip extends StatelessWidget {
+  const DeskColdComposerStrip({
+    super.key,
+    required this.mode,
+    this.resumeTokens,
+    required this.onPick,
+  });
+
+  final String mode;
+  final int? resumeTokens;
+  final ValueChanged<String> onPick;
+
+  Future<void> _menu(BuildContext context) async {
+    final tokens = resumeTokens == null ? null : '~${_tokens(resumeTokens!)}';
+    final picked = await showAppMenu<String>(
+      context,
+      anchor: context,
+      minWidth: 180,
+      maxWidth: 220,
+      items: [
+        appMenuItem<String>(
+            value: 'ask', label: 'Ask each time', selected: mode == 'ask'),
+        appMenuItem<String>(
+            value: 'lean', label: 'Lean', selected: mode == 'lean'),
+        appMenuItem<String>(
+            value: 'full',
+            label: tokens == null ? 'Full' : 'Full $tokens',
+            selected: mode == 'full'),
+      ],
+    );
+    if (picked != null) onPick(picked);
+  }
+
+  @override
+  Widget build(BuildContext context) => Container(
+        height: 36,
+        padding: const EdgeInsets.only(left: 12, right: 8),
+        decoration: BoxDecoration(
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(R.of(10)),
+        ),
+        child: Row(children: [
+          Expanded(
+            child: Text('Session is cold',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(12, height: 17 / 12, color: AppColors.fg2)),
+          ),
+          Builder(
+            builder: (ctx) => SizedBox(
+              height: 28,
+              child: DeskButton(
+                padding: const EdgeInsets.symmetric(horizontal: 9),
+                fill: AppColors.surface2,
+                hoverFill: AppColors.surface3,
+                onTap: () => _menu(ctx),
+                child: Text('Warm up',
+                    style: sans(12,
+                        weight: FontWeight.w500,
+                        height: 17 / 12,
+                        color: AppColors.fg1)),
+              ),
+            ),
+          ),
+        ]),
+      );
+}
+
+/// Desktop CMP-11 offline state above an enabled composer. No red treatment;
+/// the queued count is spelled out in words.
+class DeskOfflineComposerNotice extends StatelessWidget {
+  const DeskOfflineComposerNotice({
+    super.key,
+    required this.message,
+    required this.queued,
+    required this.onRetry,
+  });
+
+  final String message;
+  final int queued;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = [
+      message,
+      if (queued > 0)
+        '$queued message${queued == 1 ? '' : 's'} will send on reconnect',
+    ].join(' · ');
+    return Semantics(
+      liveRegion: true,
+      label: text,
+      child: Container(
+        height: 28,
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.only(left: 12, right: 8),
+        decoration: BoxDecoration(
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(R.of(8)),
+        ),
+        child: Row(children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration:
+                BoxDecoration(color: AppColors.fg2, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(11, height: 15 / 11, color: AppColors.fg2)),
+          ),
+          DeskButton(
+            height: 28,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            fill: Colors.transparent,
+            hoverFill: AppColors.surface3,
+            onTap: onRetry,
+            child: Text('Retry now',
+                style: sans(11,
+                    weight: FontWeight.w500,
+                    height: 15 / 11,
+                    color: AppColors.fg1)),
+          ),
+        ]),
+      ),
+    );
+  }
+}
