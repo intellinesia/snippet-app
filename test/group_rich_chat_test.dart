@@ -9,6 +9,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:snippet/api.dart';
 import 'package:snippet/chat/choices.dart';
+import 'package:snippet/chat/group_post.dart';
+import 'package:snippet/chat/run_head.dart' show kSoftIndent;
 import 'package:snippet/chat/message_body.dart';
 import 'package:snippet/composer/attachment_tile.dart';
 import 'package:snippet/composer/composer_card.dart';
@@ -278,6 +280,44 @@ void main() {
       await tester.tap(find.text('Save draft'));
       await tester.pump();
       expect(client.groupPosts, hasLength(1));
+      await tester.pumpWidget(const SizedBox());
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('desktop agent body and choices align with the header at x+36',
+        (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      final group = GroupSummary.fromJson({
+        'id': 'g1',
+        'title': 'Launch',
+        'members': [
+          {'kind': 'agent', 'id': 'argon'},
+          {'kind': 'human', 'id': 'local'},
+        ],
+      });
+      final client = _RichFakeClient([
+        _event('e1', 1, 'agent', 'Ready to publish?', extra: {
+          'choices': ['Publish now', 'Save draft'],
+        }),
+      ]);
+
+      await tester.pumpWidget(MaterialApp(
+        theme: buildAppTheme(),
+        home: GroupThreadScreen(client: client, group: group),
+      ));
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 80));
+      }
+
+      final head = tester.getTopLeft(find.byType(GroupPostHeader)).dx;
+      final body = tester.getTopLeft(find.text('Ready to publish?')).dx;
+      final choices = tester.getTopLeft(find.byType(ChatChoices)).dx;
+      expect(body - head, kSoftIndent);
+      expect(choices - head, kSoftIndent);
       await tester.pumpWidget(const SizedBox());
       debugDefaultTargetPlatformOverride = null;
     });

@@ -1679,11 +1679,28 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                 ? quotePreviewText(quotedTarget.body)
                 : replyToId,
             mine: mine,
+            author: quotedTarget == null
+                ? null
+                : quotedTarget.actorKind == 'human'
+                    ? 'You'
+                    : widget.agentName,
+            deleted: quotedTarget == null,
             onTap: quotedTarget != null
                 ? () => _scrollToMessage(quotedTarget.eventId)
                 : null,
           );
-    final chips = reactions.isEmpty
+    // Phone: tapback chips on the bubble. Desktop: a row under it (MSG-05).
+    final deskReactions = reactions.isEmpty || kMobile
+        ? null
+        : Padding(
+            padding: EdgeInsets.only(top: S.s6, left: mine ? 0 : kSoftIndent),
+            child: DeskReactionRow(
+              reactions: reactions,
+              onReact: (name) => unawaited(_sendReaction(e, name)),
+              alignment: mine ? WrapAlignment.end : WrapAlignment.start,
+            ),
+          );
+    final chips = reactions.isEmpty || !kMobile
         ? null
         : MessageReactionChips(
             reactions: reactions,
@@ -1757,6 +1774,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                           child: cappedCard),
                   chips,
                   mine: false),
+              if (deskReactions != null) deskReactions,
             ],
           );
         }
@@ -1812,8 +1830,12 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                         read: readAt == null
                             ? null
                             : 'Read ${_clockLabel(readAt.toLocal())}',
+                        state: _unechoed.any((p) => p.eventId == e.eventId)
+                            ? SendState.sending
+                            : null,
                       );
                     }),
+                  if (deskReactions != null) deskReactions,
                 ],
               ));
         }

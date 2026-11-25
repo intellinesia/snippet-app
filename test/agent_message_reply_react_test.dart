@@ -354,7 +354,7 @@ void main() {
       expect(client.sent.single['reaction'], '👀');
       expect(client.sent.single['body'], '');
       expect(find.byType(MessageFocusOverlay), findsNothing);
-      expect(find.byType(MessageReactionChips), findsOneWidget);
+      expect(find.byType(DeskReactionRow), findsOneWidget);
 
       await t.pumpWidget(const SizedBox());
     } finally {

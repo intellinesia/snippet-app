@@ -2011,6 +2011,11 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   // Desktop runs sit flush under their head, as in the agent chat.
   Widget _indented({required bool mine, required Widget child}) => child;
 
+  /// Agent posts: flush on the phone, at x+36 under the header's name on
+  /// desktop (MSG-03).
+  static double get _agentIndent =>
+      kMobile ? GroupPostHeader.indent : kSoftIndent;
+
   /// Desktop: reactions as chips under the message, plus a quiet add chip.
   Widget _deskReactions(CoordinationEvent e, List<ReactionGroup> reactions,
       {required bool mine}) {
@@ -2019,15 +2024,11 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       padding: EdgeInsets.only(top: S.s6, left: mine ? 0 : kSoftIndent),
       child: Align(
         alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-        child: Wrap(spacing: S.s4, runSpacing: S.s4, children: [
-          for (final r in reactions)
-            DeskReactionChip(
-                group: r, onTap: () => unawaited(_sendReaction(e, r.name))),
-          Builder(
-              builder: (anchor) => DeskReactionChip.add(
-                  onTap: () => showReactionPicker(anchor,
-                      onReact: (name) => unawaited(_sendReaction(e, name))))),
-        ]),
+        child: DeskReactionRow(
+          reactions: reactions,
+          onReact: (name) => unawaited(_sendReaction(e, name)),
+          alignment: mine ? WrapAlignment.end : WrapAlignment.start,
+        ),
       ),
     );
   }
@@ -2200,7 +2201,12 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                     ),
                   ))),
           if (mineAt != null)
-            SentMeta(time: _dayTimeStamp(mineAt).$2, read: readLine),
+            SentMeta(
+                time: _dayTimeStamp(mineAt).$2,
+                read: readLine,
+                state: e.eventId.startsWith('local-')
+                    ? SendState.sending
+                    : null),
           if (!kMobile) _deskReactions(e, reactions, mine: mine),
           if (choices.isNotEmpty)
             LayoutBuilder(
@@ -2211,7 +2217,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                 return Padding(
                   padding: EdgeInsets.only(
                     top: S.s6,
-                    left: mine ? 0 : GroupPostHeader.indent,
+                    left: mine ? 0 : _agentIndent,
                     right: mine ? S.of(5) : 0,
                   ),
                   child: ConstrainedBox(
@@ -2268,7 +2274,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   }) =>
       !mine
           ? Padding(
-              padding: const EdgeInsets.only(left: GroupPostHeader.indent),
+              padding: EdgeInsets.only(left: _agentIndent),
               child: Align(alignment: Alignment.centerLeft, child: child))
           : ChatBubbleRow(
               mine: mine,
