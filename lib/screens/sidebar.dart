@@ -1645,12 +1645,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
               selected: false,
               onTap: () => openArtifactsList(context),
             ),
-            _PlaceRow(
-              label: 'Automations',
-              icon: 'repeat',
-              selected: false,
-              onTap: widget.onOpenWakes,
-            ),
           ]),
         ),
       );
