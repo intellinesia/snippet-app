@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../models.dart';
+import '../../phone_attention_bar.dart';
+import '../../platform.dart';
 import '../../tap_detector.dart';
 import '../../theme.dart';
 import '../../toast_avoid.dart';
@@ -101,6 +103,7 @@ class _PhoneTaskBoardState extends State<PhoneTaskBoard> {
           ]),
         ),
       ),
+      if (kMobile) const PhoneAttentionLayer(),
       if (widget.stateBody == null) _chips(),
       Expanded(
         child: widget.stateBody ??

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../phone_attention_bar.dart';
+import '../../platform.dart';
 import '../../theme.dart';
 import '../../toast_avoid.dart';
 
@@ -71,6 +73,7 @@ class _CollapsingRootState extends State<CollapsingRoot> {
           ]),
         ),
       ),
+      if (kMobile) const PhoneAttentionLayer(),
       Expanded(
         child: NotificationListener<ScrollNotification>(
             onNotification: _onScroll, child: widget.child),

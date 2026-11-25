@@ -19,6 +19,11 @@ class ToastBands {
     final next = _edges.values.fold<double>(0, (a, b) => b > a ? b : a);
     if (next != bottom.value) bottom.value = next;
   }
+
+  static void reset() {
+    _edges.clear();
+    bottom.value = 0;
+  }
 }
 
 /// Registers its child as a top bar. Only bars whose top edge is in the upper

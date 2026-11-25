@@ -18,23 +18,33 @@ class PhoneAttentionBar extends StatefulWidget {
 }
 
 class _PhoneAttentionBarState extends State<PhoneAttentionBar> {
-  static const _key = 'attention-bar';
+  final _key = Object();
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
+  }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.addPostFrameCallback((_) => TopZone.unregister(_key));
+    final key = _key;
+    WidgetsBinding.instance.addPostFrameCallback((_) => TopZone.unregister(key));
     super.dispose();
   }
 
   void _measure() {
     if (!mounted) return;
     final box = context.findRenderObject();
-    if (box is! RenderBox || !box.hasSize) return;
+    if (box is! RenderBox || !box.attached || !box.hasSize) return;
+    final active = TickerMode.valuesOf(context).enabled &&
+        (ModalRoute.of(context)?.isCurrent ?? true);
     final h = box.size.height;
-    if (h <= 0.5) {
+    if (!active || h <= 0.5) {
       TopZone.unregister(_key);
     } else {
-      TopZone.register(_key, TopZone.pageBarBottom(context) + h);
+      final top = box.localToGlobal(Offset.zero).dy;
+      TopZone.register(_key, top + h);
     }
   }
 
@@ -78,13 +88,20 @@ class _PhoneAttentionBarState extends State<PhoneAttentionBar> {
                     Padding(
                       padding: const EdgeInsets.only(right: 4),
                       child: ConstrainedBox(
+                        key: const ValueKey('attention-review-target'),
                         constraints:
                             const BoxConstraints(minWidth: 48, minHeight: 48),
-                        child: Center(
+                        child: Align(
+                          alignment: Alignment.centerRight,
                           widthFactor: 1,
-                          child: Text('Review',
-                              style: sans(13,
-                                  weight: W.label, color: AppColors.fg1)),
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: Text('Review',
+                                maxLines: 1,
+                                softWrap: false,
+                                style: sans(13,
+                                    weight: W.label, color: AppColors.fg1)),
+                          ),
                         ),
                       ),
                     ),

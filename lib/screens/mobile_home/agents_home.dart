@@ -472,58 +472,50 @@ class _AskPagerState extends State<AskPager> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: quietAmber, width: 1),
             ),
-            child: Stack(children: [
-              Positioned(
-                  left: 0,
-                  top: 4,
-                  bottom: 4,
-                  width: 2,
-                  child: ColoredBox(color: quietAmber)),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(10, 10, 16, 10),
-                child: Row(children: [
-                  agentFace(a.agentId, 44),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(children: [
-                            Expanded(
-                                child: Text(a.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: sans(15,
-                                        weight: FontWeight.w500,
-                                        color: AppColors.fg1))),
-                            const SizedBox(width: 8),
-                            Text(a.time,
-                                style: sans(12, color: AppColors.fg3)),
-                          ]),
-                          Row(children: [
-                            Container(
-                                width: 6,
-                                height: 6,
-                                margin: const EdgeInsets.only(left: 1),
-                                decoration: BoxDecoration(
-                                    color: quietAmber,
-                                    shape: BoxShape.circle)),
-                            const SizedBox(width: 6),
-                            Text('Needs you',
-                                style: sans(12,
-                                    weight: FontWeight.w500,
-                                    color: quietAmber)),
-                          ]),
-                          if (a.text.isNotEmpty)
-                            Text(a.text,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: sans(13, color: AppColors.fg2)),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(10, 10, 16, 10),
+              child: Row(children: [
+                agentFace(a.agentId, 44),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [
+                          Expanded(
+                              child: Text(a.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: sans(15,
+                                      weight: FontWeight.w500,
+                                      color: AppColors.fg1))),
+                          const SizedBox(width: 8),
+                          Text(a.time,
+                              style: sans(12, color: AppColors.fg3)),
                         ]),
-                  ),
-                ]),
-              ),
-            ]),
+                        Row(children: [
+                          Container(
+                              width: 6,
+                              height: 6,
+                              margin: const EdgeInsets.only(left: 1),
+                              decoration: BoxDecoration(
+                                  color: AppColors.fg2,
+                                  shape: BoxShape.circle)),
+                          const SizedBox(width: 6),
+                          Text('Needs you',
+                              style: sans(12,
+                                  weight: FontWeight.w500,
+                                  color: AppColors.fg2)),
+                        ]),
+                        if (a.text.isNotEmpty)
+                          Text(a.text,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: sans(13, color: AppColors.fg2)),
+                      ]),
+                ),
+              ]),
+            ),
           ),
         ),
       );

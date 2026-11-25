@@ -37,9 +37,7 @@ class TopZone {
 
   @visibleForTesting
   static void reset() {
-    for (final k in ['page', 'attention', 'attention-bar']) {
-      ToastBands.report(k, null);
-    }
+    ToastBands.reset();
     attentionHolds.value = 0;
   }
 }

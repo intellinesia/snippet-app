@@ -132,7 +132,7 @@ void main() {
           expect(t.getSize(find.byWidget(chip.widget)).height, 44);
         }
         expect(find.byType(StateChip), findsNWidgets(4));
-        expect(find.byKey(const ValueKey('chip-amber-dot')), findsOneWidget);
+        expect(find.byKey(const ValueKey('chip-amber-dot')), findsNothing);
         final ask = t.getSize(find.byKey(const ValueKey('ask-card')).first);
         expect(ask.width, closeTo(content, 0.6));
         expect(ask.height, greaterThanOrEqualTo(82));

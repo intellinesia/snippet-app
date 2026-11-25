@@ -15,7 +15,6 @@ import 'notification_stack.dart';
 import 'notification_banner.dart';
 import 'notification_card.dart';
 import 'top_zone.dart';
-import 'phone_attention_bar.dart';
 import 'screens/phone_tool_bar.dart' show PhoneBar;
 import 'session_quick_send.dart' show resolveInstanceForPayload;
 
@@ -318,12 +317,6 @@ class _NotificationPopoversState extends State<NotificationPopovers>
       // is the lowest registered top bar plus 8 (TopZone).
       return Stack(children: [
         Positioned.fill(child: widget.child),
-        Positioned(
-          top: TopZone.pageBarBottom(context),
-          left: 0,
-          right: 0,
-          child: const PhoneAttentionLayer(),
-        ),
         ValueListenableBuilder<double>(
           valueListenable: TopZone.lowestBar,
           builder: (context, _, __) => Positioned(
