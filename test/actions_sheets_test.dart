@@ -71,12 +71,12 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('danger toast with action persists past 3s', (tester) async {
+  testWidgets('danger toast with action holds 8s and swipes up away', (tester) async {
     final ctx = await _pump(tester);
     toast(ctx, 'Busy', danger: true, actionLabel: 'Retry', onAction: () {});
-    await tester.pump(const Duration(seconds: 10));
+    await tester.pump(const Duration(seconds: 7));
     expect(find.text('Busy'), findsOneWidget);
-    await tester.drag(find.text('Busy'), const Offset(0, 80));
+    await tester.drag(find.text('Busy'), const Offset(0, -80));
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Busy'), findsNothing);
     debugDefaultTargetPlatformOverride = null;

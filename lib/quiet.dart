@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'tap_detector.dart';
 import 'theme.dart';
+import 'toast_avoid.dart';
 import 'widgets.dart';
 
 // Quiet design language: shared pieces. Surfaces separate by tone, hairlines
@@ -284,7 +285,10 @@ class QuietOfflineBanner extends StatelessWidget {
   final VoidCallback? onRetry;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) =>
+      ToastAvoid(child: _body(context));
+
+  Widget _body(BuildContext context) => Container(
         margin: EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s8),
         padding: EdgeInsets.fromLTRB(S.s12, S.s12, S.s12, S.s12),
         decoration: BoxDecoration(

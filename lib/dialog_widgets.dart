@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/gestures.dart';
-import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
 import 'platform.dart';
@@ -89,8 +88,8 @@ class _AppFieldState extends State<AppField> {
               color: _focus.hasFocus
                   ? AppColors.accentLine
                   : (kMobile
-                        ? AppColors.fg1.withValues(alpha: 0.08)
-                        : AppColors.lineStrong),
+                      ? AppColors.fg1.withValues(alpha: 0.08)
+                      : AppColors.lineStrong),
             ),
           ),
           child: Row(
@@ -115,8 +114,8 @@ class _AppFieldState extends State<AppField> {
                   style: kMobile
                       ? sans(15, color: AppColors.fg1)
                       : widget.mono
-                      ? mono(13, color: AppColors.fg1)
-                      : sans(13, color: AppColors.fg1),
+                          ? mono(13, color: AppColors.fg1)
+                          : sans(13, color: AppColors.fg1),
                   decoration: InputDecoration(
                     isCollapsed: true,
                     contentPadding: EdgeInsets.symmetric(
@@ -127,8 +126,8 @@ class _AppFieldState extends State<AppField> {
                     hintStyle: kMobile
                         ? sans(15, color: AppColors.fg4)
                         : widget.mono
-                        ? mono(13, color: AppColors.fg4)
-                        : sans(13, color: AppColors.fg4),
+                            ? mono(13, color: AppColors.fg4)
+                            : sans(13, color: AppColors.fg4),
                   ),
                 ),
               ),
@@ -222,22 +221,22 @@ Future<bool> confirmAction(
     );
   }
   Widget content(BuildContext ctx) => Column(
-    mainAxisSize: MainAxisSize.min,
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Padding(
-        padding: EdgeInsets.zero,
-        child: Text(body, style: TS.ui()),
-      ),
-      SizedBox(height: kMobile ? S.s20 : 18),
-      _DialogActions(
-        confirmLabel: confirmLabel,
-        danger: danger,
-        onCancel: () => Navigator.pop(ctx, false),
-        onConfirm: () => Navigator.pop(ctx, true),
-      ),
-    ],
-  );
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: EdgeInsets.zero,
+            child: Text(body, style: TS.ui()),
+          ),
+          SizedBox(height: kMobile ? S.s20 : 18),
+          _DialogActions(
+            confirmLabel: confirmLabel,
+            danger: danger,
+            onCancel: () => Navigator.pop(ctx, false),
+            onConfirm: () => Navigator.pop(ctx, true),
+          ),
+        ],
+      );
   final bool? result;
   if (kMobile) {
     result = await showAppSheet<bool>(
@@ -367,11 +366,7 @@ Widget popoverBackdrop(Animation<double> animation, Widget child) {
                   alpha: AppColors.glassScrim.a * t,
                 ),
               );
-              if (!Glass.effectiveEnabled || t < 0.001) return scrim;
-              return BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 16 * t, sigmaY: 16 * t),
-                child: scrim,
-              );
+              return scrim; // spec G: no backdrop blur
             },
           ),
         ),
@@ -388,9 +383,9 @@ Future<T?> showPointPopover<T>(
   required double maxHeight,
   required Widget child,
 }) {
-  final overlay =
-      Overlay.of(context, rootOverlay: true).context.findRenderObject()
-          as RenderBox?;
+  final overlay = Overlay.of(context, rootOverlay: true)
+      .context
+      .findRenderObject() as RenderBox?;
   final box = context.findRenderObject() as RenderBox?;
   if (overlay == null) return Future.value();
   final screen = overlay.size;
@@ -400,10 +395,11 @@ Future<T?> showPointPopover<T>(
   var at = rect != null
       ? Offset(rect.left + 24, rect.bottom - 4)
       : point != null
-      ? overlay.globalToLocal(point)
-      : box != null && box.attached
-      ? box.localToGlobal(Offset(0, box.size.height + 6), ancestor: overlay)
-      : screen.center(Offset.zero);
+          ? overlay.globalToLocal(point)
+          : box != null && box.attached
+              ? box.localToGlobal(Offset(0, box.size.height + 6),
+                  ancestor: overlay)
+              : screen.center(Offset.zero);
   final w = width.clamp(200.0, screen.width - 16);
   final left = (at.dx - w / 2 + (point != null ? w / 2 - 24 : 0)).clamp(
     8.0,
@@ -743,9 +739,9 @@ Future<T?> showAnchoredPanel<T>(
   Color? borderColor,
 }) {
   final box = anchor.findRenderObject() as RenderBox?;
-  final overlay =
-      Overlay.of(anchor, rootOverlay: true).context.findRenderObject()
-          as RenderBox?;
+  final overlay = Overlay.of(anchor, rootOverlay: true)
+      .context
+      .findRenderObject() as RenderBox?;
   if (box == null || overlay == null) {
     return showAppSheet<T>(anchor, title: '', child: child);
   }
@@ -863,9 +859,9 @@ Future<T?> showSidePopover<T>(
           builder: (context, constraints) {
             final origin =
                 (context.findRenderObject() as RenderBox?)?.localToGlobal(
-                  Offset.zero,
-                ) ??
-                Offset.zero;
+                      Offset.zero,
+                    ) ??
+                    Offset.zero;
             return CustomSingleChildLayout(
               delegate: _SidePopoverLayout(anchor.shift(-origin), width),
               child: KeyedSubtree(
@@ -960,22 +956,22 @@ class _FieldWellState extends State<FieldWell> {
 
   @override
   Widget build(BuildContext context) => Focus(
-    canRequestFocus: false,
-    skipTraversal: true,
-    onFocusChange: (f) => setState(() => _focused = f),
-    child: AnimatedContainer(
-      duration: Motion.quick,
-      constraints: BoxConstraints(minHeight: widget.minHeight),
-      alignment: widget.alignment,
-      padding: widget.padding,
-      decoration: BoxDecoration(
-        color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(R.of(14)),
-        border: Border.all(
-          color: _focused ? AppColors.fg4 : AppColors.lineStrong,
+        canRequestFocus: false,
+        skipTraversal: true,
+        onFocusChange: (f) => setState(() => _focused = f),
+        child: AnimatedContainer(
+          duration: Motion.quick,
+          constraints: BoxConstraints(minHeight: widget.minHeight),
+          alignment: widget.alignment,
+          padding: widget.padding,
+          decoration: BoxDecoration(
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.circular(R.of(14)),
+            border: Border.all(
+              color: _focused ? AppColors.fg4 : AppColors.lineStrong,
+            ),
+          ),
+          child: widget.child,
         ),
-      ),
-      child: widget.child,
-    ),
-  );
+      );
 }

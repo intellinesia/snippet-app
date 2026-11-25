@@ -8,6 +8,7 @@ import 'models.dart';
 import 'notification_text.dart';
 import 'session_quick_send.dart';
 import 'theme.dart';
+import 'toast_avoid.dart';
 import 'widgets.dart';
 import 'tap_detector.dart';
 
@@ -92,7 +93,10 @@ class _DeskAttentionBarState extends State<DeskAttentionBar> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      ToastAvoid(child: _bar(context));
+
+  Widget _bar(BuildContext context) {
     final scope = DeskAttentionScope.of(context);
     final client = scope?.client;
     final live = {

@@ -1,17 +1,14 @@
 import 'dart:async';
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
 import 'app_popover.dart';
 import 'dialog_widgets.dart' show trackMenuTrigger;
 import 'platform.dart';
-import 'glass.dart';
 import 'theme.dart';
 import 'widgets.dart';
-import 'tap_detector.dart';
 
-OverlayEntry? _activeToast;
+export 'toast.dart' show toast;
 
 ShapeBorder get appMenuShape => RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(R.card),
@@ -255,14 +252,9 @@ class AppSheetSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fill = color ?? AppColors.raised;
-    final glass = kMobile && Glass.effectiveEnabled;
     final body = DecoratedBox(
       decoration: BoxDecoration(
-        color: glass ? fill.withValues(alpha: 0.72) : fill,
-        border: glass
-            ? Border(
-                top: BorderSide(color: AppColors.fg1.withValues(alpha: 0.08)))
-            : null,
+        color: fill, // spec G: opaque, no backdrop blur
       ),
       child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -271,10 +263,7 @@ class AppSheetSurface extends StatelessWidget {
     );
     return ClipRRect(
       borderRadius: BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
-      child: glass
-          ? BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28), child: body)
-          : body,
+      child: body,
     );
   }
 }
@@ -443,241 +432,6 @@ List<Widget> _appMenuSheetEntries<T>(
     prevRow = true;
   }
   return out;
-}
-
-/// A theme-styled toast rendered in the ROOT overlay, so it floats above
-/// panels and dialogs. A new one replaces the previous (no stacking). Normal
-/// toasts leave after ~3s; danger toasts stay until tapped, swiped away or
-/// their action is taken (capped at 8s when there is no action).
-void toast(BuildContext context, String message,
-    {bool danger = false, String? actionLabel, VoidCallback? onAction}) {
-  final overlay = Overlay.maybeOf(context, rootOverlay: true);
-  if (overlay == null) return;
-  _activeToast?.remove();
-  final hold = danger
-      ? (actionLabel != null ? null : const Duration(seconds: 8))
-      : const Duration(seconds: 3);
-  final closing = ValueNotifier<bool>(false);
-  late final OverlayEntry entry;
-  void remove() {
-    if (_activeToast == entry) {
-      entry.remove();
-      _activeToast = null;
-    }
-  }
-
-  entry = OverlayEntry(
-    builder: (ctx) => _toastSlot(
-        ctx,
-        _ToastCard(
-          message: message,
-          danger: danger,
-          actionLabel: actionLabel,
-          onAction: onAction,
-          closing: closing,
-          hold: hold,
-          onGone: remove,
-        )),
-  );
-  _activeToast = entry;
-  overlay.insert(entry);
-}
-
-/// Phones: rises from just above the composer or keyboard. Desktop: top-right.
-Widget _toastSlot(BuildContext ctx, Widget card) {
-  final mq = MediaQuery.of(ctx);
-  if (kMobile) {
-    final base = mq.viewInsets.bottom > mq.padding.bottom
-        ? mq.viewInsets.bottom
-        : mq.padding.bottom;
-    return Positioned(
-      left: S.s12,
-      right: S.s12,
-      bottom: base + 112,
-      child: Align(alignment: Alignment.bottomCenter, child: card),
-    );
-  }
-  return Positioned(
-    left: S.s12,
-    right: S.s12,
-    top: mq.padding.top + 44 + S.s8,
-    child: Align(alignment: Alignment.topRight, child: card),
-  );
-}
-
-class _ToastCard extends StatefulWidget {
-  final String message;
-  final bool danger;
-  final String? actionLabel;
-  final VoidCallback? onAction;
-  final ValueNotifier<bool> closing;
-  final Duration? hold;
-  final VoidCallback onGone;
-  const _ToastCard({
-    this.hold,
-    required this.message,
-    required this.danger,
-    required this.closing,
-    required this.onGone,
-    this.actionLabel,
-    this.onAction,
-  });
-  @override
-  State<_ToastCard> createState() => _ToastCardState();
-}
-
-class _ToastCardState extends State<_ToastCard>
-    with SingleTickerProviderStateMixin {
-  /// Eager, in initState: a lazy `late final` makes `dispose` the first access
-  /// when `build` never runs, constructing a controller on a dead element.
-  late final AnimationController _c;
-  // Owned by the card so it dies with the overlay instead of outliving it.
-  Timer? _hold;
-  double _drag = 0;
-  bool _leaving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _c = AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 200),
-        reverseDuration: const Duration(milliseconds: 200))
-      ..forward();
-    widget.closing.addListener(_onClosing);
-    final hold = widget.hold;
-    if (hold != null) _hold = Timer(hold, _dismiss);
-  }
-
-  @override
-  void dispose() {
-    _hold?.cancel();
-    widget.closing.removeListener(_onClosing);
-    _c.dispose();
-    super.dispose();
-  }
-
-  void _onClosing() {
-    if (widget.closing.value) _dismiss();
-  }
-
-  Future<void> _dismiss() async {
-    if (_leaving) return;
-    _leaving = true;
-    if (!mounted) return;
-    if (!reduceMotion(context)) {
-      try {
-        await _c.reverse().orCancel;
-      } on TickerCanceled {
-        // Disposed mid-flight; the entry is already gone.
-      }
-    }
-    widget.onGone();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    Theme.of(context); // Rebuild on theme change
-    if (reduceMotion(context)) _c.value = 1;
-    final curve = CurvedAnimation(
-        parent: _c,
-        curve: Curves.easeOutCubic,
-        reverseCurve: Curves.easeInCubic);
-    final tone = widget.danger ? AppColors.danger : AppColors.ok;
-    final toneBg = widget.danger ? AppColors.dangerBg : AppColors.okBg;
-    final hasAction = widget.actionLabel != null;
-    final dir = kMobile ? 16.0 : -8.0;
-    // Material ancestor: without it, overlay text gets the debug style.
-    return Material(
-      type: MaterialType.transparency,
-      child: FadeTransition(
-        opacity: curve,
-        child: AnimatedBuilder(
-          animation: curve,
-          builder: (_, child) => Transform.translate(
-              offset: Offset(0, (1 - curve.value) * dir + _drag), child: child),
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: hasAction ? null : _dismiss,
-            onVerticalDragUpdate: (d) => setState(
-                () => _drag = (_drag + d.delta.dy).clamp(0.0, double.infinity)),
-            onVerticalDragEnd: (d) {
-              if (_drag > 24 || (d.primaryVelocity ?? 0) > 300) {
-                _dismiss();
-              } else {
-                setState(() => _drag = 0);
-              }
-            },
-            child: Container(
-              constraints: BoxConstraints(
-                  maxWidth: kMobile ? 360 : 420, minHeight: kMobile ? 44 : 36),
-              padding: EdgeInsets.only(
-                  left: S.s12,
-                  right: hasAction ? S.s4 : S.s12,
-                  top: S.s4,
-                  bottom: S.s4),
-              decoration: BoxDecoration(
-                color: AppColors.surface3,
-                border: Border.all(color: AppColors.border2),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: overlayShadow,
-              ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Container(
-                  width: 20,
-                  height: 20,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                      color: toneBg, borderRadius: BorderRadius.circular(6)),
-                  child: widget.danger
-                      ? Text('!',
-                          style: sans(12, weight: FontWeight.w700, color: tone)
-                              .copyWith(decoration: TextDecoration.none))
-                      : AppIcon('check', size: 12, color: tone),
-                ),
-                SizedBox(width: S.s12),
-                Flexible(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: S.s8),
-                    child: Text(widget.message,
-                        maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(kMobile ? 14 : 13,
-                                weight: W.label,
-                                height: 1.35,
-                                color: AppColors.fg1)
-                            .copyWith(decoration: TextDecoration.none)),
-                  ),
-                ),
-                if (hasAction)
-                  TapDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () {
-                      widget.onAction?.call();
-                      _dismiss();
-                    },
-                    child: Container(
-                      constraints: BoxConstraints(
-                          minWidth: kMobile ? 44 : 32,
-                          minHeight: kMobile ? 44 : 32),
-                      alignment: Alignment.center,
-                      padding: EdgeInsets.symmetric(horizontal: S.s12),
-                      child: Text(widget.actionLabel!,
-                          style: sans(kMobile ? 14 : 13,
-                                  weight: W.label,
-                                  color: widget.danger
-                                      ? AppColors.danger
-                                      : AppColors.accent)
-                              .copyWith(decoration: TextDecoration.none)),
-                    ),
-                  ),
-              ]),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// Open a markdown link in the external browser (fire-and-forget).
