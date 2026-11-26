@@ -14,6 +14,7 @@ import 'agent_reach_panel.dart';
 import 'agent_records.dart';
 import 'agent_wake_panel.dart';
 import 'memory_screen.dart';
+import 'pane_add_menu.dart' show PaneAddEntry, PanePill, showPaneAddMenu;
 import 'shell_models.dart' show RightTab;
 import '../tap_detector.dart';
 
@@ -323,13 +324,86 @@ class AgentSidePanel extends StatelessWidget {
     );
   }
 
+  /// Desktop pane row (Capy): Overview, each opened page, + and hide.
+  Widget _tabRow(BuildContext context, RightTab? reading) => Container(
+        key: const ValueKey('agent-panel-tabs'),
+        height: PaneRow.height,
+        padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
+        decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppColors.paneLine))),
+        child: Row(children: [
+          Flexible(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                PanePill(
+                    icon: 'list',
+                    label: 'Overview',
+                    active: reading == null,
+                    onTap: reading == null ? null : onClearReadout),
+                for (final r in readouts) ...[
+                  const SizedBox(width: 2),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 160),
+                    child: PanePill(
+                        icon: r.icon,
+                        label: r.label,
+                        active: r.key == reading?.key,
+                        onTap: () => onSelectReadout?.call(r),
+                        onClose: () => onCloseReadout?.call(r)),
+                  ),
+                ],
+                const SizedBox(width: 2),
+                Builder(
+                  builder: (ctx) => IconBtn('plus',
+                      size: 28,
+                      iconSize: 14,
+                      tooltip: 'Open a tab',
+                      onTap: () => _addMenu(ctx)),
+                ),
+              ]),
+            ),
+          ),
+          const Spacer(),
+          if (onHide != null)
+            IconBtn('sidebar',
+                size: 28, iconSize: 14, tooltip: 'Hide panel', onTap: onHide),
+        ]),
+      );
+
+  void _addMenu(BuildContext ctx) {
+    final lead = agentId == 'lead';
+    PaneAddEntry e(String action, String icon, String label) => PaneAddEntry(
+        icon: icon,
+        label: label,
+        checked: readouts.any((r) => r.label == label),
+        onTap: () => onAction(action));
+    showPaneAddMenu(
+      ctx,
+      title: agentName,
+      views: [
+        e('inbox', 'inbox', 'Inbox'),
+        e('board', 'kanban', 'Board'),
+        e('memory', 'book', 'Memory'),
+        e('wakes', 'clock', 'Wakes'),
+        if (!lead) e('reach', 'send', 'Reach'),
+      ],
+      crew: [
+        if (!lead)
+          PaneAddEntry(
+              icon: 'layers', label: 'Desk work', onTap: () => onAction('desk')),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final reading = _reading;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (readouts.isNotEmpty)
+        if (!kMobile) _tabRow(context, reading),
+        if (kMobile && readouts.isNotEmpty)
           Container(
             height: 46,
             padding: EdgeInsets.fromLTRB(S.of(10), 0, S.s8, 0),

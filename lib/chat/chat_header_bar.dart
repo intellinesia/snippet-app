@@ -40,34 +40,34 @@ class ChatHeaderBar extends StatelessWidget {
   Widget build(BuildContext context) {
     Theme.of(context);
     final avatar = agentIds.length > 1
-        ? AgentCluster(ids: agentIds, size: 14)
+        ? AgentCluster(ids: agentIds, size: 16)
         : ClipOval(
             child: AgentMochi(
                 agentIds.isEmpty ? 'snippet' : agentIds.first,
-                size: 14),
+                size: 16),
           );
     return Container(
       key: const ValueKey('chat-header-bar'),
       constraints: BoxConstraints(minHeight: height),
-      padding: const EdgeInsets.fromLTRB(6, 0, 6, 0),
+      padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: AppColors.paneLine)),
       ),
       child: Row(children: [
         Flexible(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 260),
+            constraints: const BoxConstraints(maxWidth: 320),
             child: Container(
               key: const ValueKey('chat-header-pill'),
               height: PaneRow.pill,
-              padding: const EdgeInsets.fromLTRB(7, 0, 9, 0),
+              padding: const EdgeInsets.fromLTRB(9, 0, 11, 0),
               decoration: BoxDecoration(
                 color: AppColors.surface2,
                 borderRadius: BorderRadius.circular(PaneRow.radius),
               ),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 avatar,
-                const SizedBox(width: 6),
+                const SizedBox(width: 8),
                 Flexible(
                   child: Text(title,
                       maxLines: 1,
@@ -104,7 +104,7 @@ class ChatHeaderBar extends StatelessWidget {
                   child: Text(subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(11.5, color: AppColors.fg3)),
+                      style: sans(12, color: AppColors.fg3)),
                 ),
               ]),
             ),

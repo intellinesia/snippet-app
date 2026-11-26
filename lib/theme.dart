@@ -1262,11 +1262,11 @@ Color get readingBg => AppColors.canvas;
 /// Desktop pane rows and their tab pills (Capy metrics), shared by the
 /// window tabs, the pane rows and the right panel.
 abstract final class PaneRow {
-  static const double height = 32;
-  static const double pill = 22;
-  static const double radius = 6;
-  static const double label = 12;
-  static const double icon = 13;
+  static const double height = 44;
+  static const double pill = 28;
+  static const double radius = 7;
+  static const double label = 12.5;
+  static const double icon = 14;
   static Color get labelOff => Color.lerp(AppColors.fg2, AppColors.fg3, 0.45)!;
 }
 

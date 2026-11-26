@@ -249,7 +249,7 @@ class ReadoutChip extends StatelessWidget {
         width: compact ? null : width,
         child: Padding(
           padding: EdgeInsets.symmetric(
-              horizontal: S.s2, vertical: compact ? 5 : S.of(7)),
+              horizontal: S.s2, vertical: compact ? 8 : S.of(7)),
           child: AnimatedContainer(
             duration: Motion.quick,
             height: compact ? PaneRow.pill : 32,
@@ -363,7 +363,7 @@ class PaneTabChip extends StatelessWidget {
         width: compact ? null : width,
         child: Padding(
           padding: EdgeInsets.symmetric(
-              horizontal: S.s2, vertical: compact ? 5 : S.of(7)),
+              horizontal: S.s2, vertical: compact ? 8 : S.of(7)),
           child: AnimatedContainer(
             duration: Motion.quick,
             height: compact ? PaneRow.pill : 32,

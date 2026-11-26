@@ -208,7 +208,7 @@ class _PanePillState extends State<PanePill> {
           child: Container(
             height: PaneRow.pill,
             padding: EdgeInsets.fromLTRB(
-                8, 0, widget.onClose == null ? 9 : 2, 0),
+                10, 0, widget.onClose == null ? 12 : 4, 0),
             decoration: BoxDecoration(
               color: widget.active
                   ? AppColors.surface2
@@ -224,7 +224,7 @@ class _PanePillState extends State<PanePill> {
                       color: widget.active
                           ? AppColors.fg2
                           : PaneRow.labelOff),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               Flexible(
                 child: Text(widget.label,
                     maxLines: 1,
@@ -239,8 +239,8 @@ class _PanePillState extends State<PanePill> {
                 Opacity(
                   opacity: widget.active || _hover ? 1 : 0,
                   child: IconBtn('x',
-                      size: 18,
-                      iconSize: 10,
+                      size: 20,
+                      iconSize: 11,
                       tooltip: 'Close tab',
                       onTap: widget.onClose),
                 ),

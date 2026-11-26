@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api.dart';
 import '../mochi.dart';
+import '../platform.dart';
+import '../tap_detector.dart';
 import '../models.dart';
 import '../screens/tasks/task_common.dart' show openTaskDetail;
 import '../settings_form.dart' show Grouped, SettingsSwitch;
@@ -182,6 +184,7 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
     final hasMenu = (widget.onDesk != null && !_mc) ||
         widget.onNickname != null ||
         widget.onDelete != null;
+    if (!kMobile) return _statusLine(hasMenu);
     return Semantics(
       label: '${widget.name}, ${widget.sub}',
       container: true,
@@ -213,6 +216,64 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
                 builder: (bc) => IconBtn('ellipsis',
                     size: 30,
                     iconSize: 16,
+                    tooltip: 'More',
+                    onTap: () => _menu(bc)),
+              ),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  /// Desktop Overview head (Capy): state, how long, what it is, then the
+  /// agent and its menu at the right end.
+  Widget _statusLine(bool hasMenu) {
+    final a = widget.agent;
+    final p = a?.presence;
+    final active = p != null && p.active;
+    final waiting = active &&
+        (const {'waiting', 'blocked'}.contains(p.state) ||
+            (a?.needsYou ?? 0) > 0);
+    final word = active
+        ? p.state[0].toUpperCase() + p.state.substring(1)
+        : 'Quiet';
+    final since = active && p.since != null ? _elapsed(p.since!) : null;
+    final color = waiting
+        ? AppColors.run
+        : active
+            ? AppColors.ok
+            : AppColors.fg4;
+    return Semantics(
+      label: '${widget.name}, ${widget.sub}',
+      container: true,
+      child: GestureDetector(
+        onLongPress: widget.onHeroLongPress,
+        child: SizedBox(
+          height: 28,
+          child: Row(children: [
+            _Dot(color),
+            const SizedBox(width: 8),
+            Text(word, style: sans(12.5, weight: W.label, color: AppColors.fg1)),
+            if (since != null) ...[
+              const SizedBox(width: 6),
+              Text(since, style: sans(12, color: AppColors.fg3, tabular: true)),
+            ],
+            if (widget.sub.isNotEmpty) ...[
+              Text('  ·  ', style: sans(12, color: AppColors.fg4)),
+              Flexible(
+                child: Text(widget.sub,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(12, color: AppColors.fg3)),
+              ),
+            ],
+            const Spacer(),
+            ClipOval(child: AgentMochi(widget.agentId, size: 18)),
+            if (hasMenu)
+              Builder(
+                builder: (bc) => IconBtn('ellipsis',
+                    size: 26,
+                    iconSize: 14,
                     tooltip: 'More',
                     onTap: () => _menu(bc)),
               ),
@@ -272,6 +333,34 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
       final at = a?.lastMessage?.at;
       since = noise || at == null ? null : _elapsed(at);
       line = noise ? 'Nothing on its desk.' : m;
+    }
+    if (!kMobile) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 10),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 11),
+          decoration: BoxDecoration(
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.circular(R.of(10)),
+            border: Border.all(color: AppColors.line),
+          ),
+          child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(p != null && p.active ? 'Now' : 'Last message',
+                    style: sans(11, color: AppColors.fg3)),
+                const SizedBox(height: 4),
+                Text(line,
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(12.5,
+                        height: 1.4,
+                        color: p != null && p.active
+                            ? AppColors.fg1
+                            : AppColors.fg2)),
+              ]),
+        ),
+      );
     }
     return Padding(
       padding: const EdgeInsets.only(top: 14),
@@ -350,6 +439,46 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
           ),
         ),
       ),
+    );
+  }
+
+  /// Desktop: the quick links as Capy's outlined "Open" pills.
+  Widget _openPills() {
+    final cells = <(String, String, VoidCallback)>[
+      if (widget.onInbox != null) ('inbox', 'Inbox', widget.onInbox!),
+      if (widget.onBoard != null) ('kanban', 'Board', widget.onBoard!),
+      if (widget.onMemory != null) ('book', 'Memory', widget.onMemory!),
+      if (widget.onTasks != null) ('task', 'Tasks', widget.onTasks!),
+      if (widget.onDesk != null && !_mc)
+        ('layers', 'Desk work', widget.onDesk!),
+    ];
+    if (cells.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 22, 14, 0),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('Open', style: sans(12.5, weight: W.label, color: AppColors.fg1)),
+        const SizedBox(height: 8),
+        Wrap(spacing: 6, runSpacing: 6, children: [
+          for (final c in cells)
+            InkWell(
+              onTap: c.$3,
+              borderRadius: BorderRadius.circular(R.of(7)),
+              child: Container(
+                height: 28,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(R.of(7)),
+                  border: Border.all(color: AppColors.line),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  AppIcon(c.$1, size: 13, color: AppColors.fg3),
+                  const SizedBox(width: 6),
+                  Text(c.$2, style: sans(12, color: AppColors.fg2)),
+                ]),
+              ),
+            ),
+        ]),
+      ]),
     );
   }
 
@@ -639,10 +768,11 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
               widget.header!,
             ],
             if (presence != null) presence,
-            _strip(),
+            if (kMobile) _strip(),
           ]),
         ),
         for (final s in sections) s,
+        if (!kMobile) _openPills(),
         _Section('Settings', initiallyOpen: false, children: [
           for (final s in widget.settings)
             _Row(
@@ -710,8 +840,43 @@ class _SectionState extends State<_Section> {
     await p.setBool('$_openPref${widget.label}', v);
   }
 
+  Widget _desktop() {
+    final open = _isOpen;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 22, 14, 0),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        TapDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _toggle,
+          child: SizedBox(
+            height: 22,
+            child: Row(children: [
+              Expanded(
+                child: Text(widget.label,
+                    style:
+                        sans(12.5, weight: W.label, color: AppColors.fg1)),
+              ),
+              if (widget.meta != null)
+                Text(widget.meta!,
+                    style: sans(12, color: AppColors.fg3, tabular: true)),
+              if (!open) ...[
+                const SizedBox(width: 6),
+                AppIcon('chevron-right', size: 11, color: AppColors.fg4),
+              ],
+            ]),
+          ),
+        ),
+        if (open && widget.children.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          ...widget.children,
+        ],
+      ]),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (!kMobile) return _desktop();
     final open = _isOpen;
     final head = InkWell(
       onTap: _toggle,
@@ -798,8 +963,65 @@ class _Row extends StatelessWidget {
   final bool chevron;
   final VoidCallback? onTap;
 
+  /// Desktop (Capy): one quiet 30 px line, icon, title, then the detail.
+  Widget _desktop() {
+    final hasSub = sub != null && sub!.isNotEmpty;
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        onTap: onTap,
+        hoverColor: AppColors.hoverPlate,
+        borderRadius: BorderRadius.circular(R.of(6)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 30),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            child: Row(children: [
+              if (dot != null)
+                SizedBox(width: 14, child: Center(child: _Dot(dot!)))
+              else
+                AppIcon(icon, size: 14, color: AppColors.fg3),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text.rich(
+                  TextSpan(children: [
+                    TextSpan(
+                        text: title,
+                        style: sans(12.5, color: AppColors.fg1)),
+                    if (hasSub)
+                      TextSpan(
+                          text: '  $sub',
+                          style: sans(12, color: AppColors.fg3)),
+                  ]),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (value != null) ...[
+                const SizedBox(width: 8),
+                Text(value!,
+                    style: valueMono
+                        ? mono(11.5, color: AppColors.fg3)
+                        : sans(12, color: AppColors.fg3, tabular: true)),
+              ],
+              if (trailing != null) ...[
+                const SizedBox(width: 8),
+                trailing!,
+              ],
+              if (chevron) ...[
+                const SizedBox(width: 4),
+                AppIcon('chevron-right', size: 12, color: AppColors.fg4),
+              ],
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (!kMobile) return _desktop();
     final hasSub = sub != null && sub!.isNotEmpty;
     return Material(
       type: MaterialType.transparency,

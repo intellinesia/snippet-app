@@ -320,15 +320,16 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         leading: [
           Builder(
             builder: (ctx) => IconBtn('plus',
-                size: 24,
-                iconSize: 13,
+                size: 28,
+                iconSize: 14,
                 tooltip: 'Open a tab',
                 onTap: () => _showAgentAddMenu(ctx, agent.id, sessions)),
           ),
         ],
         actions: [
           if (agent.id != 'lead') _workViewButton(agent.id),
-          _panelButton('info', 'agent info'),
+          // Open, the panel's own row carries the hide button.
+          if (_panelHidden) _panelButton('info', 'agent info'),
         ],
       );
     }
@@ -355,8 +356,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         leading: [
           Builder(
             builder: (ctx) => IconBtn('plus',
-                size: 24,
-                iconSize: 13,
+                size: 28,
+                iconSize: 14,
                 tooltip: 'Open a tab',
                 onTap: () => _showAgentAddMenu(ctx, null, const [])),
           ),
@@ -404,8 +405,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       leading: [
         Builder(
           builder: (ctx) => IconBtn('plus',
-              size: 24,
-              iconSize: 13,
+              size: 28,
+              iconSize: 14,
               tooltip: 'Open a tab',
               onTap: () => _showPaneAddMenu(ctx)),
         ),
@@ -422,8 +423,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         builder: (_, work, __) {
           final on = work.contains(agentId);
           return IconBtn('layers',
-              size: 24,
-              iconSize: 13,
+              size: 28,
+              iconSize: 14,
               active: on,
               tooltip: on ? 'Back to chat' : 'Show desk work',
               onTap: () => setAgentWorkView(agentId, !on));
@@ -432,8 +433,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
 
   /// The agent, Lead or group panel: opened only from the chat header.
   Widget _panelButton(String icon, String what) => IconBtn(icon,
-      size: 24,
-      iconSize: 13,
+      size: 28,
+      iconSize: 14,
       active: !_panelHidden,
       tooltip: _panelHidden ? 'Show $what' : 'Hide $what',
       onTap: _togglePanel);
@@ -448,8 +449,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           // Docked open, the panel's own row carries the toggle.
           if (docked && on) return const SizedBox.shrink();
           return IconBtn('sidebar',
-              size: 24,
-              iconSize: 13,
+              size: 28,
+              iconSize: 14,
               active: on,
               tooltip: on ? 'Hide session panel' : 'Show session panel',
               onTap: () {
