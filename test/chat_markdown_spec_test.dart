@@ -1,12 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:snippet/widgets.dart' show MarkdownBody;
+import 'package:snippet/widgets.dart' show IconBtn, MarkdownBody;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/chat/chat_style.dart';
 import 'package:snippet/markdown_widgets.dart';
 import 'package:snippet/theme.dart';
 
-// Spec C CH-22: code block at W, copy target 48, scrolls horizontally.
+// v19 RC-12: code block at W, 36-high header/copy affordance, scrolls horizontally.
 void main() {
   for (final vw in [360.0, 393.0, 430.0]) {
     for (final scale in [1.0, 1.35, 2.0]) {
@@ -26,7 +26,8 @@ void main() {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Builder(
                 builder: (c) => MarkdownBody(
-                  data: '```dart\nvoid main() { print("a very long line that must scroll sideways and never wrap"); }\n```',
+                  data:
+                      '```dart\nvoid main() { print("a very long line that must scroll sideways and never wrap"); }\n```',
                   styleSheet: chatMarkdownStyle(c, mine: false),
                   builders: {'pre': PreBlockBuilder()},
                 ),
@@ -34,17 +35,15 @@ void main() {
             ),
           ),
         ));
-        final copy = t.getSize(find
+        final copy = t.widget<IconBtn>(find
             .descendant(
-                of: find.byType(MarkdownBody),
-                matching: find.byWidgetPredicate(
-                    (w) => w is SizedBox && w.width == 48 && w.height == 48))
+                of: find.byType(MarkdownBody), matching: find.byType(IconBtn))
             .first);
         final scroller = t.getRect(find.byType(SingleChildScrollView).first);
         // ignore: avoid_print
         print('W $vw x$scale copy=$copy block=${scroller.width}');
-        expect(copy, const Size(48, 48));
-        expect(scroller.width, vw - 32);
+        expect(copy.iconSize, 14);
+        expect(scroller.width, vw - 56);
         expect(t.takeException(), isNull);
         debugDefaultTargetPlatformOverride = null;
       });
