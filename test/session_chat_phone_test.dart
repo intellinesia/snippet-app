@@ -71,7 +71,8 @@ Future<_Socket> _pumpSession(WidgetTester tester, Map<String, dynamic> snap,
 }
 
 void main() {
-  testWidgets('lanes pill counts the batch and what finished', (tester) async {
+  testWidgets('running lanes do not revive the superseded batch pill',
+      (tester) async {
     await _pumpSession(tester, {
       'status': 'running',
       'events': [],
@@ -81,7 +82,8 @@ void main() {
         {'id': 'l3', 'title': 'Old', 'status': 'cancelled', 'started_at': ''},
       ],
     });
-    expect(find.text('2 lanes · 1 done'), findsOneWidget);
+    expect(find.text('Running - proj'), findsOneWidget);
+    expect(find.text('2 lanes · 1 done'), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
     debugDefaultTargetPlatformOverride = null;
