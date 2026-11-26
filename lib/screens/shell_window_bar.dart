@@ -93,7 +93,7 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
   Widget _icon() {
     final t = widget.tab;
     final active = widget.isActive;
-    final color = active ? AppColors.fg1 : AppColors.fg2;
+    final color = active ? AppColors.fg1 : AppColors.fg3;
     final groupIds = tabGroupAgentIds(t);
     final hasProvider =
         widget.provider != null && providerLogoAsset(widget.provider) != null;
@@ -178,82 +178,63 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
             key: widget.chipKey,
             height: 32,
             width: widget.width,
-            child: Stack(children: [
-              if ((_hover && !active) || (_focus && !active))
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  top: 4,
-                  height: 28,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: _focus ? AppColors.surface3 : AppColors.surface2,
-                      borderRadius: BorderRadius.circular(R.of(6)),
+            // Capy pill: the active tab is a filled plate, others are bare text.
+            child: Center(
+              child: Container(
+                height: 28,
+                decoration: BoxDecoration(
+                  color: active
+                      ? AppColors.surface2
+                      : (_hover || _focus)
+                          ? AppColors.hoverPlate
+                          : Colors.transparent,
+                  borderRadius: BorderRadius.circular(R.of(7)),
+                  border: _focus
+                      ? Border.all(color: AppColors.border2, width: 1)
+                      : null,
+                ),
+                padding: const EdgeInsets.fromLTRB(10, 0, 4, 0),
+                child: Row(children: [
+                  SizedBox(width: 14, child: Center(child: _icon())),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12.5,
+                          weight: W.body,
+                          color: active ? AppColors.fg1 : AppColors.fg3),
                     ),
                   ),
-                ),
-              if (_focus)
-                Positioned(
-                  left: 0,
-                  top: 2,
-                  bottom: 2,
-                  width: 2,
-                  child: ColoredBox(color: AppColors.fg1),
-                ),
-              Positioned.fill(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 0, 4, 0),
-                  child: Row(children: [
-                    SizedBox(width: 12, child: Center(child: _icon())),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        _label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(12,
-                            weight: active ? W.label : W.body,
-                            color: active ? AppColors.fg1 : AppColors.fg2),
-                      ),
+                  if (marker != null) ...[
+                    const SizedBox(width: 2),
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: Center(child: marker),
                     ),
-                    if (marker != null) ...[
-                      const SizedBox(width: 2),
-                      SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: Center(child: marker),
-                      ),
-                    ],
-                    if (closable)
-                      Opacity(
-                        opacity: showClose ? 1 : 0,
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: showClose ? widget.onClose : null,
-                          child: SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: Center(
-                              child:
-                                  AppIcon('x', size: 10, color: AppColors.fg3),
-                            ),
+                  ],
+                  if (closable)
+                    Opacity(
+                      opacity: showClose ? 1 : 0,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: showClose ? widget.onClose : null,
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: Center(
+                            child: AppIcon('x', size: 10, color: AppColors.fg3),
                           ),
                         ),
-                      )
-                    else
-                      const SizedBox(width: 6),
-                  ]),
-                ),
+                      ),
+                    )
+                  else
+                    const SizedBox(width: 6),
+                ]),
               ),
-              if (active)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  height: 2,
-                  child: ColoredBox(color: AppColors.fg1),
-                ),
-            ]),
+            ),
           ),
         ),
       ),

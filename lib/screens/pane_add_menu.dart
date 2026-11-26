@@ -27,7 +27,7 @@ class PaneAddEntry {
 
 PopupMenuItem<VoidCallback> _row(PaneAddEntry e) => PopupMenuItem<VoidCallback>(
       value: e.onTap,
-      height: 32,
+      height: 30,
       padding: EdgeInsets.symmetric(horizontal: S.of(10)),
       child: Row(children: [
         AppIcon(e.icon, size: 14, color: AppColors.fg3),
@@ -36,7 +36,7 @@ PopupMenuItem<VoidCallback> _row(PaneAddEntry e) => PopupMenuItem<VoidCallback>(
           child: Text(e.label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: sans(13, color: AppColors.fg1)),
+              style: sans(12.5, color: AppColors.fg1)),
         ),
         if (e.meta != null)
           Text(e.meta!, style: sans(12, color: AppColors.fg4, tabular: true)),
@@ -68,6 +68,7 @@ Future<void> showPaneAddMenu(
   BuildContext anchor, {
   required String title,
   required List<PaneAddEntry> views,
+  List<PaneAddEntry> crew = const [],
   List<PaneAddEntry> terminals = const [],
 }) async {
   final fn = await showAppMenu<VoidCallback>(
@@ -76,12 +77,18 @@ Future<void> showPaneAddMenu(
     below: true,
     minWidth: 264,
     maxWidth: 300,
-    color: AppColors.surface2,
-    shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.of(10))),
+    color: AppColors.surface1,
+    shape: RoundedRectangleBorder(
+        side: BorderSide(color: AppColors.border),
+        borderRadius: BorderRadius.circular(R.of(10))),
     items: [
       _label(title.trim().isEmpty ? 'Session' : title.trim(), height: 30),
       for (final e in views) _row(e),
+      if (crew.isNotEmpty) ...[
+        const PopupMenuDivider(height: 9),
+        _label('Crew'),
+        for (final e in crew) _row(e),
+      ],
       if (terminals.isNotEmpty) ...[
         const PopupMenuDivider(height: 9),
         _label('Terminals'),

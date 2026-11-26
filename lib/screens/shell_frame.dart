@@ -56,10 +56,9 @@ class ShellTitleRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Theme.of(context);
-    return Container(
+    return SizedBox(
       key: const ValueKey('shell-title-row'),
       height: kShellTitleRowHeight,
-      decoration: BoxDecoration(border: Border(bottom: shellHairline())),
       child: LayoutBuilder(
         builder: (context, c) => c.maxWidth < 200
             // The 56 icon column (narrow Settings) keeps the toggle only.
@@ -185,10 +184,8 @@ class ShellTabStripFrame extends StatelessWidget {
     return Container(
       key: const ValueKey('shell-tab-strip'),
       height: kShellTabStripHeight,
-      decoration: BoxDecoration(
-        color: AppColors.bg,
-        border: Border(bottom: shellHairline()),
-      ),
+      // Sits on the window chrome; the inset panel below draws the edge.
+      color: AppColors.windowChrome,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

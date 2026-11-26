@@ -242,7 +242,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   }
 
   static String _line(List<String> parts) =>
-      parts.where((p) => p.trim().isNotEmpty).join(' - ');
+      parts.where((p) => p.trim().isNotEmpty).join(' \u00b7 ');
 
   Widget? _chatHeaderFor(_ShellTab t, double width) {
     final readout = t.readout;
@@ -267,6 +267,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           if (sessions.isNotEmpty)
             '${sessions.length} ${sessions.length == 1 ? 'session' : 'sessions'}',
         ]),
+        live: _agentState(agent, mac: mac) == 'Working',
         actions: [
           if (agent.id != 'lead') _workViewButton(agent.id),
           _panelButton('info', 'agent info'),
@@ -320,30 +321,27 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         : ran.inHours < 1
             ? ' ${ran.inMinutes}m'
             : ' ${ran.inHours}h ${ran.inMinutes % 60}m';
-    final state = needs ? 'needs you' : (running ? 'running$runFor' : 'idle');
+    final state = needs ? 'Needs you' : (running ? 'Running$runFor' : 'Idle');
     return ChatHeaderBar(
       agentIds: [owner ?? 'snippet'],
       title: t.title.trim().isEmpty ? 'Session' : t.title.trim(),
-      // "Session, managed by Lead, running - opus"
+      // "Running 14m · Duke · Opus"
       subtitle: _line([
-        [
-          'Session',
-          if (ownerName.isNotEmpty) 'managed by $ownerName',
-          state,
-        ].join(', '),
+        state,
+        ownerName,
         if (profile.isNotEmpty) prettyProfile(profile),
       ]),
-      actions: [
-        // The pane's "+" lives here now that a lone chat has no inner strip.
+      live: running && !needs,
+      leading: [
         Builder(
           builder: (ctx) => IconBtn('plus',
-              size: 28,
+              size: 26,
               iconSize: 14,
-              tooltip: 'Open in this session',
+              tooltip: 'Open a tab',
               onTap: () => _showPaneAddMenu(ctx)),
         ),
-        _sessionPanelButton(width),
       ],
+      actions: [_sessionPanelButton(width)],
     );
   }
 
@@ -1074,16 +1072,18 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             onTap: () => act('artifacts')),
         PaneAddEntry(
             icon: 'book-marked', label: 'Memory', onTap: () => act('memory')),
-        PaneAddEntry(
-            icon: 'pull-request',
-            label: 'Pull requests',
-            onTap: () => act('pull_requests')),
+      ],
+      crew: [
         PaneAddEntry(
             icon: 'git-branch',
             label: 'Lanes',
             meta: lanes > 0 ? '$lanes running' : null,
             chevron: true,
             onTap: () => act('lanes')),
+        PaneAddEntry(
+            icon: 'pull-request',
+            label: 'Pull requests',
+            onTap: () => act('pull_requests')),
       ],
       terminals: [
         PaneAddEntry(

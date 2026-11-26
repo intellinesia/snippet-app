@@ -1115,16 +1115,16 @@ class AppColors {
   static bool get _quietDeskLight =>
       _quietDesk && currentTheme.name == 'quiet-light';
 
-  /// Desktop window chrome: sidebar column and status bar. Quiet (home-orca
-  /// shell): s1 (light F0F0EC), with the centre pane on bg.
+  /// Desktop window chrome: sidebar column, tab strip and status bar.
   static Color get windowBg => kMobile
       ? currentTheme.bg
       : (_deskBlack
               ? const Color(0xFF09090A)
               : _quietDesk
+                  // Capy depth: chrome sits darker than the reading panel.
                   ? (_quietDeskLight
                       ? currentTheme.surface2
-                      : currentTheme.surface1)
+                      : const Color(0xFF0A0A09))
                   : Color.lerp(currentTheme.bg, currentTheme.surface1, 0.45)!)
           .withValues(alpha: chromeAlpha ?? 1);
 

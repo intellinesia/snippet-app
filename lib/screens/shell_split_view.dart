@@ -375,13 +375,7 @@ class _ShellSplitViewState extends State<ShellSplitView>
               DecoratedBox(
                 key: const ValueKey('shell-sidebar-column'),
                 // One hairline on the right edge separates it from the pane.
-                decoration: BoxDecoration(
-                  color: AppColors.windowChrome,
-                  border: kMobile
-                      ? null
-                      : Border(
-                          right: BorderSide(color: AppColors.line, width: 1)),
-                ),
+                decoration: BoxDecoration(color: AppColors.windowChrome),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -409,7 +403,7 @@ class _ShellSplitViewState extends State<ShellSplitView>
         Expanded(
           // The centre column is the reading surface: strip and panes on bg.
           child: ColoredBox(
-              color: kMobile ? Colors.transparent : AppColors.panelFill,
+              color: kMobile ? Colors.transparent : AppColors.windowChrome,
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -471,10 +465,23 @@ class _ShellSplitViewState extends State<ShellSplitView>
     );
   }
 
-  /// Desktop panes sit flat on the centre column: no inset, card or outline.
-  Widget _panel(Widget child) => kMobile
-      ? child
-      : ClipRect(key: const ValueKey('shell-panes'), child: child);
+  /// Desktop panes sit in one inset panel on the chrome, rounded at the
+  /// top left where it meets the sidebar and tab strip.
+  Widget _panel(Widget child) {
+    if (kMobile) return child;
+    final radius = widget.sidebarHidden
+        ? BorderRadius.zero
+        : BorderRadius.only(topLeft: Radius.circular(R.of(12)));
+    return DecoratedBox(
+      key: const ValueKey('shell-panes'),
+      decoration: BoxDecoration(
+        color: AppColors.panelFill,
+        borderRadius: radius,
+        border: Border.all(color: AppColors.line, width: 1),
+      ),
+      child: ClipRRect(borderRadius: radius, child: child),
+    );
+  }
 }
 
 class _SidebarResizeHandle extends StatefulWidget {
