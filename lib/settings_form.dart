@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 
 import 'platform.dart';
 import 'theme.dart';
-import 'desktop_look.dart';
 import 'widgets.dart';
 import 'tap_detector.dart';
 
@@ -253,7 +252,8 @@ class GroupedTiles extends StatelessWidget {
     {
       // Quiet: one raised surface per group with hairlines between rows; on
       // the phone no border, the tone alone separates it.
-      final radius = BorderRadius.circular(kMobile ? R.of(14) : Grouped.radiusEnd);
+      final radius =
+          BorderRadius.circular(kMobile ? R.of(14) : Grouped.radiusEnd);
       return Container(
         decoration: BoxDecoration(
           color: color ?? (kMobile ? AppColors.surface1 : Grouped.card),
@@ -360,14 +360,15 @@ class SettingsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Quiet: a load failure is amber; red stays for destructive actions.
-    final failure = danger && RegExp(r"^(Couldn|Unable|Failed)").hasMatch(label);
+    final failure =
+        danger && RegExp(r"^(Couldn|Unable|Failed)").hasMatch(label);
     final tint = failure
         ? AppColors.run
         : danger
-        ? AppColors.danger
-        : accent
-            ? AppColors.accent
-            : null;
+            ? AppColors.danger
+            : accent
+                ? AppColors.accent
+                : null;
     final lead = leading ??
         (icon != null || iconData != null
             ? SettingsIcon(icon, iconData: iconData, color: iconColor ?? tint)
@@ -961,46 +962,41 @@ class SettingsField extends StatelessWidget {
         : sans(kMobile ? 15 : 13, color: AppColors.fg1);
     return SizedBox(
       width: kMobile ? (width > 210 ? 210 : width) : width,
-      child: Tactile(
-        radius: BorderRadius.circular(R.of(6)),
-        kind: TactileKind.inset,
-        child: Container(
-          height: kMobile ? 34 : 28,
-          padding: kMobile
-              ? EdgeInsets.zero
-              : EdgeInsets.symmetric(horizontal: S.of(9)),
-          decoration: kMobile
-              ? null
-              : BoxDecoration(
-                  color: AppColors.fg1.withValues(alpha: 0.035),
-                  borderRadius: BorderRadius.circular(R.of(6)),
-                  border:
-                      Border.all(color: AppColors.fg1.withValues(alpha: 0.1)),
-                ),
-          child: Row(children: [
-            Expanded(
-              child: TextField(
-                controller: controller,
-                focusNode: focusNode,
-                obscureText: obscure,
-                onChanged: onChanged,
-                onSubmitted: onSubmitted,
-                textAlign: kMobile ? TextAlign.right : TextAlign.left,
-                keyboardType: number ? TextInputType.number : null,
-                inputFormatters:
-                    number ? [FilteringTextInputFormatter.digitsOnly] : null,
-                style: style,
-                decoration: InputDecoration(
-                  isCollapsed: true,
-                  border: InputBorder.none,
-                  hintText: hint,
-                  hintStyle: style.copyWith(color: AppColors.fg4),
-                ),
+      child: Container(
+        height: kMobile ? 34 : 28,
+        padding: kMobile
+            ? EdgeInsets.zero
+            : EdgeInsets.symmetric(horizontal: S.of(9)),
+        decoration: kMobile
+            ? null
+            : BoxDecoration(
+                color: AppColors.fg1.withValues(alpha: 0.035),
+                borderRadius: BorderRadius.circular(R.of(6)),
+                border: Border.all(color: AppColors.fg1.withValues(alpha: 0.1)),
+              ),
+        child: Row(children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              focusNode: focusNode,
+              obscureText: obscure,
+              onChanged: onChanged,
+              onSubmitted: onSubmitted,
+              textAlign: kMobile ? TextAlign.right : TextAlign.left,
+              keyboardType: number ? TextInputType.number : null,
+              inputFormatters:
+                  number ? [FilteringTextInputFormatter.digitsOnly] : null,
+              style: style,
+              decoration: InputDecoration(
+                isCollapsed: true,
+                border: InputBorder.none,
+                hintText: hint,
+                hintStyle: style.copyWith(color: AppColors.fg4),
               ),
             ),
-            if (suffix != null) ...[SizedBox(width: S.s6), suffix!],
-          ]),
-        ),
+          ),
+          if (suffix != null) ...[SizedBox(width: S.s6), suffix!],
+        ]),
       ),
     );
   }

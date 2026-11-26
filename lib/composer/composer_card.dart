@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import '../desktop_look.dart';
 import 'package:flutter/material.dart';
 import '../tap_detector.dart' show HitArea;
 
@@ -170,10 +169,7 @@ class _ComposerCardState extends State<ComposerCard> {
         ),
       ),
     );
-    return highlight
-        ? pill
-        : Tactile(
-            radius: BorderRadius.circular(ComposerCard.radius), child: pill);
+    return pill;
   }
 }
 

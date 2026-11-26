@@ -250,53 +250,49 @@ class ReadoutChip extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.symmetric(
               horizontal: S.s2, vertical: compact ? S.s6 : S.of(7)),
-          child: Tactile(
-            radius: BorderRadius.circular(compact ? R.of(7) : R.card),
-            enabled: active,
-            child: AnimatedContainer(
-          duration: Motion.quick,
-          height: compact ? 26 : 32,
-          constraints: compact ? BoxConstraints(maxWidth: width) : null,
-          padding: EdgeInsets.fromLTRB(
-              compact ? S.of(9) : S.s12, 0, compact ? S.s6 : S.s8, 0),
-          decoration: BoxDecoration(
-            color: active
-                ? (compact ? AppColors.surface3 : AppColors.surface2)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(compact ? R.of(7) : R.card),
-          ),
-          child: Row(
-              mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
-              children: [
-                AppIcon(tab.icon,
-                    size: compact ? 12 : 14,
-                    color: active ? AppColors.fg1 : AppColors.fg3),
-                SizedBox(width: compact ? S.s6 : S.s8),
-                Flexible(
-                  fit: compact ? FlexFit.loose : FlexFit.tight,
-                  child: Text(
-                    tab.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(compact ? 12 : 13,
-                        color: active ? AppColors.fg1 : AppColors.fg3),
-                  ),
-                ),
-                if (pinned)
-                  SizedBox(width: S.s6)
-                else ...[
-                  SizedBox(width: S.s6),
-                  TapDetector(
-                    onTap: onClose,
-                    behavior: HitTestBehavior.opaque,
-                    child: Padding(
-                      padding: EdgeInsets.all(S.of(3)),
-                      child: AppIcon('x', size: 11, color: AppColors.fg4),
+          child: AnimatedContainer(
+            duration: Motion.quick,
+            height: compact ? 26 : 32,
+            constraints: compact ? BoxConstraints(maxWidth: width) : null,
+            padding: EdgeInsets.fromLTRB(
+                compact ? S.of(9) : S.s12, 0, compact ? S.s6 : S.s8, 0),
+            decoration: BoxDecoration(
+              color: active
+                  ? (compact ? AppColors.surface3 : AppColors.surface2)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(compact ? R.of(7) : R.card),
+            ),
+            child: Row(
+                mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
+                children: [
+                  AppIcon(tab.icon,
+                      size: compact ? 12 : 14,
+                      color: active ? AppColors.fg1 : AppColors.fg3),
+                  SizedBox(width: compact ? S.s6 : S.s8),
+                  Flexible(
+                    fit: compact ? FlexFit.loose : FlexFit.tight,
+                    child: Text(
+                      tab.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(compact ? 12 : 13,
+                          color: active ? AppColors.fg1 : AppColors.fg3),
                     ),
                   ),
-                ],
-              ]),
-        ),
+                  if (pinned)
+                    SizedBox(width: S.s6)
+                  else ...[
+                    SizedBox(width: S.s6),
+                    TapDetector(
+                      onTap: onClose,
+                      behavior: HitTestBehavior.opaque,
+                      child: Padding(
+                        padding: EdgeInsets.all(S.of(3)),
+                        child: AppIcon('x', size: 11, color: AppColors.fg4),
+                      ),
+                    ),
+                  ],
+                ]),
           ),
         ),
       ),
@@ -368,57 +364,53 @@ class PaneTabChip extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.symmetric(
               horizontal: S.s2, vertical: compact ? S.s6 : S.of(7)),
-          child: Tactile(
-            radius: BorderRadius.circular(compact ? R.of(7) : R.card),
-            enabled: active,
-            child: AnimatedContainer(
-          duration: Motion.quick,
-          height: compact ? 26 : 32,
-          constraints: compact ? BoxConstraints(maxWidth: width) : null,
-          padding: EdgeInsets.fromLTRB(
-              compact ? S.of(9) : S.s12, 0, compact ? S.s6 : S.s8, 0),
-          decoration: BoxDecoration(
-            color: active
-                ? (compact ? AppColors.surface3 : AppColors.surface2)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(compact ? R.of(7) : R.card),
-          ),
-          child: Row(
-              mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
-              children: [
-                SessionStateIcon(
-                  status: status,
-                  icon: chat ? 'chat' : tabIconKind(tab),
-                  size: compact ? 12 : 14,
-                ),
-                SizedBox(width: compact ? S.s6 : S.s8),
-                Flexible(
-                  fit: compact ? FlexFit.loose : FlexFit.tight,
-                  child: Text(
-                    chat
-                        ? 'Chat'
-                        : tab.title.isEmpty
-                            ? '(untitled)'
-                            : tab.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(compact ? 12 : 13,
-                        color: active ? AppColors.fg1 : AppColors.fg3),
+          child: AnimatedContainer(
+            duration: Motion.quick,
+            height: compact ? 26 : 32,
+            constraints: compact ? BoxConstraints(maxWidth: width) : null,
+            padding: EdgeInsets.fromLTRB(
+                compact ? S.of(9) : S.s12, 0, compact ? S.s6 : S.s8, 0),
+            decoration: BoxDecoration(
+              color: active
+                  ? (compact ? AppColors.surface3 : AppColors.surface2)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(compact ? R.of(7) : R.card),
+            ),
+            child: Row(
+                mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
+                children: [
+                  SessionStateIcon(
+                    status: status,
+                    icon: chat ? 'chat' : tabIconKind(tab),
+                    size: compact ? 12 : 14,
                   ),
-                ),
-                if (canDismiss) ...[
-                  SizedBox(width: S.s6),
-                  TapDetector(
-                    onTap: onDismiss,
-                    behavior: HitTestBehavior.opaque,
-                    child: Padding(
-                      padding: EdgeInsets.all(S.of(3)),
-                      child: AppIcon('x', size: 11, color: AppColors.fg4),
+                  SizedBox(width: compact ? S.s6 : S.s8),
+                  Flexible(
+                    fit: compact ? FlexFit.loose : FlexFit.tight,
+                    child: Text(
+                      chat
+                          ? 'Chat'
+                          : tab.title.isEmpty
+                              ? '(untitled)'
+                              : tab.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(compact ? 12 : 13,
+                          color: active ? AppColors.fg1 : AppColors.fg3),
                     ),
                   ),
-                ],
-              ]),
-        ),
+                  if (canDismiss) ...[
+                    SizedBox(width: S.s6),
+                    TapDetector(
+                      onTap: onDismiss,
+                      behavior: HitTestBehavior.opaque,
+                      child: Padding(
+                        padding: EdgeInsets.all(S.of(3)),
+                        child: AppIcon('x', size: 11, color: AppColors.fg4),
+                      ),
+                    ),
+                  ],
+                ]),
           ),
         ),
       ),
@@ -496,9 +488,8 @@ class PaneStrip extends StatelessWidget {
       // Desktop: a hairline under the tabs, as in the reference.
       decoration: BoxDecoration(
         color: kMobile ? AppColors.pageCanvas : Colors.transparent,
-        border: kMobile
-            ? null
-            : Border(bottom: BorderSide(color: AppColors.line)),
+        border:
+            kMobile ? null : Border(bottom: BorderSide(color: AppColors.line)),
       ),
       child: LayoutBuilder(builder: (context, outer) {
         final list = _chips(count, compact);

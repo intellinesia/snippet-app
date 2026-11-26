@@ -1,6 +1,5 @@
 import 'app_icons.dart';
 import 'dart:async';
-import 'desktop_look.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 export 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
@@ -648,7 +647,8 @@ class _StatusDotState extends State<StatusDot>
       decoration: BoxDecoration(
         color: c,
         shape: BoxShape.circle,
-        boxShadow: widget.status == 'offline'
+        // Desktop is flat: no glow around status dots.
+        boxShadow: widget.status == 'offline' || !kMobile
             ? null
             : [
                 BoxShadow(
@@ -801,36 +801,31 @@ class Btn extends StatelessWidget {
     );
     return Pressable(
       enabled: !disabled && onTap != null,
-      child: Tactile(
-        radius: BorderRadius.circular(radius),
-        enabled: !disabled &&
-            (variant == BtnVariant.primary || variant == BtnVariant.secondary),
-        child: Material(
-          color: bg,
+      child: Material(
+        color: bg,
+        borderRadius: BorderRadius.circular(radius),
+        child: InkWell(
+          onTap: disabled || onTap == null
+              ? null
+              : () {
+                  tapHaptic();
+                  onTap!();
+                },
           borderRadius: BorderRadius.circular(radius),
-          child: InkWell(
-            onTap: disabled || onTap == null
-                ? null
-                : () {
-                    tapHaptic();
-                    onTap!();
-                  },
-            borderRadius: BorderRadius.circular(radius),
-            child: Container(
-              constraints: BoxConstraints(minHeight: h),
-              width: full ? double.infinity : null,
-              alignment: full ? Alignment.center : null,
-              padding: EdgeInsets.symmetric(
-                  horizontal: small ? S.s12 : S.s16, vertical: 4),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(radius),
-                border:
-                    bd != null && !(kMobile && variant == BtnVariant.secondary)
-                        ? Border.all(color: bd)
-                        : null,
-              ),
-              child: child,
+          child: Container(
+            constraints: BoxConstraints(minHeight: h),
+            width: full ? double.infinity : null,
+            alignment: full ? Alignment.center : null,
+            padding: EdgeInsets.symmetric(
+                horizontal: small ? S.s12 : S.s16, vertical: 4),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(radius),
+              border:
+                  bd != null && !(kMobile && variant == BtnVariant.secondary)
+                      ? Border.all(color: bd)
+                      : null,
             ),
+            child: child,
           ),
         ),
       ),
@@ -888,7 +883,7 @@ class PillBtn extends StatelessWidget {
 /// surface lift, rows only tint (a scaling full-width row looks wrong).
 enum PressKind { button, card, row }
 
-/// Tactile press feedback shared by buttons, cards, tiles and rows.
+/// Press feedback shared by buttons, cards, tiles and rows.
 ///
 /// A `Listener` observes the pointer without joining the gesture arena, so the
 /// child's own tap, ripple and long-press are untouched. Press-in is a fast
@@ -939,12 +934,8 @@ class Pressable extends StatefulWidget {
   static const _liftDelay = Duration(milliseconds: 420);
   static const liftScale = 1.03;
 
-  static double scaleFor(PressKind kind) => switch (kind) {
-        PressKind.button => 0.98,
-        PressKind.card => 0.98,
-        // Desktop rows only tint; a pointer click should not shrink a list.
-        PressKind.row => kMobile ? 0.98 : 1.0,
-      };
+  // Desktop is flat: a pointer click tints, it never shrinks the control.
+  static double scaleFor(PressKind kind) => kMobile ? 0.98 : 1.0;
 
   @override
   State<Pressable> createState() => _PressableState();
@@ -1006,7 +997,7 @@ class _PressableState extends State<Pressable> with TickerProviderStateMixin {
   void _show() {
     if (_disposed || !mounted) return;
     if (widget.haptic && kMobile) HapticFeedback.selectionClick();
-    final to = widget.scale ?? Pressable.scaleFor(widget.kind);
+    final to = kMobile ? widget.scale ?? Pressable.scaleFor(widget.kind) : 1.0;
     if (!reduceMotion(context) && to < 1) {
       springTo(_scale, to, 0, spring: Pressable._down, epsilon: 0.001);
     }
@@ -1296,34 +1287,29 @@ class _HoverSurfaceState extends State<HoverSurface> {
               radius: widget.radius,
               lift: widget.onLongPress != null,
               enabled: widget.onTap != null || widget.onLongPress != null,
-              child: Tactile(
-                radius: r,
-                enabled: widget.selected,
-                child: AnimatedContainer(
-                  duration:
-                      reduceMotion(context) ? Duration.zero : Motion.quick,
-                  curve: Curves.easeOut,
-                  decoration: BoxDecoration(color: color, borderRadius: r),
-                  child: Material(
-                    type: MaterialType.transparency,
-                    child: InkWell(
-                      borderRadius: r,
-                      hoverColor: Colors.transparent,
-                      onTap: widget.onTap == null
-                          ? null
-                          : () {
-                              tapHaptic();
-                              widget.onTap!();
-                            },
-                      onLongPress: widget.onLongPress == null
-                          ? null
-                          : () {
-                              holdHaptic();
-                              widget.onLongPress!();
-                            },
-                      onSecondaryTapDown: widget.onSecondaryTapDown,
-                      child: widget.child,
-                    ),
+              child: AnimatedContainer(
+                duration: reduceMotion(context) ? Duration.zero : Motion.quick,
+                curve: Curves.easeOut,
+                decoration: BoxDecoration(color: color, borderRadius: r),
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: InkWell(
+                    borderRadius: r,
+                    hoverColor: Colors.transparent,
+                    onTap: widget.onTap == null
+                        ? null
+                        : () {
+                            tapHaptic();
+                            widget.onTap!();
+                          },
+                    onLongPress: widget.onLongPress == null
+                        ? null
+                        : () {
+                            holdHaptic();
+                            widget.onLongPress!();
+                          },
+                    onSecondaryTapDown: widget.onSecondaryTapDown,
+                    child: widget.child,
                   ),
                 ),
               ),
@@ -1660,7 +1646,8 @@ class _AudioTranscriptCardState extends State<AudioTranscriptCard> {
             color: AppColors.surface1,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             InkWell(
               onTap: () => setState(() => _expanded = !_expanded),
               child: SizedBox(
@@ -2383,7 +2370,8 @@ class EmptyState extends StatelessWidget {
               header: true,
               child: Text(title,
                   textAlign: TextAlign.center,
-                  style: sans(15, weight: FontWeight.w500, color: AppColors.fg1)),
+                  style:
+                      sans(15, weight: FontWeight.w500, color: AppColors.fg1)),
             ),
             if (body != null) ...[
               const SizedBox(height: 8),
@@ -2402,8 +2390,7 @@ class EmptyState extends StatelessWidget {
 
     // Inside a list the height is unbounded and the page scrolls; a bounded
     // body scrolls the block itself.
-    return LayoutBuilder(
-        builder: (_, c) => block(c.maxHeight.isFinite));
+    return LayoutBuilder(builder: (_, c) => block(c.maxHeight.isFinite));
   }
 }
 

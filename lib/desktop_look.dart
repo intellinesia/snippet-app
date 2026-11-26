@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'platform.dart';
 import 'theme.dart';
 
-/// Desktop-only finish: tactile surfaces and the chat wallpaper.
+/// Desktop-only finish: the chat wallpaper and chrome opacity.
 class DesktopLook extends ChangeNotifier {
   @override
   void notifyListeners() {
@@ -19,7 +19,6 @@ class DesktopLook extends ChangeNotifier {
   DesktopLook._();
   static final DesktopLook instance = DesktopLook._();
 
-  static const _tactileKey = 'desktop_tactile';
   static const _wallKey = 'desktop_chat_wallpaper';
   static const _wallImageKey = 'desktop_chat_wallpaper_image';
   static const _wallStrengthKey = 'desktop_chat_wallpaper_strength';
@@ -28,14 +27,12 @@ class DesktopLook extends ChangeNotifier {
   static const none = 'none';
   static const image = 'image';
 
-  bool _tactile = false;
   String _wallpaper = none;
   String? _imagePath;
   double _strength = 0.7;
   double? _chrome;
   bool _loaded = false;
 
-  bool get tactile => !kMobile && _tactile;
   String get wallpaper => _wallpaper;
   String? get imagePath => _imagePath;
   double get strength => _strength;
@@ -49,7 +46,8 @@ class DesktopLook extends ChangeNotifier {
     if (kMobile || _loaded) return;
     _loaded = true;
     final p = await SharedPreferences.getInstance();
-    _tactile = p.getBool(_tactileKey) ?? false;
+    // The tactile finish was removed; drop its stale pref.
+    p.remove('desktop_tactile');
     _wallpaper = p.getString(_wallKey) ?? none;
     final img = p.getString(_wallImageKey);
     _imagePath = img != null && File(img).existsSync() ? img : null;
@@ -57,15 +55,6 @@ class DesktopLook extends ChangeNotifier {
     _chrome = p.getDouble(chromeKey)?.clamp(0.0, 1.0);
     if (_wallpaper != image || _imagePath == null) _wallpaper = none;
     notifyListeners();
-  }
-
-  Future<void> setTactile(bool on) async {
-    if (on == _tactile) return;
-    _tactile = on;
-    notifyListeners();
-    try {
-      (await SharedPreferences.getInstance()).setBool(_tactileKey, on);
-    } catch (_) {}
   }
 
   Future<void> clearWallpaper() async {
@@ -132,9 +121,7 @@ class DesktopLook extends ChangeNotifier {
   }
 
   @visibleForTesting
-  void debugSet(
-      {bool? tactile, String? wallpaper, String? imagePath, double? strength}) {
-    if (tactile != null) _tactile = tactile;
+  void debugSet({String? wallpaper, String? imagePath, double? strength}) {
     if (wallpaper != null) _wallpaper = wallpaper;
     if (imagePath != null) _imagePath = imagePath;
     if (strength != null) _strength = strength;
@@ -184,117 +171,4 @@ class ChatWallpaper extends StatelessWidget {
       },
     );
   }
-}
-
-enum TactileKind { raised, inset }
-
-/// Quiet physical cues on desktop: a top highlight and soft lower shade on
-/// raised surfaces, an inner shadow on wells. A no-op on phones or when off.
-class Tactile extends StatelessWidget {
-  const Tactile({
-    super.key,
-    required this.child,
-    required this.radius,
-    this.kind = TactileKind.raised,
-    this.enabled = true,
-  });
-
-  final Widget child;
-  final BorderRadius radius;
-  final TactileKind kind;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    if (kMobile || !enabled) return child;
-    return ListenableBuilder(
-      listenable: DesktopLook.instance,
-      builder: (context, child) => DesktopLook.instance.tactile
-          ? CustomPaint(
-              foregroundPainter: TactilePainter(radius, kind),
-              child: child)
-          : child!,
-      child: child,
-    );
-  }
-}
-
-class TactilePainter extends CustomPainter {
-  const TactilePainter(this.radius, this.kind);
-  final BorderRadius radius;
-  final TactileKind kind;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (size.isEmpty) return;
-    final rect = Offset.zero & size;
-    final rrect = radius.toRRect(rect);
-    if (kind == TactileKind.raised) {
-      canvas.drawRRect(
-        rrect,
-        Paint()
-          ..shader = LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.black.withValues(alpha: 0),
-              Colors.black.withValues(alpha: 0.12),
-            ],
-            stops: const [0.5, 1],
-          ).createShader(rect),
-      );
-      canvas.drawRRect(
-        radius.toRRect(rect.deflate(0.5)),
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1
-          ..shader = LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.white.withValues(alpha: 0.10),
-              Colors.white.withValues(alpha: 0),
-            ],
-            stops: [0, (12 / size.height).clamp(0.2, 0.6)],
-          ).createShader(rect),
-      );
-      return;
-    }
-    canvas.save();
-    canvas.clipRRect(rrect);
-    final shade = (7 / size.height).clamp(0.05, 0.5);
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.black.withValues(alpha: 0.38),
-            Colors.black.withValues(alpha: 0),
-          ],
-          stops: [0, shade],
-        ).createShader(rect),
-    );
-    canvas.restore();
-    canvas.drawRRect(
-      radius.toRRect(rect.deflate(0.5)),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.white.withValues(alpha: 0),
-            Colors.white.withValues(alpha: 0.05),
-          ],
-          stops: const [0.6, 1],
-        ).createShader(rect),
-    );
-  }
-
-  @override
-  bool shouldRepaint(TactilePainter old) =>
-      old.radius != radius || old.kind != kind;
 }
