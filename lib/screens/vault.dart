@@ -7,6 +7,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import '../inline_flow.dart';
 import '../settings_form.dart';
+import '../settings_target.dart';
 import 'shell_nav.dart';
 import '../tap_detector.dart';
 
@@ -24,6 +25,13 @@ class VaultScreen extends StatefulWidget {
   final VoidCallback? onBack;
   final ValueChanged<bool>? onAddingChanged;
 
+  /// Secret name to reveal and highlight; an unknown name opens the add form
+  /// with it prefilled.
+  final String? targetId;
+
+  /// Hosted in the Settings dialog: no own title, 24 pt side padding.
+  final bool chromeless;
+
   const VaultScreen({
     super.key,
     required this.client,
@@ -31,6 +39,8 @@ class VaultScreen extends StatefulWidget {
     this.embedded = false,
     this.onBack,
     this.onAddingChanged,
+    this.targetId,
+    this.chromeless = false,
   });
   @override
   State<VaultScreen> createState() => VaultScreenState();
@@ -45,6 +55,34 @@ class VaultScreenState extends State<VaultScreen> {
   bool _adding = false;
 
   bool get isAdding => _adding;
+
+  final GlobalKey _targetKey = GlobalKey();
+  final FocusNode _valueFocus = FocusNode();
+  bool _targetHandled = false;
+  String? _prefill;
+
+  String? get _target {
+    final t = widget.targetId?.trim();
+    return t == null || t.isEmpty ? null : t;
+  }
+
+  void _applyTarget() {
+    final t = _target;
+    if (t == null || _targetHandled || _names == null) return;
+    _targetHandled = true;
+    if (_names!.contains(t)) {
+      revealSettingsTarget(_targetKey);
+      return;
+    }
+    _prefill = t;
+    _add().then((_) {
+      if (!mounted || kMobile) return;
+      _name.text = t;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _valueFocus.requestFocus();
+      });
+    });
+  }
 
   @override
   void initState() {
@@ -61,6 +99,7 @@ class VaultScreenState extends State<VaultScreen> {
         _loading = false;
         _error = null;
       });
+      _applyTarget();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -90,6 +129,7 @@ class VaultScreenState extends State<VaultScreen> {
   void dispose() {
     _name.dispose();
     _value.dispose();
+    _valueFocus.dispose();
     super.dispose();
   }
 
@@ -97,7 +137,10 @@ class VaultScreenState extends State<VaultScreen> {
     if (_adding) return;
     if (kMobile) {
       final n = await showAppSheet<String>(context,
-          title: 'Add secret', child: _AddSecretSheet(client: widget.client));
+          title: 'Add secret',
+          child: _AddSecretSheet(
+              client: widget.client, initialName: _prefill));
+      _prefill = null;
       if (n == null || !mounted) return;
       setState(() {
         _names ??= [];
@@ -317,18 +360,25 @@ class VaultScreenState extends State<VaultScreen> {
         ],
       );
     }
+    final addBtn = _adding
+        ? null
+        : Btn('Add secret',
+            small: true,
+            icon: 'plus',
+            variant: BtnVariant.secondary,
+            onTap: _add);
+    if (widget.chromeless) {
+      return SettingsChromelessPage(
+        description: 'Secrets agents use as \$NAME',
+        action: addBtn,
+        children: [content],
+      );
+    }
     return SettingsColumn(children: [
       SettingsHeader(
         title: 'Vault',
         subtitle: 'Secrets agents use as \$NAME',
-        actions: [
-          if (!_adding)
-            Btn('Add secret',
-                small: true,
-                icon: 'plus',
-                variant: BtnVariant.secondary,
-                onTap: _add),
-        ],
+        actions: [if (addBtn != null) addBtn],
       ),
       SizedBox(height: S.s8),
       content,
@@ -347,6 +397,7 @@ class VaultScreenState extends State<VaultScreen> {
           sub: 'Sent to the daemon on save and redacted from output.',
           trailing: SettingsField(
               controller: _value,
+              focusNode: _valueFocus,
               hint: 'sk_live_…',
               mono: true,
               obscure: true,
@@ -392,8 +443,18 @@ class VaultScreenState extends State<VaultScreen> {
           onTap: _add,
         );
 
+  Widget _secretRow(String name) {
+    final row = _secretRowBase(name);
+    if (name != _target) return row;
+    return KeyedSubtree(
+      key: _targetKey,
+      child: SettingsTargetPlate(
+          key: Key('settings-target-$name'), child: row),
+    );
+  }
+
   // A plain 44px row: a name and one action need no tile or chevron.
-  Widget _secretRow(String name) => kMobile
+  Widget _secretRowBase(String name) => kMobile
       ? Semantics(
           container: true,
           child: SizedBox(
@@ -465,15 +526,16 @@ class VaultScreenState extends State<VaultScreen> {
 
 /// Phone sheet for a new secret; pops with the saved name.
 class _AddSecretSheet extends StatefulWidget {
-  const _AddSecretSheet({required this.client});
+  const _AddSecretSheet({required this.client, this.initialName});
   final DaemonClient client;
+  final String? initialName;
 
   @override
   State<_AddSecretSheet> createState() => _AddSecretSheetState();
 }
 
 class _AddSecretSheetState extends State<_AddSecretSheet> {
-  final _name = TextEditingController();
+  late final _name = TextEditingController(text: widget.initialName);
   final _value = TextEditingController();
   String? _error;
   bool _busy = false;

@@ -43,21 +43,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             project == null ? null : lastPathSegment(project, ifEmpty: project),
       );
     }
-    if (t.isSettings) {
-      return DesktopSettingsContent(
-        key: ValueKey('body-${t.key}'),
-        client: t.client,
-        instances: _instances,
-        active: _active,
-        section: _settingsSectionOf(t),
-        onSelect: (p) => _setSettingsSection(t, p),
-        onRemove: _removeInstance,
-        onRename: _renameInstance,
-        onSelectInstance: _selectInstance,
-        onAdd: _onInstanceAdded,
-        onClose: () => _closeTabAt(t),
-      );
-    }
     if (t.isReadout) {
       final origin = t.readoutOrigin;
       return _withChatHeader(t, Container(
@@ -528,10 +513,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   Widget _splitView({required bool topInset}) => ShellSplitView(
         key: const ValueKey('shell-split'),
         sidebarHidden: _sidebarHidden,
-        sidebarWidth: _activeTab?.isSettings == true &&
-                MediaQuery.sizeOf(context).width < 1000
-            ? 56
-            : _sidebarWidth,
+        sidebarWidth: _sidebarWidth,
         onSidebarResize: _resizeSidebar,
         onSidebarResizeEnd: _saveSidebarWidth,
         onSidebarReset: _resetSidebarWidth,
@@ -542,15 +524,10 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           child: KeyedSubtree(
             key: _panelScopeKey,
             child: Swap(
-              stateKey: _activeTab?.isSettings == true
-                  ? 'settings'
-                  : _effectiveSection,
-              fill: true,
-              child: _activeTab?.isSettings == true
-                  ? _settingsSidebar()
-                  : _sidebar(topInset: topInset),
-            ),
-          ),
+            stateKey: _effectiveSection,
+            fill: true,
+            child: _sidebar(topInset: topInset),
+          )),
         ),
         sidebarTop: _sidebarTop(),
         mainHeader: kMobile ? _macWindowBar() : _tabStripBand(),
@@ -558,8 +535,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         statusBar: kMobile ? null : _statusBarBand(),
         leftStripAfter: _sessionStripAdd(),
         leftStripTrailing: _sessionStripTools(),
-        sidebarHeader: _activeTab?.isSettings == true ||
-                _effectiveSection == ShellSection.sessions ||
+        sidebarHeader: _effectiveSection == ShellSection.sessions ||
                 _effectiveSection == ShellSection.tasks
             ? null
             : ShellSectionTabs(
@@ -593,7 +569,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
                 _activeTab!.isDraft ||
                 (_activeTab!.isReadout && !_dockedInfo) ||
                 _activeTab!.isPrs ||
-                _activeTab!.isSettings ||
                 (_activeTab!.isBoard && _tabsIn(_Pane.right).isEmpty)),
         panelHostsReadouts: _activeTab != null &&
             (_activeTab!.sessionId != null || _activeAgent != null),
@@ -1139,101 +1114,31 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         onMenu: onMenu,
       );
 
-  void _openShellSettings([SettingsPage? page]) {
-    if (!kMobile) {
-      _openSettingsTab(page);
+  /// Settings is an overlay (spec S0): every entry (gear, shortcut, palette)
+  /// lands on the same dialog. Opening again while it is up closes it.
+  void _openShellSettings(
+      [SettingsPage? page, String? backLabel, String? targetId]) {
+    if (_settingsOpen) {
+      closeSettingsOverlay();
       return;
     }
-    if (page == null && _settingsOpen) return;
     final c = _client;
     if (c == null) return;
-    final inst = _active;
     _settingsOpen = true;
-    Navigator.of(context)
-        .push(PageRouteBuilder<void>(
-          transitionDuration: Motion.base,
-          reverseTransitionDuration: Motion.close,
-          pageBuilder: (ctx, a1, a2) => DesktopSettingsPage(
-            client: c,
-            instances: _instances,
-            active: inst,
-            onRemove: _removeInstance,
-            onRename: _renameInstance,
-            onSelect: _selectInstance,
-            onAdd: _onInstanceAdded,
-            onBack: () => Navigator.of(ctx).maybePop(),
-            initialSection: page,
-            fullPage: true,
-            navWidth: _sidebarWidth,
-          ),
-          transitionsBuilder: (ctx, anim, a2, child) {
-            final t = CurvedAnimation(
-                parent: anim, curve: Motion.enter, reverseCurve: Motion.exit);
-            return FadeTransition(
-              opacity: t,
-              child: SlideTransition(
-                position: Tween(begin: const Offset(0.015, 0), end: Offset.zero)
-                    .animate(t),
-                child: child,
-              ),
-            );
-          },
-        ))
-        .whenComplete(() => _settingsOpen = false);
-  }
-
-  void _openSettingsTab(SettingsPage? page) {
-    final c = _client;
-    final url = _active?.url;
-    if (c == null || url == null) return;
-    final current = _activeTab;
-    if (current != null && !current.isSettings) {
-      _preSettingsKey = _groupRootKey[_Pane.left] ?? current.key;
-    }
-    final existing = _tabs.indexWhere((t) => t.isSettings);
-    if (existing >= 0) {
-      if (page != null) _setSettingsSection(_tabs[existing], page);
-      _openMainTab(null, existing);
-      return;
-    }
-    final p = page ?? SettingsPage.general;
-    _openMainTab(
-        _ShellTab.settings(
-          client: c,
-          instanceUrl: url,
-          section: p.name,
-          title: settingsPageLabel(p),
-          icon: settingsPageIcon(p),
-        ),
-        -1);
-  }
-
-  SettingsPage _settingsSectionOf(_ShellTab t) =>
-      SettingsPage.values.asNameMap()[t.settingsSection] ??
-      SettingsPage.general;
-
-  void _setSettingsSection(_ShellTab t, SettingsPage page) => _setState(() {
-        t
-          ..settingsSection = page.name
-          ..title = settingsPageLabel(page)
-          ..settingsIcon = settingsPageIcon(page);
-      });
-
-  void _leaveSettings() {
-    final i =
-        _tabs.indexWhere((t) => t.key == _preSettingsKey && !t.isSettings);
-    final fallback = _tabs.indexWhere((t) => !t.isSettings && !_isAuxiliary(t));
-    final target = i >= 0 ? i : fallback;
-    if (target >= 0) _openMainTab(null, target);
-  }
-
-  Widget _settingsSidebar() {
-    final t = _activeTab!;
-    return DesktopSettingsNav(
-      section: _settingsSectionOf(t),
-      onSelect: (p) => _setSettingsSection(t, p),
-      onBack: _leaveSettings,
-    );
+    showSettings(
+      context,
+      client: c,
+      instances: _instances,
+      active: _active,
+      onRemove: _removeInstance,
+      onRename: _renameInstance,
+      onSelect: _selectInstance,
+      onAdd: _onInstanceAdded,
+      page: page,
+      backLabel: backLabel,
+      targetId: targetId,
+      onSearchAll: (q) => _openCommandPalette(query: q),
+    ).whenComplete(() => _settingsOpen = false);
   }
 
   Widget _tabStrip(VoidCallback? onMenu) => CardTabStrip(
@@ -1370,23 +1275,22 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           const SizedBox(width: 9),
         ]),
       ),
-      if (_activeTab?.isSettings != true)
-        Padding(
-          // Right 9 puts the 16 px icons on the 16 px content edge.
-          padding: const EdgeInsets.fromLTRB(16, 0, 9, 6),
-          child: SidebarBrand(trailing: [
-            _TbBtn(
-                icon: 'search',
-                tooltip: kMacOS ? 'Search (⌘K)' : 'Search (Ctrl+K)',
-                onTap: _openCommandPalette),
-            Builder(
-              builder: (ctx) => _TbBtn(
-                  icon: 'edit',
-                  tooltip: 'New session',
-                  onTap: () => _showNewMenu(ctx)),
-            ),
-          ]),
-        ),
+      Padding(
+        // Right 9 puts the 16 px icons on the 16 px content edge.
+        padding: const EdgeInsets.fromLTRB(16, 0, 9, 6),
+        child: SidebarBrand(trailing: [
+          _TbBtn(
+              icon: 'search',
+              tooltip: kMacOS ? 'Search (⌘K)' : 'Search (Ctrl+K)',
+              onTap: _openCommandPalette),
+          Builder(
+            builder: (ctx) => _TbBtn(
+                icon: 'edit',
+                tooltip: 'New session',
+                onTap: () => _showNewMenu(ctx)),
+          ),
+        ]),
+      ),
     ]);
   }
 
@@ -1402,9 +1306,14 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     final runningTab = _openRunningSessionTab;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 9),
-      child: Row(children: [
+      child: LayoutBuilder(builder: (context, box) => Row(children: [
         _FooterBtn(
-            icon: 'settings', tooltip: 'Settings', onTap: _openShellSettings),
+            icon: 'settings',
+            tooltip: 'Settings',
+            label: 'Settings',
+            // The narrowest sidebar has no room for the shortcut hint.
+            hint: box.maxWidth < 210 ? null : (kMacOS ? 'Cmd ,' : 'Ctrl ,'),
+            onTap: _openShellSettings),
         const SizedBox(width: 4),
         _FooterBtn(
             icon: 'help-circle',
@@ -1424,7 +1333,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
               tooltip: _chatTab == null ? 'No session pane' : 'Pane layout',
               onTap: _chatTab == null ? null : () => _showPaneAddMenu(ctx)),
         ),
-      ]),
+      ])),
     );
   }
 
@@ -1524,10 +1433,16 @@ class _FooterBtn extends StatefulWidget {
     required this.icon,
     required this.tooltip,
     required this.onTap,
+    this.label,
+    this.hint,
   });
   final String icon;
   final String tooltip;
   final VoidCallback? onTap;
+
+  /// A labelled row (icon, label, shortcut hint) instead of a bare icon.
+  final String? label;
+  final String? hint;
 
   @override
   State<_FooterBtn> createState() => _FooterBtnState();
@@ -1549,22 +1464,43 @@ class _FooterBtnState extends State<_FooterBtn> {
           behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
           child: Container(
-            width: 28,
+            width: widget.label == null ? 28 : null,
             height: 26,
+            padding: widget.label == null
+                ? null
+                : const EdgeInsets.only(left: 6, right: 8),
             decoration: BoxDecoration(
               color:
                   _hover && enabled ? AppColors.surface2 : Colors.transparent,
               borderRadius: BorderRadius.circular(R.of(6)),
             ),
-            child: Stack(alignment: Alignment.center, children: [
-              AppIcon(widget.icon,
-                  size: 15,
-                  color: !enabled
-                      ? AppColors.fg3
-                      : _hover
-                          ? AppColors.fg1
-                          : AppColors.fg2),
-            ]),
+            child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  AppIcon(widget.icon,
+                      size: 15,
+                      color: !enabled
+                          ? AppColors.fg3
+                          : _hover
+                              ? AppColors.fg1
+                              : AppColors.fg2),
+                  // Footer chrome keeps its locked 26 px scale.
+                  if (widget.label != null) ...[
+                    const SizedBox(width: 6),
+                    Text(widget.label!,
+                        textScaler: TextScaler.noScaling,
+                        style: sans(12,
+                            color: _hover ? AppColors.fg1 : AppColors.fg2)),
+                  ],
+                  if (widget.hint != null) ...[
+                    const SizedBox(width: 6),
+                    Text(widget.hint!,
+                        key: const Key('settings-shortcut-label'),
+                        textScaler: TextScaler.noScaling,
+                        style: sans(11, color: AppColors.fg3)),
+                  ],
+                ]),
           ),
         ),
       ),

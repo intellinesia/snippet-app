@@ -290,8 +290,6 @@ void main() {
           topInset: false,
           mobileHome: MobileHome.tasks,
           onMobileHome: (_) {},
-          settingsSection: null,
-          onSettingsSection: (_) {},
           agent: null,
           onAgent: (_) {},
         ),

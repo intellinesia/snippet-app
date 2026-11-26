@@ -1,17 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:snippet/api.dart';
 import 'package:snippet/motion_routes.dart';
 import 'package:snippet/screens/mobile_shell.dart';
 import 'package:snippet/screens/shell_models.dart';
-import 'package:snippet/screens/sidebar.dart';
 import 'package:snippet/theme.dart';
 import 'package:snippet/page_stack.dart';
-
-class _Client extends DaemonClient {
-  _Client() : super('https://daemon.invalid', 'test');
-}
 
 
 
@@ -212,73 +206,6 @@ void main() {
         await g.up();
         await t.pumpAndSettle();
         expect(chatsOpen, isTrue);
-      } finally {
-        debugDefaultTargetPlatformOverride = null;
-      }
-    });
-  });
-
-  group('Sidebar home tab & settings transitions', () {
-    Widget buildSidebar(MobileHome home) => MaterialApp(
-          theme: buildAppTheme(),
-          home: Scaffold(
-            body: Sidebar(
-              instances: const [],
-              active: null,
-              client: _Client(),
-              selectedSessionId: null,
-              sessions: const [],
-              sessionsLoading: false,
-              onRefreshSessions: () {},
-              onNewSession: () {},
-              onSelectInstance: (_) {},
-              onOpenLead: () {},
-              onOpenSession: (_, __, ___) {},
-              onAddInstance: () {},
-              onRenameInstance: (_, __) {},
-              onRemoveInstance: (_) {},
-              onSessionDeleted: (_) {},
-              health: const {'https://daemon.invalid': true},
-              onRefreshHealth: () {},
-              topInset: false,
-              mobileHome: home,
-              onMobileHome: (_) {},
-              settingsSection: null,
-              onSettingsSection: (_) {},
-              agent: null,
-              onAgent: (_) {},
-            ),
-          ),
-        );
-
-    testWidgets('Settings pushes and pops from the right',
-        (t) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.android;
-      try {
-        await t.pumpWidget(buildSidebar(MobileHome.chats));
-        await t.pumpAndSettle();
-
-        // Sessions <-> Agents now pages with the finger (test/pager).
-        // Chats -> Settings: Settings slides in from right (> 50px mid-flight).
-        await t.pumpWidget(buildSidebar(MobileHome.settings));
-        await t.pump();
-        await t.pump(const Duration(milliseconds: 120));
-        final settingsInDx =
-            t.getTopLeft(find.byKey(const ValueKey('mobile-settings'))).dx;
-        final chatsParallaxDx =
-            t.getTopLeft(find.byKey(const ValueKey('mobile-chats'))).dx;
-        expect(settingsInDx, greaterThan(50));
-        expect(chatsParallaxDx, lessThan(0));
-        await t.pumpAndSettle();
-
-        // Settings -> Chats: Settings slides out to the right (> 50px mid-flight).
-        await t.pumpWidget(buildSidebar(MobileHome.chats));
-        await t.pump();
-        await t.pump(const Duration(milliseconds: 100));
-        final settingsOutDx =
-            t.getTopLeft(find.byKey(const ValueKey('mobile-settings'))).dx;
-        expect(settingsOutDx, greaterThan(50));
-        await t.pumpAndSettle();
       } finally {
         debugDefaultTargetPlatformOverride = null;
       }

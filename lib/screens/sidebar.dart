@@ -21,7 +21,7 @@ import '../widgets.dart';
 import 'agents_sidebar_panel.dart';
 import 'lead.dart';
 import 'lead/coordination_agent_detail.dart';
-import 'settings_panel.dart';
+import 'settings_overlay.dart' show showSettings;
 import 'shell_models.dart';
 import 'shell_nav.dart';
 import 'session_list_row.dart';
@@ -40,7 +40,6 @@ import '../quiet.dart' show QuietOfflineBanner, QuietPlace;
 import 'mobile_home/quiet_home.dart';
 import 'mobile_home/quiet_lists.dart';
 import 'tasks/tasks_panel.dart' show TasksPanel;
-import 'mobile_chrome.dart';
 import 'mobile_session_home.dart';
 import 'phone_hero.dart';
 import '../session_quick_send.dart';
@@ -175,15 +174,15 @@ class Sidebar extends StatefulWidget {
   final MobileHome mobileHome;
   final Widget? mobileTopBar;
   final VoidCallback? onMobileMenu;
+
+  /// The shell's Settings entry; preferred so every opener shares one path.
+  final VoidCallback? onOpenSettings;
   final ValueChanged<MobileHome> onMobileHome;
 
-  /// Phone drill-down state + setters. Also shell-owned, for the same reason:
+  /// Phone drill-down state + setter. Also shell-owned, for the same reason:
   /// the back handler and the bar's visibility both live up there.
-  final SettingsPage? settingsSection;
-  final ValueChanged<SettingsPage?> onSettingsSection;
   final CoordinationAgent? agent;
   final ValueChanged<CoordinationAgent?> onAgent;
-  final VoidCallback? onSettingsClose;
   final bool listening;
   final int? mcAttention;
 
@@ -221,12 +220,10 @@ class Sidebar extends StatefulWidget {
     required this.mobileHome,
     this.mobileTopBar,
     this.onMobileMenu,
+    this.onOpenSettings,
     required this.onMobileHome,
-    required this.settingsSection,
-    required this.onSettingsSection,
     required this.agent,
     required this.onAgent,
-    this.onSettingsClose,
     this.listening = false,
     this.mcAttention,
   });
@@ -241,9 +238,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   String _filterQuery = '';
   String _agentFilterQuery = '';
 
-  final GlobalKey<SettingsPanelState> _mobileSettingsKey =
-      GlobalKey<SettingsPanelState>();
-  SettingsPage? _pendingSettingsCreate;
   final GlobalKey<AgentsSidebarPanelState> _agentsPanelKey =
       GlobalKey<AgentsSidebarPanelState>();
 
@@ -290,11 +284,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   int? _collapsedAgentsCount;
   int? _agentsCount;
 
-  MobileHome _lastMainHome = MobileHome.chats;
-  // Settings rides over the main homes as a page, so it is never current here.
-  late MobileHome _currentHome = widget.mobileHome == MobileHome.settings
-      ? MobileHome.chats
-      : widget.mobileHome;
+  late MobileHome _currentHome = widget.mobileHome;
   MobileHome? _prevHome;
   final Set<MobileHome> _mountedHomes = <MobileHome>{};
   AnimationController? _homeAnimC;
@@ -397,9 +387,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     _mountedHomes.add(_slot(_currentHome));
     if (kMobile) _loadHeroAgents();
     if (!kMobile) sidebarAgentsFirst.addListener(_onAgentsList);
-    if (widget.mobileHome != MobileHome.settings) {
-      _lastMainHome = widget.mobileHome;
-    }
   }
 
   @override
@@ -418,13 +405,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       _loadProviders();
     }
     if (oldWidget.mobileHome != widget.mobileHome) {
-      if (oldWidget.mobileHome != MobileHome.settings) {
-        _lastMainHome = oldWidget.mobileHome;
-      }
       if (kMobile) _loadHeroAgents();
-      if (widget.mobileHome == MobileHome.settings) {
-        // Shown by the page stack over whatever home is current.
-      } else if (_slot(widget.mobileHome) == _slot(_currentHome)) {
+      if (_slot(widget.mobileHome) == _slot(_currentHome)) {
         _currentHome = widget.mobileHome;
       } else if (widget.mobileHome != _currentHome) {
         _prevHome = _currentHome;
@@ -585,24 +567,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         );
       },
     );
-    return PhonePageStack(
-      onBack: _closeSettings,
-      page: widget.mobileHome == MobileHome.settings
-          ? KeyedSubtree(
-              key: const ValueKey('mobile-settings'),
-              child: _mobileHomeBody(hasClient, MobileHome.settings),
-            )
-          : null,
-      base: homes,
-    );
-  }
-
-  void _closeSettings() {
-    if (widget.onSettingsClose != null) {
-      widget.onSettingsClose!();
-    } else {
-      widget.onMobileHome(_lastMainHome);
-    }
+    return homes;
   }
 
   Widget _homeLayer(
@@ -641,6 +606,24 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           ),
         ),
       ),
+    );
+  }
+
+  /// The gear on the phone home: Settings opens as an overlay, not a home
+  /// (spec S0).
+  void _openSettings() {
+    final open = widget.onOpenSettings;
+    if (open != null) return open();
+    final client = widget.client;
+    if (client == null) return;
+    showSettings(
+      context,
+      client: client,
+      instances: widget.instances,
+      active: widget.active,
+      onRemove: widget.onRemoveInstance,
+      onRename: widget.onRenameInstance,
+      onSelect: widget.onSelectInstance,
     );
   }
 
@@ -704,7 +687,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
               openGroupThread(context, client: client, group: g),
           onOpenSession: (s) => widget.onOpenSession(s.id, s.title, s.profile),
           onOpenSessions: () => widget.onMobileHome(MobileHome.chats),
-          onSettings: () => widget.onMobileHome(MobileHome.settings),
+          onSettings: _openSettings,
           onSearch: () => showEveryoneSwitcher(
             context,
             agents: _heroAgents,
@@ -827,67 +810,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             ),
         ]);
 
-      case MobileHome.settings:
-        final client = widget.client;
-        if (client == null) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _mobileSettingsHeader(),
-              Expanded(
-                child: _mobileUnavailable('Add a machine to configure it.'),
-              ),
-            ],
-          );
-        }
-        final section = widget.settingsSection;
-        return Padding(
-          padding: EdgeInsets.only(bottom: _scrollBottomPad),
-          child: PhonePageStack(
-            onBack: () => widget.onSettingsSection(null),
-            page: section != null
-                ? SettingsPanel(
-                    key: const ValueKey('settings-detail'),
-                    client: client,
-                    instances: widget.instances,
-                    active: widget.active,
-                    onRemove: widget.onRemoveInstance,
-                    onSelect: widget.onSelectInstance,
-                    onRename: widget.onRenameInstance,
-                    section: section,
-                    onSection: widget.onSettingsSection,
-                    onClose: () => widget.onSettingsSection(null),
-                    embedded: true,
-                    createOnOpen:
-                        _pendingSettingsCreate == section ? section : null,
-                    onCreateHandled: () =>
-                        setState(() => _pendingSettingsCreate = null),
-                  )
-                : null,
-            base: Column(
-              key: const ValueKey('settings-root'),
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _mobileSettingsHeader(),
-                Expanded(
-                  child: SettingsPanel(
-                    key: _mobileSettingsKey,
-                    client: client,
-                    instances: widget.instances,
-                    active: widget.active,
-                    onRemove: widget.onRemoveInstance,
-                    onSelect: widget.onSelectInstance,
-                    onRename: widget.onRenameInstance,
-                    section: null,
-                    onSection: widget.onSettingsSection,
-                    onClose: _closeSettings,
-                    embedded: true,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
     }
   }
 
@@ -954,11 +876,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       ),
     );
   }
-
-  Widget _mobileSettingsHeader() => MobileHomeHeader(
-        title: 'Settings',
-        onBack: () => widget.onMobileHome(_lastMainHome),
-      );
 
   Widget _emptySessions({bool searching = false}) => Padding(
         padding: EdgeInsets.only(top: kMobile ? 72 : S.s32),

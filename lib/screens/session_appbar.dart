@@ -491,32 +491,30 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     final title = _title.trim().isNotEmpty
         ? _title.trim()
         : (folder.isEmpty ? 'Session' : 'New session in $folder');
-    final lanesPill = lanePillLabel(s?.lanes ?? const <LaneInfo>[]);
-    return SpecBar(
+    return StageBar(
+      framed: false,
+      members: [
+        StageMember(_me?.displayAgentId ?? 'snippet',
+            state: s?.status == 'running'
+                ? AgentCharacterState.working
+                : AgentCharacterState.idle),
+      ],
       title: title,
       subtitle: subtitle,
+      subtitleHand: needsYou,
       onBack: back,
-      actions: [
-        if (lanesPill != null)
-          GestureDetector(
-            onTap: _showLanes,
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: S.s8),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                        color: AppColors.fg2, shape: BoxShape.circle)),
-                SizedBox(width: S.s6),
-                Text(lanesPill,
-                    style: TextStyle(fontSize: 12, color: AppColors.fg2)),
-              ]),
-            ),
+      onTap: stuck ? _retryNow : () => _openActionsDrawer(s),
+      trailing: TapDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: stuck ? _retryNow : () => _openActionsDrawer(s),
+        child: SizedBox(
+          width: 36,
+          height: 48,
+          child: Center(
+            child: AppIcon('more-horizontal', size: 20, color: AppColors.fg2),
           ),
-        SpecIconAction('more-horizontal', 'Session actions',
-            stuck ? _retryNow : () => _openActionsDrawer(s)),
-      ],
+        ),
+      ),
     );
   }
 

@@ -11,7 +11,6 @@ import 'git.dart';
 import 'git_diff_sidebar_panel.dart';
 import 'lead/lead_state.dart' show isDedicatedLeadSession;
 import 'session.dart' show TerminalInfo;
-import 'settings_panel.dart' show SettingsPage;
 import '../menu_widgets.dart' show lastPathSegment;
 import 'phone_tool_bar.dart';
 import 'shell_models.dart';
@@ -70,14 +69,12 @@ class ShellSidebarHost extends StatelessWidget {
     required this.mobileHome,
     this.mobileTopBar,
     this.onMobileMenu,
+    this.onOpenSettings,
     required this.onMobileHome,
-    required this.mobileSettingsSection,
-    required this.onSettingsSection,
     required this.mobileAgent,
     required this.onMobileAgent,
     this.topInset = true,
     this.onAfterPick,
-    this.onSettingsClose,
     this.onSection,
   });
 
@@ -131,12 +128,10 @@ class ShellSidebarHost extends StatelessWidget {
   final MobileHome mobileHome;
   final Widget? mobileTopBar;
   final VoidCallback? onMobileMenu;
+  final VoidCallback? onOpenSettings;
   final ValueChanged<MobileHome> onMobileHome;
-  final SettingsPage? mobileSettingsSection;
-  final ValueChanged<SettingsPage?> onSettingsSection;
   final CoordinationAgent? mobileAgent;
   final ValueChanged<CoordinationAgent?> onMobileAgent;
-  final VoidCallback? onSettingsClose;
 
   /// Phone chip row: switch between Files, Git and Terminals.
   final ValueChanged<ShellSection>? onSection;
@@ -294,12 +289,10 @@ class ShellSidebarHost extends StatelessWidget {
       mobileHome: mobileHome,
       mobileTopBar: mobileTopBar,
       onMobileMenu: onMobileMenu,
+      onOpenSettings: onOpenSettings,
       onMobileHome: onMobileHome,
-      settingsSection: mobileSettingsSection,
-      onSettingsSection: onSettingsSection,
       agent: mobileAgent,
       onAgent: onMobileAgent,
-      onSettingsClose: onSettingsClose,
     );
   }
 }

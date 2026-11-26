@@ -65,7 +65,7 @@ import 'session_list_row.dart' show sessionNeedsYou, shellNeedsYouCount;
 import 'artifact_viewer.dart' show SessionDeliverables;
 import 'wakes_screen.dart';
 import 'workspace_tab.dart';
-import 'desktop_settings_page.dart';
+import 'settings_overlay.dart';
 import 'file_changes.dart' show sessionChangeSteps;
 import '../tool_activity.dart' show fileChanges;
 import 'pane_add_menu.dart';
@@ -211,12 +211,11 @@ class _DesktopShellState extends State<DesktopShell>
   /// to Chats. Desktop navigates with the sidebar rail, so this is phone-only.
   _MobileHome _mobileHome = homeFirstTab();
 
-  /// Phone drill-down: which settings section is open, and which agent's detail.
+  /// Phone drill-down: which agent's detail page is open.
   ///
-  /// Both live HERE rather than inside their own screens because two things
-  /// outside them must read them: the back handler (to unwind one level at a
+  /// Lives HERE rather than inside the agent screen because two things
+  /// outside it must read it: the back handler (to unwind one level at a
   /// time) and the bar's visibility (to hide itself while drilled down).
-  _SettingsPage? _mobileSettingsSection;
   CoordinationAgent? _mobileAgent;
 
   final List<_MobileRoute> _mobileRouteHistory = [
@@ -262,8 +261,6 @@ class _DesktopShellState extends State<DesktopShell>
   bool _sidebarGit = false;
   bool _sidebarHidden = false;
   bool _settingsOpen = false;
-  // The tab to return to when the settings tab's back row is used.
-  String? _preSettingsKey;
 
   /// The user's dragged width; null follows [sidebarWidthFor] the window.
   double? _sidebarWidthPref;
@@ -628,8 +625,14 @@ class _DesktopShellState extends State<DesktopShell>
     onShowShortcuts: _showDesktopShortcuts,
   );
 
-  bool _handleGlobalShortcuts(KeyEvent event) =>
-      _shortcutsHandler.handleKeyEvent(event);
+  bool _handleGlobalShortcuts(KeyEvent event) {
+    // The app behind the Settings modal stays inert; only its toggle passes.
+    if (settingsOverlayOpen &&
+        event.logicalKey != LogicalKeyboardKey.comma) {
+      return false;
+    }
+    return _shortcutsHandler.handleKeyEvent(event);
+  }
 
   /// Drop every per-tab bookkeeping entry for a tab that is going away.
   ///
@@ -928,7 +931,13 @@ class _DesktopShellState extends State<DesktopShell>
 
   void _openMacGit() => _dispatchSessionAction('file_changes');
 
-  void _openCommandPalette() {
+  /// The tab a palette jump into Settings came from, for its back line.
+  String? _settingsOrigin(_ShellTab? tab) {
+    final t = tab?.title.trim() ?? '';
+    return t.isEmpty ? null : t;
+  }
+
+  void _openCommandPalette({String query = ''}) {
     final tab = _activeTab;
     final client = _client;
     final url = _active?.url ?? '';
@@ -1029,83 +1038,12 @@ class _DesktopShellState extends State<DesktopShell>
         shortcut: kMacOS ? '⌘ B' : 'Ctrl+B',
         keywords: const ['sidebar', 'collapse', 'expand', 'panel', 'left'],
       ),
-      for (final (page, icon, title, keys) in const [
-        (
-          SettingsPage.general,
-          'server',
-          'Settings: General & machines',
-          ['machines', 'connection', 'notifications', 'approvals']
-        ),
-        (
-          SettingsPage.appearance,
-          'sliders',
-          'Settings: Appearance',
-          ['theme', 'accent', 'color', 'font', 'typeface', 'cove', 'geist']
-        ),
-        (
-          SettingsPage.models,
-          'sparkles',
-          'Settings: Profiles',
-          ['inference', 'models', 'providers', 'keys']
-        ),
-        (
-          SettingsPage.routing,
-          'route',
-          'Settings: Routing',
-          ['fallback', 'limits', 'priority']
-        ),
-        (
-          SettingsPage.usage,
-          'analytics',
-          'Settings: Usage',
-          ['tokens', 'cost', 'billing', 'limits']
-        ),
-        (SettingsPage.memory, 'book', 'Settings: Memory', ['remember']),
-        (
-          SettingsPage.scheduled,
-          'repeat',
-          'Settings: Scheduled jobs',
-          ['recurring', 'cron']
-        ),
-        (
-          SettingsPage.wakes,
-          'repeat',
-          'Settings: Wakes',
-          ['wake', 'schedule', 'agents']
-        ),
-        (
-          SettingsPage.keepWarm,
-          'zap',
-          'Settings: Keep warm',
-          ['keep warm', 'cache', 'warm']
-        ),
-        (
-          SettingsPage.vault,
-          'lock-key',
-          'Settings: Vault',
-          ['secrets', 'keys', 'credentials']
-        ),
-        (
-          SettingsPage.voice,
-          'mic',
-          'Settings: Voice',
-          ['voice notes', 'transcription', 'speech model', 'microphone']
-        ),
-        (
-          SettingsPage.webSearch,
-          'globe',
-          'Settings: Web search',
-          ['exa', 'search', 'internet', 'browse']
-        ),
-        (
-          SettingsPage.accounts,
-          'users',
-          'Settings: Accounts',
-          ['subscription', 'rotation', 'chatgpt', 'xai', 'claude']
-        ),
-      ])
-        cmd(page.name, icon, title, () => _openShellSettings(page),
-            kind: PaletteKind.setting, keywords: keys),
+      for (final (_, rows) in kSettingsGroups)
+        for (final r in rows)
+          cmd(r.page.name, settingsPageIcon(r.page), 'Settings: ${r.label}',
+              () => _openShellSettings(r.page, _settingsOrigin(tab)),
+              kind: PaletteKind.setting,
+              keywords: settingsPageKeywords(r.page)),
       for (final t in _mainTabs)
         if (t != tab)
           PaletteItem(
@@ -1231,7 +1169,8 @@ class _DesktopShellState extends State<DesktopShell>
         }),
     ];
 
-    showCommandPalette(context, items: items, sources: sources);
+    showCommandPalette(context,
+        items: items, sources: sources, initialQuery: query);
   }
 
   void _showDesktopShortcuts() => showDesktopShortcutsDialog(context);
@@ -1676,7 +1615,6 @@ class _DesktopShellState extends State<DesktopShell>
         if (fromNotification) {
           _mobileHome = homeFirstTab();
           _mobileAgent = null;
-          _mobileSettingsSection = null;
           _mobileRouteHistory
             ..clear()
             ..add(_MobileRoute(home: _mobileHome));
@@ -1685,7 +1623,6 @@ class _DesktopShellState extends State<DesktopShell>
         _pushMobileRoute(_MobileRoute(
           home: _mobileHome,
           agent: _mobileAgent,
-          settingsSection: _mobileSettingsSection,
           inSession: true,
           sessionTabIndex: _activeIndex,
         ));
@@ -1840,24 +1777,12 @@ class _DesktopShellState extends State<DesktopShell>
         onRefreshHealth: _refreshHealth,
         mobileHome: _mobileHome,
         onMobileMenu: kMobile ? _openMobileMenu : null,
+        onOpenSettings: _openShellSettings,
         onMobileHome: (h) => setState(() {
           _mobileHome = h;
-          _mobileSettingsSection = null;
           _mobileAgent = null;
           _pushMobileRoute(_MobileRoute(home: h));
         }),
-        mobileSettingsSection: _mobileSettingsSection,
-        onSettingsSection: (s) {
-          if (s == null) {
-            _handleMobileBack();
-          } else {
-            setState(() {
-              _mobileSettingsSection = s;
-              _pushMobileRoute(
-                  _MobileRoute(home: _MobileHome.settings, settingsSection: s));
-            });
-          }
-        },
         mobileAgent: _mobileAgent,
         onMobileAgent: (a) {
           if (a == null) {
@@ -1865,9 +1790,6 @@ class _DesktopShellState extends State<DesktopShell>
           } else {
             _openMobileAgent(a);
           }
-        },
-        onSettingsClose: () {
-          _handleMobileBack();
         },
       );
 
@@ -2075,4 +1997,3 @@ class _DesktopShellState extends State<DesktopShell>
   }
 }
 
-typedef _SettingsPage = SettingsPage;

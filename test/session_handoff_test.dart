@@ -251,8 +251,6 @@ void main() {
               onOpenPalette: null,
               mobileHome: MobileHome.chats,
               onMobileHome: (_) {},
-              settingsSection: null,
-              onSettingsSection: (_) {},
               agent: null,
               onAgent: (_) {},
             ),

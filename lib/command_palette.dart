@@ -70,8 +70,10 @@ Future<void> showCommandPalette(
   BuildContext context, {
   required List<PaletteItem> items,
   List<PaletteSource> sources = const [],
+  String initialQuery = '',
 }) {
-  Widget body() => _Palette(items: items, sources: sources);
+  Widget body() =>
+      _Palette(items: items, sources: sources, initialQuery: initialQuery);
   final view = View.of(context);
   final desktop =
       view.physicalSize.width / view.devicePixelRatio >= kDesktopBreakpoint;
@@ -210,7 +212,9 @@ class _Scored {
 class _Palette extends StatefulWidget {
   final List<PaletteItem> items;
   final List<PaletteSource> sources;
-  const _Palette({required this.items, required this.sources});
+  final String initialQuery;
+  const _Palette(
+      {required this.items, required this.sources, this.initialQuery = ''});
   @override
   State<_Palette> createState() => _PaletteState();
 }
@@ -219,7 +223,7 @@ class _PaletteState extends State<_Palette> {
   static double get _rowHeight => kMobile ? 44.0 : 34.0;
   static double get _headerHeight => kMobile ? 30.0 : 32.0;
 
-  final _ctrl = TextEditingController();
+  late final _ctrl = TextEditingController(text: widget.initialQuery);
   final _scroll = ScrollController();
   final Map<PaletteKind, List<PaletteItem>> _loaded = {};
   final Set<PaletteKind> _loading = {};

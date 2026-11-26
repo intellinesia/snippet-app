@@ -223,54 +223,51 @@ class _ActivityDockState extends State<ActivityDock> {
         ),
       );
     }
-    // Text first and static: a dot, "Working", the step, the clock. The
-    // screen reader hears the state once, not the ticking time.
+    // XO-03: a floating surface-2 pill, sized to its content rather than a
+    // transcript-width bar. It reads state in words and never uses amber/red.
+    final agent = widget.agentId.isEmpty ? 'Agent' : widget.agentId;
+    final label = failed > 0
+        ? '$failed failed: $agent'
+        : '$agent running $clock';
     return Semantics(
       button: true,
-      label: step.isEmpty ? 'Working' : 'Working, $step',
+      label: failed > 0 ? label : 'Running, $step',
       excludeSemantics: true,
       child: TapDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () => widget.onOpen(null),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 48),
-          padding: const EdgeInsets.fromLTRB(12, 0, 8, 0),
-          decoration: BoxDecoration(
-              color: AppColors.surface1,
-              borderRadius: BorderRadius.circular(10)),
-          child: Row(children: [
-            SizedBox.square(
-              dimension: 16,
-              child: Center(
-                child: Container(
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                      color: AppColors.fg2, shape: BoxShape.circle),
+        onTap: () => widget.onOpen(failed > 0 ? firstFailure(steps) : null),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 236),
+          child: Container(
+            height: 36,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              SizedBox(
+                width: 14,
+                height: 14,
+                child: Center(
+                  child: failed > 0
+                      ? AppIcon('x', size: 13, color: AppColors.fg1)
+                      : Spinner(size: 12, color: AppColors.fg1),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Text('Working',
-                style: sans(14, weight: W.label, color: AppColors.fg1)),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(step,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(14, color: AppColors.fg2)),
-            ),
-            const SizedBox(width: 10),
-            Text(clock, style: sans(13, color: AppColors.fg2, tabular: true)),
-            if (failed > 0) ...[
-              const SizedBox(width: 8),
-              FailedPill(failed,
-                  compact: true,
-                  onTap: () => widget.onOpen(firstFailure(steps))),
-            ],
-            const SizedBox(width: 6),
-            AppIcon('chevron-right', size: 16, color: AppColors.fg3),
-          ]),
+              const SizedBox(width: 7),
+              Flexible(
+                child: Text(label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(12.5,
+                        color: failed > 0 ? AppColors.fg1 : AppColors.fg2,
+                        tabular: true)),
+              ),
+              const SizedBox(width: 6),
+              AppIcon('chevron-right', size: 14, color: AppColors.fg3),
+            ]),
+          ),
         ),
       ),
     );

@@ -330,10 +330,7 @@ class _MobileShellState extends State<MobileShell>
         ),
       ),
     );
-    final showBar = widget.onNew != null &&
-        chatsVisible &&
-        !drilledDown &&
-        mobileHome != MobileHome.settings;
+    final showBar = widget.onNew != null && chatsVisible && !drilledDown;
     final shell = Scaffold(
       backgroundColor: AppColors.bg,
       bottomNavigationBar: showBar
@@ -354,7 +351,6 @@ class _MobileShellState extends State<MobileShell>
                     MobileHome.chats => QuietPlace.sessions,
                     MobileHome.tasks => QuietPlace.tasks,
                     MobileHome.agents => QuietPlace.agents,
-                    MobileHome.settings => null,
                   },
                   onSelect: (p) {
                     if (p == QuietPlace.artifacts) {

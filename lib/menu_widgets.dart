@@ -240,7 +240,14 @@ class SheetGrabHandle extends StatelessWidget {
 /// handle. [child] gets the remaining height.
 class AppSheetSurface extends StatelessWidget {
   const AppSheetSurface(
-      {super.key, required this.child, this.color, this.expand = false});
+      {super.key,
+      required this.child,
+      this.color,
+      this.expand = false,
+      this.handle = true});
+
+  /// False when the child draws [SheetGrabHandle] itself (inside a target).
+  final bool handle;
 
   /// Fill the height the route gives (medium and large sheets).
   final bool expand;
@@ -259,7 +266,7 @@ class AppSheetSurface extends StatelessWidget {
           mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SheetGrabHandle(),
+            if (handle) const SheetGrabHandle(),
             expand ? Expanded(child: child) : Flexible(child: child)
           ]),
     );

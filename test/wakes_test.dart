@@ -201,11 +201,11 @@ void main() {
       );
       await _pump(tester, WakesScreen(client: c, embedded: true),
           scroll: false);
-      // The schedule row and the keep-warm row both name the agent.
-      expect(find.text('Revenue Scout'), findsNWidgets(2));
+      expect(find.text('Revenue Scout'), findsOneWidget);
       expect(find.byKey(const ValueKey('wake-wake-scout')), findsOneWidget);
-      // Keep warm is the last group on the page.
-      expect(find.byKey(const ValueKey('warm-scout')), findsOneWidget);
+      // Keep warm is managed on its own page; Wakes only summarises it.
+      expect(find.byKey(const ValueKey('warm-scout')), findsNothing);
+      expect(find.byKey(const Key('keep-warm-summary')), findsOneWidget);
       expect(find.textContaining('Session was busy'), findsOneWidget);
     });
 
