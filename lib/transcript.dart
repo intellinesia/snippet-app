@@ -52,8 +52,9 @@ List<InlineSpan> workSpans(WorkSummary w, TextStyle base) {
   if (outcome != null) {
     spans.add(TextSpan(
         text: ' $outcome',
-        style:
-            base.copyWith(color: w.failed ? AppColors.fg1 : AppColors.fg2, fontWeight: w.failed ? W.label : null)));
+        style: base.copyWith(
+            color: w.failed ? AppColors.fg1 : AppColors.fg2,
+            fontWeight: w.failed ? W.label : null)));
   }
   return spans;
 }
@@ -505,8 +506,7 @@ class _DenseToolRowState extends State<DenseToolRow> {
 
 /// The opened body of a tool row without its title, for lists that already name the step.
 Widget? toolRowBody(DenseToolRow r) {
-  final step =
-      ToolStep(tool: r.tool, args: r.args, result: r.result);
+  final step = ToolStep(tool: r.tool, args: r.args, result: r.result);
   final command = toolBaseName(r.tool) == 'bash';
   if (!toolHasDetail(step) && !(command && step.running && step.args is Map)) {
     return null;
@@ -783,8 +783,7 @@ class _TerminalBlockState extends State<TerminalBlock> {
                   ),
                 if (kMobile) ...[
                   if (badge != null)
-                    Text(badge.$1,
-                        style: mono(11, color: AppColors.fg3)),
+                    Text(badge.$1, style: mono(11, color: AppColors.fg3)),
                   if (stepDuration(step) != null) ...[
                     const SizedBox(width: 8),
                     Text(stepDuration(step)!,
@@ -798,8 +797,7 @@ class _TerminalBlockState extends State<TerminalBlock> {
                             .where((p) => p.trim().isNotEmpty)
                             .join('\n'))),
                     child: Text('Copy',
-                        style: sans(11,
-                            weight: W.label, color: AppColors.fg3)),
+                        style: sans(11, weight: W.label, color: AppColors.fg3)),
                   ),
                 ],
               ]),
@@ -1126,9 +1124,7 @@ class _LaneControlButtonState extends State<LaneControlButton> {
             padding: EdgeInsets.symmetric(horizontal: S.s8),
             alignment: Alignment.center,
             child: Text(label,
-                style: sans(12,
-                    weight: W.label,
-                    color: AppColors.fg2)),
+                style: sans(12, weight: W.label, color: AppColors.fg2)),
           ),
         ),
       );
@@ -1484,6 +1480,18 @@ class _SystemDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = label[0].toUpperCase() + label.substring(1);
+    // Desktop: Capy's bare, dim, centred checkpoint label.
+    if (!kMobile) {
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: S.s12),
+        child: Center(
+            child: Text(text,
+                style: sans(11.5, color: AppColors.fg4),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis)),
+      );
+    }
     return Padding(
       padding: EdgeInsets.symmetric(vertical: S.s12),
       child: Row(children: [

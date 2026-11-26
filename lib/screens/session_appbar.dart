@@ -312,7 +312,8 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   Widget _centerWide(Widget child, {double extra = 0}) => widget.embedded
       ? Center(
           child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: 760 + extra), child: child))
+              constraints: BoxConstraints(maxWidth: kChatMeasure + 20 + extra),
+              child: child))
       : child;
 
   // Mobile chat header: a back button that returns to the session list, the
@@ -1223,7 +1224,8 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
             children: [
           Flexible(
               child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: kChatMeasure + 40),
+                  constraints:
+                      const BoxConstraints(maxWidth: kChatMeasure + 40),
                   child: child)),
         ])));
   }

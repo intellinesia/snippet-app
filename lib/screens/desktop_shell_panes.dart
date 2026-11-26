@@ -1667,7 +1667,7 @@ class _FooterBtnState extends State<_FooterBtn> {
                             ? AppColors.fg3
                             : _hover
                                 ? AppColors.fg1
-                                : AppColors.fg2),
+                                : AppColors.fg3),
                     if (widget.dot != null)
                       Positioned(
                         right: -2,

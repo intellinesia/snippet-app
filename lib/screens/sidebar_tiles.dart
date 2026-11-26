@@ -100,7 +100,7 @@ class SidebarSectionHeader extends StatelessWidget {
     if (!kMobile) {
       final toggle = onToggle;
       return Padding(
-        padding: const EdgeInsets.fromLTRB(12, 16, 6, 0),
+        padding: const EdgeInsets.fromLTRB(12, 12, 6, 0),
         child: SizedBox(
           height: 30,
           child: Row(children: [
@@ -118,9 +118,13 @@ class SidebarSectionHeader extends StatelessWidget {
                       child: Text(title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: sans(13, weight: W.label, color: AppColors.fg1)),
+                          style: sans(13,
+                              weight: W.label,
+                              color: Color.lerp(
+                                  AppColors.fg1, AppColors.fg2, 0.3))),
                     ),
-                    if (count != null) ...[
+                    // Capy shows no count; it stays as a hint once collapsed.
+                    if (count != null && collapsed) ...[
                       const SizedBox(width: 6),
                       Text('$count', style: sans(11.5, color: AppColors.fg3)),
                     ],

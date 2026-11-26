@@ -1340,19 +1340,21 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           ? (_collapsedAgentsCount ?? visibleCount)
           : visibleCount,
       onToggle: _toggleAgentsCollapsed,
+      // Capy: plus and more; search and filter live under more.
+      moreTooltip: 'Search and filter',
+      moreBuilder: (ctx) async {
+        final pick = await showAppMenu<String>(context, anchor: ctx, items: [
+          appMenuItem(value: 'search', icon: 'search', label: 'Search agents'),
+          appMenuItem(
+              value: 'filter',
+              icon: 'sliders-horizontal',
+              label: 'Filter agents'),
+        ]);
+        if (!mounted || !ctx.mounted) return;
+        if (pick == 'search') _toggleAgentSearch();
+        if (pick == 'filter') _openAgentStateFilter(ctx);
+      },
       actions: [
-        SidebarSectionAction(
-          icon: 'search',
-          tooltip: 'Search agents',
-          onTap: (_) => _toggleAgentSearch(),
-        ),
-        SidebarSectionAction(
-          icon: 'sliders-horizontal',
-          tooltip: 'Filter agents',
-          onTap: (ctx) {
-            _openAgentStateFilter(ctx);
-          },
-        ),
         SidebarSectionAction(
           icon: 'plus',
           tooltip: 'New agent or group',
@@ -1362,19 +1364,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       ],
     );
   }
-
-  Widget _pinnedArtifactsHeader() => SidebarSectionHeader(
-        'Pinned artifacts',
-        collapsed: true,
-        count: 0,
-        actions: const [
-          SidebarSectionAction(
-            icon: 'plus',
-            tooltip: 'No artifact picker available',
-            enabled: false,
-          ),
-        ],
-      );
 
   String? _focusedRowId(String prefix) {
     final ctx = FocusManager.instance.primaryFocus?.context;
@@ -1497,7 +1486,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           child: _withSidebarKeyboard(body),
         ),
       ),
-      if (hasClient) _pinnedArtifactsHeader(),
       // Capy footer: places and tools as one quiet row of icons.
       SizedBox(
         height: 44,
@@ -1518,7 +1506,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   Widget _brandRow() => SizedBox(
         height: PaneRow.height,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
+          padding: const EdgeInsets.fromLTRB(15, 0, 6, 0),
           child: Row(children: [
             const AgentMochi('snippet', size: 20),
             const Spacer(),

@@ -1742,12 +1742,14 @@ class _RailCardState extends State<_RailCard> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
             curve: const Cubic(.23, 1, .32, 1),
-            padding: const EdgeInsets.all(8),
+            // Capy's destination card: 48 pt, a tone above the pane, hairline.
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: _hover && widget.onTap != null
-                  ? AppColors.surface3
-                  : AppColors.surface2,
-              borderRadius: BorderRadius.circular(R.of(8)),
+                  ? AppColors.surface2
+                  : AppColors.surface1,
+              borderRadius: BorderRadius.circular(R.of(9)),
+              border: Border.all(color: AppColors.paneLine),
             ),
             child: widget.child,
           ),
@@ -1881,8 +1883,9 @@ class _OpenPill extends StatelessWidget {
           height: 28,
           padding: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
+            color: AppColors.surface1,
             borderRadius: BorderRadius.circular(R.of(7)),
-            border: Border.all(color: AppColors.line),
+            border: Border.all(color: AppColors.paneLine),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             AppIcon(icon, size: 13, color: AppColors.fg3),

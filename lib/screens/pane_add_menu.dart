@@ -27,16 +27,17 @@ class PaneAddEntry {
 
 PopupMenuItem<VoidCallback> _row(PaneAddEntry e) => PopupMenuItem<VoidCallback>(
       value: e.onTap,
-      height: 30,
+      height: 28,
       padding: EdgeInsets.symmetric(horizontal: S.of(10)),
       child: Row(children: [
-        AppIcon(e.icon, size: 14, color: AppColors.fg3),
+        AppIcon(e.icon, size: 14, color: AppColors.fg4),
         SizedBox(width: S.of(9)),
         Expanded(
           child: Text(e.label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: sans(12.5, color: AppColors.fg1)),
+              style: sans(12.5,
+                  color: Color.lerp(AppColors.fg1, AppColors.fg2, 0.3))),
         ),
         if (e.meta != null)
           Text(e.meta!, style: sans(12, color: AppColors.fg4, tabular: true)),
@@ -75,12 +76,12 @@ Future<void> showPaneAddMenu(
     anchor,
     anchor: anchor,
     below: true,
-    minWidth: 264,
-    maxWidth: 300,
+    minWidth: 320,
+    maxWidth: 320,
     color: AppColors.surface1,
     shape: RoundedRectangleBorder(
         side: BorderSide(color: AppColors.border),
-        borderRadius: BorderRadius.circular(R.of(10))),
+        borderRadius: BorderRadius.circular(R.of(8))),
     items: [
       _label(title.trim().isEmpty ? 'Session' : title.trim(), height: 30),
       for (final e in views) _row(e),

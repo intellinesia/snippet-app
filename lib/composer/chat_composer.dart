@@ -11,7 +11,8 @@ import 'composer_card.dart';
 import 'voice_note.dart';
 
 /// Desktop transcript column; the composer card sits 12 outside it each side.
-const double kChatMeasure = 740;
+// Capy fills the pane less a 15 pt inset; 840 matches it at the reference size.
+const double kChatMeasure = 840;
 const double kDesktopComposerWidth = kChatMeasure + 24;
 
 /// The one composer for session chats, agent threads and group threads, on

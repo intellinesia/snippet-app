@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'platform.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -39,7 +40,8 @@ class AppPopoverSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(R.lg);
+    // Capy's desktop menus are nearly square: 8 pt corners.
+    final radius = BorderRadius.circular(kMobile ? R.lg : R.of(8));
     return DecoratedBox(
       decoration: BoxDecoration(borderRadius: radius, boxShadow: overlayShadow),
       child: Material(
@@ -195,7 +197,7 @@ class _PopoverLayout extends SingleChildLayoutDelegate {
         : _spaceAbove(c.biggest);
     final preferred =
         anchor.below ? _spaceBelow(c.biggest) : _spaceAbove(c.biggest);
-    final h = (preferred >= 160 ? preferred : room).clamp(80.0, 440.0);
+    final h = (preferred >= 160 ? preferred : room).clamp(80.0, 560.0);
     return BoxConstraints(
         minWidth: minWidth.clamp(0, c.maxWidth - 2 * _edge),
         maxWidth: maxWidth.clamp(0, c.maxWidth - 2 * _edge),
@@ -371,8 +373,10 @@ class _PopoverMenuState<T> extends State<_PopoverMenu<T>> {
       if (e is PopupMenuDivider) {
         children.add(Container(
             height: 1,
-            margin: EdgeInsets.symmetric(vertical: S.s4),
-            color: AppColors.line));
+            margin: EdgeInsets.symmetric(vertical: kMobile ? S.s4 : 3),
+            color: kMobile
+                ? AppColors.line
+                : Color.lerp(AppColors.line, AppColors.lineStrong, 0.5)));
         continue;
       }
       if (e is! PopupMenuItem<T>) continue;
@@ -386,7 +390,8 @@ class _PopoverMenuState<T> extends State<_PopoverMenu<T>> {
         continue;
       }
       firstGroup = false;
-      final height = e.height < 30 ? 30.0 : e.height;
+      final floor = kMobile ? 30.0 : 28.0;
+      final height = e.height < floor ? floor : e.height;
       // Items that bring their own inset (pane menus, rail tools) keep it.
       final pad = e.padding;
       final bare = e.child is AppPopoverRowBody;
@@ -435,7 +440,33 @@ class _PopoverMenuState<T> extends State<_PopoverMenu<T>> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (_hasSearch)
+            if (_hasSearch && !kMobile) ...[
+              // Capy: a bare query line over a full-width hairline.
+              SizedBox(
+                height: 30,
+                child: TextField(
+                  controller: _search,
+                  autofocus: true,
+                  style: sans(12.5, color: AppColors.fg1),
+                  cursorColor: AppColors.fg1,
+                  textAlignVertical: TextAlignVertical.center,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    border: InputBorder.none,
+                    hintText: 'Search',
+                    hintStyle: sans(12.5, color: AppColors.fg4),
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  ),
+                ),
+              ),
+              Container(
+                  height: 1,
+                  margin: const EdgeInsets.only(bottom: 4),
+                  color: Color.lerp(
+                      AppColors.line, AppColors.lineStrong, 0.5)),
+            ],
+            if (_hasSearch && kMobile)
               Padding(
                 padding: EdgeInsets.fromLTRB(S.s4, S.s4, S.s4, S.s6),
                 child: SizedBox(

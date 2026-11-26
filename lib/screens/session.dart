@@ -1936,7 +1936,7 @@ class _SessionScreenState extends State<SessionScreen>
                                                                           : (_deskHeader
                                                                               ? _deskHeaderHeight +
                                                                                   S
-                                                                                      .s8
+                                                                                      .s12
                                                                               : S
                                                                                   .s16),
                                                                       kMobile

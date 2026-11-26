@@ -456,7 +456,10 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 22, 14, 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text('Open', style: sans(12.5, weight: W.label, color: AppColors.fg1)),
+        Text('Open',
+            style: sans(12.5,
+                weight: W.label,
+                color: Color.lerp(AppColors.fg1, AppColors.fg2, 0.3))),
         const SizedBox(height: 8),
         Wrap(spacing: 6, runSpacing: 6, children: [
           for (final c in cells)
@@ -467,8 +470,9 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
                 height: 28,
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 decoration: BoxDecoration(
+                  color: AppColors.surface1,
                   borderRadius: BorderRadius.circular(R.of(7)),
-                  border: Border.all(color: AppColors.line),
+                  border: Border.all(color: AppColors.paneLine),
                 ),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   AppIcon(c.$1, size: 13, color: AppColors.fg3),
@@ -853,8 +857,9 @@ class _SectionState extends State<_Section> {
             child: Row(children: [
               Expanded(
                 child: Text(widget.label,
-                    style:
-                        sans(12.5, weight: W.label, color: AppColors.fg1)),
+                    style: sans(12.5,
+                        weight: W.label,
+                        color: Color.lerp(AppColors.fg1, AppColors.fg2, 0.3))),
               ),
               if (widget.meta != null)
                 Text(widget.meta!,
@@ -987,7 +992,9 @@ class _Row extends StatelessWidget {
                   TextSpan(children: [
                     TextSpan(
                         text: title,
-                        style: sans(12.5, color: AppColors.fg1)),
+                        style: sans(12.5,
+                            color:
+                                Color.lerp(AppColors.fg1, AppColors.fg2, 0.3))),
                     if (hasSub)
                       TextSpan(
                           text: '  $sub',

@@ -19,17 +19,19 @@ extension _RailPages on _SessionRailState {
           height: 28,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: AppColors.fg1.withValues(alpha: 0.07),
+            color: AppColors.surface2,
             borderRadius: BorderRadius.circular(R.of(6)),
           ),
-          child: leading ?? AppIcon(icon, size: 15, color: AppColors.fg2),
+          child: leading ?? AppIcon(icon, size: 15, color: AppColors.fg3),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: Text(label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: sans(13, weight: FontWeight.w500, color: AppColors.fg1)),
+              style: sans(13,
+                  weight: FontWeight.w500,
+                  color: Color.lerp(AppColors.fg1, AppColors.fg2, 0.3))),
         ),
         if (value != null) ...[
           const SizedBox(width: 8),
@@ -73,7 +75,7 @@ extension _RailPages on _SessionRailState {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         if (title != null) _plab(title),
         for (var i = 0; i < rows.length; i++) ...[
-          if (i > 0) const SizedBox(height: 6),
+          if (i > 0) const SizedBox(height: 10),
           rows[i](i == 0, i == rows.length - 1),
         ],
       ]),
@@ -328,14 +330,18 @@ extension _RailPages on _SessionRailState {
           ),
         );
 
-    final pills = <Widget>[
+    // Capy's Overview leads into Diffs, Files and Shell as cards.
+    final cards = <Widget>[
+      _navRow('file-diff', 'Diffs',
+          value: nFiles == 0 ? 'No changes' : '$nFiles',
+          onTap: () => _go('changes')),
       if (w.onFiles != null)
-        _OpenPill(
-            icon: 'folder',
-            label: wsLabel.isEmpty ? 'Files' : wsLabel,
+        _navRow('folder', 'Files',
+            value: wsLabel.isEmpty ? null : wsLabel,
             onTap: () => _go('files')),
-      if (w.onShell != null)
-        _OpenPill(icon: 'terminal', label: 'Shell', onTap: w.onShell!),
+      if (w.onShell != null) _navRow('terminal', 'Shell', onTap: w.onShell!),
+    ];
+    final pills = <Widget>[
       if (lanes.isNotEmpty)
         _OpenPill(
             icon: 'git-branch',
@@ -399,6 +405,11 @@ extension _RailPages on _SessionRailState {
               ),
             ],
             _capyHead('Open'),
+            for (var i = 0; i < cards.length; i++) ...[
+              if (i > 0) const SizedBox(height: 10),
+              cards[i],
+            ],
+            const SizedBox(height: 10),
             Wrap(spacing: 6, runSpacing: 6, children: pills),
           ],
         ),
@@ -417,7 +428,9 @@ extension _RailPages on _SessionRailState {
           child: Row(children: [
             Expanded(
               child: Text(title,
-                  style: sans(12.5, weight: W.label, color: AppColors.fg1)),
+                  style: sans(12.5,
+                      weight: W.label,
+                      color: Color.lerp(AppColors.fg1, AppColors.fg2, 0.3))),
             ),
             if (meta != null)
               Text(meta, style: sans(12, color: AppColors.fg3, tabular: true)),

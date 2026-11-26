@@ -59,10 +59,10 @@ class SoftBubble extends StatelessWidget {
       return ConstrainedBox(
         constraints: BoxConstraints(maxWidth: cap),
         child: Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: fill,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(8),
             border: selected ? Border.all(color: AppColors.fg3) : null,
           ),
           child: ChatBubbleFill(

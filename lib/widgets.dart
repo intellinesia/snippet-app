@@ -412,10 +412,13 @@ MarkdownStyleSheet agentMarkdownStyle(BuildContext context) {
   }
   _cachedAgentMarkdownThemeIndex = themeIndex;
   final reading = TS.reading();
-  // Desktop transcript: 13 on a 1.5 line, per the reference session.
+  // Desktop transcript: Capy's 13/19, a step below white.
   final prose = kMobile
       ? reading
-      : reading.copyWith(fontSize: reading.fontSize! * 13 / 14, height: 1.5);
+      : reading.copyWith(
+          fontSize: 13,
+          height: 19 / 13,
+          color: Color.lerp(AppColors.fg1, AppColors.fg2, 0.35));
   _cachedAgentMarkdownStyle = base.copyWith(
     p: prose,
     strong: prose.copyWith(fontWeight: weightFor(W.strong)),
@@ -1474,7 +1477,8 @@ class _DesktopIconBtnState extends State<_DesktopIconBtn> {
                   child: Center(
                     child: AppIcon(widget.name,
                         size: widget.iconSize,
-                        color: lit ? AppColors.fg1 : AppColors.fg2),
+                        // Capy keeps resting icons quiet; they light on hover.
+                        color: lit ? AppColors.fg1 : AppColors.fg3),
                   ),
                 ),
               ),
@@ -2047,7 +2051,7 @@ class Bubble extends StatelessWidget {
                   padding: kMobile
                       ? EdgeInsets.fromLTRB(
                           S.of(15), S.of(10), S.of(15), S.of(11))
-                      : const EdgeInsets.fromLTRB(11, 7, 11, 7),
+                      : const EdgeInsets.fromLTRB(12, 8, 12, 8),
                   decoration: BoxDecoration(
                     color: AppColors.surface2,
                     borderRadius: kMobile

@@ -808,10 +808,21 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
             onTap: _initRepo),
       );
 
-  Widget _cleanState() => EmptyState(
-        icon: 'check-check',
-        title: 'Working tree clean',
-        body: 'No changes to commit · updated ${_timeAgo(_lastUpdated)}',
+  // Capy: a quiet centred note rather than the generic empty card.
+  Widget _cleanState() => Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            AppIcon('check-check', size: 22, color: AppColors.fg4),
+            const SizedBox(height: 12),
+            Text('No local changes',
+                style: sans(12.5, weight: W.label, color: AppColors.fg3)),
+            const SizedBox(height: 4),
+            Text('The working tree is clean · ${_timeAgo(_lastUpdated)}',
+                textAlign: TextAlign.center,
+                style: sans(12, color: AppColors.fg4)),
+          ]),
+        ),
       );
 
   Widget _errorState() => Padding(

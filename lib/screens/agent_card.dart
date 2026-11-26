@@ -730,9 +730,15 @@ class _AgentRowShellState extends State<AgentRowShell> {
     final still = reduceMotion(context);
     final kind = _kind;
     final offline = kind == AgentRowStatusKind.offline;
-    final nameColor = offline ? AppColors.fg3 : AppColors.fg1;
+    // Capy's sidebar: titles a step below white, metadata well back.
+    final nameColor = offline
+        ? AppColors.fg3
+        : (kMobile || widget.unread
+            ? AppColors.fg1
+            : Color.lerp(AppColors.fg1, AppColors.fg2, 0.3)!);
+    final metaInk = kMobile ? AppColors.fg3 : AppColors.fg4;
     final statusStyle = sans(12,
-        height: 15 / 12, color: widget.unread ? AppColors.fg1 : AppColors.fg3);
+        height: 15 / 12, color: widget.unread ? AppColors.fg2 : metaInk);
 
     Widget avatar = widget.avatar;
     if (avatar is AgentMochi) avatar = ClipOval(child: avatar);
@@ -825,7 +831,7 @@ class _AgentRowShellState extends State<AgentRowShell> {
                             maxLines: 1,
                             style: sans(11.5,
                                 height: 16 / 11.5,
-                                color: AppColors.fg3,
+                                color: metaInk,
                                 tabular: true)),
                       ],
                       if (widget.expandable) ...[
