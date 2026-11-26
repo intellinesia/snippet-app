@@ -6,7 +6,6 @@ import '../api.dart';
 import '../models.dart';
 import '../settings_form.dart';
 import '../tool_activity.dart';
-import '../tool_views.dart' show toolIcon;
 import 'file_changes.dart' show sessionChangeSteps;
 import 'desk_memory.dart' show DeskMemoryView;
 import 'file_tree_sidebar_panel.dart' show FileTreeSidebarPanel;
@@ -22,6 +21,7 @@ import '../shell_panel.dart' show ShellPanelPurpose;
 import '../chat/mc_panel_sections.dart' show mcNeeds, McNeedsYou;
 import 'agent_records.dart' show AgentInboxView, AgentBoardView;
 import '../tap_detector.dart';
+import 'pane_add_menu.dart' show showPaneAddMenu, PaneAddEntry;
 
 part 'session_rail_pages.dart';
 
@@ -497,25 +497,42 @@ class _SessionRailState extends State<SessionRail> {
         final column = widget.columnWidth;
         final outer =
             kMobile || column == null ? null : sessionRailOuterWidth(column);
-        final open = LayoutBuilder(
-          builder: (_, box) => Container(
-            width: outer,
-            // Meets the divider in the pane row's panel strip above.
-            decoration: kMobile
-                ? null
-                : BoxDecoration(
-                    color: AppColors.surface1,
+        final open = kMobile
+            ? LayoutBuilder(
+                builder: (_, box) => Container(
+                  width: outer,
+                  padding: EdgeInsets.fromLTRB(
+                      24, 10, kSessionRailEdgeInset, S.s12),
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: _card(box.maxHeight - 10 - S.s12),
+                  ),
+                ),
+              )
+            // Desktop: the panel's own pane row, then its page, flat on the inset panel.
+            : Container(
+                width: outer,
+                decoration: BoxDecoration(
                     border: Border(left: BorderSide(color: AppColors.line))),
-            padding: kMobile
-                ? EdgeInsets.fromLTRB(24, 10, kSessionRailEdgeInset, S.s12)
-                : const EdgeInsets.fromLTRB(16, 18, 16, 8),
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: _card(box.maxHeight - 10 - S.s12,
-                  width: outer == null ? null : outer - 2 * S.s12),
-            ),
-          ),
-        );
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _railTabs(),
+                    Expanded(
+                      child: LayoutBuilder(
+                        builder: (_, box) => Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                          child: Align(
+                            alignment: Alignment.topCenter,
+                            child: _card(box.maxHeight - 14,
+                                width: outer == null ? null : outer - 33),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
         final body = outer == null
             ? open
             : Stack(children: [
@@ -1834,4 +1851,104 @@ class _RailResizeHandleState extends State<_RailResizeHandle> {
       ),
     );
   }
+}
+
+/// A Capy-style tab pill in the panel's pane row.
+class _RailTabPill extends StatefulWidget {
+  const _RailTabPill(
+      {required this.icon,
+      required this.label,
+      required this.active,
+      this.onTap,
+      this.onClose});
+
+  final String icon;
+  final String label;
+  final bool active;
+  final VoidCallback? onTap;
+  final VoidCallback? onClose;
+
+  @override
+  State<_RailTabPill> createState() => _RailTabPillState();
+}
+
+class _RailTabPillState extends State<_RailTabPill> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        cursor: widget.onTap == null
+            ? MouseCursor.defer
+            : SystemMouseCursors.click,
+        child: TapDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          child: Container(
+            height: 28,
+            padding: EdgeInsets.fromLTRB(
+                10, 0, widget.onClose == null ? 12 : 4, 0),
+            decoration: BoxDecoration(
+              color: widget.active
+                  ? AppColors.surface2
+                  : _hover
+                      ? AppColors.hoverPlate
+                      : null,
+              borderRadius: BorderRadius.circular(R.of(7)),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              AppIcon(widget.icon,
+                  size: 14,
+                  color: widget.active ? AppColors.fg2 : AppColors.fg3),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(widget.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(12.5,
+                        color:
+                            widget.active ? AppColors.fg1 : AppColors.fg3)),
+              ),
+              if (widget.onClose != null) ...[
+                const SizedBox(width: 4),
+                IconBtn('x',
+                    size: 20,
+                    iconSize: 12,
+                    tooltip: 'Close tab',
+                    onTap: widget.onClose),
+              ],
+            ]),
+          ),
+        ),
+      );
+}
+
+/// One quick way into another panel tab, on the Overview.
+class _OpenPill extends StatelessWidget {
+  const _OpenPill(
+      {required this.icon, required this.label, required this.onTap});
+
+  final String icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(R.of(7)),
+        child: Container(
+          height: 28,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(R.of(7)),
+            border: Border.all(color: AppColors.line),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            AppIcon(icon, size: 13, color: AppColors.fg3),
+            const SizedBox(width: 6),
+            Text(label, style: sans(12, color: AppColors.fg2)),
+          ]),
+        ),
+      );
 }

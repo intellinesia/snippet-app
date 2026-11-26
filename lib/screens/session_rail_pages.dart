@@ -104,50 +104,125 @@ extension _RailPages on _SessionRailState {
         _armedRewind = null;
       });
 
-  Widget _flatSectionHead(String title,
-          {String? meta, VoidCallback? onTap, double top = 0}) =>
-      Padding(
-        padding: EdgeInsets.only(top: top, bottom: 8),
-        child: TapDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: Row(children: [
-            Expanded(
-              child: Text(title,
-                  style: sans(12, weight: W.label, color: AppColors.fg2)),
-            ),
-            if (meta != null)
-              Text(meta, style: sans(12, color: AppColors.fg2, tabular: true)),
-          ]),
+  /// The panel's pane row: Overview and the open page as pills, + for more.
+  Widget _railTabs() {
+    final page = _page;
+    final open = switch (page) {
+      'lanes' => ('git-branch', 'Lanes'),
+      'jobs' => ('activity', 'Activity'),
+      'checkpoints' => ('history', 'Checkpoints'),
+      'wakes' => ('clock', 'Wakes'),
+      'usage' => ('gauge', 'Usage'),
+      'memory' => ('book-marked', 'Memory'),
+      'changes' => ('file-diff', 'Diffs'),
+      'files' => ('folder', 'Files'),
+      _ => null,
+    };
+    return Container(
+      key: const ValueKey('rail-tabs'),
+      height: 44,
+      padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
+      decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: AppColors.line))),
+      child: Row(children: [
+        Flexible(
+          child: _RailTabPill(
+              icon: 'list',
+              label: widget.isLead ? 'Lead' : 'Overview',
+              active: open == null,
+              onTap: open == null ? null : () => _go(null)),
         ),
-      );
+        if (open != null) ...[
+          const SizedBox(width: 4),
+          Flexible(
+            child: _RailTabPill(
+                icon: open.$1,
+                label: open.$2,
+                active: true,
+                onClose: () => _go(null)),
+          ),
+        ],
+        if (!widget.isLead) ...[
+          const SizedBox(width: 2),
+          Builder(
+            builder: (ctx) => IconBtn('plus',
+                size: 26,
+                iconSize: 14,
+                tooltip: 'Open a tab',
+                onTap: () => _railAddMenu(ctx)),
+          ),
+        ],
+        const Spacer(),
+        IconBtn('sidebar',
+            size: 28,
+            iconSize: 14,
+            active: true,
+            tooltip: 'Hide panel',
+            onTap: () => setSessionRailCollapsed(true)),
+      ]),
+    );
+  }
 
-  /// Desktop session details (frame 06): flat on the rail, hairline-separated
-  /// sections for status, participants, activity, changes and artifacts.
+  void _railAddMenu(BuildContext ctx) {
+    final s = widget.state;
+    final cps = s?.checkpoints.length ?? 0;
+    final lanes = s?.lanes.where((l) => l.running).length ?? 0;
+    final files = _git?.ok == true ? _git!.files.length : 0;
+    String? count(int n) => n > 0 ? '$n' : null;
+    PaneAddEntry e(String page, String icon, String label, {String? meta}) =>
+        PaneAddEntry(
+            icon: icon,
+            label: label,
+            meta: meta,
+            checked: _page == page,
+            onTap: () => _go(page));
+    showPaneAddMenu(
+      ctx,
+      title: 'Panel',
+      views: [
+        if (widget.onChanges != null)
+          e('changes', 'file-diff', 'Diffs', meta: count(files)),
+        if (widget.onFiles != null) e('files', 'folder', 'Files'),
+        e('jobs', 'activity', 'Activity'),
+        e('checkpoints', 'history', 'Checkpoints', meta: count(cps)),
+        e('memory', 'book-marked', 'Memory'),
+        e('usage', 'gauge', 'Usage'),
+        e('wakes', 'clock', 'Wakes'),
+      ],
+      crew: [
+        e('lanes', 'git-branch', 'Lanes',
+            meta: lanes > 0 ? '$lanes running' : null),
+      ],
+    );
+  }
+
+  /// Desktop Overview (Capy pass): status, what is happening now, changes,
+  /// artifacts, task and quick ways into the panel's other tabs.
   List<Widget> _overviewRoot() {
     final s = widget.state;
     final w = widget;
     final agentId = (w.agentId ?? w.ownAgent ?? 'snippet').trim();
-    final head = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: SizedBox(
-        height: w.floating ? 28 : 20,
-        child: Row(children: [
-          Expanded(
-            child: Text('Session details',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sans(14, weight: W.label, color: AppColors.fg1)),
-          ),
-          if (w.floating)
-            IconBtn('x',
-                size: 28,
-                iconSize: 15,
-                tooltip: 'Close',
-                onTap: () => sessionRailFloating.value = false),
-        ]),
-      ),
-    );
+    final head = !w.floating
+        ? const SizedBox.shrink()
+        : Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: SizedBox(
+              height: 28,
+              child: Row(children: [
+                Expanded(
+                  child: Text('Overview',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(14, weight: W.label, color: AppColors.fg1)),
+                ),
+                IconBtn('x',
+                    size: 28,
+                    iconSize: 15,
+                    tooltip: 'Close',
+                    onTap: () => sessionRailFloating.value = false),
+              ]),
+            ),
+          );
     if (s == null && _loading) {
       return [
         head,
@@ -180,13 +255,71 @@ extension _RailPages on _SessionRailState {
     }
     final t = _tasks.where((t) => t.sessionId == widget.sessionId).firstOrNull;
     final git = _git;
-    final gitFiles =
-        git != null && git.ok ? git.files : const <GitFile>[];
+    final gitFiles = git != null && git.ok ? git.files : const <GitFile>[];
     final fallbackFiles = gitFiles.isEmpty
         ? fileChanges(sessionChangeSteps(s?.events ?? const []))
         : const <FileChange>[];
+    var adds = 0, dels = 0;
+    for (final f in gitFiles) {
+      if (_lineCounts['${f.path}|${f.staged}|${f.unstaged}'] case (
+            final a,
+            final r
+          )) {
+        adds += a;
+        dels += r;
+      }
+    }
+    final nFiles = gitFiles.isNotEmpty ? gitFiles.length : fallbackFiles.length;
+    final steps = _activitySteps(s);
+    final lanes = [...?s?.lanes];
+    final running = lanes.where((l) => l.running).length;
     final ws = (s?.workspace ?? '').trim();
     final wsLabel = ws.isEmpty ? '' : lastPathSegment(ws, ifEmpty: ws);
+
+    Widget fileRow(String path, {(int, int)? counts, VoidCallback? onTap}) =>
+        TapDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: SizedBox(
+            height: 26,
+            child: Row(children: [
+              Expanded(
+                child: Text(lastPathSegment(path, ifEmpty: path),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: mono(12, color: AppColors.fg1)),
+              ),
+              if (counts case (final a, final r)) ...[
+                const SizedBox(width: 8),
+                Text('+$a', style: mono(12, color: AppColors.ok)),
+                const SizedBox(width: 6),
+                Text('−$r', style: mono(12, color: AppColors.danger)),
+              ],
+            ]),
+          ),
+        );
+
+    final pills = <Widget>[
+      if (w.onFiles != null)
+        _OpenPill(
+            icon: 'folder',
+            label: wsLabel.isEmpty ? 'Files' : wsLabel,
+            onTap: () => _go('files')),
+      if (w.onShell != null)
+        _OpenPill(icon: 'terminal', label: 'Shell', onTap: w.onShell!),
+      if (lanes.isNotEmpty)
+        _OpenPill(
+            icon: 'git-branch',
+            label: running > 0 ? 'Lanes $running' : 'Lanes',
+            onTap: () => _go('lanes')),
+      _OpenPill(
+          icon: 'history',
+          label: 'Checkpoints',
+          onTap: () => _go('checkpoints')),
+      _OpenPill(
+          icon: 'book-marked', label: 'Memory', onTap: () => _go('memory')),
+    ];
+
     return [
       head,
       Padding(
@@ -194,159 +327,155 @@ extension _RailPages on _SessionRailState {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _detailsHead('Status', first: true),
-            _statusLine(s),
-            _detailsHead('Participants'),
-            ..._participantRows(agentId, s),
-            if (_activitySteps(s).isNotEmpty) ...[
-              _detailsHead('Activity'),
-              for (final step in _activitySteps(s)) _activityRow(step),
+            _statusLine(s, people: _people(agentId, s)),
+            if (steps.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              _nowCard(s, steps),
             ],
-            _divider(),
-            _flatSectionHead(
-              'Changes',
-              top: 0,
-              onTap: w.onChanges != null ? () => _go('changes') : null,
-            ),
+            _capyHead('Changes',
+                meta: nFiles == 0
+                    ? null
+                    : '$nFiles file${nFiles == 1 ? '' : 's'}',
+                adds: adds > 0 || dels > 0 ? (adds, dels) : null,
+                onTap: w.onChanges != null ? () => _go('changes') : null),
             if (gitFiles.isNotEmpty)
               for (final f in gitFiles.take(6))
-                TapDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => w.onOpenDiff != null
-                      ? w.onOpenDiff!(f)
-                      : _go('changes'),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 28),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(children: [
-                        AppIcon('file', size: 14, color: AppColors.fg2),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                              lastPathSegment(f.path, ifEmpty: f.path),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: sans(13, color: AppColors.fg1)),
-                        ),
-                        if (_lineCounts[
-                                '${f.path}|${f.staged}|${f.unstaged}']
-                            case (final a, final r)) ...[
-                          const SizedBox(width: 8),
-                          Text('+$a \u2212$r',
-                              style: sans(12,
-                                  color: AppColors.fg2, tabular: true)),
-                        ],
-                      ]),
-                    ),
-                  ),
-                )
+                fileRow(f.path,
+                    counts: _lineCounts['${f.path}|${f.staged}|${f.unstaged}'],
+                    onTap: () => w.onOpenDiff != null
+                        ? w.onOpenDiff!(f)
+                        : _go('changes'))
             else if (fallbackFiles.isNotEmpty)
               for (final f in fallbackFiles.take(6))
-                TapDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => _go('changes'),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 28),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(children: [
-                        AppIcon('file', size: 14, color: AppColors.fg2),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                              lastPathSegment(f.path, ifEmpty: f.path),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: sans(13, color: AppColors.fg1)),
-                        ),
-                      ]),
-                    ),
-                  ),
-                )
+                fileRow(f.path, onTap: () => _go('changes'))
             else
-              Text('No changes yet.', style: sans(12, color: AppColors.fg2)),
+              Text('No changes yet.', style: sans(12, color: AppColors.fg3)),
             if (_artifacts.isNotEmpty) ...[
-              _detailsHead('Artifacts'),
+              _capyHead('Artifacts',
+                  meta: '${_artifacts.length}', onTap: w.onDeliverables),
               for (final a in _artifacts.reversed.take(4)) _artifactRow(a),
             ],
             if (t != null) ...[
-              _flatSectionHead(
-                'Task',
-                top: 20,
-                onTap: w.onOpenTask != null ? () => w.onOpenTask!(t.id) : null,
-              ),
+              _capyHead('Task',
+                  meta: t.status.label,
+                  onTap:
+                      w.onOpenTask != null ? () => w.onOpenTask!(t.id) : null),
               TapDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: w.onOpenTask != null ? () => w.onOpenTask!(t.id) : null,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(t.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(13, height: 1.35, color: AppColors.fg1)),
-                    const SizedBox(height: 4),
-                    Text(
-                      t.status.label,
-                      style: sans(12, color: AppColors.fg2),
-                    ),
-                  ],
-                ),
+                child: Text(t.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(12.5, height: 1.35, color: AppColors.fg2)),
               ),
-            ] else ...[
-              _flatSectionHead(
-                'Files',
-                top: 20,
-                onTap: w.onFiles != null ? () => _go('files') : null,
-              ),
-              if (wsLabel.isNotEmpty && w.onFiles != null)
-                TapDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => _go('files'),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 28),
-                    child: Row(children: [
-                      AppIcon('folder', size: 14, color: AppColors.fg2),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(wsLabel,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(13, color: AppColors.fg1)),
-                      ),
-                    ]),
-                  ),
-                )
-              else
-                Text('Nothing attached.',
-                    style: sans(12, color: AppColors.fg2)),
             ],
+            _capyHead('Open'),
+            Wrap(spacing: 6, runSpacing: 6, children: pills),
           ],
         ),
       ),
-      const SizedBox(height: 12),
+      const SizedBox(height: 16),
     ];
   }
 
-  Widget _divider() => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 18),
-        child: Container(height: 1, color: AppColors.line),
+  Widget _capyHead(String title,
+          {String? meta, (int, int)? adds, VoidCallback? onTap}) =>
+      Padding(
+        padding: const EdgeInsets.only(top: 22, bottom: 8),
+        child: TapDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: Row(children: [
+            Expanded(
+              child: Text(title,
+                  style: sans(12.5, weight: W.label, color: AppColors.fg1)),
+            ),
+            if (meta != null)
+              Text(meta, style: sans(12, color: AppColors.fg3, tabular: true)),
+            if (adds case (final a, final r)) ...[
+              const SizedBox(width: 6),
+              Text('+$a', style: sans(12, color: AppColors.ok, tabular: true)),
+              const SizedBox(width: 4),
+              Text('−$r',
+                  style: sans(12, color: AppColors.danger, tabular: true)),
+            ],
+          ]),
+        ),
       );
 
-  Widget _detailsHead(String title, {bool first = false}) => Column(
+  /// What the session is doing: its last few steps, newest first and lit.
+  Widget _nowCard(HarnessState? s, List<ToolStep> steps) {
+    final live = switch (s?.status) {
+      'running' || 'thinking' || 'tool' => true,
+      _ => false,
+    };
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+      decoration: BoxDecoration(
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(R.of(10)),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (first) const SizedBox(height: 20) else _divider(),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Text(title,
-                style: sans(11, weight: W.label, color: AppColors.fg3)),
-          ),
+          Text(live ? 'Now' : 'Last steps',
+              style: sans(11, color: AppColors.fg3)),
+          const SizedBox(height: 4),
+          for (var i = 0; i < steps.length; i++)
+            _stepRow(steps[i], lit: i == 0 && live),
         ],
-      );
+      ),
+    );
+  }
 
-  Widget _statusLine(HarnessState? s) {
+  Widget _stepRow(ToolStep step, {bool lit = false}) {
+    final ms = step.startMs;
+    final when = ms == null ? '' : relativeTime(ms ~/ 1000);
+    return SizedBox(
+      height: 24,
+      child: Row(children: [
+        Container(
+          width: 6,
+          height: 6,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: lit ? AppColors.ok : AppColors.fg3.withValues(alpha: 0.6),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(toolSentence(step, running: false),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(12, color: lit ? AppColors.fg1 : AppColors.fg2)),
+        ),
+        if (when.isNotEmpty) ...[
+          const SizedBox(width: 8),
+          Text(when, style: sans(11, color: AppColors.fg3, tabular: true)),
+        ],
+      ]),
+    );
+  }
+
+  /// The manager, then each lane's other agent once: (id, name, role).
+  List<(String, String, String)> _people(String agentId, HarnessState? s) {
+    final seen = <String>{agentId};
+    final manager = (widget.managerName ?? '').trim();
+    final out = [
+      (agentId, manager.isEmpty ? _titleCase(agentId) : manager, 'manager')
+    ];
+    for (final lane in s?.lanes ?? const <LaneInfo>[]) {
+      final who = (lane.agent ?? '').trim();
+      if (who.isEmpty || !seen.add(who)) continue;
+      out.add((who, _titleCase(who), lane.title));
+      if (out.length >= 5) break;
+    }
+    return out;
+  }
+
+  Widget _statusLine(HarnessState? s,
+      {List<(String, String, String)> people = const []}) {
     final (word, live) = switch (s?.status) {
       'running' || 'thinking' || 'tool' => ('Running', true),
       'waiting_approval' || 'waiting_question' => ('Waiting on you', true),
@@ -356,33 +485,41 @@ extension _RailPages on _SessionRailState {
     final elapsed = live && started != null
         ? DateTime.now().difference(started.toLocal())
         : null;
-    return Row(children: [
-      Container(
-        height: 26,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: AppColors.surface2,
-          borderRadius: BorderRadius.circular(13),
+    final model = widget.profileLabel.trim();
+    return SizedBox(
+      height: 24,
+      child: Row(children: [
+        Container(
+          width: 6,
+          height: 6,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: live ? AppColors.ok : AppColors.fg3,
+          ),
         ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: live ? AppColors.fg2 : AppColors.fg3,
+        const SizedBox(width: 8),
+        Text(word, style: sans(12.5, weight: W.label, color: AppColors.fg1)),
+        Expanded(
+          child: Text(
+              [
+                if (elapsed != null) _elapsedLabel(elapsed),
+                if (model.isNotEmpty) model,
+              ].map((e) => '  \u00b7  $e').join(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(12, color: AppColors.fg3, tabular: true)),
+        ),
+        for (var i = 0; i < people.length; i++)
+          Align(
+            widthFactor: i == people.length - 1 ? 1 : 0.7,
+            child: Tooltip(
+              message: '${people[i].$2}, ${people[i].$3}',
+              child: AgentMochi(people[i].$1.isEmpty ? 'snippet' : people[i].$1,
+                  size: 20),
             ),
           ),
-          const SizedBox(width: 8),
-          Text(word, style: sans(11, weight: W.label, color: AppColors.fg2)),
-        ]),
-      ),
-      if (elapsed != null) ...[
-        const SizedBox(width: 12),
-        Text('${_elapsedLabel(elapsed)} elapsed',
-            style: sans(11, color: AppColors.fg3, tabular: true)),
-      ],
-    ]);
+      ]),
+    );
   }
 
   String _elapsedLabel(Duration d) {
@@ -393,51 +530,6 @@ extension _RailPages on _SessionRailState {
 
   String _titleCase(String id) =>
       id.isEmpty ? id : '${id[0].toUpperCase()}${id.substring(1)}';
-
-  Widget _personRow(String id, String name, String role) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: SizedBox(
-          height: 32,
-          child: Row(children: [
-            AgentMochi(id.isEmpty ? 'snippet' : id, size: 24),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(12, weight: W.label, color: AppColors.fg1)),
-                  Text(role,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(10.5, color: AppColors.fg3)),
-                ],
-              ),
-            ),
-          ]),
-        ),
-      );
-
-  /// The managing agent, then each lane's agent once, with what it is on.
-  List<Widget> _participantRows(String agentId, HarnessState? s) {
-    final seen = <String>{agentId};
-    final manager = (widget.managerName ?? '').trim();
-    final rows = [
-      _personRow(agentId, manager.isEmpty ? _titleCase(agentId) : manager,
-          'manager')
-    ];
-    // Lanes are hands, not people: only a lane offered to another agent counts.
-    for (final lane in s?.lanes ?? const <LaneInfo>[]) {
-      final who = (lane.agent ?? '').trim();
-      if (who.isEmpty || !seen.add(who)) continue;
-      rows.add(_personRow(who, _titleCase(who), lane.title));
-      if (rows.length >= 5) break;
-    }
-    return rows;
-  }
 
   /// The last few finished steps, newest first.
   List<ToolStep> _activitySteps(HarnessState? s) {
@@ -459,28 +551,6 @@ extension _RailPages on _SessionRailState {
       }
     }
     return out.reversed.take(4).toList();
-  }
-
-  Widget _activityRow(ToolStep step) {
-    final ms = step.startMs;
-    final when = ms == null ? '' : relativeTime(ms ~/ 1000);
-    return SizedBox(
-      height: 30,
-      child: Row(children: [
-        AppIcon(toolIcon(step.tool), size: 14, color: AppColors.fg3),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(toolSentence(step, running: false),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: sans(11.5, color: AppColors.fg2)),
-        ),
-        if (when.isNotEmpty) ...[
-          const SizedBox(width: 8),
-          Text(when, style: sans(10.5, color: AppColors.fg3, tabular: true)),
-        ],
-      ]),
-    );
   }
 
   Widget _artifactRow(ArtifactInfo a) {
@@ -520,7 +590,11 @@ extension _RailPages on _SessionRailState {
     );
   }
 
-  Widget _subHeader(String title, {String? meta}) => Container(
+  Widget _subHeader(String title, {String? meta}) => !kMobile &&
+          !widget.floating
+      // Docked, the page's pill in the panel row names it.
+      ? const SizedBox(height: 2)
+      : Container(
         height: 40,
         padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
         child: Row(children: [

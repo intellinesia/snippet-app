@@ -376,6 +376,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           final docked = width >= kSessionRailMinColumn;
           final on =
               docked ? !sessionRailCollapsed.value : sessionRailFloating.value;
+          // Docked open, the panel's own row carries the toggle.
+          if (docked && on) return const SizedBox.shrink();
           return IconBtn('sidebar',
               size: 28,
               iconSize: 14,
@@ -961,7 +963,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   /// The panel toggle at the end of the pane row. With the panel docked the
   /// row's right end becomes the panel's own strip, the panel's width wide.
   Widget Function(double)? _sessionStripTools() {
-    if (_chatTab == null) return null;
+    // The docked panel now has its own pane row with + and the toggle.
+    if (_chatTab == null || !kMobile) return null;
     return (width) => ListenableBuilder(
           listenable: Listenable.merge(
               [sessionRailCollapsed, sessionRailFloating, sessionRailFraction]),
