@@ -183,14 +183,19 @@ class InlineSegmented<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        height: 26,
+        // Grows with large text instead of clipping the labels.
+        constraints: const BoxConstraints(minHeight: 26),
         padding: const EdgeInsets.all(2),
         decoration: BoxDecoration(
           color: AppColors.surface1,
           borderRadius: BorderRadius.circular(R.sm),
           border: Border.all(color: AppColors.border),
         ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
+        child: IntrinsicHeight(
+            child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
           for (final (v, label) in options)
             Material(
               color: v == value ? AppColors.surface3 : Colors.transparent,
@@ -199,7 +204,8 @@ class InlineSegmented<T> extends StatelessWidget {
                 borderRadius: BorderRadius.circular(R.sm - 1),
                 onTap: v == value ? null : () => onChanged(v),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
                   child: Center(
                     child: Text(label,
                         style: sans(12,
@@ -209,6 +215,6 @@ class InlineSegmented<T> extends StatelessWidget {
                 ),
               ),
             ),
-        ]),
+        ])),
       );
 }

@@ -1916,16 +1916,19 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     Widget header(String t) => Text(t,
         style: sans(11, weight: FontWeight.w500, color: AppColors.fg3));
     Widget line() => Container(height: 1, color: AppColors.line);
+    // Large text: each machine stacks its values under the name (D7).
+    final stacked = MediaQuery.textScalerOf(context).scale(1) > 1.5;
     final rows = <Widget>[
-      _tableRow(header('Machine'), header('Status'), header('Agents'),
-          header('Approvals'), const SizedBox.shrink(),
-          height: 28),
+      if (!stacked)
+        _tableRow(header('Machine'), header('Status'), header('Agents'),
+            header('Approvals'), const SizedBox.shrink(),
+            height: 28),
       for (final i in _instances) ...[
-        line(),
+        if (!stacked || i != _instances.first) line(),
         if (_removingUrl == i.url)
           _removeStrip(i)
         else
-          _machineTableRow(i),
+          _machineTableRow(i, stacked: stacked),
       ],
     ];
     return Padding(
@@ -1946,8 +1949,8 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
 
   Widget _tableRow(Widget a, Widget b, Widget c, Widget d, Widget e,
           {double height = 32}) =>
-      SizedBox(
-        height: height,
+      ConstrainedBox(
+        constraints: BoxConstraints(minHeight: height),
         child: Row(children: [
           Expanded(flex: 4, child: a),
           Expanded(flex: 3, child: b),
@@ -1957,7 +1960,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
         ]),
       );
 
-  Widget _machineTableRow(Instance i) {
+  Widget _machineTableRow(Instance i, {bool stacked = false}) {
     final isActive = i.url == widget.active?.url;
     if (_renamingUrl == i.url) {
       return SizedBox(
@@ -1981,6 +1984,55 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     final agents = _agentCount[i.url];
     final manual = isActive ? (_manual ?? _manualBy[i.url]) : _manualBy[i.url];
     final canConnect = !isActive && widget.onSelect != null;
+    final approvals = manual == null
+        ? '\u2014'
+        : manual
+            ? 'Ask first'
+            : 'Auto';
+    if (stacked) {
+      final meta = sans(12.5, color: AppColors.fg2);
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isActive ? AppColors.ok : AppColors.fg4),
+                        ),
+                        Text(i.label.isEmpty ? hostOf(i.url) : i.label,
+                            style: sans(12.5, color: AppColors.fg1)),
+                        if (isActive)
+                          Text('Active', style: sans(11, color: AppColors.fg3)),
+                      ]),
+                  const SizedBox(height: 4),
+                  Wrap(spacing: 16, runSpacing: 4, children: [
+                    Text(status, style: meta),
+                    Text(
+                        agents == null
+                            ? 'Agents \u2014'
+                            : agents == 1
+                                ? '1 agent'
+                                : '$agents agents',
+                        style: meta),
+                    Text('Approvals: $approvals', style: meta),
+                  ]),
+                ]),
+          ),
+          SizedBox(width: 28, child: _machineMenu(i, connect: canConnect)),
+        ]),
+      );
+    }
     return _tableRow(
       Row(children: [
         Container(
@@ -1996,16 +2048,17 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
                 color: AppColors.fg1)),
         if (isActive) ...[
           SizedBox(width: S.s8),
-          Text('Active', style: sans(11, color: AppColors.fg3)),
+          Flexible(
+              child: Text('Active',
+                  maxLines: 1,
+                  overflow: TextOverflow.clip,
+                  softWrap: false,
+                  style: sans(11, color: AppColors.fg3))),
         ],
       ]),
       _tableCell(status),
       _tableCell(agents == null ? '\u2014' : '$agents'),
-      _tableCell(manual == null
-          ? '\u2014'
-          : manual
-              ? 'Ask first'
-              : 'Auto'),
+      _tableCell(approvals),
       _machineMenu(i, connect: canConnect),
     );
   }

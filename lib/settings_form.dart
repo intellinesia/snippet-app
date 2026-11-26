@@ -372,6 +372,7 @@ class SettingsRow extends StatelessWidget {
         (icon != null || iconData != null
             ? SettingsIcon(icon, iconData: iconData, color: iconColor ?? tint)
             : null);
+    final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.5;
     final s = sub;
     final hasSub = subWidget != null || (s != null && s.isNotEmpty);
     final text = Column(
@@ -380,8 +381,8 @@ class SettingsRow extends StatelessWidget {
       children: [
         labelWidget ??
             Text(label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                maxLines: largeText ? null : 1,
+                overflow: largeText ? null : TextOverflow.ellipsis,
                 style: Grouped.titleStyle(tint)),
         if (hasSub)
           Padding(
@@ -396,6 +397,51 @@ class SettingsRow extends StatelessWidget {
       ],
     );
     final v = value;
+    final hasValue = v != null && v.isNotEmpty;
+    // Large text: the value or control wraps under the name, never clips.
+    if (largeText && (hasValue || trailing != null)) {
+      final stacked = ConstrainedBox(
+        constraints: BoxConstraints(
+            minHeight: hasSub ? Grouped.rowMinTwoLine : Grouped.rowMin),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+              horizontal: Grouped.padX, vertical: Grouped.padY),
+          child: Row(children: [
+            if (lead != null) ...[lead, SizedBox(width: Grouped.iconGap)],
+            Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    text,
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Wrap(
+                          spacing: 12,
+                          runSpacing: 6,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            if (hasValue)
+                              Text(v, style: Grouped.valueStyle(valueColor)),
+                            if (trailing != null) trailing!,
+                          ]),
+                    ),
+                  ]),
+            ),
+            if (chevron)
+              Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: AppIcon('chevron-right',
+                    size: Grouped.chevron, color: Grouped.faint),
+              ),
+          ]),
+        ),
+      );
+      if (onTap == null && onLongPress == null) return stacked;
+      return Material(
+        type: MaterialType.transparency,
+        child: InkWell(onTap: onTap, onLongPress: onLongPress, child: stacked),
+      );
+    }
     Widget row(double? valueMax) => Row(children: [
           if (lead != null) ...[lead, SizedBox(width: Grouped.iconGap)],
           Expanded(child: text),

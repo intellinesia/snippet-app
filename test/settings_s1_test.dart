@@ -23,6 +23,12 @@ class _FakeClient extends DaemonClient {
       const [];
 }
 
+class _MachineClient extends _FakeClient {
+  @override
+  Future<ServerConfig> getConfig({bool force = false}) async =>
+      ServerConfig.fromJson({'manual_approval': false});
+}
+
 void _spec(String name, Future<void> Function(WidgetTester) body) {
   testWidgets(name, (t) async {
     SharedPreferences.setMockInitialValues({});
@@ -341,5 +347,34 @@ void main() {
       expect(find.byKey(const Key('settings-sheet-index')), findsOneWidget);
       expect(find.byKey(const Key('settings-sheet')), findsOneWidget);
     });
+  });
+
+  _spec('D7 at 200% text the Machines page reflows instead of clipping',
+      (t) async {
+    final ctx = await _host(t, 1440, 900, textScale: 2);
+    const inst = Instance(
+        name: 'canvas-qa', url: 'http://127.0.0.1:1', token: 'tok');
+    unawaited(showSettings(ctx,
+        client: _MachineClient(),
+        instances: const [inst],
+        active: inst,
+        onRemove: (_) {},
+        page: SettingsPage.general,
+        onSearchAll: (_) {}));
+    await t.pumpAndSettle();
+    expect(t.takeException(), isNull);
+    // Values sit under the machine name, not in table columns.
+    expect(find.text('Status'), findsNothing);
+    final name = t.getRect(find.text('canvas-qa').last);
+    final status = t.getRect(find.text('Offline'));
+    expect(status.top, greaterThanOrEqualTo(name.bottom));
+    expect(find.text('Approvals: Auto'), findsOneWidget);
+    // The Ask/Yolo control wraps under its label and holds its text.
+    final yolo = t.getRect(find.text('Yolo'));
+    final seg = t.getRect(find
+        .ancestor(of: find.text('Yolo'), matching: find.byType(IntrinsicHeight))
+        .first);
+    expect(yolo.top >= seg.top && yolo.bottom <= seg.bottom, isTrue);
+    expect(yolo.top, greaterThan(t.getRect(find.text('Approvals').last).bottom));
   });
 }
