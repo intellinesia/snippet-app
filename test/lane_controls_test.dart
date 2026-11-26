@@ -82,7 +82,8 @@ void main() {
       expect(find.text('cargo test'), findsNothing);
       final stopFinder = find.widgetWithText(LaneControlButton, 'Stop');
       expect(stopFinder, findsOneWidget);
-      expect(t.getSize(stopFinder).height, 44.0);
+      // v19 phone lane actions are 36-high neutral chips.
+      expect(t.getSize(stopFinder).height, 36.0);
 
       await t.tap(stopFinder);
       await t.pumpAndSettle();

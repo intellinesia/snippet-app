@@ -368,13 +368,20 @@ void main() {
         expect(find.text('Steps so far'), findsOneWidget);
         expect(find.text('1 command'), findsOneWidget);
       } else {
-        // Phone: the finished run is one pill, the live run is the dock.
+        // Phone v19: the finished run is one pill, the live run is a compact
+        // content-sized dock that reads state in words rather than embedding
+        // the command line from the superseded CH-12 bar.
         expect(find.byType(WorkLine), findsNothing);
         expect(find.byType(DenseToolRow), findsNothing);
         expect(find.byType(ActivityPill), findsOneWidget);
         expect(find.byType(ActivityDock), findsOneWidget);
+        final dock = tester.getRect(find.byType(ActivityDock));
+        expect(dock.height, 36);
+        expect(dock.width, lessThanOrEqualTo(236));
         expect(
-            find.textContaining('Running flutter analyze', findRichText: true),
+            find.descendant(
+                of: find.byType(ActivityDock),
+                matching: find.textContaining('running', findRichText: true)),
             findsOneWidget);
 
         await tester.tap(find.byType(ActivityPill));
