@@ -962,20 +962,23 @@ extension _SessionScreenComposerExt on _SessionScreenState {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            _shortcutChip('Continue',
-                primary: false, enabled: !widget.readOnly, onTap: continueNow),
-            const SizedBox(width: 8),
-            _shortcutChip('Summarise',
-                primary: false,
-                enabled: !widget.readOnly,
-                onTap: () => _performMacAction('compact')),
-            const SizedBox(width: 8),
-            _shortcutChip('Stop',
-                primary: running,
-                enabled: running,
-                onTap: running ? () => _send({'kind': 'interrupt'}) : null),
-          ]),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(children: [
+              _shortcutChip('Continue',
+                  primary: false, enabled: !widget.readOnly, onTap: continueNow),
+              const SizedBox(width: 8),
+              _shortcutChip('Summarise',
+                  primary: false,
+                  enabled: !widget.readOnly,
+                  onTap: () => _performMacAction('compact')),
+              const SizedBox(width: 8),
+              _shortcutChip('Stop',
+                  primary: running,
+                  enabled: running,
+                  onTap: running ? () => _send({'kind': 'interrupt'}) : null),
+            ]),
+          ),
           const SizedBox(height: 8),
           Text(
               running

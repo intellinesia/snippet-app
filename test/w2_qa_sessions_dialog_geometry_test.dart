@@ -7,13 +7,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/app_dialog.dart';
-import 'package:snippet/dialog_widgets.dart';
+import 'package:snippet/chat/stage_bar.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/mobile_home/sessions_list_phone.dart';
 import 'package:snippet/screens/new_session_draft.dart';
 import 'package:snippet/screens/session.dart';
 import 'package:snippet/screens/session_handoff.dart';
 import 'package:snippet/theme.dart';
+import 'package:snippet/widgets.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -148,26 +149,35 @@ void main() {
         }
         expect(t.takeException(), isNull);
 
-        final back = t.getRect(find.bySemanticsLabel('Back'));
-        final title = t.getRect(find.text('Wire the wake').first);
-        final sub = t.getRect(find.text('Settled - feat/redesign-all'));
-        final more = t.getRect(find.bySemanticsLabel('Session actions'));
+        final header = find.byType(StageBar);
+        final headerCard = t.getRect(find
+            .descendant(of: header, matching: find.byType(Container))
+            .first);
+        final backIcon = find.descendant(
+            of: header,
+            matching: find.byWidgetPredicate(
+                (x) => x is AppIcon && x.name == 'chevron-left'));
+        final moreIcon = find.descendant(
+            of: header,
+            matching: find.byWidgetPredicate(
+                (x) => x is AppIcon && x.name == 'more-horizontal'));
         final wake = t.getRect(find
             .ancestor(of: find.text('Wake'), matching: find.byType(InkWell))
             .first);
 
         debugPrint(
-            'MEASURE SE-03 w=${w.toInt()} s=${s}x: back=${back.left.toStringAsFixed(1)},${back.width.toStringAsFixed(1)}x${back.height.toStringAsFixed(1)} '
-            'title.x=${title.left.toStringAsFixed(1)} sub.x=${sub.left.toStringAsFixed(1)} '
-            'more.r=${more.right.toStringAsFixed(1)} (${more.width.toStringAsFixed(1)}x${more.height.toStringAsFixed(1)}) '
+            'MEASURE SE-03 w=${w.toInt()} s=${s}x: header=${headerCard.left.toStringAsFixed(1)},${headerCard.width.toStringAsFixed(1)}x${headerCard.height.toStringAsFixed(1)} '
             'wake=${wake.width.toStringAsFixed(1)}x${wake.height.toStringAsFixed(1)}');
 
-        expect(back.left, 0);
-        expect(back.size, const Size(48, 48));
-        expect(title.left, 56);
-        expect(sub.left, 56);
-        expect(more.right, w - 4);
-        expect(more.size, const Size(48, 48));
+        // v19 XO-03 supersedes the old plain bar: the phone chat header is a
+        // surface card inset x16 with one trailing icon. Wake keeps its existing
+        // settled-bar target because the written delta does not supersede it.
+        expect(headerCard.left, 16);
+        expect(headerCard.width, w - 32);
+        if (s == 1.0) expect(headerCard.height, 58);
+        expect(headerCard.height, greaterThanOrEqualTo(58));
+        expect(backIcon, findsOneWidget);
+        expect(moreIcon, findsOneWidget);
         expect(wake.height, greaterThanOrEqualTo(44));
 
         await t.pumpWidget(const SizedBox.shrink());
