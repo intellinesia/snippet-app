@@ -5,7 +5,7 @@ import 'package:snippet/chat/chat_card.dart';
 import 'package:snippet/theme.dart';
 import 'package:snippet/turn_changes_card.dart';
 
-// v19 D4/D6: Allow once first, 333 x 48 style buttons at card padding;
+// v19 D2/D4: approval actions sit three across in 36-high buttons;
 // turn changes is a collapsed 48-high row with no full-width review CTA.
 void main() {
   for (final vw in [360.0, 393.0, 430.0]) {
@@ -55,12 +55,15 @@ void main() {
         // ignore: avoid_print
         print('W $vw x$scale allowOnce=$onceBtn always=$always deny=$deny '
             'card=${card.width}');
-        expect(once.top, lessThan(always.top));
-        expect(onceBtn.width, w);
-        expect(onceBtn.height, greaterThanOrEqualTo(48));
-        expect(always.width, closeTo((w - 8) / 2, 0.1));
-        expect(deny.width, closeTo((w - 8) / 2, 0.1));
-        expect(always.height, deny.height);
+        expect(onceBtn.top, always.top);
+        expect(onceBtn.top, deny.top);
+        final buttonWidth = (w - 16) / 3;
+        expect(onceBtn.width, closeTo(buttonWidth, 0.1));
+        expect(always.width, closeTo(buttonWidth, 0.1));
+        expect(deny.width, closeTo(buttonWidth, 0.1));
+        expect(onceBtn.height, 36);
+        expect(always.height, 36);
+        expect(deny.height, 36);
         expect(card.width, w);
         expect(find.text('7 files changed'), findsOneWidget);
         expect(t.takeException(), isNull);
