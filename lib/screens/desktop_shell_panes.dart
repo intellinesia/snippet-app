@@ -1306,12 +1306,13 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     final runningTab = _openRunningSessionTab;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 9),
-      child: Row(children: [
+      child: LayoutBuilder(builder: (context, box) => Row(children: [
         _FooterBtn(
             icon: 'settings',
             tooltip: 'Settings',
             label: 'Settings',
-            hint: kMacOS ? 'Cmd ,' : 'Ctrl ,',
+            // The narrowest sidebar has no room for the shortcut hint.
+            hint: box.maxWidth < 210 ? null : (kMacOS ? 'Cmd ,' : 'Ctrl ,'),
             onTap: _openShellSettings),
         const SizedBox(width: 4),
         _FooterBtn(
@@ -1332,7 +1333,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
               tooltip: _chatTab == null ? 'No session pane' : 'Pane layout',
               onTap: _chatTab == null ? null : () => _showPaneAddMenu(ctx)),
         ),
-      ]),
+      ])),
     );
   }
 

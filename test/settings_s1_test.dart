@@ -214,6 +214,17 @@ void main() {
     expect(find.byKey(const Key('settings-card')), findsNothing);
   });
 
+  _spec('D5 closing returns focus to the opener', (t) async {
+    final ctx = await _host(t, 1440, 900);
+    _behindFocus.requestFocus();
+    await t.pump();
+    await _open(t, ctx, page: SettingsPage.vault, backLabel: 'App Redesign');
+    expect(_behindFocus.hasFocus, isFalse);
+    await t.sendKeyEvent(LogicalKeyboardKey.escape);
+    await t.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus, _behindFocus);
+  });
+
   _spec('D5 plain reopen lands on the last page used', (t) async {
     final ctx = await _host(t, 1440, 900);
     await _open(t, ctx, page: SettingsPage.memory);
