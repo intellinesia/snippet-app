@@ -184,7 +184,7 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
                 height: 28,
                 decoration: BoxDecoration(
                   color: active
-                      ? AppColors.surface2
+                      ? PaneRow.tabPlate
                       : (_hover || _focus)
                           ? AppColors.hoverPlate
                           : Colors.transparent,
@@ -204,7 +204,7 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
                       overflow: TextOverflow.ellipsis,
                       style: sans(PaneRow.label,
                           weight: W.body,
-                          color: active ? AppColors.fg1 : PaneRow.labelOff),
+                          color: active ? PaneRow.labelOn : PaneRow.labelOff),
                     ),
                   ),
                   if (marker != null) ...[
@@ -524,7 +524,7 @@ class _MainTabsStripState extends State<MainTabsStrip> {
           child: IconBtn(
             'plus',
             size: 28,
-            iconSize: 13,
+            iconSize: 11,
             tooltip: 'New session',
             onTap: widget.onNewSession,
           ),

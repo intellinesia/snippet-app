@@ -1262,6 +1262,19 @@ Color get readingBg => AppColors.canvas;
 /// Desktop pane rows and their tab pills (Capy metrics), shared by the
 /// window tabs, the pane rows and the right panel.
 abstract final class PaneRow {
+  /// Active pane-pill plate: Capy's #1A, a step above the window tab.
+  static Color get plate => identical(currentTheme, _quietCapy)
+      ? const Color(0xFF1A1A1A)
+      : currentTheme.surface2;
+
+  /// Active window-tab plate: Capy's #15.
+  static Color get tabPlate => identical(currentTheme, _quietCapy)
+      ? const Color(0xFF151515)
+      : currentTheme.surface2;
+
+  /// Active labels sit well below white, as Capy's do.
+  static Color get labelOn => Color.lerp(AppColors.fg1, AppColors.fg2, 0.6)!;
+
   static const double height = 44;
   static const double pill = 28;
   static const double radius = 7;

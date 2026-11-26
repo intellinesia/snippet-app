@@ -77,8 +77,8 @@ class DeskComposerPlusButton extends StatelessWidget {
   Widget build(BuildContext context) => Builder(
         builder: (anchor) => DeskIconButton('plus',
             tooltip: 'Add',
-            iconSize: 15,
-            color: AppColors.fg2,
+            iconSize: 13,
+            color: AppColors.fg3,
             onTap: () => unawaited(_open(anchor))),
       );
 }

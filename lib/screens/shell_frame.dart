@@ -86,7 +86,7 @@ class ShellTitleRow extends StatelessWidget {
                     (reserveWindowControls ? kShellWindowControlsWidth : 16) -
                     3 * 28 -
                     6)
-                .clamp(0.0, reserveWindowControls ? 68.0 : 122.0),
+                .clamp(0.0, reserveWindowControls ? 116.0 : 122.0),
             // The brand sits in the sidebar's own row below, as in Capy.
             child: const SizedBox.shrink(),
           ),

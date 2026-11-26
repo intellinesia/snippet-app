@@ -62,7 +62,7 @@ class ChatHeaderBar extends StatelessWidget {
               height: PaneRow.pill,
               padding: const EdgeInsets.fromLTRB(9, 0, 11, 0),
               decoration: BoxDecoration(
-                color: AppColors.surface2,
+                color: PaneRow.plate,
                 borderRadius: BorderRadius.circular(PaneRow.radius),
               ),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -72,7 +72,7 @@ class ChatHeaderBar extends StatelessWidget {
                   child: Text(title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(PaneRow.label, color: AppColors.fg1)),
+                      style: sans(PaneRow.label, color: PaneRow.labelOn)),
                 ),
               ]),
             ),

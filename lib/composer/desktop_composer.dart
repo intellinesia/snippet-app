@@ -198,7 +198,8 @@ class DeskActionButton extends StatelessWidget {
     final Color ink;
     if (icon == 'arrow-up' || icon == 'mic' || icon == 'stop') {
       fill = AppColors.accent;
-      ink = AppColors.accentFg;
+      // Capy inks its blue action black.
+      ink = const Color(0xFF000000);
     } else if (on || soft || danger) {
       fill = AppColors.surface3;
       ink = AppColors.fg1;
@@ -345,7 +346,8 @@ class DeskMachineLine extends StatelessWidget {
     ].where((p) => p.isNotEmpty).join(' · ');
     if (parts.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
+      // Aligned with the card's content, as Capy's footer is.
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         AppIcon('laptop', size: 13, color: AppColors.fg3),
         const SizedBox(width: 7),
@@ -420,8 +422,9 @@ class DeskComposerCard extends StatelessWidget {
         border: InputBorder.none,
         hintText: hint,
         hintMaxLines: 1,
+        // Capy's placeholder sits far back, near the card's edge tone.
         hintStyle: fieldStyle.copyWith(
-            color: AppColors.fg3, overflow: TextOverflow.ellipsis),
+            color: AppColors.fg4, overflow: TextOverflow.ellipsis),
       );
 
   @override
@@ -513,19 +516,23 @@ class DeskModelChip extends StatelessWidget {
         tooltip: 'Model',
         padding: const EdgeInsets.symmetric(horizontal: 4),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
+          if ((icon ?? '').isNotEmpty) ...[
+            AppIcon(icon!, size: 12, color: AppColors.fg3),
+            const SizedBox(width: 5),
+          ],
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 150),
             child: Text(label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: sans(12.5, height: 16 / 12.5, color: AppColors.fg2)),
+                style: sans(12, height: 16 / 12, color: AppColors.fg3)),
           ),
           if ((effort ?? '').trim().isNotEmpty) ...[
             const SizedBox(width: 5),
             Text(effort!,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: sans(12.5, height: 16 / 12.5, color: AppColors.fg3)),
+                style: sans(12, height: 16 / 12, color: AppColors.fg4)),
           ],
           const SizedBox(width: 3),
           AppIcon('chevron-down', size: 11, color: AppColors.fg4),

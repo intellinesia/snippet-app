@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+import 'dart:ui' show PointMode;
 import '../quiet.dart' show QuietHand;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -471,16 +473,17 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
       Material(
         key: key,
         color: Colors.transparent,
+        // Capy: quiet borderless controls; hover shows the plate.
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(R.of(5)),
-          side: BorderSide(color: AppColors.border2),
+          borderRadius: BorderRadius.circular(R.of(6)),
         ),
         child: InkWell(
-          borderRadius: BorderRadius.circular(R.of(5)),
+          borderRadius: BorderRadius.circular(R.of(6)),
+          hoverColor: AppColors.surface2,
           onTap: onTap,
           child: Container(
             constraints: const BoxConstraints(minHeight: 24),
-            padding: EdgeInsets.symmetric(horizontal: S.of(9), vertical: 3),
+            padding: EdgeInsets.symmetric(horizontal: S.of(6), vertical: 3),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               if (lead != null) ...[lead, SizedBox(width: S.s6)],
               ConstrainedBox(
@@ -488,10 +491,10 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                 child: Text(label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(12, color: AppColors.fg2)),
+                    style: sans(12, color: AppColors.fg3)),
               ),
               SizedBox(width: S.s4),
-              AppIcon('chevron-down', size: 10, color: AppColors.fg3),
+              AppIcon('chevron-down', size: 10, color: AppColors.fg4),
             ]),
           ),
         ),
@@ -651,12 +654,13 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
         focusNode: _focus,
         minLines: sheet ? 3 : 2,
         maxLines: 10,
-        style: sans(sheet ? 16 : 15, height: 1.5, color: AppColors.fg1),
+        style: sans(sheet ? 16 : 13.5, height: 1.5, color: AppColors.fg1),
         decoration: InputDecoration(
           isCollapsed: true,
           border: InputBorder.none,
           hintText: 'Ask, build, or type / for commands',
-          hintStyle: sans(sheet ? 16 : 15, color: AppColors.fg3),
+          hintStyle: sans(sheet ? 16 : 13.5,
+              color: sheet ? AppColors.fg3 : AppColors.fg4),
         ),
       );
 
@@ -716,40 +720,32 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
         ]),
       );
 
-  /// Who this session goes to: face, name and one meta line.
-  Widget _identity() {
+  /// Capy's context line above the card: who, where, and on which tree.
+  Widget _contextLine() {
     final where = [
       if (_folder != null) _folderLabel,
       if (_folder != null) _worktreeLabel,
     ].join(' \u00b7 ');
-    return Row(children: [
-      ClipRRect(
-          borderRadius: BorderRadius.circular(R.of(10)),
-          child: AgentMochi(_agentId, size: 40)),
-      SizedBox(width: S.s12),
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(_agentName,
-                style: sans(20, weight: W.label, color: AppColors.fg1)),
-            Row(children: [
-              if (_starting) ...[
-                const Spinner(size: 12),
-                SizedBox(width: S.s6),
-              ],
-              Flexible(
-                child: Text(
-                    _starting
-                        ? (where.isEmpty ? 'Starting' : 'Starting on $where')
-                        : (where.isEmpty ? 'Choose a folder to start' : where),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(13, color: AppColors.fg3)),
-              ),
-            ]),
-          ],
-        ),
+    final text = _starting
+        ? (where.isEmpty ? 'Starting' : 'Starting on $where')
+        : (where.isEmpty ? 'Choose a folder to start' : where);
+    return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+      if (_starting) ...[
+        const Spinner(size: 11),
+        const SizedBox(width: 6),
+      ] else ...[
+        AgentMochi(_agentId, size: 14),
+        const SizedBox(width: 6),
+      ],
+      Text(_agentName, style: sans(12, color: AppColors.fg2)),
+      const SizedBox(width: 10),
+      AppIcon('folder', size: 12, color: AppColors.fg4),
+      const SizedBox(width: 5),
+      Flexible(
+        child: Text(text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: sans(12, color: AppColors.fg3)),
       ),
     ]);
   }
@@ -773,7 +769,13 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
         ]),
       );
 
-  Widget _hero() {
+  Widget _hero() => Stack(children: [
+        const Positioned.fill(
+            child: IgnorePointer(child: CustomPaint(painter: _DotField()))),
+        _heroBody(),
+      ]);
+
+  Widget _heroBody() {
     final canSend = !_starting && _input.text.trim().isNotEmpty;
     final current = _current;
     return LayoutBuilder(
@@ -784,15 +786,15 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
             child: Padding(
               padding: EdgeInsets.fromLTRB(S.s32, S.s24, S.s32, 70),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 680),
+                constraints: const BoxConstraints(maxWidth: 710),
                 child: SizedBox(
                   width: double.infinity,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _identity(),
-                      SizedBox(height: S.s24),
+                      _contextLine(),
+                      SizedBox(height: S.s12),
                       if (_starting && _input.text.trim().isNotEmpty)
                         _sentMessage(),
                       if (_startError != null) _startFailure(_startError!),
@@ -802,8 +804,8 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                               S.of(16), S.of(14), S.of(10), S.s8),
                           decoration: BoxDecoration(
                             color: AppColors.surface1,
-                            borderRadius: BorderRadius.circular(R.lg),
-                            border: Border.all(color: AppColors.border2),
+                            borderRadius: BorderRadius.circular(R.of(10)),
+                            border: Border.all(color: AppColors.line),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -868,13 +870,6 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                               ),
                             ],
                           ),
-                        ),
-                      if (!_starting)
-                        Padding(
-                          padding: EdgeInsets.only(top: S.s8, left: S.s12),
-                          child: Text(
-                              'Enter sends \u00b7 Shift Enter for a new line \u00b7 @ names another agent',
-                              style: sans(12, color: AppColors.fg3)),
                         ),
                       if (widget.footer != null)
                         widget.footer!
@@ -998,7 +993,8 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                               borderRadius: BorderRadius.circular(R.of(5)),
                               onTap: _addFiles,
                               child: Container(
-                                constraints: const BoxConstraints(minHeight: 24),
+                                constraints:
+                                    const BoxConstraints(minHeight: 24),
                                 padding: EdgeInsets.symmetric(
                                     horizontal: S.of(9), vertical: 3),
                                 child: Row(
@@ -1214,10 +1210,12 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           SpecBar(
               title: 'New session',
-              onBack: widget.onCancel ?? () => Navigator.of(context).maybePop()),
+              onBack:
+                  widget.onCancel ?? () => Navigator.of(context).maybePop()),
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -2057,4 +2055,39 @@ class _FolderPopoverState extends State<_FolderPopover> {
       ),
     );
   }
+}
+
+/// Capy's new-thread canvas: a blue halftone whose dots shrink away from
+/// the top-left corner.
+class _DotField extends CustomPainter {
+  const _DotField();
+
+  static const _step = 6.3;
+  static const _bands = 8;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rx = size.width * 0.6, ry = size.height * 0.5;
+    final points = List.generate(_bands, (_) => <Offset>[]);
+    for (var y = _step / 2; y < ry; y += _step) {
+      for (var x = _step / 2; x < rx; x += _step) {
+        final d = math.sqrt((x / rx) * (x / rx) + (y / ry) * (y / ry));
+        final v = 1 - d;
+        if (v <= 0.03) continue;
+        points[(v * _bands).floor().clamp(0, _bands - 1)].add(Offset(x, y));
+      }
+    }
+    final paint = Paint()..strokeCap = StrokeCap.round;
+    for (var b = 0; b < _bands; b++) {
+      if (points[b].isEmpty) continue;
+      final v = (b + 1) / _bands;
+      paint
+        ..strokeWidth = 1.0 + 2.6 * v
+        ..color = const Color(0xFF26345F).withValues(alpha: 0.25 + 0.5 * v);
+      canvas.drawPoints(PointMode.points, points[b], paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DotField old) => false;
 }

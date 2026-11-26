@@ -519,11 +519,10 @@ class _SessionRailState extends State<SessionRail> {
                   ),
                 ),
               )
-            // Desktop: the panel's own pane row, then its page, flat on the inset panel.
-            : Container(
+            // Desktop: the panel's own pane row, then its page, flat on the
+            // inset panel, whose own edge is the one seam.
+            : SizedBox(
                 width: outer,
-                decoration: BoxDecoration(
-                    border: Border(left: BorderSide(color: AppColors.paneLine))),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [

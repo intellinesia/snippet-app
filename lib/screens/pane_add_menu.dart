@@ -212,7 +212,7 @@ class _PanePillState extends State<PanePill> {
                 10, 0, widget.onClose == null ? 12 : 4, 0),
             decoration: BoxDecoration(
               color: widget.active
-                  ? AppColors.surface2
+                  ? PaneRow.plate
                   : _hover
                       ? AppColors.hoverPlate
                       : null,
@@ -232,7 +232,7 @@ class _PanePillState extends State<PanePill> {
                     overflow: TextOverflow.ellipsis,
                     style: sans(PaneRow.label,
                         color: widget.active
-                            ? AppColors.fg1
+                            ? PaneRow.labelOn
                             : PaneRow.labelOff)),
               ),
               if (widget.onClose != null) ...[

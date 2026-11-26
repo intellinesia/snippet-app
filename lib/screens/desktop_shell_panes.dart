@@ -224,9 +224,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     });
   }
 
-  static String _line(List<String> parts) =>
-      parts.where((p) => p.trim().isNotEmpty).join(' \u00b7 ');
-
   /// Whether a left-pane tab draws its own pane row (and so lists the tabs).
   bool _ownsPaneRow(_ShellTab t) {
     if (kMobile) return false;
@@ -339,42 +336,20 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     final running = mac?.running ?? s?.running ?? false;
     final needs = mac?.state?.pendingQuestion != null ||
         (s != null && sessionNeedsYou(s));
-    final profile = (s?.profile ?? t.profile ?? '').trim();
     final owner = s?.displayAgentId;
-    final ownerName = owner == null
-        ? ''
-        : _coordinationAgents
-                .where((a) => a.id == owner)
-                .map((a) => a.displayName.trim())
-                .where((n) => n.isNotEmpty)
-                .firstOrNull ??
-            '';
-    final started = DateTime.tryParse(mac?.state?.turnStartedAt ?? '');
-    final ran = running && started != null
-        ? DateTime.now().difference(started.toLocal())
-        : null;
-    final runFor = ran == null || ran.inMinutes < 1
-        ? ''
-        : ran.inHours < 1
-            ? ' ${ran.inMinutes}m'
-            : ' ${ran.inHours}h ${ran.inMinutes % 60}m';
-    final state = needs ? 'Needs you' : (running ? 'Running$runFor' : 'Idle');
     return ChatHeaderBar(
       tabs: _paneTabsFor(t),
       agentIds: [owner ?? 'snippet'],
       title: t.title.trim().isEmpty ? 'Session' : t.title.trim(),
-      // "Running 14m · Duke · Opus"
-      subtitle: _line([
-        state,
-        ownerName,
-        if (profile.isNotEmpty) prettyProfile(profile),
-      ]),
+      // Capy keeps the row quiet: state lives in the panel; only a
+      // request for the user surfaces here.
+      subtitle: needs ? 'Needs you' : '',
       live: running && !needs,
       leading: [
         Builder(
           builder: (ctx) => IconBtn('plus',
               size: 28,
-              iconSize: 14,
+              iconSize: 12,
               tooltip: 'Open a tab',
               onTap: () => _showPaneAddMenu(ctx)),
         ),

@@ -4,7 +4,6 @@ import 'dart:async';
 import '../desk_attention.dart';
 import '../desktop_look.dart';
 import '../chat/chat_header_bar.dart';
-import '../chat/signal_row.dart' show prettyProfile;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
