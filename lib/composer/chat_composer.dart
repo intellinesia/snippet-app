@@ -10,7 +10,7 @@ import '../theme.dart';
 import 'composer_card.dart';
 import 'voice_note.dart';
 
-const double kDesktopComposerWidth = 960;
+const double kDesktopComposerWidth = 760;
 
 /// The one composer for session chats, agent threads and group threads, on
 /// phone and desktop: field, attach, voice note, send and stop, docked with

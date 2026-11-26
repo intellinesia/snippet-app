@@ -10,7 +10,7 @@ import '../widgets.dart';
 /// them only lay out their content row.
 ///
 ///   +-------------------+---------------------------------------------+
-///   | ShellTitleRow 40  | ShellTabStripFrame 36 (tabs | tools)        |
+///   | ShellTitleRow 40  | ShellTabStripFrame 40 (tabs | tools)        |
 ///   +-------------------+---------------------------------------------+
 ///   | sidebar body      | centre panes (bg, no card, gaps 0)          |
 ///   | (s1, right edge   |                                             |
@@ -22,7 +22,7 @@ import '../widgets.dart';
 ///   | ShellStatusBarFrame 26, full width, s1, hairline top            |
 ///   +-----------------------------------------------------------------+
 const double kShellTitleRowHeight = 40;
-const double kShellTabStripHeight = 36;
+const double kShellTabStripHeight = 40;
 const double kShellStatusBarHeight = 26;
 const double kShellFooterHeight = 30;
 
@@ -164,7 +164,7 @@ class ShellCollapsedNavCluster extends StatelessWidget {
   }
 }
 
-/// Centre-column tab strip band: 36 high, hairline at the bottom. [tabs]
+/// Centre-column tab strip band: 40 high, hairline at the bottom. [tabs]
 /// fills the space between [leading] (collapsed-sidebar cluster) and
 /// [trailing] (per-tab tools).
 class ShellTabStripFrame extends StatelessWidget {

@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/screens/shell_frame.dart';
 
 void main() {
-  testWidgets('desktop shell uses the revised 40/36 top chrome density',
+  testWidgets('desktop shell uses the unified 40 pt top chrome density',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: SizedBox(
@@ -37,8 +37,8 @@ void main() {
     expect(tester.getRect(find.text('Snippet')).left,
         greaterThanOrEqualTo(kShellWindowControlsWidth));
     expect(strip.height, kShellTabStripHeight);
-    expect(strip.height, 36);
-    expect(tab.top - strip.top, closeTo(2, 1));
+    expect(strip.height, 40);
+    expect(tab.top - strip.top, closeTo(4, 1));
     expect(tab.height, 32);
   });
 }

@@ -167,7 +167,8 @@ class DeskIconButton extends StatelessWidget {
       );
 }
 
-/// 28px square action: send (light fill, grey when off) or stop (soft fill).
+/// 28px square action in the quiet tonal language; state is the icon and
+/// enabled/disabled ink, never a bright plate.
 class DeskActionButton extends StatelessWidget {
   const DeskActionButton({
     super.key,
@@ -192,15 +193,12 @@ class DeskActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color fill;
     final Color ink;
-    if (busy) {
+    if (on || soft || danger) {
       fill = AppColors.surface2;
-      ink = AppColors.fg2;
-    } else if (on || soft || danger) {
-      fill = AppColors.accentFill;
-      ink = AppColors.accentFg;
+      ink = AppColors.fg1;
     } else {
       fill = AppColors.surface2;
-      ink = AppColors.fg2;
+      ink = AppColors.fg3;
     }
     return DeskButton(
       size: 28,

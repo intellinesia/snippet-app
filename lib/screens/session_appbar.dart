@@ -306,12 +306,12 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     }
   }
 
-  // On desktop, keep chat content to a comfortable reading width (centered),
+  // On desktop, keep chat content to a readable measure (centred),
   // rather than stretching across the whole pane.
   Widget _centerWide(Widget child, {double extra = 0}) => widget.embedded
       ? Center(
           child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: 960 + extra), child: child))
+              constraints: BoxConstraints(maxWidth: 760 + extra), child: child))
       : child;
 
   // Mobile chat header: a back button that returns to the session list, the
@@ -1361,8 +1361,11 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   Widget _disconnectedBanner() {
     return Container(
       height: kMobile ? 44 : null,
-      margin: kMobile ? EdgeInsets.symmetric(horizontal: S.s20, vertical: S.s4) : EdgeInsets.zero,
-      padding: EdgeInsets.symmetric(horizontal: S.s16, vertical: kMobile ? 0 : S.of(10)),
+      margin: kMobile
+          ? EdgeInsets.symmetric(horizontal: S.s20, vertical: S.s4)
+          : EdgeInsets.zero,
+      padding: EdgeInsets.symmetric(
+          horizontal: S.s16, vertical: kMobile ? 0 : S.of(10)),
       decoration: BoxDecoration(
         color: AppColors.surface2,
         borderRadius: kMobile ? BorderRadius.circular(8) : null,
@@ -1524,12 +1527,6 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
           ],
         ],
       );
-
-  /// Opens the session panel, docked or floating, whichever fits.
-  void _showPanel() {
-    if (sessionRailCollapsed.value) setSessionRailCollapsed(false);
-    sessionRailFloating.value = true;
-  }
 
   Widget _mcHeaderActions(HarnessState? s) => Row(
         mainAxisSize: MainAxisSize.min,

@@ -989,12 +989,6 @@ extension _SessionScreenComposerExt on _SessionScreenState {
               resumeTokens: (_cold!['resume_tokens'] as num?)?.toInt(),
               onPick: _onColdPick)
           : null,
-      // No send-mode legend; only the new-line key, while idle.
-      deskHint: () => DeskHint([
-        ('\u21b5', running ? 'queue' : 'send'),
-        ('\u21e7\u21b5', 'new line'),
-        ('esc', 'dismiss'),
-      ]),
       running: running,
       sending: _sendingAudio,
       hasDraft: () => _hasDraft,
