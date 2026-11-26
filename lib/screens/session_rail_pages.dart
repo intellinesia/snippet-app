@@ -122,39 +122,31 @@ extension _RailPages on _SessionRailState {
         ),
       );
 
-  /// Desktop session inspector (W22-W25): one vertical hairline on the left,
-  /// flat on the panel with three sections (Plan, Changes, Task/Files), no
-  /// cards and no fg4 text.
+  /// Desktop session details (frame 06): flat on the rail, hairline-separated
+  /// sections for status, participants, activity, changes and artifacts.
   List<Widget> _overviewRoot() {
     final s = widget.state;
     final w = widget;
     final agentId = (w.agentId ?? w.ownAgent ?? 'snippet').trim();
-    final agentLabel = agentId.isEmpty
-        ? 'Agent'
-        : '${agentId[0].toUpperCase()}${agentId.substring(1)}';
-    final statusWord = switch (s?.status) {
-      'running' || 'thinking' || 'tool' => 'Running',
-      'waiting_approval' || 'waiting_question' => 'Waiting on you',
-      _ => 'Idle',
-    };
     final head = Padding(
-      padding: const EdgeInsets.fromLTRB(4, 6, 4, 16),
-      child: Row(children: [
-        AgentMochi(agentId.isEmpty ? 'snippet' : agentId, size: 16),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text('$agentLabel \u00b7 $statusWord',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: sans(12, color: AppColors.fg2)),
-        ),
-        if (w.floating)
-          IconBtn('x',
-              size: 28,
-              iconSize: 15,
-              tooltip: 'Close',
-              onTap: () => sessionRailFloating.value = false),
-      ]),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: SizedBox(
+        height: w.floating ? 28 : 20,
+        child: Row(children: [
+          Expanded(
+            child: Text('Session details',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(14, weight: W.label, color: AppColors.fg1)),
+          ),
+          if (w.floating)
+            IconBtn('x',
+                size: 28,
+                iconSize: 15,
+                tooltip: 'Close',
+                onTap: () => sessionRailFloating.value = false),
+        ]),
+      ),
     );
     if (s == null && _loading) {
       return [
@@ -202,9 +194,18 @@ extension _RailPages on _SessionRailState {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            _detailsHead('Status', first: true),
+            _statusLine(s),
+            _detailsHead('Participants'),
+            ..._participantRows(agentId, s),
+            if (_activitySteps(s).isNotEmpty) ...[
+              _detailsHead('Activity'),
+              for (final step in _activitySteps(s)) _activityRow(step),
+            ],
+            _divider(),
             _flatSectionHead(
               'Changes',
-              top: 20,
+              top: 0,
               onTap: w.onChanges != null ? () => _go('changes') : null,
             ),
             if (gitFiles.isNotEmpty)
@@ -265,6 +266,10 @@ extension _RailPages on _SessionRailState {
                 )
             else
               Text('No changes yet.', style: sans(12, color: AppColors.fg2)),
+            if (_artifacts.isNotEmpty) ...[
+              _detailsHead('Artifacts'),
+              for (final a in _artifacts.reversed.take(4)) _artifactRow(a),
+            ],
             if (t != null) ...[
               _flatSectionHead(
                 'Task',
@@ -322,6 +327,197 @@ extension _RailPages on _SessionRailState {
       ),
       const SizedBox(height: 12),
     ];
+  }
+
+  Widget _divider() => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        child: Container(height: 1, color: AppColors.line),
+      );
+
+  Widget _detailsHead(String title, {bool first = false}) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (first) const SizedBox(height: 20) else _divider(),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(title,
+                style: sans(11, weight: W.label, color: AppColors.fg3)),
+          ),
+        ],
+      );
+
+  Widget _statusLine(HarnessState? s) {
+    final (word, live) = switch (s?.status) {
+      'running' || 'thinking' || 'tool' => ('Running', true),
+      'waiting_approval' || 'waiting_question' => ('Waiting on you', true),
+      _ => ('Idle', false),
+    };
+    final started = DateTime.tryParse(s?.turnStartedAt ?? '');
+    final elapsed = live && started != null
+        ? DateTime.now().difference(started.toLocal())
+        : null;
+    return Row(children: [
+      Container(
+        height: 26,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(13),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: live ? AppColors.fg2 : AppColors.fg3,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(word, style: sans(11, weight: W.label, color: AppColors.fg2)),
+        ]),
+      ),
+      if (elapsed != null) ...[
+        const SizedBox(width: 12),
+        Text('${_elapsedLabel(elapsed)} elapsed',
+            style: sans(11, color: AppColors.fg3, tabular: true)),
+      ],
+    ]);
+  }
+
+  String _elapsedLabel(Duration d) {
+    if (d.inMinutes < 1) return '${d.inSeconds.clamp(0, 59)}s';
+    if (d.inHours < 1) return '${d.inMinutes}m';
+    return '${d.inHours}h ${d.inMinutes % 60}m';
+  }
+
+  String _titleCase(String id) =>
+      id.isEmpty ? id : '${id[0].toUpperCase()}${id.substring(1)}';
+
+  Widget _personRow(String id, String name, String role) => Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: SizedBox(
+          height: 32,
+          child: Row(children: [
+            AgentMochi(id.isEmpty ? 'snippet' : id, size: 24),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12, weight: W.label, color: AppColors.fg1)),
+                  Text(role,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(10.5, color: AppColors.fg3)),
+                ],
+              ),
+            ),
+          ]),
+        ),
+      );
+
+  /// The managing agent, then each lane's agent once, with what it is on.
+  List<Widget> _participantRows(String agentId, HarnessState? s) {
+    final seen = <String>{agentId};
+    final manager = (widget.managerName ?? '').trim();
+    final rows = [
+      _personRow(agentId, manager.isEmpty ? _titleCase(agentId) : manager,
+          'manager')
+    ];
+    // Lanes are hands, not people: only a lane offered to another agent counts.
+    for (final lane in s?.lanes ?? const <LaneInfo>[]) {
+      final who = (lane.agent ?? '').trim();
+      if (who.isEmpty || !seen.add(who)) continue;
+      rows.add(_personRow(who, _titleCase(who), lane.title));
+      if (rows.length >= 5) break;
+    }
+    return rows;
+  }
+
+  /// The last few finished steps, newest first.
+  List<ToolStep> _activitySteps(HarnessState? s) {
+    final out = <ToolStep>[];
+    Map<String, dynamic>? pending;
+    for (final e in s?.events ?? const <Map<String, dynamic>>[]) {
+      final k = e['kind'];
+      if (k == 'tool_call') {
+        pending = e;
+      } else if (k == 'tool_result' && pending != null) {
+        final at = pending['at_ms'];
+        out.add(ToolStep(
+          tool: (pending['tool_name'] ?? e['tool_name'])?.toString() ?? '',
+          args: pending['arguments'],
+          result: e['result'],
+          startMs: at is num ? at.toInt() : null,
+        ));
+        pending = null;
+      }
+    }
+    return out.reversed.take(4).toList();
+  }
+
+  Widget _activityRow(ToolStep step) {
+    final ms = step.startMs;
+    final when = ms == null ? '' : relativeTime(ms ~/ 1000);
+    return SizedBox(
+      height: 30,
+      child: Row(children: [
+        AppIcon(toolIcon(step.tool), size: 14, color: AppColors.fg3),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(toolSentence(step, running: false),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(11.5, color: AppColors.fg2)),
+        ),
+        if (when.isNotEmpty) ...[
+          const SizedBox(width: 8),
+          Text(when, style: sans(10.5, color: AppColors.fg3, tabular: true)),
+        ],
+      ]),
+    );
+  }
+
+  Widget _artifactRow(ArtifactInfo a) {
+    final kind = _titleCase(a.kind.isEmpty ? 'artifact' : a.kind);
+    final n = a.versions.length;
+    final meta = n > 1 ? '$kind, $n versions' : kind;
+    return TapDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: widget.onDeliverables,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 1),
+            child: AppIcon(a.kind == 'canvas' ? 'grid' : 'file-text',
+                size: 14, color: AppColors.fg3),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(a.title.isEmpty ? a.id : a.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(11.5, weight: W.label, color: AppColors.fg1)),
+                const SizedBox(height: 1),
+                Text(meta,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(10.5, color: AppColors.fg3)),
+              ],
+            ),
+          ),
+        ]),
+      ),
+    );
   }
 
   Widget _subHeader(String title, {String? meta}) => Container(

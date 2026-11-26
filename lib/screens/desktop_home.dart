@@ -288,29 +288,40 @@ class _DesktopHomeState extends State<DesktopHome> {
                       );
                     }),
             ),
-            _StartComposer(
-              agents: _agents,
-              folder: _lastUsedFolder,
-              profileLabel: widget.profileLabel,
-              focusNode: _composerFocus,
-              onStart: widget.onStart,
-            ),
-            const SizedBox(height: 2),
-            SizedBox(
-              height: 24,
-              child: Row(children: [
-                const SizedBox(width: 4),
-                AppIcon('folder', size: 13, color: AppColors.fg3),
-                const SizedBox(width: 7),
-                Expanded(
-                  child: Text(
-                    _projectChipLabel,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(12, color: AppColors.fg3),
-                  ),
+            // Frame 01: the start composer is a 900 column, centred.
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 900),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _StartComposer(
+                      agents: _agents,
+                      folder: _lastUsedFolder,
+                      profileLabel: widget.profileLabel,
+                      focusNode: _composerFocus,
+                      onStart: widget.onStart,
+                    ),
+                    const SizedBox(height: 2),
+                    SizedBox(
+                      height: 24,
+                      child: Row(children: [
+                        const SizedBox(width: 4),
+                        AppIcon('folder', size: 13, color: AppColors.fg3),
+                        const SizedBox(width: 7),
+                        Expanded(
+                          child: Text(
+                            _projectChipLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(12, color: AppColors.fg3),
+                          ),
+                        ),
+                      ]),
+                    ),
+                  ],
                 ),
-              ]),
+              ),
             ),
             const SizedBox(height: 12),
           ],
@@ -707,23 +718,15 @@ class _RecentSessionRowState extends State<_RecentSessionRow> {
           behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
           child: Container(
-            height: 32,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            height: 27,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
               color: _hover ? AppColors.hoverPlate : Colors.transparent,
               borderRadius: BorderRadius.circular(R.of(8)),
             ),
             child: Row(children: [
               SizedBox(
-                width: 16,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: AppIcon('chat', size: 12, color: AppColors.fg3),
-                ),
-              ),
-              const SizedBox(width: 4),
-              SizedBox(
-                width: 118,
+                width: 120,
                 child: Text(
                   widget.agent,
                   maxLines: 1,
@@ -731,37 +734,37 @@ class _RecentSessionRowState extends State<_RecentSessionRow> {
                   style: sans(12, color: AppColors.fg3),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 64),
               Expanded(
                 child: Text(
                   widget.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(13, color: AppColors.fg1),
+                  style: sans(12.5, weight: W.label, color: AppColors.fg1),
                 ),
               ),
               if (widget.meta.isNotEmpty) ...[
                 const SizedBox(width: 8),
                 ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 150),
+                  constraints: const BoxConstraints(maxWidth: 170),
                   child: Text(
                     widget.meta,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.right,
-                    style: sans(12, color: AppColors.fg3),
+                    style: sans(11, color: AppColors.fg3),
                   ),
                 ),
               ],
-              const SizedBox(width: 8),
+              const SizedBox(width: 16),
               SizedBox(
-                width: 36,
+                width: 40,
                 child: Text(
                   widget.when,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.right,
-                  style: sans(12, color: AppColors.fg3),
+                  style: sans(11, color: AppColors.fg3),
                 ),
               ),
             ]),

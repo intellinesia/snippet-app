@@ -209,6 +209,10 @@ class SessionScreen extends StatefulWidget {
   /// Desktop: toggle the shell's right panel from the floating header.
   final VoidCallback? onTogglePanel;
 
+  /// Desktop header bar, laid over the chat column only so the docked
+  /// session panel runs the full height beside it.
+  final Widget? chatHeader;
+
   /// Desktop Lead: the header title opens the docked agent info.
   final VoidCallback? onDeskInfo;
 
@@ -272,6 +276,7 @@ class SessionScreen extends StatefulWidget {
       this.onOpenScheduled,
       this.onOpenRightPanel,
       this.onTogglePanel,
+      this.chatHeader,
       this.onDeskInfo,
       this.deskActions,
       this.acceptDrops = true,

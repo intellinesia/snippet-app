@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -979,3 +981,49 @@ bool deskPlainEnter(KeyEvent e) =>
     !HardwareKeyboard.instance.isControlPressed &&
     !HardwareKeyboard.instance.isShiftPressed &&
     !HardwareKeyboard.instance.isAltPressed;
+
+/// Frame 09 running state: "<agent> running 12s" in the control row.
+class DeskRunningLabel extends StatefulWidget {
+  const DeskRunningLabel({super.key, required this.name, this.startedAt});
+
+  final String name;
+  final DateTime? startedAt;
+
+  @override
+  State<DeskRunningLabel> createState() => _DeskRunningLabelState();
+}
+
+class _DeskRunningLabelState extends State<DeskRunningLabel> {
+  Timer? _tick;
+
+  @override
+  void initState() {
+    super.initState();
+    _tick = Timer.periodic(
+        const Duration(seconds: 1), (_) => mounted ? setState(() {}) : null);
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
+  }
+
+  String get _elapsed {
+    final at = widget.startedAt;
+    if (at == null) return '';
+    final d = DateTime.now().difference(at.toLocal());
+    if (d.isNegative) return '';
+    if (d.inMinutes < 1) return ' ${d.inSeconds}s';
+    if (d.inHours < 1) return ' ${d.inMinutes}m ${d.inSeconds % 60}s';
+    return ' ${d.inHours}h ${d.inMinutes % 60}m';
+  }
+
+  @override
+  Widget build(BuildContext context) => Text(
+        '${widget.name} running$_elapsed',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: sans(11, color: AppColors.fg3, tabular: true),
+      );
+}

@@ -1201,11 +1201,22 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   Widget _chatPane(bool paired, Widget child) {
     final hasPanel =
         !widget.readOnly && _inboxAgentId(widget.sessionId) == null;
-    if (kMobile || (!paired && !hasPanel)) return Expanded(child: child);
+    Widget withHeader(Widget body) {
+      final header = widget.chatHeader;
+      if (header == null) return body;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [header, Expanded(child: body)],
+      );
+    }
+
+    if (kMobile || (!paired && !hasPanel)) {
+      return Expanded(child: withHeader(child));
+    }
     // The transcript keeps a 20px gutter inside the pane.
     // Chat centres in the space left of the panel; the panel itself hugs the edge under its toggle.
     return Expanded(
-        child: Row(
+        child: withHeader(Row(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -1213,7 +1224,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
               child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: kChatMeasure + 40),
                   child: child)),
-        ]));
+        ])));
   }
 
   Widget _passThrough(Widget w) => w;
@@ -1276,6 +1287,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       floating: floating,
       columnWidth: column,
       agentId: _me?.displayAgentId,
+      managerName: _meAgentName,
       profileLabel: profile.isEmpty ? 'Default model' : profile,
       resumeMode: _resumeMode,
       github: _github != null,

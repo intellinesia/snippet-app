@@ -608,6 +608,9 @@ extension _DesktopShellTabsExt on _DesktopShellState {
       return -1;
     }
     if (_tabs.any((x) => x.groupSessionKey == t.key)) return -1;
+    // Place pages (Sessions, Agents) are where you open things from; keep them.
+    final req = t.readout?.request?.id;
+    if (req == 'all-sessions' || req == 'all-agents') return -1;
     return i;
   }
 

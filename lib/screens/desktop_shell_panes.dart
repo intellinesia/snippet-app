@@ -153,7 +153,9 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         onClose: primary ? () => _closeTabByKey(t.key) : null,
       );
     }
-    return _withChatHeader(t, SessionScreen(
+    // The header rides inside the session so the docked panel spans full height.
+    return LayoutBuilder(builder: (context, box) => SessionScreen(
+      chatHeader: kMobile ? null : _chatHeaderFor(t, box.maxWidth),
       onTogglePanel: null,
       onDeskInfo: t.isLead ? _showAgentInfo : null,
       deskActions: primary
@@ -309,7 +311,16 @@ extension _DesktopShellPanesExt on _DesktopShellState {
                 .where((n) => n.isNotEmpty)
                 .firstOrNull ??
             '';
-    final state = needs ? 'needs you' : (running ? 'running' : 'idle');
+    final started = DateTime.tryParse(mac?.state?.turnStartedAt ?? '');
+    final ran = running && started != null
+        ? DateTime.now().difference(started.toLocal())
+        : null;
+    final runFor = ran == null || ran.inMinutes < 1
+        ? ''
+        : ran.inHours < 1
+            ? ' ${ran.inMinutes}m'
+            : ' ${ran.inHours}h ${ran.inMinutes % 60}m';
+    final state = needs ? 'needs you' : (running ? 'running$runFor' : 'idle');
     return ChatHeaderBar(
       agentIds: [owner ?? 'snippet'],
       title: t.title.trim().isEmpty ? 'Session' : t.title.trim(),

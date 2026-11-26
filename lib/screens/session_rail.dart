@@ -6,6 +6,7 @@ import '../api.dart';
 import '../models.dart';
 import '../settings_form.dart';
 import '../tool_activity.dart';
+import '../tool_views.dart' show toolIcon;
 import 'file_changes.dart' show sessionChangeSteps;
 import 'desk_memory.dart' show DeskMemoryView;
 import 'file_tree_sidebar_panel.dart' show FileTreeSidebarPanel;
@@ -110,6 +111,7 @@ class SessionRail extends StatefulWidget {
     this.floating = false,
     this.columnWidth,
     this.agentId,
+    this.managerName,
     this.github,
     this.onChanges,
     this.onFiles,
@@ -158,6 +160,9 @@ class SessionRail extends StatefulWidget {
 
   /// Whose mascot heads the quiet Overview.
   final String? agentId;
+
+  /// The managing agent's display name, for Participants.
+  final String? managerName;
   final bool? github;
   final VoidCallback onModel;
   final VoidCallback onWakes;
@@ -294,6 +299,7 @@ class _SessionRailState extends State<SessionRail> {
   // Lead only: every open task and session, for "Needs you".
   List<TaskItem> _allTasks = const [];
   List<SessionInfo> _sessions = const [];
+  List<ArtifactInfo> _artifacts = const [];
   int _gen = 0;
   int _liveGen = 0;
   bool _loading = true;
@@ -412,6 +418,7 @@ class _SessionRailState extends State<SessionRail> {
       mc ? Future.value(null) : _try(c.wakes()),
       mc ? _try(c.tasks(limit: 300)) : Future.value(null),
       mc ? _try(c.sessions()) : Future.value(null),
+      mc ? Future.value(null) : _try(c.artifacts(id)),
     ]);
     if (!mounted || gen != _gen) return;
     final auto = r[4] as Map<String, dynamic>?;
@@ -427,6 +434,7 @@ class _SessionRailState extends State<SessionRail> {
       _tasks = r[3] as List<TaskItem>? ?? const [];
       _allTasks = r[7] as List<TaskItem>? ?? _allTasks;
       _sessions = r[8] as List<SessionInfo>? ?? _sessions;
+      _artifacts = r[9] as List<ArtifactInfo>? ?? _artifacts;
       _autonomous = auto == null ? null : auto['on'] == true;
       _procs = r[5] as List<Map<String, dynamic>>? ?? _procs;
       final wl = r[6] as WakeList?;
@@ -474,10 +482,11 @@ class _SessionRailState extends State<SessionRail> {
             decoration: kMobile
                 ? null
                 : BoxDecoration(
+                    color: AppColors.surface1,
                     border: Border(left: BorderSide(color: AppColors.line))),
             padding: kMobile
                 ? EdgeInsets.fromLTRB(24, 10, kSessionRailEdgeInset, S.s12)
-                : EdgeInsets.fromLTRB(S.s12, S.s4, S.s12, S.s8),
+                : const EdgeInsets.fromLTRB(16, 18, 16, 8),
             child: Align(
               alignment: Alignment.topCenter,
               child: _card(box.maxHeight - 10 - S.s12,

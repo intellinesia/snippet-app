@@ -983,6 +983,14 @@ extension _SessionScreenComposerExt on _SessionScreenState {
               _contextRing(),
             ])
           : null,
+      deskHint: !kMobile && running
+          ? () => Flexible(
+                child: DeskRunningLabel(
+                  name: agent.isEmpty ? 'Agent' : agent,
+                  startedAt: DateTime.tryParse(_state?.turnStartedAt ?? ''),
+                ),
+              )
+          : null,
       deskCold: _showsCold(running)
           ? ColdChip(
               mode: _resumeMode,
