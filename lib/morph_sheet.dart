@@ -324,10 +324,16 @@ Future<T?> showSpringSheet<T>(
   required Widget Function(BuildContext context, ScrollController scroll)
       builder,
   SheetSize size = SheetSize.auto,
+  double? medium,
+  double largeGap = 16,
+  SheetDetents? detents,
 }) {
   final nav = Navigator.of(context);
   return nav.push<T>(AppSheetRoute<T>(
     size: size,
+    medium: medium,
+    largeGap: largeGap,
+    detents: detents,
     builder: builder,
     capturedThemes: InheritedTheme.capture(from: context, to: nav.context),
     instant: reduceMotion(context),
@@ -341,6 +347,9 @@ Future<T?> showSpringSheet<T>(
 class AppSheetRoute<T> extends PopupRoute<T> {
   AppSheetRoute({
     this.size = SheetSize.auto,
+    this.medium,
+    this.largeGap = 16,
+    this.detents,
     required this.builder,
     required this.capturedThemes,
     this.instant = false,
@@ -353,6 +362,14 @@ class AppSheetRoute<T> extends PopupRoute<T> {
   final CapturedThemes capturedThemes;
   final bool instant;
   final SheetSize size;
+
+  /// With [SheetSize.large]: also rest at this fraction of the screen
+  /// height, opening there (two detents: medium and large).
+  final double? medium;
+
+  /// Gap between the top safe area and a large sheet's top edge.
+  final double largeGap;
+  final SheetDetents? detents;
 
   static const SpringDescription presentSpring =
       SpringDescription(mass: 1, stiffness: 300, damping: 32);
@@ -426,6 +443,33 @@ class AppSheetRoute<T> extends PopupRoute<T> {
       child;
 }
 
+/// Drives a two-detent [AppSheetRoute]: reports whether it rests at large
+/// and moves it between medium and large.
+class SheetDetents extends ChangeNotifier {
+  _SheetBodyState? _body;
+  bool _large = false;
+  bool _disposed = false;
+
+  bool get large => _large;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _body = null;
+    super.dispose();
+  }
+
+  void _set(bool v) {
+    // The route's exit animation can outlive the owner's dispose.
+    if (_disposed || v == _large) return;
+    _large = v;
+    notifyListeners();
+  }
+
+  void expand() => _body?._settleExtra(_body!._maxExtra, 0);
+  void collapse() => _body?._settleExtra(0, 0);
+}
+
 class _SheetBody<T> extends StatefulWidget {
   const _SheetBody({required this.route, required this.topPad});
   final AppSheetRoute<T> route;
@@ -464,17 +508,22 @@ class _SheetBodyState<T> extends State<_SheetBody<T>>
       ..addListener(_syncExtra);
     _scroll = _SheetScrollController(this);
     _route._body = this;
+    _route.detents?._body = this;
   }
 
   @override
   void dispose() {
     if (_route._body == this) _route._body = null;
+    if (_route.detents?._body == this) _route.detents?._body = null;
     _extraC.dispose();
     _scroll.dispose();
     super.dispose();
   }
 
-  void _syncExtra() => _route._extra.value = _extraC.value;
+  void _syncExtra() {
+    _route._extra.value = _extraC.value;
+    _route.detents?._set(_hasHalf && _extraC.value >= _maxExtra - 0.5);
+  }
 
   void _metrics(double base, double full) {
     _base = base;
@@ -598,6 +647,8 @@ class _SheetBodyState<T> extends State<_SheetBody<T>>
         progress: _curved,
         size: _route.size,
         topInset: widget.topPad,
+        medium: _route.medium,
+        largeGap: _route.largeGap,
         extra: _route._extra,
         screenHeight: media.size.height - keyboard,
         onMetrics: _metrics,
@@ -625,11 +676,15 @@ class _SpringSheetFrame extends SingleChildRenderObjectWidget {
     required this.onMetrics,
     required this.size,
     required this.topInset,
+    this.medium,
+    this.largeGap = 16,
     required super.child,
   });
 
   final SheetSize size;
   final double topInset;
+  final double? medium;
+  final double largeGap;
 
   final Animation<double> progress;
   final ValueListenable<double> extra;
@@ -638,8 +693,8 @@ class _SpringSheetFrame extends SingleChildRenderObjectWidget {
 
   @override
   _RenderSpringSheetFrame createRenderObject(BuildContext context) =>
-      _RenderSpringSheetFrame(
-          progress, extra, screenHeight, onMetrics, size, topInset);
+      _RenderSpringSheetFrame(progress, extra, screenHeight, onMetrics, size,
+          topInset, medium, largeGap);
 
   @override
   void updateRenderObject(BuildContext context, _RenderSpringSheetFrame r) {
@@ -649,17 +704,22 @@ class _SpringSheetFrame extends SingleChildRenderObjectWidget {
       ..screenHeight = screenHeight
       ..sheetSize = size
       ..topInset = topInset
+      ..medium = medium
+      ..largeGap = largeGap
       ..onMetrics = onMetrics;
   }
 }
 
 class _RenderSpringSheetFrame extends RenderShiftedBox {
   _RenderSpringSheetFrame(this._progress, this._extra, this._screenHeight,
-      this.onMetrics, this.sheetSize, this.topInset)
+      this.onMetrics, this.sheetSize, this.topInset, this.medium,
+      this.largeGap)
       : super(null);
 
   SheetSize sheetSize;
   double topInset;
+  double? medium;
+  double largeGap;
 
   Animation<double> _progress;
   ValueListenable<double> _extra;
@@ -711,7 +771,7 @@ class _RenderSpringSheetFrame extends RenderShiftedBox {
     final cap = switch (sheetSize) {
       SheetSize.small => screen * 0.40,
       SheetSize.medium => screen * 0.60,
-      SheetSize.large => screen - (topInset + 16),
+      SheetSize.large => screen - (topInset + largeGap),
       SheetSize.auto => screen * AppSheetRoute.fullCap,
     };
     final fixed = sheetSize == SheetSize.medium || sheetSize == SheetSize.large;
@@ -723,8 +783,11 @@ class _RenderSpringSheetFrame extends RenderShiftedBox {
             maxHeight: cap),
         parentUsesSize: true);
     final full = c.size.height;
-    // One detent: the named size. No half stop.
-    final base = full;
+    // One detent (the named size) unless a medium rest is asked for.
+    final m = medium;
+    final base = m != null && sheetSize == SheetSize.large
+        ? math.min(full, (screen * m).roundToDouble())
+        : full;
     onMetrics(base, full);
     final visible = _progress.value * base + _extra.value;
     (c.parentData! as BoxParentData).offset =
