@@ -444,7 +444,7 @@ void main() {
       ));
 
       expect(find.text('jane doe · shipping rich chat'), findsOneWidget);
-      expect(find.text('linkedin.com - posts'), findsOneWidget);
+      expect(find.text('linkedin.com'), findsOneWidget);
       expect(find.textContaining('@argon', findRichText: true), findsOneWidget);
       expect(
           find.textContaining('https://example.com/inline-ref',

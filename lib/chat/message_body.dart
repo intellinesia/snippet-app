@@ -480,9 +480,6 @@ class _LinkCardState extends State<_LinkCard> {
       );
 
   Widget _readyCard(({String host, String title}) info) {
-    final firstSegment = widget.uri.pathSegments.isEmpty
-        ? ''
-        : ' - ${widget.uri.pathSegments.first}';
     final title = _data?.title.trim().isNotEmpty == true
         ? _data!.title.trim()
         : info.title;
@@ -496,7 +493,7 @@ class _LinkCardState extends State<_LinkCard> {
           AppIcon('link', size: 14, color: AppColors.fg2),
           const SizedBox(width: 8),
           Expanded(
-            child: Text('${info.host}$firstSegment',
+            child: Text(info.host,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: sans(13, color: AppColors.fg3)),
