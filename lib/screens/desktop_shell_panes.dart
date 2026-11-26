@@ -224,30 +224,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     });
   }
 
-  String _agentModel(CoordinationAgent a) {
-    final m = (a.deskModel ?? '').trim();
-    if (m.isNotEmpty) return prettyModel(m);
-    final p = (a.deskProfile ?? a.profile ?? '').trim();
-    return p.isEmpty ? '' : prettyProfile(p);
-  }
-
-  String _agentState(CoordinationAgent a, {MacSessionStatus? mac}) {
-    if (a.needsYou > 0 || mac?.state?.pendingQuestion != null) {
-      return 'Needs you';
-    }
-    if ((mac?.running ?? false) || (a.presence?.live ?? false)) {
-      return 'Working';
-    }
-    if (!a.available) return 'Asleep';
-    return 'Ready';
-  }
-
-  String _sessionProfileLabel(_ShellTab t) {
-    final s = _sessions?.where((x) => x.id == t.sessionId).firstOrNull;
-    final p = (s?.profile ?? t.profile ?? '').trim();
-    return p.isEmpty ? '' : prettyProfile(p);
-  }
-
   static String _line(List<String> parts) =>
       parts.where((p) => p.trim().isNotEmpty).join(' \u00b7 ');
 
@@ -299,7 +275,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       final name = agent.displayName.trim().isEmpty
           ? agent.id
           : agent.displayName.trim();
-      final mac = t.isLead ? _macSessionStatuses[t.key] : null;
       final sessions = [
         for (final s in _sessions ?? const <SessionInfo>[])
           if (s.displayAgentId == agent.id) s
@@ -308,15 +283,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       tabs: _paneTabsFor(t),
         agentIds: [agent.id],
         title: name,
-        subtitle: _line([
-          _agentState(agent, mac: mac),
-          _agentModel(agent).isNotEmpty
-              ? _agentModel(agent)
-              : _sessionProfileLabel(t),
-          if (sessions.isNotEmpty)
-            '${sessions.length} ${sessions.length == 1 ? 'session' : 'sessions'}',
-        ]),
-        live: _agentState(agent, mac: mac) == 'Working',
+        // State, model and sessions live in the panel's Overview; the row
+        // keeps only quiet controls at its right end (Capy).
         leading: [
           Builder(
             builder: (ctx) => IconBtn('plus',
