@@ -7,6 +7,7 @@ import '../motion_routes.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../settings_form.dart';
+import '../settings_table.dart';
 import '../settings_target.dart';
 import '../widgets.dart';
 import 'inference_profile_editor.dart';
@@ -506,38 +507,30 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
           );
         }
         final listBody = <Widget>[
-          SettingsGroup(
-            header: 'Your profiles',
-            footer:
-                'New chats use the active profile. Lanes and background work follow Routing.',
-            children: [
-              if (profiles.isEmpty)
-                const SettingsRow(label: 'No inference profiles yet'),
-              for (final p in profiles)
-                _mark(p, SettingsRow(
-                  label: p.name,
-                  sub: p.model.isEmpty ? p.provider : '${p.provider} · ${p.model}',
-                  subMaxLines: 1,
-                  leading: Container(
-                    width: 28,
-                    height: 28,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: AppColors.fg1.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(R.of(7)),
-                    ),
-                    child: ProviderLogo(p.provider, size: 15),
-                  ),
-                  trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                    if (!p.usable) const WarnChip(),
-                    if (p.active) const _ActivePill(),
-                  ]),
-                  chevron: true,
-                  onTap: () => _edit(p),
-                )),
+          SettingsTable(
+            columns: const [
+              SettingsColumnSpec('Profile', flex: 3),
+              SettingsColumnSpec('Backend', flex: 3),
+              SettingsColumnSpec('Model', flex: 4),
             ],
+            empty: 'No inference profiles yet',
+            footnote:
+                'New chats use the active profile. Lanes and background work follow Routing.',
+            rows: [
+              for (final p in profiles)
+                SettingsTableRowData(
+                  cells: [p.name, p.provider, p.model],
+                  tag: !p.usable
+                      ? const WarnChip()
+                      : (p.active ? const SettingsTag('Active') : null),
+                  onTap: () => _edit(p),
+                ),
+            ],
+            wrap: (i, row) => _mark(profiles[i], row),
           ),
-          SettingsGroup(header: 'Behaviour', children: [
+          SizedBox(height: S.s8),
+          const SettingsSectionLabel('Behaviour'),
+          SettingsGroup(children: [
             SettingsRow(
               label: "Keep a task's model",
               sub: 'Chats stay on the model a task used.',
@@ -585,20 +578,4 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
       return false;
     }
   }
-}
-
-class _ActivePill extends StatelessWidget {
-  const _ActivePill();
-
-  @override
-  Widget build(BuildContext context) => Container(
-        height: 22,
-        padding: const EdgeInsets.symmetric(horizontal: 9),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: AppColors.fg1.withValues(alpha: 0.12)),
-        ),
-        child: Text('Active', style: sans(11.5, color: AppColors.fg2)),
-      );
 }

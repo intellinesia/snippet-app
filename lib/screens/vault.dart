@@ -7,6 +7,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import '../inline_flow.dart';
 import '../settings_form.dart';
+import '../settings_table.dart';
 import '../settings_target.dart';
 import 'shell_nav.dart';
 import '../tap_detector.dart';
@@ -348,15 +349,38 @@ class VaultScreenState extends State<VaultScreen> {
         ),
       ]);
     } else {
-      content = SettingsGroup(
-        footer: 'Values stay on this machine and are never shown again.',
+      content = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (_adding) ..._desktopForm(),
-          for (final n in names) _secretRow(n),
-          if (names.isEmpty && !_adding)
-            SettingsRow(
-                label: 'No secrets yet',
-                sub: 'Add one and agents can use it as \$NAME.'),
+          if (_adding) SettingsGroup(children: _desktopForm()),
+          SettingsTable(
+            columns: const [SettingsColumnSpec('Name')],
+            empty: 'No secrets yet',
+            footnote: 'Values stay on this machine and are never shown again.',
+            rows: [
+              for (final n in names)
+                SettingsTableRowData(
+                  key: ValueKey('secret-$n'),
+                  cells: [n],
+                  monoFirst: true,
+                  trailing: Semantics(
+                    button: true,
+                    label: 'Remove $n',
+                    child: TapDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => _remove(n),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: S.s4, vertical: S.s8),
+                        child: Text('Remove',
+                            style: sans(12, color: AppColors.fg2)),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+            wrap: (i, row) => _deskSecretWrap(names[i], row),
+          ),
         ],
       );
     }
@@ -369,7 +393,8 @@ class VaultScreenState extends State<VaultScreen> {
             onTap: _add);
     if (widget.chromeless) {
       return SettingsChromelessPage(
-        description: 'Secrets agents use as \$NAME',
+        description:
+            'Secrets agents can use. Values are never shown again after saving.',
         action: addBtn,
         children: [content],
       );
@@ -442,6 +467,28 @@ class VaultScreenState extends State<VaultScreen> {
           ]),
           onTap: _add,
         );
+
+  Widget _deskSecretWrap(String name, Widget row) {
+    if (_removing == name) {
+      return InlineConfirmStrip(
+        title: 'Remove $name?',
+        body:
+            'The agent can no longer use it. The stored value cannot be recovered.',
+        onCancel: () {
+          if (mounted && _removing == name) setState(() => _removing = null);
+        },
+        onConfirm: () {
+          setState(() => _removing = null);
+          _doRemove(name);
+        },
+      );
+    }
+    if (name != _target) return row;
+    return KeyedSubtree(
+      key: _targetKey,
+      child: SettingsTargetPlate(key: Key('settings-target-$name'), child: row),
+    );
+  }
 
   Widget _secretRow(String name) {
     final row = _secretRowBase(name);

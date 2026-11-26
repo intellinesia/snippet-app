@@ -9,6 +9,7 @@ import '../models.dart';
 import '../panel.dart';
 import '../platform.dart';
 import '../settings_form.dart';
+import '../settings_table.dart';
 import '../shell_panel.dart';
 import '../theme.dart';
 import '../wake_models.dart';
@@ -127,8 +128,12 @@ class _WakesScreenState extends State<WakesScreen> {
     final warmPage = widget.keepWarm;
     final title = warmPage ? 'Keep warm' : 'Wakes';
     final subtitle = warmPage
-        ? 'Sessions that hold their prompt cache while idle.'
-        : 'When each agent wakes on its own.';
+        ? (desk
+            ? 'Keep an agent session warm so its next reply starts fast.'
+            : 'Sessions that hold their prompt cache while idle.')
+        : (desk
+            ? 'Agents that wake themselves to check on work.'
+            : 'When each agent wakes on its own.');
     Widget page(List<Widget> children) => !kMobile && widget.tab
         ? ListView(padding: const EdgeInsets.only(bottom: 24), children: [
             Center(
@@ -159,6 +164,7 @@ class _WakesScreenState extends State<WakesScreen> {
                     ? Builder(
                         builder: (ctx) => Btn('New wake',
                             small: true,
+                            icon: 'plus',
                             variant: BtnVariant.secondary,
                             onTap: () => _newWake(ctx, _agents!)))
                     : null,
@@ -170,6 +176,7 @@ class _WakesScreenState extends State<WakesScreen> {
                     Builder(
                         builder: (ctx) => Btn('New wake',
                             small: true,
+                            icon: 'plus',
                             variant: BtnVariant.secondary,
                             onTap: () => _newWake(ctx, _agents!))),
                 ]),
@@ -214,7 +221,9 @@ class _WakesScreenState extends State<WakesScreen> {
               for (final e in warmOn) _warmRow(context, e, agents),
           ],
         );
+        if (warmPage && desk) return page(_deskWarm(context, warm, agents));
         if (warmPage) return page([warmGroup]);
+        if (desk) return page([_deskWakeTable(context, book, agents)]);
         final warmSummary = SettingsGroup(children: [
           SettingsRow(
             key: const Key('keep-warm-summary'),
@@ -411,6 +420,161 @@ class _WakesScreenState extends State<WakesScreen> {
         onTap: () => _open(ctx, w.owner, name, agents),
       ),
     );
+  }
+
+  String _cap(String t) => t.isEmpty ? t : t[0].toUpperCase() + t.substring(1);
+
+  /// Desktop Wakes (sc-wakes-d): one table of every wake, opened per row.
+  Widget _deskWakeTable(
+      BuildContext context, WakeBook book, List<CoordinationAgent> agents) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final rows = <SettingsTableRowData>[
+      for (final w in book.every)
+        SettingsTableRowData(
+          key: ValueKey('wake-${w.id.isEmpty ? w.owner : w.id}'),
+          cells: [
+            _name(w.owner, agents),
+            !w.enabled
+                ? 'Paused'
+                : w.nextRunAt <= 0
+                    ? (w.scheduleText.isEmpty ? w.schedule : w.scheduleText)
+                    : w.nextRunAt * 1000 < now
+                        ? 'Overdue'
+                        : _cap(_wakeAt(w.nextRunAt)),
+            w.lastError ??
+                w.name ??
+                (w.title.isNotEmpty
+                    ? w.title
+                    : (w.scheduleText.isEmpty ? w.schedule : w.scheduleText)),
+          ],
+          onTap: () => _open(context, w.owner, _name(w.owner, agents), agents),
+        ),
+      for (final w in book.once)
+        SettingsTableRowData(
+          key: ValueKey('once-${w.id}'),
+          cells: [
+            _name(w.owner, agents),
+            w.dueAt == null ? 'Once' : _cap(_wakeAt(w.dueAt!)),
+            w.title.isEmpty ? 'One-off wake' : w.title,
+          ],
+          onTap: () => _open(context, w.owner, _name(w.owner, agents), agents),
+        ),
+      for (final w in book.watches)
+        SettingsTableRowData(
+          key: ValueKey('watch-${w.id}'),
+          cells: [
+            _name(w.owner, agents),
+            w.enabled ? 'Watching' : 'Paused',
+            w.lastError ?? w.name,
+          ],
+          onTap: () => _open(context, w.owner, _name(w.owner, agents), agents),
+        ),
+    ];
+    return SettingsTable(
+      columns: const [
+        SettingsColumnSpec('Agent', flex: 3),
+        SettingsColumnSpec('Next wake', flex: 3),
+        SettingsColumnSpec('Reason', flex: 6),
+      ],
+      rows: rows,
+      empty: 'Nothing wakes on its own yet',
+      footnote:
+          'A wake starts a short run with the note you gave. Open a row to change or pause it.',
+    );
+  }
+
+  /// Desktop Keep warm (sc-keepwarm-d): one toggle row per agent, plus any
+  /// session kept warm, then the quota caption.
+  List<Widget> _deskWarm(BuildContext context, KeepWarmList? warm,
+      List<CoordinationAgent> agents) {
+    final entries = {
+      for (final e in warm?.entries ?? const <KeepWarmEntry>[]) e.owner: e
+    };
+    final owners = <String>[
+      'lead',
+      for (final a in agents)
+        if (a.id != 'lead') a.id,
+      for (final e in entries.values)
+        if (e.ownerKind == 'session' && e.enabled) e.owner,
+    ];
+    String sub(KeepWarmEntry? e) {
+      if (e == null || !e.enabled) return 'Not kept warm';
+      final reason = e.reason;
+      if (reason != null) {
+        return reason == 'quiet hours' ? 'Paused for quiet hours' : _cap(reason);
+      }
+      return [
+        'Every ${e.intervalMinutes} min',
+        if (e.maxIdleHours > 0) 'warm for ${e.maxIdleHours} h',
+      ].join(', ');
+    }
+
+    String label(String owner) {
+      final e = entries[owner];
+      if (e != null && e.ownerKind == 'session') {
+        return _sessionTitles[e.owner] ??
+            _sessionTitles[e.sessionId] ??
+            'Untitled conversation';
+      }
+      return _name(owner, agents);
+    }
+
+    return [
+      for (final o in owners)
+        Padding(
+          padding: EdgeInsets.only(bottom: S.s8),
+          child: Container(
+            key: ValueKey('warm-$o'),
+            constraints: const BoxConstraints(minHeight: 52),
+            padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s8),
+            decoration: BoxDecoration(
+              color: AppColors.surface1,
+              borderRadius: BorderRadius.circular(R.of(8)),
+            ),
+            child: Row(children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(label(o),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(13, color: AppColors.fg1)),
+                    SizedBox(height: S.s2),
+                    Text(sub(entries[o]),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(12, color: AppColors.fg3)),
+                  ],
+                ),
+              ),
+              SettingsSwitch(
+                value: entries[o]?.enabled ?? false,
+                onChanged: (on) => unawaited(_setWarm(o, on)),
+              ),
+            ]),
+          ),
+        ),
+      Padding(
+        padding: EdgeInsets.only(top: S.s4),
+        child: Text(
+          warm != null && warm.calls7d > 0
+              ? 'Warm sessions use a little quota while idle. ${warm.calls7d} warm calls in the last 7 days, ${tokensLabel(warm.cacheReadTokens7d)} tokens read from cache.'
+              : 'Warm sessions use a little quota while idle.',
+          style: sans(12, color: AppColors.fg3),
+        ),
+      ),
+    ];
+  }
+
+  Future<void> _setWarm(String owner, bool on) async {
+    try {
+      await widget.client.setKeepWarm(owner, enabled: on);
+    } catch (e) {
+      if (mounted) toast(context, '$e', danger: true);
+    }
+    if (mounted) _refresh();
   }
 
   /// A new wake starts from its owner: an agent, Lead or a session

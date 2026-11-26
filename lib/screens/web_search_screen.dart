@@ -3,6 +3,7 @@ import '../api.dart';
 import '../desktop_layout.dart';
 import '../platform.dart';
 import '../settings_form.dart';
+import '../settings_table.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'shell_nav.dart';
@@ -153,8 +154,7 @@ class _WebSearchScreenState extends State<WebSearchScreen> {
           SettingsRow(
             label: 'Exa search',
             sub: 'Web search and page reading for agents',
-            trailing: Tag(keySet ? 'Active' : 'Not set',
-                tone: keySet ? Tone.ok : Tone.neutral, dot: true),
+            trailing: SettingsTag(keySet ? 'Active' : 'Not set'),
           ),
           SettingsRow(
             label: keySet ? 'Replace key' : 'API key',
@@ -166,7 +166,6 @@ class _WebSearchScreenState extends State<WebSearchScreen> {
               label: 'Remove key',
               sub: 'Turns web search off for new sessions',
               trailing: SettingsPill('Remove',
-                  danger: true,
                   onTap: _busy ? null : () => _save('', 'Key removed')),
             ),
         ],

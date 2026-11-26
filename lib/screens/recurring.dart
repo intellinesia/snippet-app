@@ -5,13 +5,12 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../desktop_layout.dart';
 import '../models.dart';
-import '../panel.dart';
 import '../platform.dart';
 import '../settings_form.dart';
+import '../settings_table.dart';
 import '../swr.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import 'files.dart';
 import 'lead.dart';
 import 'shell_nav.dart';
 
@@ -820,43 +819,45 @@ class RecurringScreenState extends State<RecurringScreen>
         return SettingsColumn(children: [
           SettingsHeader(
             title: 'Scheduled',
-            subtitle: 'Goals and messages that run on a schedule.',
+            subtitle: jobs.isEmpty
+                ? 'Recurring tasks agents run on a timer.'
+                : 'Recurring tasks agents run on a timer. ${jobs.length} recurring.',
             actions: [
               if (_canAdd)
-                Btn('New job', small: true, icon: 'plus', onTap: _add),
+                Btn('New schedule',
+                    small: true,
+                    icon: 'plus',
+                    variant: BtnVariant.secondary,
+                    onTap: _add),
             ],
           ),
           SizedBox(height: S.s8),
-          if (jobs.isEmpty)
-            const SettingsGroup(children: [
-              SettingsRow(
-                label: 'No scheduled jobs',
-                sub:
-                    'Run a prompt on a schedule, like a morning triage or a nightly audit.',
-              ),
-            ])
-          else
-            SettingsGroup(children: [for (final j in jobs) _deskRow(j)]),
+          SettingsTable(
+            columns: const [
+              SettingsColumnSpec('Task', flex: 4),
+              SettingsColumnSpec('Schedule', flex: 3),
+              SettingsColumnSpec('Agent', flex: 3),
+              SettingsColumnSpec('Last run', flex: 2),
+            ],
+            empty: 'No scheduled jobs',
+            footnote:
+                'Each run opens a session you can read. Pause a schedule from its row.',
+            rows: [
+              for (final j in jobs)
+                SettingsTableRowData(
+                  key: ValueKey('recurring-${j.id}'),
+                  cells: [
+                    j.title.isEmpty ? j.id : j.title,
+                    _enabled(j) ? j.scheduleLabel : 'Paused',
+                    _targetLabel(j),
+                    j.lastRunAt == null ? 'Never' : relativeTime(j.lastRunAt!),
+                  ],
+                  onTap: () => _selectJob(j),
+                ),
+            ],
+          ),
         ]);
       },
-    );
-  }
-
-  Widget _deskRow(RecurringJob job) {
-    final paused = !_enabled(job);
-    final next = _nextIn(job);
-    return SettingsRow(
-      label: job.title.isEmpty ? job.id : job.title,
-      sub: [
-        job.scheduleLabel,
-        _targetLabel(job),
-        if (!paused && next.isNotEmpty) next,
-      ].join(' · '),
-      trailing: paused
-          ? const Tag('Paused')
-          : const Tag('Active', tone: Tone.accent),
-      chevron: true,
-      onTap: () => _selectJob(job),
     );
   }
 

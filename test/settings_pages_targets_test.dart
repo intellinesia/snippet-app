@@ -63,7 +63,8 @@ void main() {
             targetId: 'GITHUB_TOKEN'));
     expect(find.byKey(const Key('settings-target-GITHUB_TOKEN')),
         findsOneWidget);
-    expect(find.text('Name'), findsNothing);
+    // The add form is closed; its Name field hint is absent.
+    expect(find.text('Use it as \$NAME in shell commands.'), findsNothing);
   });
 
   desktop('vault opens the add form prefilled for a missing target',
@@ -78,7 +79,7 @@ void main() {
             targetId: 'GITHUB_TOKEN'));
     expect(find.byKey(const Key('settings-target-GITHUB_TOKEN')),
         findsNothing);
-    expect(find.text('Name'), findsOneWidget);
+    expect(find.text('Use it as \$NAME in shell commands.'), findsOneWidget);
     final fields = tester.widgetList<EditableText>(find.byType(EditableText));
     expect(fields.first.controller.text, 'GITHUB_TOKEN');
     expect(fields.last.focusNode.hasFocus, isTrue);
@@ -117,7 +118,7 @@ void main() {
     expect(find.text('Profiles'), findsNothing);
   });
 
-  desktop('wakes summarises keep warm instead of managing it', (tester) async {
+  desktop('wakes leaves keep warm to its own page', (tester) async {
     var opened = false;
     final c = FakeWakeClient(
       warmState: KeepWarmEntry.fromJson(keepWarmJson()),
@@ -129,10 +130,11 @@ void main() {
             embedded: true,
             chromeless: true,
             onOpenKeepWarm: () => opened = true));
+    // Keep warm has its own Settings page (spec_settings D2); Wakes neither
+    // manages nor summarises it.
     expect(find.byKey(const ValueKey('warm-scout')), findsNothing);
     expect(find.byType(Switch), findsNothing);
-    expect(find.text('1 on'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('keep-warm-summary')));
-    expect(opened, isTrue);
+    expect(find.byKey(const Key('keep-warm-summary')), findsNothing);
+    expect(opened, isFalse);
   });
 }

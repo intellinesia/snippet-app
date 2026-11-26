@@ -12,6 +12,7 @@ import '../notifications.dart';
 import '../panel.dart';
 import '../platform.dart';
 import '../settings_form.dart';
+import '../settings_table.dart';
 import '../settings_target.dart';
 import '../inline_flow.dart';
 import '../store.dart';
@@ -1795,6 +1796,13 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
                 )),
       );
 
+  String _machinesSummary() {
+    final online = _health.values.where((v) => v == true).length;
+    return _health.isEmpty
+        ? 'Computers that run agents.'
+        : 'Computers that run agents. $online online.';
+  }
+
   String _pageTitle(SettingsPage page) => switch (page) {
         SettingsPage.general => widget.v5Desktop ? 'Machines' : 'General',
         SettingsPage.appearance =>
@@ -1814,7 +1822,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
 
   String _pageSubtitle(SettingsPage page) => switch (page) {
         SettingsPage.general => widget.v5Desktop
-            ? ''
+            ? _machinesSummary()
             : 'Machines this app connects to, and how sessions behave.',
         SettingsPage.appearance => widget.v5Desktop
             ? 'Look of the app on this device. Does not change other machines.'
@@ -1942,7 +1950,8 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
             line(),
             Padding(
               padding: const EdgeInsets.only(top: 8, bottom: 16),
-              child: Text('Approvals apply to every session on that machine.',
+              child: Text(
+                  'Approvals decide what an agent may run on that machine without asking you.',
                   style: sans(12, weight: W.body, color: AppColors.fg3)),
             ),
           ]),
@@ -2037,25 +2046,12 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     }
     return _tableRow(
       Row(children: [
-        Container(
-          width: 6,
-          height: 6,
-          decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isActive ? AppColors.ok : AppColors.fg4),
-        ),
-        SizedBox(width: S.s8),
         Flexible(
             child: _tableCell(i.label.isEmpty ? hostOf(i.url) : i.label,
                 color: AppColors.fg1)),
         if (isActive) ...[
           SizedBox(width: S.s8),
-          Flexible(
-              child: Text('Active',
-                  maxLines: 1,
-                  overflow: TextOverflow.clip,
-                  softWrap: false,
-                  style: sans(11, color: AppColors.fg3))),
+          const SettingsTag('Active'),
         ],
       ]),
       _tableCell(status),
