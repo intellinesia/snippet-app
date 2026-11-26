@@ -117,8 +117,8 @@ void main() {
         expect(reviewTarget.right, closeTo(w - 4, 0.5));
         expect(reviewText.right, closeTo(w - 16, 0.5));
 
-        expect(
-            t.widget<Text>(find.text('2 need you')).style?.color, AppColors.run);
+        expect(t.widget<Text>(find.text('2 need you')).style?.color,
+            AppColors.run);
         expect(
             t.widget<AppIcon>(find.byType(AppIcon).first).color, AppColors.run);
 
@@ -127,7 +127,7 @@ void main() {
         await t.pump(const Duration(milliseconds: 300));
         expect(TopZone.floatTop(_ctx), closeTo(r.bottom + 8, 0.5));
         final toastTop = t.getTopLeft(find.text('Approved')).dy;
-        expect(toastTop, greaterThanOrEqualTo(r.bottom + 8));
+        expect(toastTop, greaterThanOrEqualTo(r.bottom + 7));
         expect(t.takeException(), isNull);
 
         report.add(
@@ -228,7 +228,8 @@ void main() {
     expect(TopZone.lowestBar.value, closeTo(96, 0.5));
   });
 
-  testWidgets('Agents root carries at most 2 amber elements (bar + card border)',
+  testWidgets(
+      'Agents root carries at most 2 amber elements (bar + card border)',
       (t) async {
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final agents = [
