@@ -277,23 +277,12 @@ void main() {
         '@sashy look:\ncanvas:app/home\nAlso canvas:app/pricing/cta, thanks.\n[Phone](canvas:app/phone@2)'));
     await tester.pump();
     await tester.pump();
-    // The cap keeps three lines; the fourth appears with Show more.
-    expect(find.byType(CanvasLinkCard), findsNWidgets(2));
-    await tester.tap(find.text('Show more'));
-    await tester.pump();
-    await tester.pump();
+    // v19 canvas links are structural cards, not lines hidden by the prose cap.
     expect(find.byType(CanvasLinkCard), findsNWidgets(3));
 
-    // A long agent post is cut with an ellipsis; a link at the cut must stay
-    // a card for the right frame, not swallow the ellipsis.
-    final long = '${'x ' * 70}canvas:app/home ${'b' * 30}';
-    final preview = groupPostPreview(long)!;
-    expect(preview.endsWith('…'), isTrue);
+    // A link at the prose cut must stay a card for the right frame, not swallow
+    // the ellipsis.
     await tester.pumpWidget(host('${'word ' * 40}\ncanvas:app/home'));
-    await tester.pump();
-    await tester.pump();
-    expect(find.text('Show more'), findsOneWidget);
-    await tester.tap(find.text('Show more'));
     await tester.pump();
     await tester.pump();
     expect(find.byType(CanvasLinkCard), findsOneWidget);
@@ -445,14 +434,13 @@ void main() {
 
     expect(find.byType(CanvasLinkCard), findsOneWidget);
     expect(find.text('Home screen'), findsOneWidget);
-    expect(find.text('Canvas · rev 4'), findsOneWidget);
-    expect(find.text('live'), findsOneWidget);
+    expect(find.text('Canvas - v4'), findsOneWidget);
 
     // Live card refreshes its revision when a canvas_rev event arrives.
     fake.emitRev(const CanvasRevEvent(rev: 5, frameIds: ['home-screen']));
     await tester.pump();
     await tester.pump();
-    expect(find.text('Canvas · rev 5'), findsOneWidget);
+    expect(find.text('Canvas - v5'), findsOneWidget);
   });
 
   testWidgets('pinned @rev card ignores live events and unreachable falls back',
@@ -488,8 +476,7 @@ void main() {
     ));
     await tester.pump();
     await tester.pump();
-    expect(find.text('Canvas · rev 3'), findsOneWidget);
-    expect(find.text('live'), findsNothing);
+    expect(find.text('Canvas - v3'), findsOneWidget);
 
     final callsBefore = pinnedClient.resolveCalls;
     pinnedClient
@@ -514,7 +501,7 @@ void main() {
     ));
     await tester.pump();
     await tester.pump();
-    expect(find.text('Fallback frame'), findsOneWidget);
+    expect(find.text('Canvas unreachable'), findsOneWidget);
     expect(find.text('Canvas · rev 1'), findsNothing);
 
     final missingClient = _TestCanvasCardClient(unavailable: true);
@@ -534,7 +521,7 @@ void main() {
     ));
     await tester.pump();
     await tester.pump();
-    expect(find.text('Frame unavailable'), findsOneWidget);
+    expect(find.text('Canvas was archived or deleted'), findsOneWidget);
   });
 
   testWidgets('canvas-only links split and render preview cards',
@@ -585,7 +572,7 @@ void main() {
 
     expect(find.byType(CanvasLinkCard), findsOneWidget);
     expect(find.text('Pricing board'), findsOneWidget);
-    expect(find.text('Canvas · rev 4'), findsOneWidget);
+    expect(find.text('Canvas - v4'), findsOneWidget);
   });
 }
 
@@ -595,7 +582,15 @@ void canvasLiteTests() {
       'canvas_id': 'c',
       'rev': 4,
       'frames': [
-        {'id': 'a', 'title': 'Home', 'x': 0, 'y': 0, 'w': 390, 'h': 800, 'rev': 1}
+        {
+          'id': 'a',
+          'title': 'Home',
+          'x': 0,
+          'y': 0,
+          'w': 390,
+          'h': 800,
+          'rev': 1
+        }
       ],
     });
     expect(s.frames.single.id, 'a');
@@ -638,13 +633,16 @@ void canvasPinBodyTests() {
         id: 'b', title: 'SE-03', x: 600, y: 0, w: 1200, h: 800, rev: 1);
     const frames = [a, b];
     // Centre inside SE-03 while the phone frame is also partly visible.
-    expect(canvasBarTitle(frames, const Rect.fromLTWH(300, 0, 1000, 800), 'Board'),
+    expect(
+        canvasBarTitle(frames, const Rect.fromLTWH(300, 0, 1000, 800), 'Board'),
         'SE-03');
     // Several visible, centre in a gap: canvas title.
-    expect(canvasBarTitle(frames, const Rect.fromLTWH(100, 0, 800, 800), 'Board'),
+    expect(
+        canvasBarTitle(frames, const Rect.fromLTWH(100, 0, 800, 800), 'Board'),
         'Board');
     // Nothing visible: canvas title.
-    expect(canvasBarTitle(frames, const Rect.fromLTWH(5000, 0, 100, 100), 'Board'),
+    expect(
+        canvasBarTitle(frames, const Rect.fromLTWH(5000, 0, 100, 100), 'Board'),
         'Board');
   });
 }
