@@ -257,8 +257,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 350));
       await tester.pump(const Duration(milliseconds: 50));
 
-      expect(find.text('Working tree clean'), findsOneWidget);
-      expect(find.textContaining('Working tree clean'), findsOneWidget);
+      expect(find.text('No local changes'), findsOneWidget);
+      expect(find.textContaining('working tree is clean'), findsOneWidget);
 
       // Dispose cleanly to cancel timer
       await tester.pumpWidget(const SizedBox.shrink());

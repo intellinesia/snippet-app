@@ -8,7 +8,7 @@ import 'package:snippet/widgets.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('section count is visible when expanded and collapsed',
+  testWidgets('section count shows only once collapsed, as in Capy',
       (tester) async {
     Future<void> pump(bool collapsed) async {
       await tester.pumpWidget(
@@ -37,21 +37,21 @@ void main() {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
 
     await pump(false);
-    expect(find.text('7'), findsOneWidget);
+    expect(find.text('7'), findsNothing);
     final title = tester.widget<Text>(find.text('Agents'));
     expect(title.style?.fontSize, 13);
     expect(title.style?.fontWeight, W.label);
-    expect(title.style?.color, AppColors.fg1);
+    expect(title.style?.color, Color.lerp(AppColors.fg1, AppColors.fg2, 0.3));
     final action = tester.widget<AppIcon>(
         find.byWidgetPredicate((w) => w is AppIcon && w.name == 'search'));
     expect(action.size, 14);
     expect(action.color, AppColors.fg3);
-    final expanded = tester.widget<Text>(find.text('7'));
-    expect(expanded.style?.fontSize, 11.5);
-    expect(expanded.style?.color, AppColors.fg3);
 
     await pump(true);
     expect(find.text('7'), findsOneWidget);
+    final count = tester.widget<Text>(find.text('7'));
+    expect(count.style?.fontSize, 11.5);
+    expect(count.style?.color, AppColors.fg3);
     // Reset inside the body: the binding checks debug vars before tear-down.
     debugDefaultTargetPlatformOverride = null;
   });

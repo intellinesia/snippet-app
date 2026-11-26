@@ -97,7 +97,7 @@ void main() {
     expect(d.borderRadius, BorderRadius.circular(10));
   });
 
-  testWidgets('MSG-01 your bubble: s2 radius 12, pad 12, at most 360',
+  testWidgets('MSG-01 your bubble: s2 radius 8, pad 12x8, at most 360',
       (t) async {
     await pump(
         t,
@@ -111,9 +111,10 @@ void main() {
     final c = t.widget<Container>(box.first);
     final d = c.decoration as BoxDecoration;
     expect(d.color, AppColors.surface2);
-    expect(d.borderRadius, BorderRadius.circular(12));
+    expect(d.borderRadius, BorderRadius.circular(8));
     expect(d.border, isNull);
-    expect(c.padding, const EdgeInsets.all(12));
+    expect(c.padding,
+        const EdgeInsets.symmetric(horizontal: 12, vertical: 8));
     expect(t.getSize(box.first).width, 360);
   });
 
