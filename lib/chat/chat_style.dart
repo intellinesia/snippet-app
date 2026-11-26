@@ -444,6 +444,59 @@ class ChatSenderName extends StatelessWidget {
       );
 }
 
+const _dayNames = [
+  'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
+];
+const _monthNames = [
+  'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
+  'September', 'October', 'November', 'December'
+];
+
+/// "Today, 26 November", "Thursday, 20 November", "3 March 2025".
+String chatDayLabel(DateTime t, {DateTime? now}) {
+  final n = now ?? DateTime.now();
+  final days = DateTime(n.year, n.month, n.day)
+      .difference(DateTime(t.year, t.month, t.day))
+      .inDays;
+  final date = '${t.day} ${_monthNames[t.month - 1]}';
+  if (t.year != n.year) return '$date ${t.year}';
+  final day = switch (days) {
+    0 => 'Today',
+    1 => 'Yesterday',
+    _ => _dayNames[t.weekday - 1],
+  };
+  return '$day, $date';
+}
+
+/// Desktop day marker: a 28-high line, hairlines either side of the label.
+class ChatDayDivider extends StatelessWidget {
+  const ChatDayDivider(this.label, {super.key});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final rule = Expanded(child: Container(height: 1, color: AppColors.line));
+    return Semantics(
+      header: true,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: SizedBox(
+          height: 28,
+          child: Row(children: [
+            rule,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(label,
+                  style: sans(11, color: AppColors.fg3, tabular: true)),
+            ),
+            rule,
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
 /// Centred grey line: day stamps, "Read 18:59", handoffs, tool summaries.
 class ChatSystemLine extends StatelessWidget {
   const ChatSystemLine(this.text,

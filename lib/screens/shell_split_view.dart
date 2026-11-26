@@ -9,7 +9,7 @@ import 'shell_pane_view.dart';
 import 'shell_rail.dart' show kSidebarWidth;
 import '../motion.dart';
 import 'session_rail.dart'
-    show sessionRailCollapsed, sessionRailFraction;
+    show sessionRailCollapsed, sessionRailFraction, kSessionRailMinColumn;
 
 /// The two-pane desktop body row with drag-and-drop between split panes.
 class ShellSplitView extends StatefulWidget {
@@ -315,7 +315,11 @@ class _ShellSplitViewState extends State<ShellSplitView>
                 ? list.isNotEmpty || readouts.any((r) => r != _filesTab)
                 : list.length + readouts.length > 1 ||
                     (p == ShellPane.left && widget.leftStripTrailing != null))
-              PaneStrip(
+              _RailGatedStrip(
+                // A lone chat has no inner strip (C3); it returns only to
+                // carry the docked session panel's own header.
+                gated: list.length + readouts.length <= 1,
+                child: PaneStrip(
                 afterTabs: p == ShellPane.left ? widget.leftStripAfter : null,
                 trailing: p == ShellPane.left ? widget.leftStripTrailing : null,
                 pane: p,
@@ -337,6 +341,7 @@ class _ShellSplitViewState extends State<ShellSplitView>
                     });
                   }
                 },
+              ),
               ),
             Expanded(child: content),
           ],
@@ -516,6 +521,27 @@ class _SidebarResizeHandleState extends State<_SidebarResizeHandle> {
         onHorizontalDragCancel: widget.onResizeEnd,
         onDoubleTap: widget.onReset,
         child: divider,
+      ),
+    );
+  }
+}
+
+/// Shows [child] unless [gated] and the session panel is not docked open.
+class _RailGatedStrip extends StatelessWidget {
+  const _RailGatedStrip({required this.gated, required this.child});
+  final bool gated;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!gated) return child;
+    return LayoutBuilder(
+      builder: (_, box) => ValueListenableBuilder<bool>(
+        valueListenable: sessionRailCollapsed,
+        builder: (_, collapsed, __) =>
+            !collapsed && box.maxWidth >= kSessionRailMinColumn
+                ? child
+                : const SizedBox.shrink(),
       ),
     );
   }

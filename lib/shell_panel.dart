@@ -22,6 +22,7 @@ enum ShellPanelPurpose {
   artifact,
   canvas,
   artifacts,
+  sessions,
   deliverables,
   pullRequests,
   autonomy,

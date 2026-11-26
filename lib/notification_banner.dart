@@ -175,7 +175,7 @@ class NotificationBanner extends StatelessWidget {
                 child: AppIcon(informationGlyph(payload),
                     size: 20, color: AppColors.fg2)));
 
-    final needsMark = compact
+    final needsMark = compact || !kMobile
         ? const NeedsYouMark()
         : Row(mainAxisSize: MainAxisSize.min, children: [
             AppIcon('hand', size: 14, color: amber),

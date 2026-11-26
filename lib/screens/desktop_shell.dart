@@ -1855,7 +1855,9 @@ class _DesktopShellState extends State<DesktopShell>
         ? 'home'
         : reqId == 'all-agents'
             ? 'agents'
-            : '';
+            : reqId == 'all-sessions'
+                ? 'sessions'
+                : '';
     if (activeShellPlace.value != place) {
       WidgetsBinding.instance
           .addPostFrameCallback((_) => activeShellPlace.value = place);

@@ -257,7 +257,7 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('needs-you count always uses the words needs you', (t) async {
+  testWidgets('desktop agent rows carry no needs-you count', (t) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     await t.pumpWidget(MaterialApp(
       home: Scaffold(
@@ -272,8 +272,9 @@ void main() {
       ),
     ));
     await t.pump();
-    expect(find.text('3 needs you'), findsOneWidget);
-    expect(find.text('3 need you'), findsNothing);
+    expect(find.textContaining('needs you'), findsNothing);
+    expect(find.byKey(const ValueKey('agent-needs-dot')), findsNothing);
+    expect(find.text('Idle'), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
   });
 }

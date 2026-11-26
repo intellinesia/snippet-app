@@ -10,7 +10,9 @@ import '../theme.dart';
 import 'composer_card.dart';
 import 'voice_note.dart';
 
-const double kDesktopComposerWidth = 760;
+/// Desktop transcript column; the composer card sits 12 outside it each side.
+const double kChatMeasure = 740;
+const double kDesktopComposerWidth = kChatMeasure + 24;
 
 /// The one composer for session chats, agent threads and group threads, on
 /// phone and desktop: field, attach, voice note, send and stop, docked with

@@ -2252,8 +2252,18 @@ class NoteLine extends StatelessWidget {
             children: [
               Padding(
                 padding: EdgeInsets.only(top: S.s2),
-                child: AppIcon(limit ? 'clock' : 'hand',
-                    size: 14, color: tone, filled: !limit),
+                child: !limit && !kMobile
+                    // Desktop needs-you is a 6px amber dot, never a hand.
+                    ? SizedBox.square(
+                        dimension: 14,
+                        child: Center(
+                            child: Container(
+                                width: 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                    color: tone, shape: BoxShape.circle))))
+                    : AppIcon(limit ? 'clock' : 'hand',
+                        size: 14, color: tone, filled: !limit),
               ),
               SizedBox(width: S.s8),
               Flexible(

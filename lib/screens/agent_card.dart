@@ -665,13 +665,21 @@ class _AgentRowShellState extends State<AgentRowShell> {
     if (mounted) setState(() {});
   }
 
-  AgentRowStatusKind get _kind =>
-      widget.statusKind ??
-      (widget.needs
-          ? AgentRowStatusKind.needsYou
-          : widget.working
-              ? AgentRowStatusKind.running
-              : AgentRowStatusKind.idle);
+  AgentRowStatusKind get _kind {
+    final k = widget.statusKind ??
+        (widget.needs
+            ? AgentRowStatusKind.needsYou
+            : widget.working
+                ? AgentRowStatusKind.running
+                : AgentRowStatusKind.idle);
+    // Desktop agent rows carry no needs-you count; the Sessions inbox does.
+    if (!kMobile && k == AgentRowStatusKind.needsYou) {
+      return widget.working
+          ? AgentRowStatusKind.running
+          : AgentRowStatusKind.idle;
+    }
+    return k;
+  }
 
   void _open({bool newTab = false}) {
     if (newTab) {

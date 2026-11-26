@@ -1568,7 +1568,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     final days = DateTime(now.year, now.month, now.day)
         .difference(DateTime(t.year, t.month, t.day))
         .inDays;
-    final day = switch (days) {
+    final day = !kMobile ? chatDayLabel(t) : switch (days) {
       0 => 'Today',
       1 => 'Yesterday',
       > 1 && < 7 => _weekdays[t.weekday - 1],
@@ -1896,13 +1896,9 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
           final run = runs[i];
           final at = _eventTime(e);
           final prevAt = i > 0 ? _eventTime(visible[i - 1]) : null;
-          final showStamp = at != null &&
-              (prevAt == null ||
-                  !_sameDay(prevAt, at) ||
-                  (!kMobile &&
-                      run.first &&
-                      at.difference(prevAt).abs() >=
-                          const Duration(minutes: 15)));
+          // Desktop marks only the day; each post carries its own time.
+          final showStamp =
+              at != null && (prevAt == null || !_sameDay(prevAt, at));
           final stamp = showStamp ? _dayTimeStamp(at) : null;
           // The header carries a time only after a 10 minute gap.
           final headerTime = at != null &&
@@ -2299,7 +2295,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
           child: Center(
               child: Text(stamp.$1,
                   style: sans(12, color: AppColors.fg3, tabular: true))))
-      : ChatSystemLine(stamp.$2, bold: stamp.$1);
+      : ChatDayDivider(stamp.$1);
 
   // Cards share the bubbles' lane: same avatar column, same width cap.
   Widget _rowFor({
@@ -2325,7 +2321,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       ? child
       : Center(
           child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 960),
+              constraints: const BoxConstraints(maxWidth: kChatMeasure),
               child: SizedBox(width: double.infinity, child: child)));
 
   Widget _sendFlight(String id, Widget child) =>
@@ -2380,16 +2376,22 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                 onInsertText: (t) => appendToInput(_input, t)) : null,
         onAttach: () => unawaited(_attachments.pickFromSheet(context)),
         onRecordMore: () => unawaited(_voice.recordMore(_attachVoiceBytes)),
-        deskHint: () => Padding(
-          padding: EdgeInsets.only(right: S.s8),
-          // Everyone by default; typing @ narrows it to one member.
+        // Everyone by default; typing @ narrows it to one member.
+        deskHint: () => Container(
+          height: 26,
+          padding: const EdgeInsets.fromLTRB(6, 0, 8, 0),
+          decoration: BoxDecoration(
+            color: AppColors.surface2,
+            borderRadius: BorderRadius.circular(7),
+          ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             SizedBox(
                 width: 28,
                 height: 16,
                 child: AgentCluster(ids: _group.agentIds, size: 16)),
-            const SizedBox(width: 6),
-            Text('Everyone', style: sans(12, color: AppColors.fg2)),
+            const SizedBox(width: 4),
+            Text('Everyone',
+                style: sans(11, weight: FontWeight.w500, color: AppColors.fg2)),
           ]),
         ),
         sending: _sending,

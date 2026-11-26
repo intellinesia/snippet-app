@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'tap_detector.dart';
+import 'platform.dart';
 import 'theme.dart';
 import 'toast_avoid.dart';
 import 'widgets.dart';
@@ -149,14 +150,26 @@ const double kQuietRowSize = 15;
 double get quietRowHeight => kMobileRowHeight;
 const double kMobileRowHeight = 52;
 
-/// Amber hand: the only mark that means "this needs you".
+/// The only mark that means "this needs you": an amber hand on the phone, a
+/// 6px amber dot in the same box on desktop (the locked desktop form).
 class QuietHand extends StatelessWidget {
   const QuietHand({super.key, this.size = 16});
   final double size;
 
   @override
-  Widget build(BuildContext context) =>
-      AppIcon('hand', size: size, color: quietAmber, filled: true);
+  Widget build(BuildContext context) => kMobile
+      ? AppIcon('hand', size: size, color: quietAmber, filled: true)
+      : SizedBox.square(
+          dimension: size,
+          child: Center(
+            child: Container(
+              width: 6,
+              height: 6,
+              decoration:
+                  BoxDecoration(color: quietAmber, shape: BoxShape.circle),
+            ),
+          ),
+        );
 }
 
 /// A failure the app recovered from: one muted collapsed line. Tap shows the

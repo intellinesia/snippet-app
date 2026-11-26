@@ -255,8 +255,8 @@ class DeskHint extends StatelessWidget {
 }
 
 /// The composer card: [banner] and [attachments] above the text, then a
-/// toolbar row with attach and the model chip on the left, hints, mic and
-/// the action on the right.
+/// toolbar row with attach, the model chip and the audience on the left, mic
+/// and the action on the right.
 class DeskComposerCard extends StatelessWidget {
   const DeskComposerCard({
     super.key,
@@ -339,8 +339,8 @@ class DeskComposerCard extends StatelessWidget {
                     if (attach != null) attach!,
                     if (model != null) ...[const SizedBox(width: 6), model!],
                     if (cold != null) ...[const SizedBox(width: 6), cold!],
+                    if (hint != null) ...[const SizedBox(width: 6), hint!],
                     const Spacer(),
-                    if (hint != null) hint!,
                     if (recipient != null) ...[
                       recipient!,
                       const SizedBox(width: 8),

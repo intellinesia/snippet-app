@@ -1300,6 +1300,10 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
 
   static String _clockLabel(DateTime t) => clock12(t);
 
+  static Widget _stampLine(DateTime at) => kMobile
+      ? ChatSystemLine(_clockLabel(at), bold: _dayLabel(at))
+      : ChatDayDivider(chatDayLabel(at));
+
   static String _dayLabel(DateTime t) {
     final now = DateTime.now();
     final days = DateTime(now.year, now.month, now.day)
@@ -1613,12 +1617,14 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       final ev = visible[i];
       if (ev.actorKind == 'human') lastHumanIdx = i;
       final at = _eventTime(ev);
-      final isStamp = at != null &&
-          (i == 0 ||
-              prevAt == null ||
-              !_sameDay(prevAt, at) ||
+      final dayBreak =
+          at != null && (i == 0 || prevAt == null || !_sameDay(prevAt, at));
+      final isStamp = dayBreak ||
+          (at != null &&
+              prevAt != null &&
               at.difference(prevAt).abs() >= const Duration(minutes: 15));
-      stamps[i] = isStamp;
+      // Desktop marks only the day; each post carries its own time.
+      stamps[i] = kMobile ? isStamp : dayBreak;
       origins[i] = _hasTaskOrigin(ev);
       splitBefore[i] = i == 0 || rawRuns[i].first || isStamp || origins[i];
       if (at != null) prevAt = at;
@@ -1719,8 +1725,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (showStamp && at != null)
-              ChatSystemLine(_clockLabel(at), bold: _dayLabel(at)),
+            if (showStamp && at != null) _stampLine(at),
             ChatSystemLine(answerLine),
           ],
         ),
@@ -1965,8 +1970,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (showStamp && at != null)
-            ChatSystemLine(_clockLabel(at), bold: _dayLabel(at)),
+          if (showStamp && at != null) _stampLine(at),
           if (showOrigin)
             ChatSystemLine(
               aboutTask is String && aboutTask.isNotEmpty
@@ -2186,7 +2190,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       ? child
       : Center(
           child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 960),
+              constraints: const BoxConstraints(maxWidth: kChatMeasure),
               child: SizedBox(width: double.infinity, child: child)));
 
   Widget _composer() {

@@ -265,7 +265,10 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           if (sessions.isNotEmpty)
             '${sessions.length} ${sessions.length == 1 ? 'session' : 'sessions'}',
         ]),
-        actions: [_panelButton('info', 'agent info')],
+        actions: [
+          if (agent.id != 'lead') _workViewButton(agent.id),
+          _panelButton('info', 'agent info'),
+        ],
       );
     }
     final request = readout?.request;
@@ -297,16 +300,57 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     final needs = mac?.state?.pendingQuestion != null ||
         (s != null && sessionNeedsYou(s));
     final profile = (s?.profile ?? t.profile ?? '').trim();
+    final owner = s?.displayAgentId;
+    final ownerName = owner == null
+        ? ''
+        : _coordinationAgents
+                .where((a) => a.id == owner)
+                .map((a) => a.displayName.trim())
+                .where((n) => n.isNotEmpty)
+                .firstOrNull ??
+            '';
+    final state = needs ? 'needs you' : (running ? 'running' : 'idle');
     return ChatHeaderBar(
-      agentIds: [s?.displayAgentId ?? 'snippet'],
+      agentIds: [owner ?? 'snippet'],
       title: t.title.trim().isEmpty ? 'Session' : t.title.trim(),
+      // "Session, managed by Lead, running - opus"
       subtitle: _line([
-        needs ? 'Needs you' : (running ? 'Running' : 'Ready'),
+        [
+          'Session',
+          if (ownerName.isNotEmpty) 'managed by $ownerName',
+          state,
+        ].join(', '),
         if (profile.isNotEmpty) prettyProfile(profile),
       ]),
-      actions: [_sessionPanelButton(width)],
+      actions: [
+        // The pane's "+" lives here now that a lone chat has no inner strip.
+        Builder(
+          builder: (ctx) => IconBtn('plus',
+              size: 28,
+              iconSize: 14,
+              tooltip: 'Open in this session',
+              onTap: () => _showPaneAddMenu(ctx)),
+        ),
+        _sessionPanelButton(width),
+      ],
     );
   }
+
+  /// Chat or the agent's desk work, toggled from the header rather than a
+  /// permanent switch in the window bar.
+  Widget _workViewButton(String agentId) =>
+      ValueListenableBuilder<Set<String>>(
+        valueListenable: agentWorkView,
+        builder: (_, work, __) {
+          final on = work.contains(agentId);
+          return IconBtn('layers',
+              size: 28,
+              iconSize: 14,
+              active: on,
+              tooltip: on ? 'Back to chat' : 'Show desk work',
+              onTap: () => setAgentWorkView(agentId, !on));
+        },
+      );
 
   /// The agent, Lead or group panel: opened only from the chat header.
   Widget _panelButton(String icon, String what) => IconBtn(icon,
@@ -1067,10 +1111,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           );
         },
       ),
-      if (a.id != 'lead') ...[
-        AgentViewSwitch(agentId: a.id),
-        SizedBox(width: S.s6),
-      ],
     ]);
   }
 

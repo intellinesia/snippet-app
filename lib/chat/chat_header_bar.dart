@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../mochi.dart';
+import '../composer/chat_composer.dart' show kChatMeasure;
 import '../theme.dart';
 import 'agent_cluster.dart';
 
-/// Desktop chat header (XO-03): a bounded s1 bar above the transcript with the
+/// Desktop chat header: one flat bounded row above the transcript with the
 /// chat's identity, its state line and the trailing chat actions.
 class ChatHeaderBar extends StatelessWidget {
   const ChatHeaderBar({
@@ -28,48 +29,52 @@ class ChatHeaderBar extends StatelessWidget {
     Theme.of(context);
     final avatar = agentIds.length > 1
         ? AgentCluster(ids: agentIds, size: 28)
-        : ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+        : ClipOval(
             child: AgentMochi(
                 agentIds.isEmpty ? 'snippet' : agentIds.first,
                 size: 28),
           );
-    return Container(
-      key: const ValueKey('chat-header-bar'),
-      // Grows with large text instead of overflowing.
-      constraints: BoxConstraints(minHeight: height),
-      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-      padding: const EdgeInsets.only(left: 12, right: 10, top: 4, bottom: 4),
-      decoration: BoxDecoration(
-        color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(children: [
-        avatar,
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(13.5,
-                      weight: FontWeight.w500, color: AppColors.fg1)),
-              if (subtitle.isNotEmpty)
-                Text(subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(11, color: AppColors.fg3)),
-            ],
+    // Flat and bounded to the transcript column plus 24 each side, so the
+    // avatar lines up with the posts below; a hairline closes it.
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: kChatMeasure + 48),
+        child: Container(
+          key: const ValueKey('chat-header-bar'),
+          // Grows with large text instead of overflowing.
+          constraints: BoxConstraints(minHeight: height),
+          padding: const EdgeInsets.fromLTRB(24, 4, 24, 4),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppColors.line)),
           ),
+          child: Row(children: [
+            avatar,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(13.5,
+                          weight: FontWeight.w500, color: AppColors.fg1)),
+                  if (subtitle.isNotEmpty)
+                    Text(subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(12, color: AppColors.fg3)),
+                ],
+              ),
+            ),
+            for (var i = 0; i < actions.length; i++) ...[
+              SizedBox(width: i == 0 ? 8 : 2),
+              actions[i],
+            ],
+          ]),
         ),
-        for (var i = 0; i < actions.length; i++) ...[
-          SizedBox(width: i == 0 ? 8 : 2),
-          actions[i],
-        ],
-      ]),
+      ),
     );
   }
 }

@@ -1195,7 +1195,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
           onClose: close,
           onOpenFile: _openChangedFile);
 
-  /// The chat pane: 960 of text, centred, the same with or without the session
+  /// The chat pane: the 740 measure, centred, the same with or without the session
   /// panel so opening it never reflows the transcript. Alone (phone,
   /// read-only, inbox) it takes the full width.
   Widget _chatPane(bool paired, Widget child) {
@@ -1211,7 +1211,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
             children: [
           Flexible(
               child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 960 + 40),
+                  constraints: const BoxConstraints(maxWidth: kChatMeasure + 40),
                   child: child)),
         ]));
   }

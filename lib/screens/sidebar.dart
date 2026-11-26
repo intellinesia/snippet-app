@@ -44,6 +44,7 @@ import 'mobile_session_home.dart';
 import 'phone_hero.dart';
 import '../session_quick_send.dart';
 import 'artifacts_screen.dart' show openArtifactsList;
+import 'sessions_inbox.dart' show openSessionsInbox;
 import 'mobile_home/everyone_switcher.dart' show showEveryoneSwitcher;
 import 'pull_requests.dart' show openPullRequest;
 export 'sidebar_mobile.dart';
@@ -1546,6 +1547,17 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     }
   }
 
+  /// Desktop Sessions is a page (the cross-agent inbox), not a sidebar mode.
+  void _openSessionsPage() {
+    final c = widget.client;
+    if (c == null) return;
+    openSessionsInbox(context,
+        client: c,
+        initial: widget.sessions ?? const <SessionInfo>[],
+        onOpen: (s) => widget.onOpenSession(s.id, s.title, s.profile),
+        onNewSession: widget.onOpenHome);
+  }
+
   /// Home sits above the agents.
   Widget _desktopNav() => Padding(
         padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
@@ -1557,6 +1569,12 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
               icon: 'home',
               selected: place == 'home' && _place != QuietPlace.sessions,
               onTap: () => _selectPlace(QuietPlace.home),
+            ),
+            _PlaceRow(
+              label: 'Sessions',
+              icon: 'chat-thread',
+              selected: place == 'sessions',
+              onTap: _openSessionsPage,
             ),
             _PlaceRow(
               label: 'Tasks',
