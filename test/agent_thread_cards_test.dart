@@ -10,6 +10,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'package:snippet/api.dart';
 import 'package:snippet/chat/grouped_card.dart';
+import 'package:snippet/chat/run_head.dart';
 import 'package:snippet/chat/chat_style.dart';
 import 'package:snippet/media_views.dart';
 import 'package:snippet/models.dart';
@@ -334,7 +335,7 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('plain body still renders ChatBubble for both human and agent',
+  testWidgets('plain body uses a user bubble and flat agent prose',
       (t) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     await _open(t, [
@@ -342,14 +343,13 @@ void main() {
       _ev(2, 'agent', 'All clear, no errors found.'),
     ]);
 
-    expect(find.byType(ChatBubble), findsNWidgets(2));
+    expect(find.byType(ChatBubble), findsOneWidget);
+    expect(find.byType(SoftLane), findsWidgets);
     expect(find.text('Can you check the logs?'), findsOneWidget);
     expect(find.text('All clear, no errors found.'), findsOneWidget);
     // The list is reversed, so build order runs newest first.
-    final bubbles =
-        t.widgetList<ChatBubble>(find.byType(ChatBubble)).toList().reversed.toList();
-    expect(bubbles[0].mine, isTrue);
-    expect(bubbles[1].mine, isFalse);
+    final bubble = t.widget<ChatBubble>(find.byType(ChatBubble));
+    expect(bubble.mine, isTrue);
     await t.pumpWidget(const SizedBox());
     debugDefaultTargetPlatformOverride = null;
   });
@@ -382,8 +382,9 @@ void main() {
       tasksById: {'t-100': task},
     );
 
-    // Earlier event is a ChatBubble; latest event is the task card.
-    expect(find.byType(ChatBubble), findsOneWidget);
+    // Earlier event is flat agent prose; latest event is the task card.
+    expect(find.byType(ChatBubble), findsNothing);
+    expect(find.byType(SoftLane), findsWidgets);
     expect(find.text('Started working on it.'), findsOneWidget);
     expect(find.text('XDR+ISE demo: fix TTS acronyms'), findsOneWidget);
     expect(find.textContaining('Task in review'), findsOneWidget);
