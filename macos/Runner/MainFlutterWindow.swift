@@ -327,9 +327,13 @@ enum MochiRenderer {
 }
 
 class MainFlutterWindow: NSWindow, NSWindowDelegate {
-  /// Height of the title bar the app paints itself; the lights centre in it,
-  /// level with the Flutter sidebar row (52) and pane bar (8 + 36).
-  private let paintedTitleBarHeight: CGFloat = 52
+  /// Height of the top band Flutter paints (kShellTitleRowHeight); the lights
+  /// centre in it, level with the "Snippet" label.
+  private let paintedTitleBarHeight: CGFloat = 40
+
+  /// Right edge the zoom button must stay inside; Flutter starts the label at
+  /// kShellWindowControlsWidth (80), so this keeps a clear gap on every macOS.
+  private let trafficLightReserve: CGFloat = 68
 
   private var statusItem: NSStatusItem?
   private var ambientMenuItem: NSMenuItem?
@@ -883,7 +887,7 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
 
   /// Left edge of the close button: the Flutter sidebar keeps its content on
   /// a 16pt edge, nudged in to clear the larger window corner.
-  private let trafficLightInset: CGFloat = 18
+  private let trafficLightInset: CGFloat = 12
 
   private func centreTrafficLights() {
     guard !styleMask.contains(.fullScreen),
@@ -893,7 +897,7 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
           let container = close.superview?.superview else { return }
 
     // AppKit's title bar is ~28pt; stretch it to the painted bar so the
-    // lights can centre in 52pt without being clipped or reset.
+    // lights can centre in the painted band without being clipped or reset.
     let height = paintedTitleBarHeight
     var bar = container.frame
     if abs(bar.height - height) > 0.5 || abs(bar.minY - (frame.height - height)) > 0.5 {
@@ -902,7 +906,11 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
       container.frame = bar
     }
 
-    let spacing = max(mini.frame.minX - close.frame.minX, 20)
+    // Newer macOS draws larger, wider-spaced lights; tighten the pitch so the
+    // zoom button never reaches the label.
+    let natural = max(mini.frame.minX - close.frame.minX, 20)
+    let fit = (trafficLightReserve - trafficLightInset - zoom.frame.width) / 2
+    let spacing = min(natural, max(fit, zoom.frame.width + 4))
     for (index, button) in [close, mini, zoom].enumerated() {
       let parentHeight = button.superview?.bounds.height ?? height
       let y = (parentHeight - button.frame.height) / 2
