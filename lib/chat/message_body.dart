@@ -192,8 +192,7 @@ class _DraftCardState extends State<_DraftCard> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('Draft message',
-                style:
-                    sans(13, weight: FontWeight.w500, color: AppColors.fg1)),
+                style: sans(13, weight: FontWeight.w500, color: AppColors.fg1)),
             const SizedBox(height: 10),
             Container(
               width: double.infinity,
@@ -215,21 +214,18 @@ class _DraftCardState extends State<_DraftCard> {
                 width: 72,
                 child: DesktopRichButton('Copy',
                     variant: DesktopRichButtonVariant.secondary,
-                    parentSurface: 1,
-                    onTap: () {
-                      Clipboard.setData(ClipboardData(text: text));
-                      toast(context, 'Copied');
-                    }),
+                    parentSurface: 1, onTap: () {
+                  Clipboard.setData(ClipboardData(text: text));
+                  toast(context, 'Copied');
+                }),
               ),
               const SizedBox(width: 8),
-              DesktopRichButton('Post to group',
-                  parentSurface: 1,
-                  onTap: () {
-                    if (!DraftSink.use(text)) {
-                      Clipboard.setData(ClipboardData(text: text));
-                      toast(context, 'Draft copied');
-                    }
-                  }),
+              DesktopRichButton('Post to group', parentSurface: 1, onTap: () {
+                if (!DraftSink.use(text)) {
+                  Clipboard.setData(ClipboardData(text: text));
+                  toast(context, 'Draft copied');
+                }
+              }),
             ]),
           ],
         ),
@@ -256,70 +252,249 @@ class _DraftCardState extends State<_DraftCard> {
   }
 }
 
-class _LinkCard extends StatelessWidget {
+/// Metadata for RC-10. The daemon does not currently expose an unfurl endpoint;
+/// when one is added it can be wired through [phoneLinkPreviewLoader] without
+/// changing the chat renderer.
+class LinkPreviewData {
+  const LinkPreviewData({this.title = '', this.snippet = ''});
+  final String title;
+  final String snippet;
+}
+
+typedef LinkPreviewLoader = Future<LinkPreviewData?> Function(Uri uri);
+
+/// Phone-only preview resolver. Null means no daemon metadata path exists yet,
+/// so the card uses the deterministic URL-derived ready treatment.
+LinkPreviewLoader? phoneLinkPreviewLoader;
+
+class _LinkCard extends StatefulWidget {
   const _LinkCard({required this.url, required this.uri});
 
   final String url;
   final Uri uri;
 
   @override
+  State<_LinkCard> createState() => _LinkCardState();
+}
+
+class _LinkCardState extends State<_LinkCard> {
+  LinkPreviewData? _data;
+  bool _loading = false;
+  bool _failed = false;
+  int _seq = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(_LinkCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url) _load();
+  }
+
+  Future<void> _load() async {
+    final loader = phoneLinkPreviewLoader;
+    if (!kMobile || loader == null) return;
+    final seq = ++_seq;
+    setState(() {
+      _loading = true;
+      _failed = false;
+      _data = null;
+    });
+    try {
+      final data = await loader(widget.uri);
+      if (!mounted || seq != _seq) return;
+      final empty = data == null ||
+          (data.title.trim().isEmpty && data.snippet.trim().isEmpty);
+      setState(() {
+        _data = data;
+        _loading = false;
+        _failed = empty;
+      });
+    } catch (_) {
+      if (!mounted || seq != _seq) return;
+      setState(() {
+        _loading = false;
+        _failed = true;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     Theme.of(context);
-    final info = describeLinkUrl(uri);
+    final info = describeLinkUrl(widget.uri);
     if (!kMobile) {
       return Padding(
         padding: EdgeInsets.symmetric(vertical: S.s4),
         child: DesktopLinkPreviewCard(
-          url: url,
+          url: widget.url,
           title: info.title,
           host: info.host,
-          onTap: () => openMarkdownLink(url, context),
+          onTap: () => openMarkdownLink(widget.url, context),
         ),
       );
     }
-    return Container(
-      width: double.infinity,
-      height: 146,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Material(
-        type: MaterialType.transparency,
-        child: InkWell(
-          onTap: () => openMarkdownLink(url, context),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                AppIcon('link', size: 12, color: AppColors.fg3),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(info.host,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(13, color: AppColors.fg3)),
-                ),
-              ]),
-              const SizedBox(height: 10),
-              Text(info.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style:
-                      sans(15, weight: FontWeight.w500, color: AppColors.fg1)),
-              const SizedBox(height: 6),
-              Expanded(
-                child: Text(url,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(13, height: 1.35, color: AppColors.fg2)),
-              ),
-            ]),
+    if (_loading) return _loadingCard();
+    if (_failed) return _failedCard(info);
+    return _readyCard(info);
+  }
+
+  String get _hostPath {
+    final path = widget.uri.path.replaceAll(RegExp(r'^/+'), '');
+    return path.isEmpty ? widget.uri.host : '${widget.uri.host}/$path';
+  }
+
+  Widget _shell({required double height, required Widget child}) => Container(
+        width: double.infinity,
+        height: height,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onTap: () => openMarkdownLink(widget.url, context),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+              child: child,
+            ),
           ),
         ),
-      ),
+      );
+
+  Widget _loadingCard() {
+    Widget bar(double w, double h) => Container(
+          width: w,
+          height: h,
+          decoration: BoxDecoration(
+            color: AppColors.surface2,
+            borderRadius: BorderRadius.circular(3),
+          ),
+        );
+    return _shell(
+      height: 92,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            bar(180.5, 10),
+            const SizedBox(height: 8),
+            bar(212.7, 8),
+          ]),
+        ]),
+        const Spacer(),
+        Text('Fetching preview for $_hostPath',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: sans(12, color: AppColors.fg3)),
+      ]),
+    );
+  }
+
+  Widget _failedCard(({String host, String title}) info) => _shell(
+        height: 96,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            AppIcon('link', size: 14, color: AppColors.fg2),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(_hostPath,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(13, color: AppColors.fg1)),
+            ),
+          ]),
+          const SizedBox(height: 8),
+          Row(children: [
+            AppIcon('x', size: 12, color: AppColors.fg2),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text('No preview available',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(13, color: AppColors.fg2)),
+            ),
+            Material(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(6),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(6),
+                onTap: () => openMarkdownLink(widget.url, context),
+                child: SizedBox(
+                  height: 36,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      AppIcon('external-link', size: 14, color: AppColors.fg1),
+                      const SizedBox(width: 4),
+                      Text('Open link',
+                          style: sans(13,
+                              weight: FontWeight.w500, color: AppColors.fg1)),
+                    ]),
+                  ),
+                ),
+              ),
+            ),
+          ]),
+        ]),
+      );
+
+  Widget _readyCard(({String host, String title}) info) {
+    final firstSegment = widget.uri.pathSegments.isEmpty
+        ? ''
+        : ' - ${widget.uri.pathSegments.first}';
+    final title = _data?.title.trim().isNotEmpty == true
+        ? _data!.title.trim()
+        : info.title;
+    final snippet = _data?.snippet.trim().isNotEmpty == true
+        ? _data!.snippet.trim()
+        : widget.url;
+    return _shell(
+      height: 146,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          AppIcon('link', size: 14, color: AppColors.fg2),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text('${info.host}$firstSegment',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(13, color: AppColors.fg3)),
+          ),
+        ]),
+        const SizedBox(height: 4),
+        Text(title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: sans(15,
+                weight: FontWeight.w500,
+                height: 21 / 15,
+                color: AppColors.fg1)),
+        const SizedBox(height: 4),
+        Expanded(
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: Text(snippet,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: sans(13, height: 18 / 13, color: AppColors.fg2)),
+          ),
+        ),
+      ]),
     );
   }
 }

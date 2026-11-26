@@ -283,6 +283,7 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
   @override
   Widget build(BuildContext context) {
     Theme.of(context);
+    if (kMobile) return _buildPhone(context);
     if (_phase == _CardPhase.unreachable) {
       if (widget.inline) return const SizedBox.shrink();
       if (!kMobile) {
@@ -382,6 +383,180 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
                   }),
                 ),
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhone(BuildContext context) {
+    if (_phase == _CardPhase.unreachable && widget.inline) {
+      return const SizedBox.shrink();
+    }
+    final title = _displayTitle;
+    final isReady = _phase == _CardPhase.ready && !_imageFailed;
+    final isLoading = _phase == _CardPhase.loading;
+    final isUnreachable = _phase == _CardPhase.unreachable;
+    final meta = _meta;
+
+    Widget thumbIcon(Widget child) => Container(
+          width: 56,
+          height: 62,
+          decoration: BoxDecoration(
+            color: AppColors.surface2,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Center(child: child),
+        );
+
+    Widget thumb;
+    if (isReady &&
+        meta != null &&
+        meta.thumbUrl.isNotEmpty &&
+        _client != null) {
+      thumb = Container(
+        width: 56,
+        height: 62,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: AppColors.bg,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: _CanvasThumbImage(
+          provider: _client!.imageProvider(meta.thumbUrl, rev: _effectiveRev),
+          onDecodedSize: (_) {},
+          onError: () {
+            if (!mounted || _imageFailed) return;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && !_imageFailed) setState(() => _imageFailed = true);
+            });
+          },
+        ),
+      );
+    } else if (isLoading) {
+      thumb = thumbIcon(SizedBox.square(
+        dimension: 16,
+        child:
+            CircularProgressIndicator(strokeWidth: 1.5, color: AppColors.fg3),
+      ));
+    } else if (isUnreachable) {
+      thumb = thumbIcon(AppIcon('wifi-off', size: 16, color: AppColors.fg2));
+    } else {
+      thumb = thumbIcon(AppIcon('grid', size: 16, color: AppColors.fg3));
+    }
+
+    final lines = switch (_phase) {
+      _CardPhase.loading => (
+          title,
+          'Loading canvas metadata...',
+          '',
+          AppColors.fg2,
+          AppColors.fg3,
+        ),
+      _CardPhase.unreachable => (
+          'Canvas unreachable',
+          'Server timed out${_effectiveRev != null ? ' - v$_effectiveRev' : ''}',
+          '',
+          AppColors.fg1,
+          AppColors.fg3,
+        ),
+      _CardPhase.unavailable => (
+          '$title (unavailable)',
+          'Canvas was archived or deleted',
+          '',
+          AppColors.fg2,
+          AppColors.fg3,
+        ),
+      _ => (
+          title,
+          [
+            'Canvas',
+            if (_effectiveRev != null) 'v$_effectiveRev',
+            if (meta?.frameCount != null)
+              '${meta!.frameCount} ${meta.frameCount == 1 ? 'frame' : 'frames'}',
+          ].join(' - '),
+          _activity?.author?.isNotEmpty == true
+              ? '${_activity!.author}${_activity!.editedAt != null ? ' - ${formatCanvasRelativeTime(_activity!.editedAt!)}' : ''}'
+              : '',
+          AppColors.fg1,
+          AppColors.fg2,
+        ),
+    };
+
+    return Semantics(
+      button: true,
+      label: 'Open canvas frame $title',
+      child: Material(
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: isUnreachable ? null : () => _handleTap(context),
+          child: SizedBox(
+            width: double.infinity,
+            height: 82,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+              child: Row(children: [
+                thumb,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        if (isReady) ...[
+                          AppIcon('grid', size: 12, color: AppColors.fg2),
+                          const SizedBox(width: 6),
+                        ],
+                        Expanded(
+                          child: Text(lines.$1,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: sans(14,
+                                  weight: FontWeight.w500,
+                                  height: 18.9 / 14,
+                                  color: lines.$4)),
+                        ),
+                      ]),
+                      const SizedBox(height: 3),
+                      Text(lines.$2,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(12,
+                              height: 16.2 / 12,
+                              color: lines.$5,
+                              tabular: true)),
+                      if (lines.$3.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(lines.$3,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(12,
+                                height: 16.2 / 12,
+                                color: AppColors.fg3,
+                                tabular: true)),
+                      ],
+                    ],
+                  ),
+                ),
+                if (isUnreachable) ...[
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 68,
+                    child: DesktopRichButton('Retry',
+                        variant: DesktopRichButtonVariant.secondary,
+                        parentSurface: 1,
+                        onTap: _load),
+                  ),
+                ] else ...[
+                  const SizedBox(width: 8),
+                  AppIcon('chevron-right', size: 13, color: AppColors.fg3),
+                ],
+              ]),
             ),
           ),
         ),
