@@ -10,6 +10,7 @@ void main() {
         width: 600,
         child: Column(children: [
           ShellTitleRow(
+            reserveWindowControls: true,
             onToggleSidebar: () {},
             canNavigateBack: false,
             canNavigateForward: false,
@@ -33,6 +34,8 @@ void main() {
 
     expect(title.height, kShellTitleRowHeight);
     expect(title.height, 40);
+    expect(tester.getRect(find.text('Snippet')).left,
+        greaterThanOrEqualTo(kShellWindowControlsWidth));
     expect(strip.height, kShellTabStripHeight);
     expect(strip.height, 36);
     expect(tab.top - strip.top, closeTo(2, 1));

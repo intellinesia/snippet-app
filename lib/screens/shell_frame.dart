@@ -26,8 +26,9 @@ const double kShellTabStripHeight = 36;
 const double kShellStatusBarHeight = 26;
 const double kShellFooterHeight = 30;
 
-/// Space the macOS traffic lights (10 at x16/34/52) take at the row start.
-const double kShellWindowControlsWidth = 64;
+/// Space the macOS traffic lights take at the row start, including the
+/// clearance needed before the first app control or label.
+const double kShellWindowControlsWidth = 80;
 
 /// The single hairline between frame regions.
 BorderSide shellHairline() => BorderSide(color: AppColors.line, width: 1);
@@ -77,11 +78,15 @@ class ShellTitleRow extends StatelessWidget {
 
   Widget _full(double width) => Row(
         children: [
-          // "Snippet" at x70, toggle at x138 (spec H1).
-          SizedBox(width: reserveWindowControls ? 70 : 16),
+          // "Snippet" starts after the window-control gutter; the toggle follows.
+          SizedBox(
+              width: reserveWindowControls ? kShellWindowControlsWidth : 16),
           SizedBox(
             // Shrinks first when the column is dragged narrow.
-            width: (width - (reserveWindowControls ? 70 : 16) - 3 * 28 - 6)
+            width: (width -
+                    (reserveWindowControls ? kShellWindowControlsWidth : 16) -
+                    3 * 28 -
+                    6)
                 .clamp(0.0, reserveWindowControls ? 68.0 : 122.0),
             child: Text(
               'Snippet',
