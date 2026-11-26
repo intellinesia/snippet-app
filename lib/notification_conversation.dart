@@ -24,7 +24,10 @@ Future<bool> openNotificationConversation(
   for (final thread in threads) {
     if (thread.threadId == threadId && thread.peerKind == 'agent') {
       openAgentThread(context,
-          client: client, agentId: thread.peerId, agentName: thread.title);
+          client: client,
+          agentId: thread.peerId,
+          agentName: thread.title,
+          initialUnread: thread.unread);
       return true;
     }
   }

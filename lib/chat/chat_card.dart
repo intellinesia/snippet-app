@@ -69,8 +69,8 @@ class ChatCard extends StatelessWidget {
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 // A surface step, not an outline, sets the card apart.
-                color: fill ?? (kMobile ? AppColors.surface1 : AppColors.surface2),
-                borderRadius: BorderRadius.circular(kMobile ? 12 : R.of(16)),
+                color: fill ?? (kMobile ? AppColors.surface2 : AppColors.surface2),
+                borderRadius: BorderRadius.circular(kMobile ? 10 : R.of(16)),
                 border: border == null ? null : Border.all(color: border!),
               ),
               // Own Material so row hovers paint inside the rounded clip.
@@ -311,19 +311,23 @@ class _ChatCardPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final h = kMobile ? 44.0 : 32.0;
+    final h = kMobile ? 36.0 : 32.0;
     final enabled = b.onTap != null && !b.busy;
     final (bg, fg, border) = switch (b.kind) {
-      ChatCardButtonKind.primary => (
-          ChatCardAccent.of(context),
-          ChatCardAccent.inkOf(context),
-          ChatCardAccent.of(context)
-        ),
-      ChatCardButtonKind.secondary => (
-          Colors.transparent,
-          AppColors.fg1,
-          AppColors.fg4
-        ),
+      ChatCardButtonKind.primary => kMobile
+          ? (AppColors.fg1, AppColors.bg, AppColors.fg1)
+          : (
+              ChatCardAccent.of(context),
+              ChatCardAccent.inkOf(context),
+              ChatCardAccent.of(context)
+            ),
+      ChatCardButtonKind.secondary => kMobile
+          ? (AppColors.surface3, AppColors.fg1, AppColors.surface3)
+          : (
+              Colors.transparent,
+              AppColors.fg1,
+              AppColors.fg4
+            ),
       ChatCardButtonKind.danger => (
           AppColors.danger.withValues(alpha: 0.13),
           AppColors.danger,
@@ -336,7 +340,7 @@ class _ChatCardPill extends StatelessWidget {
       label: b.label,
       child: Pressable(
         kind: PressKind.card,
-        radius: h / 2,
+        radius: kMobile ? 8 : h / 2,
         enabled: enabled,
         child: TapDetector(
           behavior: HitTestBehavior.opaque,
@@ -351,7 +355,7 @@ class _ChatCardPill extends StatelessWidget {
                   kMobile ? null : const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
                 color: bg,
-                borderRadius: BorderRadius.circular(h / 2),
+                borderRadius: BorderRadius.circular(kMobile ? 8 : h / 2),
                 border: Border.all(color: border),
               ),
               child: ExcludeSemantics(
@@ -671,7 +675,7 @@ class ApprovalDecideButtons extends StatelessWidget {
   final VoidCallback? onAlways;
   final bool busy;
 
-  Widget _btn(String label, VoidCallback onTap, {required bool primary}) =>
+  Widget _btn(String label, VoidCallback onTap, {required bool primary, bool ghost = false}) =>
       Semantics(
         button: true,
         enabled: !busy,
@@ -680,23 +684,31 @@ class ApprovalDecideButtons extends StatelessWidget {
         child: Opacity(
           opacity: busy ? 0.5 : 1,
           child: Material(
-            color: primary ? AppColors.fg1 : AppColors.surface2,
+            color: ghost
+                ? Colors.transparent
+                : primary
+                    ? AppColors.fg1
+                    : AppColors.surface3,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-              side: primary ? BorderSide.none : BorderSide(color: AppColors.border),
-            ),
+                borderRadius: BorderRadius.circular(8)),
             child: InkWell(
               customBorder: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                  borderRadius: BorderRadius.circular(8)),
               onTap: busy ? null : onTap,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 48),
+              child: SizedBox(
+                height: 36,
                 child: Center(
                   child: Text(label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
-                      style: sans(14,
-                          weight: W.label,
-                          color: primary ? AppColors.bg : AppColors.fg1)),
+                      style: sans(12.5,
+                          weight: FontWeight.w500,
+                          color: ghost
+                              ? AppColors.fg3
+                              : primary
+                                  ? AppColors.bg
+                                  : AppColors.fg1)),
                 ),
               ),
             ),
@@ -705,31 +717,25 @@ class ApprovalDecideButtons extends StatelessWidget {
       );
 
   @override
-  Widget build(BuildContext context) => Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _btn('Allow once', onAllowOnce, primary: true),
-          const SizedBox(height: 8),
-          if (onAlways == null)
-            _btn('Deny', onDeny, primary: false)
-          else
-            IntrinsicHeight(
-              child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                Expanded(child: _btn('Always allow', onAlways!, primary: false)),
-                const SizedBox(width: 8),
-                Expanded(child: _btn('Deny', onDeny, primary: false)),
-              ]),
-            ),
-        ],
-      );
+  Widget build(BuildContext context) {
+    if (onAlways == null) {
+      return Row(children: [
+        Expanded(child: _btn('Deny', onDeny, primary: false)),
+        const SizedBox(width: 8),
+        Expanded(child: _btn('Allow once', onAllowOnce, primary: true)),
+      ]);
+    }
+    return Row(children: [
+      Expanded(child: _btn('Deny', onDeny, primary: false)),
+      const SizedBox(width: 8),
+      Expanded(child: _btn('Allow once', onAllowOnce, primary: true)),
+      const SizedBox(width: 8),
+      Expanded(child: _btn('Always allow', onAlways!, primary: false, ghost: true)),
+    ]);
+  }
 }
 
 
-/// The amber tint of a pending approval: 342F24 dark, FFF3D6 light.
-Color get approvalTint => AppColors.bg.computeLuminance() > 0.18
-    ? const Color(0xFFFFF3D6)
-    : const Color(0xFF342F24);
 
 /// "Needs you" with the amber hand, the first line of a pending approval.
 class NeedsYouRow extends StatelessWidget {
@@ -740,10 +746,17 @@ class NeedsYouRow extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
         child: Row(children: [
-          AppIcon('hand', size: 16, color: AppColors.run),
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: AppColors.run,
+              shape: BoxShape.circle,
+            ),
+          ),
           const SizedBox(width: 8),
           Text('Needs you',
-              style: sans(12, weight: W.label, color: AppColors.run)),
+              style: sans(13, weight: FontWeight.w500, color: AppColors.fg2)),
           const Spacer(),
           if (trailing != null)
             Text(trailing!, style: sans(12, color: AppColors.fg2)),

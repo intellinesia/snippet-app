@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/composer/attachment_tile.dart';
 import 'package:snippet/theme.dart';
 
-// Spec C CH-07: tiles 161.5 x 118 in a two column tray, remove target 48.
+// v19 CM-04: full-width attachment rows, 56 high, remove target 40.
 void main() {
   for (final vw in [360.0, 393.0, 430.0]) {
     for (final scale in [1.0, 1.35, 2.0]) {
@@ -36,16 +36,15 @@ void main() {
           ),
         ));
         final a = t.getRect(find.byKey(const Key('a.txt')));
-        final remove = t.getSize(find.descendant(of: find.byKey(const Key('a.txt')), matching: find.byWidgetPredicate((w) => w is SizedBox && w.width == 48 && w.height == 48)).first);
+        final remove = t.getSize(find.descendant(of: find.byKey(const Key('a.txt')), matching: find.byWidgetPredicate((w) => w is SizedBox && w.width == 40 && w.height == 40)).first);
         final w = vw - 32;
         // ignore: avoid_print
         print('W $vw x$scale tile=${a.width} x ${a.height}');
-        expect(a.width, closeTo((w - 28 - 10) / 2, 0.1));
-        if (scale == 1.0) expect(a.height, 118);
-        expect(a.height, greaterThanOrEqualTo(118));
+        expect(a.width, closeTo(w, 0.1));
+        expect(a.height, 56);
         expect(t.takeException(), isNull);
         debugDefaultTargetPlatformOverride = null;
-        expect(remove, const Size(48, 48));
+        expect(remove, const Size(40, 40));
       });
     }
   }

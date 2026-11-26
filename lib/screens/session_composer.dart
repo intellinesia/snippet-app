@@ -832,9 +832,9 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       margin: EdgeInsets.only(bottom: S.s6),
       padding: EdgeInsets.all(S.s4),
       decoration: BoxDecoration(
-        color: AppColors.raised,
-        borderRadius: BorderRadius.circular(R.lg),
-        border: Border.all(color: AppColors.border),
+        color: AppColors.surface2,
+        borderRadius: BorderRadius.circular(kMobile ? 10 : R.lg),
+        border: kMobile ? null : Border.all(color: AppColors.border),
       ),
       child: matches.isEmpty
           ? Padding(
@@ -851,28 +851,41 @@ extension _SessionScreenComposerExt on _SessionScreenState {
           : Column(mainAxisSize: MainAxisSize.min, children: [
               for (var i = 0; i < matches.length; i++)
                 Material(
-                  color: i == _mentionIndex && !kMobile
-                      ? AppColors.surface2
+                  color: i == _mentionIndex
+                      ? (kMobile ? AppColors.surface3 : AppColors.surface2)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(R.md),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(R.md),
                     onTap: () => _applyMention(matches[i]),
                     child: Container(
-                      height: kMobile ? 44 : 34,
+                      height: kMobile ? 48 : 34,
                       padding: EdgeInsets.symmetric(horizontal: S.of(10)),
                       child: Row(children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: matches[i].status == 'disabled'
-                                ? AppColors.fg4
-                                : AppColors.fg2,
+                        if (kMobile) ...[
+                          Container(
+                            width: 2,
+                            height: 36,
+                            color: i == _mentionIndex
+                                ? AppColors.fg1
+                                : Colors.transparent,
                           ),
-                        ),
-                        SizedBox(width: S.of(10)),
+                          const SizedBox(width: 8),
+                          AgentMochi(matches[i].id, size: 28),
+                          const SizedBox(width: 10),
+                        ] else ...[
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: matches[i].status == 'disabled'
+                                  ? AppColors.fg4
+                                  : AppColors.fg2,
+                            ),
+                          ),
+                          SizedBox(width: S.of(10)),
+                        ],
                         Flexible(
                           child: Text(
                               matches[i].displayName.trim().isEmpty
@@ -880,7 +893,9 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                                   : matches[i].displayName,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: sans(13, color: AppColors.fg1)),
+                              style: sans(kMobile ? 14 : 13,
+                                  weight: kMobile ? FontWeight.w500 : null,
+                                  color: AppColors.fg1)),
                         ),
                       ]),
                     ),
@@ -894,6 +909,83 @@ extension _SessionScreenComposerExt on _SessionScreenState {
 
   bool get _hasDraft =>
       _input.text.trim().isNotEmpty || _attachments.isNotEmpty;
+
+
+  Widget _shortcutChip(String label,
+      {required bool primary,
+      required bool enabled,
+      required VoidCallback? onTap}) {
+    final fill = !enabled
+        ? AppColors.surface2
+        : primary
+            ? AppColors.fg1
+            : AppColors.surface3;
+    final ink = !enabled
+        ? AppColors.fg3
+        : primary
+            ? AppColors.bg
+            : AppColors.fg1;
+    return TapDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: enabled ? onTap : null,
+      child: Container(
+        height: 36,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: fill,
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Text(label,
+            style: sans(12.5, weight: FontWeight.w500, color: ink)),
+      ),
+    );
+  }
+
+  /// CMP-16: fast session actions in a tonal card directly above the pill.
+  Widget _phoneShortcutStrip(bool running) {
+    void continueNow() {
+      if (!_canSend && !running) return;
+      _input.value = const TextEditingValue(
+          text: 'Continue', selection: TextSelection.collapsed(offset: 8));
+      unawaited(_sendMessage());
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 9),
+      decoration: BoxDecoration(
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            _shortcutChip('Continue',
+                primary: false, enabled: !widget.readOnly, onTap: continueNow),
+            const SizedBox(width: 8),
+            _shortcutChip('Summarise',
+                primary: false,
+                enabled: !widget.readOnly,
+                onTap: () => _performMacAction('compact')),
+            const SizedBox(width: 8),
+            _shortcutChip('Stop',
+                primary: running,
+                enabled: running,
+                onTap: running ? () => _send({'kind': 'interrupt'}) : null),
+          ]),
+          const SizedBox(height: 8),
+          Text(
+              running
+                  ? 'Continue queues behind this run.'
+                  : 'Stop is available while the agent is running.',
+              style: sans(13, height: 18 / 13, color: AppColors.fg2)),
+        ],
+      ),
+    );
+  }
 
   Widget _inputBar(bool running, {Widget? top}) {
     var agent = (_meAgentName ?? '').trim();
@@ -935,6 +1027,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
             builder: (_, __) => ComposerTray(
                 controller: _tray, bleed: M.gutter, child: _trayPage(running)),
           ),
+        if (!widget.readOnly) _phoneShortcutStrip(running),
         if (_heldQueue.isNotEmpty) _queuedCard(),
         if (_mentionQuery != null && !_isLead) _mentionList(),
         SlashMenuPopover(controller: _slash),
@@ -1101,32 +1194,23 @@ extension _SessionScreenComposerExt on _SessionScreenState {
               onTap: () => run(() => _send({'kind': 'interrupt'}))),
         ]),
       ComposerGroup(children: [
-        ComposerTrayRow(
-            icon: 'image',
-            label: 'Photo or file',
-            onTap: () => run(_pickFiles)),
-        ComposerTrayRow(
-            icon: 'camera', label: 'Camera', onTap: () => run(_pickCamera)),
-        ComposerTrayRow(
-            icon: 'folder',
-            label: 'Attach a session file',
-            onTap: () => run(_attachSessionFile)),
-        ComposerTrayRow(
-            icon: 'users',
-            label: 'Mention an agent',
-            onTap: () => run(() {
-                  final t = _input.text;
-                  _input.value = TextEditingValue(
-                      text: '$t${t.isEmpty || t.endsWith(' ') ? '' : ' '}@',
-                      selection: TextSelection.collapsed(
-                          offset: t.length +
-                              (t.isEmpty || t.endsWith(' ') ? 0 : 1) +
-                              1));
-                })),
-        ComposerTrayRow(
-            icon: 'mic',
-            label: 'Talk instead',
-            onTap: () => run(() => _voice.start())),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(children: [
+            ComposerTrayTile(
+                icon: 'file', label: 'File', onTap: () => run(_pickFiles)),
+            const Spacer(),
+            ComposerTrayTile(
+                icon: 'mic',
+                label: 'Voice',
+                onTap: () => run(() => _voice.start())),
+            const Spacer(),
+            ComposerTrayTile(
+                icon: 'columns-3',
+                label: 'Canvas',
+                onTap: () => run(_newCanvasFromComposer)),
+          ]),
+        ),
       ]),
       ComposerGroup(children: [
         ComposerTrayRow(
@@ -1134,7 +1218,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
             label: 'Hand off',
             subtitle: 'To another agent, after this turn',
             chevron: true,
-            onTap: () => kMobile ? run(_showHandOff) : _tray.show('handoff')),
+            onTap: () => _tray.show('handoff')),
         ComposerTrayRow(
             icon: 'git-branch',
             label: 'Fork from here',

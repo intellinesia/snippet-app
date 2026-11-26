@@ -38,23 +38,8 @@ class ComposerAttachmentBar extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final v in voice)
-            Padding(padding: EdgeInsets.only(top: S.s6), child: v),
-          if (rest.isNotEmpty)
-            // Phone spec CH-07: a tray of two-column tiles, 118 high each.
-            Container(
-              margin: EdgeInsets.only(top: S.s6),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                  color: AppColors.surface1,
-                  borderRadius: BorderRadius.circular(16)),
-              child: LayoutBuilder(
-                builder: (_, c) => Wrap(spacing: 10, runSpacing: 10, children: [
-                  for (final t in rest)
-                    SizedBox(width: (c.maxWidth - 10) / 2, child: t),
-                ]),
-              ),
-            ),
+          for (final t in [...voice, ...rest])
+            Padding(padding: EdgeInsets.only(top: S.s6), child: t),
         ],
       ),
     );
@@ -109,11 +94,10 @@ class ComposerAttachmentTile extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             onTap: uploading ? null : onOpen,
             child: Container(
-              height: 48,
+              height: 56,
               decoration: BoxDecoration(
                 color: AppColors.surface2,
-                borderRadius: BorderRadius.circular(R.md),
-                border: Border.all(color: AppColors.border),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Row(children: [
                 Expanded(
@@ -128,11 +112,11 @@ class ComposerAttachmentTile extends StatelessWidget {
                         height: 32,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: AppColors.accentBg,
+                          color: AppColors.surface3,
                           shape: BoxShape.circle,
                         ),
                         child:
-                            AppIcon('play', size: 14, color: AppColors.accent),
+                            AppIcon('play', size: 14, color: AppColors.fg1),
                       ),
                       SizedBox(width: S.s12),
                       Expanded(child: NoteWaveStrip(seed: name.hashCode)),
@@ -162,7 +146,7 @@ class ComposerAttachmentTile extends StatelessWidget {
           sizeBytes: sizeBytes,
           pastedText: pastedText,
           imageProvider: imageProvider,
-          child: _tile(),
+          child: _tile(context),
         );
 
   static String _bytes(int b) => b < 1024
@@ -171,103 +155,91 @@ class ComposerAttachmentTile extends StatelessWidget {
           ? '${(b / 1024).round()} KB'
           : '${(b / 1048576).toStringAsFixed(1)} MB';
 
-  Widget _phoneTile() {
+  Widget _phoneTile(BuildContext context) {
     final meta = pastedText != null
         ? '${pastedText!.length} chars'
-        : (sizeBytes != null
-            ? _bytes(sizeBytes!)
+        : (_effectiveSizeBytes != null
+            ? _bytes(_effectiveSizeBytes!)
             : (isImage ? 'Image' : 'File'));
-    final thumb = isImage && localPath != null && File(localPath!).existsSync()
-        ? Image.file(File(localPath!),
-            fit: BoxFit.cover, cacheWidth: 300, cacheHeight: 150)
-        : Center(
-            child: AppIcon(
-                pastedText != null
-                    ? 'file-text'
-                    : (mediaKindOf(name) == MediaKind.pdf ? 'pdf' : 'file'),
-                size: 20,
-                color: AppColors.fg3));
+    final icon = pastedText != null
+        ? 'file-text'
+        : isImage
+            ? 'image'
+            : (mediaKindOf(name) == MediaKind.pdf ? 'pdf' : 'file');
     return Container(
-      constraints: const BoxConstraints(minHeight: 118),
+      height: 56,
       decoration: BoxDecoration(
-          color: AppColors.surface2, borderRadius: BorderRadius.circular(10)),
-      child: Stack(children: [
-        Semantics(
-          button: onOpen != null,
-          label: 'Preview $name',
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onOpen,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(6, 6, 6, 4),
+        color: AppColors.surface2,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(children: [
+        const SizedBox(width: 10),
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: AppColors.surface3,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: isImage && localPath != null && File(localPath!).existsSync()
+              ? Image.file(File(localPath!), fit: BoxFit.cover)
+              : Center(child: AppIcon(icon, size: 16, color: AppColors.fg2)),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Semantics(
+            button: onOpen != null,
+            label: 'Preview $name',
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: uploading ? null : onOpen,
               child: Column(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    height: 72,
-                    width: double.infinity,
-                    clipBehavior: Clip.antiAlias,
-                    decoration: BoxDecoration(
-                        color: AppColors.bg,
-                        borderRadius: BorderRadius.circular(6)),
-                    child: thumb,
-                  ),
-                  const SizedBox(height: 4),
                   Text(name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(12, weight: W.label, color: AppColors.fg1)),
-                  Text(meta,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(11, color: AppColors.fg3)),
+                      style: sans(14,
+                          height: 19 / 14,
+                          weight: FontWeight.w500,
+                          color: uploading ? AppColors.fg2 : AppColors.fg1)),
+                  if (MediaQuery.textScalerOf(context).scale(14) <= 19)
+                    Text(meta,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(12, height: 16 / 12, color: AppColors.fg2)),
                 ],
               ),
             ),
           ),
         ),
         if (uploading)
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                  color: AppColors.scrim,
-                  borderRadius: BorderRadius.circular(10)),
-              alignment: Alignment.center,
-              child: Spinner(size: 16, color: AppColors.fg1),
-            ),
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: Spinner(size: 14, color: AppColors.fg2),
           ),
-        Positioned(
-          top: 0,
-          right: 0,
-          child: Semantics(
-            button: true,
-            label: 'Remove $name',
-            child: TapDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onRemove,
-              child: SizedBox(
-                width: 48,
-                height: 48,
-                child: Center(
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                        color: AppColors.surface3, shape: BoxShape.circle),
-                    child: AppIcon('x', size: 12, color: AppColors.fg1),
-                  ),
-                ),
-              ),
+        Semantics(
+          button: true,
+          label: 'Remove $name',
+          child: TapDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onRemove,
+            child: SizedBox(
+              width: 40,
+              height: 40,
+              child: Center(child: AppIcon('x', size: 14, color: AppColors.fg2)),
             ),
           ),
         ),
+        const SizedBox(width: 6),
       ]),
     );
   }
 
-  Widget _tile() => kMobile ? _phoneTile() : _deskTile();
+  Widget _tile(BuildContext context) =>
+      kMobile ? _phoneTile(context) : _deskTile();
 
   int? get _effectiveSizeBytes {
     if (sizeBytes != null) return sizeBytes;

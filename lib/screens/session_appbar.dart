@@ -1360,10 +1360,15 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
 
   Widget _disconnectedBanner() {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: S.s16, vertical: S.of(10)),
-      decoration: BoxDecoration(color: AppColors.surface2),
+      height: kMobile ? 44 : null,
+      margin: kMobile ? EdgeInsets.symmetric(horizontal: S.s20, vertical: S.s4) : EdgeInsets.zero,
+      padding: EdgeInsets.symmetric(horizontal: S.s16, vertical: kMobile ? 0 : S.of(10)),
+      decoration: BoxDecoration(
+        color: AppColors.surface2,
+        borderRadius: kMobile ? BorderRadius.circular(8) : null,
+      ),
       child: Row(children: [
-        AppIcon('wifi-off', size: 15, color: AppColors.run),
+        AppIcon('wifi-off', size: 15, color: AppColors.fg2),
         SizedBox(width: S.of(9)),
         Expanded(
             child: Text(

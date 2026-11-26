@@ -207,9 +207,9 @@ class MessageFocusOverlay extends StatelessWidget {
   static const _springCurve = Cubic(0.22, 1.12, 0.36, 1.0);
   static const _gap = 10.0;
   // Desktop (MSG-08): a 36 bar of 28 targets, 28 rows on a 200 card.
-  static double get _barHeight => kMobile ? 56.0 : 36.0;
-  static double get _cardWidth => kMobile ? 240.0 : 200.0;
-  static double get _rowHeight => kMobile ? 48.0 : 28.0;
+  static double get _barHeight => kMobile ? 44.0 : 36.0;
+  static double get _cardWidth => 200.0;
+  static double get _rowHeight => kMobile ? 44.0 : 28.0;
   static const _sideMargin = 16.0;
 
   @override
@@ -270,7 +270,7 @@ class MessageFocusOverlay extends StatelessWidget {
     final estimatedBarW = math.min(
       screen.width - _sideMargin * 2,
       kMobile
-          ? 20.0 + quickReactions.length * 48.0 + (showMoreButton ? 52.0 : 0.0)
+          ? 8.0 + quickReactions.length * 40.0 + (showMoreButton ? 44.0 : 0.0)
           : 8.0 + quickReactions.length * 28.0,
     );
     final barLeft = (mine ? bubbleRight - estimatedBarW : bubbleLeft)
@@ -327,8 +327,8 @@ class MessageFocusOverlay extends StatelessWidget {
           }
 
           // Spec CH-10: the dark scrim 0.58, the light one warm at 0.36.
-          final base = kMobile ? AppColors.scrim : AppColors.glassScrim;
-          final scrimColor = base.withValues(alpha: base.a * t);
+          final base = kMobile ? Colors.black : AppColors.glassScrim;
+          final scrimColor = base.withValues(alpha: (kMobile ? 0.60 : base.a) * t);
           Widget backdrop = ColoredBox(color: scrimColor);
           // Desktop: a flat dim, no backdrop blur.
           if (kMobile && Glass.effectiveEnabled && t > 0.001) {
@@ -459,65 +459,50 @@ class _ReactionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!kMobile) return _desk();
-    return SizedBox(
-      height: 56,
-      child: Glass(
-        radius: BorderRadius.circular(R.of(28)),
-        child: Material(
-          type: MaterialType.transparency,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: S.of(10)),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final emoji in reactions)
-                  Semantics(
-                    button: true,
-                    label: 'React $emoji',
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(R.of(20)),
-                      onTap: () => onReact(emoji),
-                      child: SizedBox(
-                        width: 48,
-                        height: 48,
-                        child: Center(
-                          child: Text(
-                            emoji,
-                            style: const TextStyle(fontSize: 24, height: 1.1),
-                          ),
-                        ),
-                      ),
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.surface3,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final emoji in reactions)
+              Semantics(
+                button: true,
+                label: 'React $emoji',
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: () => onReact(emoji),
+                  child: SizedBox.square(
+                    dimension: 36,
+                    child: Center(
+                      child: Text(emoji,
+                          style: const TextStyle(fontSize: 20, height: 1.1)),
                     ),
                   ),
-                if (showMore)
-                  Padding(
-                    padding: EdgeInsets.only(left: S.s4),
-                    child: Semantics(
-                      button: true,
-                      label: 'More reactions',
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(R.of(18)),
-                        onTap: onMore,
-                        child: Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: AppColors.fg1.withValues(alpha: 0.08),
-                            shape: BoxShape.circle,
-                          ),
-                          alignment: Alignment.center,
-                          child: Icon(
-                            PhIcons.plus,
-                            size: 18,
-                            color: AppColors.fg2,
-                          ),
-                        ),
-                      ),
+                ),
+              ),
+            if (showMore)
+              Semantics(
+                button: true,
+                label: 'More reactions',
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: onMore,
+                  child: SizedBox.square(
+                    dimension: 36,
+                    child: Center(
+                      child: Icon(PhIcons.plus, size: 16, color: AppColors.fg2),
                     ),
                   ),
-              ],
-            ),
-          ),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -575,9 +560,13 @@ class _ActionsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!kMobile) return _desk();
-    final dividerColor = AppColors.fg1.withValues(alpha: 0.08);
-    return Glass(
-      radius: BorderRadius.circular(R.of(16)),
+    final dividerColor = AppColors.surface1;
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface3,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: Material(
         type: MaterialType.transparency,
         child: Column(

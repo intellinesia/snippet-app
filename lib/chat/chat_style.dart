@@ -130,25 +130,50 @@ MarkdownStyleSheet chatMarkdownStyle(BuildContext context,
         color: linkColor,
         decoration: TextDecoration.underline,
         decorationColor: linkColor.withValues(alpha: 0.5)),
+    listIndent: kMobile ? 18 : base.listIndent,
+    listBulletPadding: EdgeInsets.only(right: kMobile ? 6 : S.s6),
     listBullet: soft,
-    blockquote: soft.copyWith(fontStyle: FontStyle.italic),
-    // Phone spec CH-22: hairline rows, 12.5 head in fg2, 13 body, 36 rows.
-    tableHead: sans(12.5, weight: W.label, color: AppColors.fg2),
-    tableBody: sans(13, color: AppColors.fg1),
+    blockquote: kMobile
+        ? soft.copyWith(color: AppColors.fg2)
+        : soft.copyWith(fontStyle: FontStyle.italic),
+    blockquotePadding: kMobile
+        ? const EdgeInsets.fromLTRB(10, 2, 0, 2)
+        : base.blockquotePadding,
+    blockquoteDecoration: BoxDecoration(
+      border: Border(
+          left: BorderSide(
+              color: kMobile ? AppColors.fg3 : AppColors.lineStrong, width: 2)),
+    ),
+    code: base.code?.copyWith(
+        fontSize: kMobile ? 12 : null,
+        backgroundColor: kMobile ? AppColors.surface3 : null),
+    // RC-14 phone tables: full-width hairline rows, tonal header plate, 40 h rows.
+    tableHead:
+        sans(kMobile ? 13.5 : 12.5, weight: W.label, color: AppColors.fg2),
+    tableBody: sans(kMobile ? 13.5 : 13, color: AppColors.fg1),
     tableBorder: TableBorder(
+        borderRadius: kMobile ? BorderRadius.circular(6) : BorderRadius.zero,
         horizontalInside: BorderSide(color: AppColors.border, width: 1),
         bottom: BorderSide(color: AppColors.border, width: 1)),
-    tableCellsPadding:
-        const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+    tableCellsPadding: EdgeInsets.symmetric(
+        horizontal: kMobile ? 10 : 8, vertical: kMobile ? 11 : 8),
+    tableHeadCellsPadding: EdgeInsets.symmetric(
+        horizontal: kMobile ? 10 : 8, vertical: kMobile ? 11 : 8),
+    tableHeadCellsDecoration:
+        BoxDecoration(color: kMobile ? AppColors.surface2 : null),
     tableCellsDecoration: const BoxDecoration(),
+    tableColumnWidth: kMobile ? const FlexColumnWidth() : base.tableColumnWidth,
     codeblockDecoration: BoxDecoration(
         color: AppColors.surface1, borderRadius: BorderRadius.circular(10)),
     h1: prose.copyWith(
-        fontSize: ChatColors.fontSize + 3, fontWeight: weightFor(W.strong)),
+        fontSize: kMobile ? 19 : ChatColors.fontSize + 3,
+        fontWeight: kMobile ? FontWeight.w500 : weightFor(W.strong)),
     h2: prose.copyWith(
-        fontSize: ChatColors.fontSize + 2, fontWeight: weightFor(W.strong)),
+        fontSize: kMobile ? 16 : ChatColors.fontSize + 2,
+        fontWeight: kMobile ? FontWeight.w500 : weightFor(W.strong)),
     h3: prose.copyWith(
-        fontSize: ChatColors.fontSize + 1, fontWeight: weightFor(W.strong)),
+        fontSize: kMobile ? 16 : ChatColors.fontSize + 1,
+        fontWeight: kMobile ? FontWeight.w500 : weightFor(W.strong)),
   );
 }
 
@@ -182,7 +207,7 @@ class ChatBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Agent replies are plain prose on the canvas; yours sits on s2.
-    if (!mine && color == null && (!kMobile || reading)) {
+    if (!mine && color == null) {
       return ChatBubbleFill(
         fill: AppColors.bg,
         child: Builder(
@@ -194,10 +219,10 @@ class ChatBubble extends StatelessWidget {
         ),
       );
     }
-    // Phone spec: user surface3, agent surface1, padding 12 x 11, no tail.
+    // v19 phone: your bubble is surface2; agent prose has no bubble.
     final fill = color ??
         (kMobile
-            ? (mine ? AppColors.surface3 : AppColors.surface1)
+            ? (mine ? AppColors.surface2 : AppColors.surface1)
             : (mine ? AppColors.surface2 : ChatColors.received));
     final h = kMobile ? 12.0 : 11.0;
     final v = kMobile ? 11.0 : 6.0;
@@ -251,7 +276,7 @@ class ChatBubble extends StatelessWidget {
               color: fill,
               mine: mine,
               tail: false,
-              radius: ChatColors.radius,
+              radius: kMobile ? 12 : ChatColors.radius,
               tailW: tailPad),
           child: Padding(
             padding: EdgeInsets.fromLTRB(

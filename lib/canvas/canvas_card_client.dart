@@ -8,7 +8,8 @@ import 'canvas_models.dart' show CanvasRevEvent;
 /// Raised when the canvas backend cannot be reached (network/transport error).
 /// Cards fall back to normal markdown link text.
 class CanvasUnreachableException implements Exception {
-  const CanvasUnreachableException([this.message = 'Canvas backend unreachable']);
+  const CanvasUnreachableException(
+      [this.message = 'Canvas backend unreachable']);
   final String message;
 
   @override
@@ -34,6 +35,7 @@ class CanvasLinkMeta {
     required this.rev,
     required this.title,
     required this.thumbUrl,
+    this.frameCount,
     this.width,
     this.height,
   });
@@ -44,6 +46,7 @@ class CanvasLinkMeta {
   final int rev;
   final String title;
   final String thumbUrl;
+  final int? frameCount;
   final double? width;
   final double? height;
 
@@ -56,15 +59,24 @@ class CanvasLinkMeta {
 
   factory CanvasLinkMeta.fromJson(Map<String, dynamic> j) {
     final rawRev = j['rev'];
-    final rev = rawRev is num
-        ? rawRev.toInt()
-        : int.tryParse('${rawRev ?? 0}') ?? 0;
+    final rev =
+        rawRev is num ? rawRev.toInt() : int.tryParse('${rawRev ?? 0}') ?? 0;
     double? numField(List<String> keys) {
       for (final k in keys) {
         final v = j[k];
         if (v is num && v > 0) return v.toDouble();
       }
       return null;
+    }
+
+    int? frameCount;
+    for (final key in const ['frame_count', 'frames_count', 'frameCount']) {
+      final raw = j[key];
+      if (raw is num && raw > 0) frameCount = raw.toInt();
+    }
+    if (frameCount == null && j['frames'] is List) {
+      final count = (j['frames'] as List).length;
+      if (count > 0) frameCount = count;
     }
 
     return CanvasLinkMeta(
@@ -76,6 +88,7 @@ class CanvasLinkMeta {
       rev: rev,
       title: (j['title'] ?? '').toString(),
       thumbUrl: (j['thumb_url'] ?? '').toString(),
+      frameCount: frameCount,
       width: numField(const ['width', 'frame_width', 'w']),
       height: numField(const ['height', 'frame_height', 'h']),
     );
@@ -171,8 +184,8 @@ class CanvasLayout {
       if (raw is! List) return;
       for (final item in raw) {
         if (item is! Map) continue;
-        final id =
-            (item['data-cv-id'] ?? item['cv_id'] ?? item['id'] ?? '').toString();
+        final id = (item['data-cv-id'] ?? item['cv_id'] ?? item['id'] ?? '')
+            .toString();
         if (id.isEmpty) continue;
         final box = CanvasElementBox.tryFromJson(item);
         if (box != null) out[id] = box;
@@ -227,8 +240,9 @@ class CanvasCardClientScope extends InheritedWidget {
 
   final CanvasCardClient client;
 
-  static CanvasCardClient? maybeOf(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<CanvasCardClientScope>()?.client;
+  static CanvasCardClient? maybeOf(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<CanvasCardClientScope>()
+      ?.client;
 
   @override
   bool updateShouldNotify(CanvasCardClientScope oldWidget) =>

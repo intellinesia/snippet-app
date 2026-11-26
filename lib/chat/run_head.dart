@@ -167,8 +167,8 @@ class SoftLane extends StatelessWidget {
                         child: Text(name!,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: sans(13,
-                                height: 18 / 13,
+                            style: sans(kMobile ? 13 : 13,
+                                height: kMobile ? 18 / 13 : 18 / 13,
                                 weight: FontWeight.w500,
                                 color: ink)),
                       ),
@@ -179,8 +179,8 @@ class SoftLane extends StatelessWidget {
                       if (time != null) ...[
                         const SizedBox(width: 6),
                         Text(time!,
-                            style:
-                                sans(11, color: AppColors.fg3, tabular: true)),
+                            style: sans(kMobile ? 11.5 : 11,
+                                color: AppColors.fg3, tabular: true)),
                       ],
                       if (muted) ...[
                         const SizedBox(width: 8),
@@ -197,7 +197,9 @@ class SoftLane extends StatelessWidget {
           ),
         ],
       );
-      if (selected) post = SelectedPlate(child: post);
+      if (selected) {
+        post = kMobile ? PhoneSelectedPlate(child: post) : SelectedPlate(child: post);
+      }
       return post;
     });
   }
@@ -225,6 +227,39 @@ class SelectedPlate extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
+          ),
+          child,
+        ],
+      );
+}
+
+/// v19 phone selection: surface3 plate, radius 8, with a 2 px fg2 left bar.
+class PhoneSelectedPlate extends StatelessWidget {
+  const PhoneSelectedPlate({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: -8,
+            top: -6,
+            right: -8,
+            bottom: -6,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppColors.surface3,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+          Positioned(
+            left: -8,
+            top: -6,
+            bottom: -6,
+            child: Container(width: 2, color: AppColors.fg2),
           ),
           child,
         ],

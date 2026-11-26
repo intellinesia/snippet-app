@@ -80,6 +80,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
   final _text = TextEditingController();
   final _focus = FocusNode();
   var _state = _Send.idle;
+  bool _replyExpanded = false;
   String _sending = 'Sending...';
 
   @override
@@ -132,6 +133,312 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
         'Sent');
   }
 
+  Widget _phoneChip({
+    required String label,
+    required String icon,
+    required VoidCallback? onTap,
+    bool primary = false,
+    double? width,
+  }) {
+    final fill = primary ? AppColors.fg1 : AppColors.surface3;
+    final fg = primary ? AppColors.bg : AppColors.fg1;
+    return Semantics(
+      button: true,
+      enabled: onTap != null,
+      label: label,
+      child: Material(
+        color: fill,
+        borderRadius: BorderRadius.circular(6),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(6),
+          child: SizedBox(
+            width: width,
+            height: 36,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                AppIcon(icon, size: 14, color: fg),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(13,
+                          weight: FontWeight.w500, height: 1, color: fg)),
+                ),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _phoneReplyField(String hint) {
+    final canSend = _state != _Send.sending && _text.text.trim().isNotEmpty;
+    return SizedBox(
+      height: 36,
+      child: Row(children: [
+        Expanded(
+          child: Container(
+            height: 36,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: AppColors.surface1,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            alignment: Alignment.centerLeft,
+            child: TextField(
+              controller: _text,
+              focusNode: _focus,
+              enabled: _state != _Send.sending,
+              textInputAction: TextInputAction.send,
+              onSubmitted: (_) => _submitText(cardActionFor(widget.payload)),
+              style: sans(14, color: AppColors.fg1),
+              decoration: InputDecoration(
+                isCollapsed: true,
+                border: InputBorder.none,
+                hintText: hint,
+                hintStyle: sans(14, color: AppColors.fg3),
+              ),
+            ),
+          ),
+        ),
+        if (_text.text.trim().isNotEmpty) ...[
+          const SizedBox(width: 6),
+          SizedBox(
+            width: 36,
+            height: 36,
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              tooltip: 'Send',
+              onPressed: canSend
+                  ? () => _submitText(cardActionFor(widget.payload))
+                  : null,
+              icon: Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: canSend ? AppColors.fg1 : AppColors.surface3,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: AppIcon('arrow-up',
+                      size: 13, color: canSend ? AppColors.bg : AppColors.fg4),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ]),
+    );
+  }
+
+  /// RC-18 phone cards are fixed-height notification messages, not the desktop
+  /// expanded quick-action form. Reply composition is revealed only after the
+  /// 36-high Reply chip is tapped, so the idle measurement stays exact.
+  Widget _buildPhone(BuildContext context) {
+    final p = widget.payload;
+    final title = '${p['title'] ?? ''}'.trim();
+    final name = title.isEmpty ? 'Snippet' : title;
+    final attention = p['attention'];
+    var body = notificationBody(p);
+    if (body.isEmpty && attention is Map) {
+      body = '${attention['label'] ?? attention['text'] ?? ''}'.trim();
+    }
+    final action = cardActionFor(p);
+    final needs = notificationKind(p) == 'waiting';
+    final busy = _state == _Send.sending;
+    final failed = _state == _Send.failed;
+    final choices = action == CardAction.answer
+        ? answerChoices(attention)
+        : const <(String, String)>[];
+    final height = switch (action) {
+      CardAction.none => 73.0,
+      CardAction.approval || CardAction.answer => 153.0,
+      CardAction.reply || CardAction.view => 152.0,
+    };
+    final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    final fixedHeight = textScale <= 1.01;
+    final twoLineBody = action == CardAction.reply || action == CardAction.view;
+
+    Widget statusOrActions() {
+      if (busy) {
+        return Row(children: [
+          SizedBox.square(
+            dimension: 14,
+            child: CircularProgressIndicator(
+                strokeWidth: 1.5, color: AppColors.fg2),
+          ),
+          const SizedBox(width: 8),
+          Text(_sending, style: sans(13, color: AppColors.fg2)),
+        ]);
+      }
+      if (failed) {
+        return Row(children: [
+          AppIcon('x', size: 14, color: AppColors.fg1),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text('Could not send',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(13, color: AppColors.fg1)),
+          ),
+          SizedBox(
+            width: 73,
+            child: _phoneChip(
+              label: 'Retry',
+              icon: 'refresh',
+              onTap: () => setState(() => _state = _Send.idle),
+            ),
+          ),
+        ]);
+      }
+      return switch (action) {
+        CardAction.none => const SizedBox.shrink(),
+        CardAction.view => Align(
+            alignment: Alignment.centerLeft,
+            child: SizedBox(
+              width: 70,
+              child:
+                  _phoneChip(label: 'View', icon: 'eye', onTap: widget.onOpen),
+            ),
+          ),
+        CardAction.reply => Align(
+            alignment: Alignment.centerLeft,
+            child: SizedBox(
+              width: 70,
+              child: _phoneChip(
+                label: 'Reply',
+                icon: 'reply',
+                onTap: () {
+                  setState(() => _replyExpanded = true);
+                  _focus.requestFocus();
+                },
+              ),
+            ),
+          ),
+        CardAction.approval => Row(children: [
+            _phoneChip(
+              label: busy ? 'Approving...' : 'Approve',
+              icon: 'check',
+              primary: true,
+              onTap: busy
+                  ? null
+                  : () => _send(const QuickApprove(via: 'notification'),
+                      'Approving...', 'Approved'),
+            ),
+            const SizedBox(width: 8),
+            _phoneChip(
+              label: 'Deny',
+              icon: 'x',
+              onTap: busy
+                  ? null
+                  : () => _send(const QuickDeny(via: 'notification'),
+                      'Denying...', 'Denied'),
+            ),
+          ]),
+        CardAction.answer => Row(children: [
+            for (final (i, choice) in choices.indexed) ...[
+              if (i > 0) const SizedBox(width: 8),
+              _phoneChip(
+                label: choice.$1,
+                icon: 'check',
+                onTap: busy
+                    ? null
+                    : () => _send(
+                        QuickAnswer(answerText(attention, choiceAnswer(choice)),
+                            via: 'notification'),
+                        'Sending answer...',
+                        'Sent'),
+              ),
+            ],
+          ]),
+      };
+    }
+
+    return Semantics(
+      container: true,
+      label: '$name, ${needs ? 'needs you' : 'message'}, $body',
+      child: Container(
+        width: double.infinity,
+        height: fixedHeight && !(_replyExpanded && action == CardAction.reply)
+            ? height
+            : null,
+        constraints:
+            !fixedHeight || (_replyExpanded && action == CardAction.reply)
+                ? BoxConstraints(minHeight: height)
+                : null,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          SizedBox(
+            height: 20,
+            child: Row(children: [
+              Container(
+                width: 20,
+                height: 20,
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: AppColors.surface3,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: AgentMochi('${p['agent_id'] ?? 'snippet'}', size: 20),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13,
+                        weight: FontWeight.w500, color: AppColors.fg1)),
+              ),
+              Text(notificationAgo(p['created_at']),
+                  style: sans(12, color: AppColors.fg2)),
+            ]),
+          ),
+          if (needs) ...[
+            const SizedBox(height: 6),
+            SizedBox(
+              height: 18,
+              child: Row(children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                      color: AppColors.run, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 8),
+                Text('Needs you',
+                    style: sans(13,
+                        weight: FontWeight.w500, color: AppColors.fg2)),
+              ]),
+            ),
+            const SizedBox(height: 4),
+          ] else
+            const SizedBox(height: 6),
+          Text(body,
+              maxLines: twoLineBody ? 2 : 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(15, height: 21 / 15, color: AppColors.fg1)),
+          if (action != CardAction.none || busy || failed) ...[
+            SizedBox(height: twoLineBody ? 10 : 8),
+            SizedBox(height: 36, child: statusOrActions()),
+          ],
+          if (_replyExpanded && action == CardAction.reply && !busy) ...[
+            const SizedBox(height: 8),
+            _phoneReplyField('Reply to $name...'),
+          ],
+        ]),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     Theme.of(context);
@@ -144,6 +451,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
     var body = notificationBody(p);
     if (body.isEmpty) body = label;
     final action = cardActionFor(p);
+    if (!compact) return _buildPhone(context);
     final needs = notificationKind(p) == 'waiting';
     final busy = _state == _Send.sending;
     final choices = action == CardAction.answer
@@ -162,8 +470,8 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
             Container(
               width: 6,
               height: 6,
-              decoration: BoxDecoration(
-                  color: AppColors.run, shape: BoxShape.circle),
+              decoration:
+                  BoxDecoration(color: AppColors.run, shape: BoxShape.circle),
             ),
             const SizedBox(width: 6),
             Text('Needs you',
@@ -175,9 +483,11 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
         width: compact ? 36 : 20,
         height: compact ? 36 : 20,
         decoration: BoxDecoration(
-            color: AppColors.surface2, borderRadius: BorderRadius.circular(compact ? 18 : 10)),
+            color: AppColors.surface2,
+            borderRadius: BorderRadius.circular(compact ? 18 : 10)),
         clipBehavior: Clip.antiAlias,
-        child: AgentMochi('${p['agent_id'] ?? 'snippet'}', size: compact ? 36 : 20),
+        child: AgentMochi('${p['agent_id'] ?? 'snippet'}',
+            size: compact ? 36 : 20),
       ),
       const SizedBox(width: 10),
       Expanded(
@@ -188,7 +498,8 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
             Text(name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: sans(compact ? 14 : 13, weight: W.label, color: AppColors.fg1)),
+                style: sans(compact ? 14 : 13,
+                    weight: W.label, color: AppColors.fg1)),
             if (needs) needsMark,
           ],
         ),
@@ -267,8 +578,8 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
           ),
           child: InkWell(
             onTap: onTap,
-            customBorder:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(compact ? 6 : 8)),
+            customBorder: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(compact ? 6 : 8)),
             child: Container(
               constraints: BoxConstraints(
                   minHeight: controlH, minWidth: compact ? 0 : 48),

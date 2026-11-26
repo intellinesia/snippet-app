@@ -28,7 +28,11 @@ final _approval = <String, dynamic>{
   'body': 'Run flutter build apk for snippet-mobile',
   'session': 's',
   'url': 'u',
-  'attention': {'type': 'approval', 'tool': 'bash', 'text': 'flutter build apk'},
+  'attention': {
+    'type': 'approval',
+    'tool': 'bash',
+    'text': 'flutter build apk'
+  },
 };
 final _message = <String, dynamic>{
   'kind': 'message',
@@ -53,7 +57,8 @@ final _decision = <String, dynamic>{
   },
 };
 
-Future<void> _pump(WidgetTester t, Size size, double scale, Map<String, dynamic> p,
+Future<void> _pump(
+    WidgetTester t, Size size, double scale, Map<String, dynamic> p,
     {Future<bool> Function(Map<String, dynamic>, QuickAction)? send,
     double keyboard = 0}) async {
   t.view.physicalSize = size;
@@ -82,30 +87,23 @@ Future<void> _pump(WidgetTester t, Size size, double scale, Map<String, dynamic>
   await t.pump(const Duration(milliseconds: 50));
 }
 
-Finder _btn(String label) => find.ancestor(
-    of: find.text(label), matching: find.byType(InkWell)).first;
+Finder _btn(String label) =>
+    find.ancestor(of: find.text(label), matching: find.byType(InkWell)).first;
 
 void main() {
   for (final size in _sizes) {
     for (final scale in _scales) {
-      testWidgets('NT-02 ${size.width.toInt()} x$scale', (t) async {
+      testWidgets('RC-18 ${size.width.toInt()} x$scale', (t) async {
         await _pump(t, size, scale, _approval);
         final card = find.byType(NotificationMessageCard);
         expect(t.getRect(card).left, 16);
         expect(t.getRect(card).width, size.width - 32);
-        expect(t.getSize(find.byKey(const ValueKey('reply-field'))).height, 44);
-        for (final l in ['Open', 'Approve']) {
+        expect(t.getSize(card).height,
+            scale <= 1.01 ? 153 : greaterThanOrEqualTo(153.0));
+        expect(find.text('Open'), findsNothing);
+        for (final l in ['Approve', 'Deny']) {
           final s = t.getSize(_btn(l));
-          expect(s.height, greaterThanOrEqualTo(36), reason: l);
-          if (scale < 1.75) expect(s.width, greaterThanOrEqualTo(120), reason: l);
-        }
-        if (scale >= 1.75) {
-          expect(t.getTopLeft(_btn('Approve')).dy,
-              lessThan(t.getTopLeft(_btn('Open')).dy),
-              reason: 'stacked, Approve on top');
-        } else {
-          final inner = size.width - 32 - 24;
-          expect(t.getSize(_btn('Open')).width, closeTo((inner - 8) / 2, .5));
+          expect(s.height, 36, reason: l);
         }
         expect(find.text('Needs you'), findsOneWidget);
         expect(
@@ -117,61 +115,67 @@ void main() {
         expect(t.takeException(), isNull);
 
         await _pump(t, size, scale, _message);
+        expect(t.getSize(card).height,
+            scale <= 1.01 ? 152 : greaterThanOrEqualTo(152.0));
         expect(find.text('Approve'), findsNothing);
+        expect(find.text('Open'), findsNothing);
         expect(find.text('Reply'), findsOneWidget);
+        expect(find.byType(TextField), findsNothing);
         expect(find.text('Needs you'), findsNothing);
-        expect(find.text('More'), findsOneWidget);
-        expect(t.getSize(find.ancestor(of: find.text('More'), matching: find.byType(ConstrainedBox)).first).height,
-            greaterThanOrEqualTo(48));
         expect(t.takeException(), isNull);
 
         await _pump(t, size, scale, _decision);
+        expect(t.getSize(card).height,
+            scale <= 1.01 ? 153 : greaterThanOrEqualTo(153.0));
         expect(find.text('Approve'), findsNothing);
+        expect(find.text('Open'), findsNothing);
         for (final l in ['main', 'release']) {
-          final s = t.getSize(_btn(l));
-          expect(s.height, greaterThanOrEqualTo(36));
-          expect(s.width, size.width - 32 - 24);
+          expect(t.getSize(_btn(l)).height, 36);
         }
         expect(t.takeException(), isNull);
       });
     }
   }
 
-  testWidgets('NT-02 keyboard at 360 x 640 clamps body to 2 lines, keeps buttons',
-      (t) async {
+  testWidgets('RC-18 keyboard at 360 x 640 keeps the reply chip', (t) async {
     await _pump(t, const Size(360, 640), 1, _message, keyboard: 260);
     final body = t.widget<Text>(find.textContaining('Short note').first);
     expect(body.maxLines, 2);
     expect(find.text('Reply'), findsOneWidget);
-    expect(find.text('Open'), findsOneWidget);
+    expect(find.text('Open'), findsNothing);
+    expect(t.takeException(), isNull);
   });
 
-  testWidgets('NT-02 send icon only with text; failure line; no red',
-      (t) async {
+  testWidgets('RC-18 reply chip reveals composer; failure is tonal', (t) async {
     await _pump(t, _sizes[1], 1, _message, send: (_, __) async => false);
+    expect(find.byType(TextField), findsNothing);
+    await t.tap(find.text('Reply'));
+    await t.pump();
+    expect(find.byType(TextField), findsOneWidget);
     expect(find.byTooltip('Send'), findsNothing);
     await t.enterText(find.byType(TextField), 'hi');
     await t.pump();
     expect(find.byTooltip('Send'), findsOneWidget);
-    expect(t.getSize(find.byTooltip('Send')).height, 48);
-    expect(t.getSize(find.byKey(const ValueKey('reply-field'))).height, 44);
+    expect(t.getSize(find.byTooltip('Send')).height, 36);
     await t.testTextInput.receiveAction(TextInputAction.send);
     await t.pump();
     await t.pump();
-    expect(find.text('Could not send. Try again.'), findsOneWidget);
+    expect(find.text('Could not send'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
     expect(t.takeException(), isNull);
   });
 
-  testWidgets('NT-02 approve shows Approving... disabled', (t) async {
+  testWidgets('RC-18 approve shows a sending state', (t) async {
     final done = Completer<bool>();
     await _pump(t, _sizes[1], 1, _approval, send: (_, __) => done.future);
     await t.tap(find.text('Approve'));
     await t.pump();
     expect(find.text('Approving...'), findsOneWidget);
+    expect(find.text('Approve'), findsNothing);
     done.complete(false);
     await t.pump();
     await t.pump();
-    expect(find.text('Approve'), findsOneWidget);
+    expect(find.text('Could not send'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
   });
 }
-

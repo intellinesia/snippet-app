@@ -460,11 +460,11 @@ class SlashMenuView extends StatelessWidget {
     return Container(
       // Phone: the full content width, above the composer, 6 rows then scroll.
       width: kMobile ? double.infinity : 300,
-      constraints: kMobile ? const BoxConstraints(maxHeight: 6 * 48 + 8) : null,
+      constraints: kMobile ? const BoxConstraints(maxHeight: 6 * 52 + 8) : null,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(kMobile ? 12 : 8),
+        borderRadius: BorderRadius.circular(kMobile ? 10 : 8),
         boxShadow: kMobile ? null : overlayShadow,
       ),
       child: kMobile
@@ -511,18 +511,20 @@ class _Row extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
           child: Container(
-            constraints: BoxConstraints(minHeight: kMobile ? 48 : 28),
+            constraints: BoxConstraints(minHeight: kMobile ? 52 : 28),
             padding: EdgeInsets.symmetric(horizontal: kMobile ? 12 : 8),
             decoration: BoxDecoration(
               color: on ? AppColors.surface3 : null,
               borderRadius: BorderRadius.circular(kMobile ? 8 : 6),
             ),
             child: Row(children: [
-              if (icon != null) ...[
-                AppIcon(icon!, size: kMobile ? 16 : 14, color: AppColors.fg2),
-                SizedBox(width: kMobile ? 10 : 8),
-              ] else
-                SizedBox(width: kMobile ? 26 : 22),
+              if (!kMobile) ...[
+                if (icon != null) ...[
+                  AppIcon(icon!, size: 14, color: AppColors.fg2),
+                  const SizedBox(width: 8),
+                ] else
+                  const SizedBox(width: 22),
+              ],
               if (!kMobile && command != null) ...[
                 Text(command!,
                     style: mono(12.5,
@@ -532,11 +534,33 @@ class _Row extends StatelessWidget {
                 const SizedBox(width: 10),
               ],
               Expanded(
-                  child: Text(label,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(kMobile ? 13 : 12,
-                          height: kMobile ? null : 16 / 12,
-                          color: kMobile ? AppColors.fg2 : AppColors.fg3))),
+                child: kMobile
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(command ?? label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: sans(14,
+                                  height: 19 / 14,
+                                  weight: FontWeight.w500,
+                                  color: AppColors.fg1)),
+                          if (command != null && label != command)
+                            Text(label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: sans(12.5,
+                                    height: 17 / 12.5,
+                                    color: AppColors.fg2)),
+                        ],
+                      )
+                    : Text(label,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(12,
+                            height: 16 / 12,
+                            color: AppColors.fg3)),
+              ),
               right,
             ]),
           ),

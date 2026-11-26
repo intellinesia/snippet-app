@@ -70,7 +70,7 @@ void main() {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(children: [
                 // CH-05 pending, CH-04 pending (amber outline)
-                ChatCard(fill: approvalTint, children: const [
+                ChatCard(fill: AppColors.surface2, children: const [
                   NeedsYouRow(trailing: 'Sashy - 12:41'),
                   SizedBox(height: 12),
                 ]),
