@@ -627,17 +627,43 @@ class LaneDetailCard extends StatefulWidget {
 
 class _LaneDetailCardState extends State<LaneDetailCard> {
   LaneInfo? _full;
+  int _fullGen = 0;
 
   LaneInfo get lane => _full ?? widget.lane;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final session = widget.lane.trimmedIn;
-    if (!widget.detail || session == null || _full != null) return;
+    if (_full == null) _loadFull();
+  }
+
+  @override
+  void didUpdateWidget(covariant LaneDetailCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.lane.id != widget.lane.id ||
+        oldWidget.lane.trimmedIn != widget.lane.trimmedIn) {
+      _full = null;
+      _loadFull();
+      return;
+    }
+    if (_full != null &&
+        (oldWidget.lane.status != widget.lane.status ||
+            oldWidget.lane.activityAt != widget.lane.activityAt ||
+            oldWidget.lane.activity != widget.lane.activity)) {
+      _loadFull();
+    }
+  }
+
+  void _loadFull() {
+    final lane = widget.lane;
+    final session = lane.trimmedIn;
+    if (!widget.detail || session == null) return;
     final client = widget.client ?? DaemonScope.maybeOf(context);
-    client?.sessionLane(session, widget.lane.id).then((full) {
-      if (mounted) setState(() => _full = full);
+    if (client == null) return;
+    final gen = ++_fullGen;
+    client.sessionLane(session, lane.id).then((full) {
+      if (!mounted || gen != _fullGen || widget.lane.id != lane.id) return;
+      setState(() => _full = full);
     }, onError: (Object _) {});
   }
 

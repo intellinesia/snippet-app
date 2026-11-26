@@ -116,14 +116,17 @@ class _EditorScreenState extends State<EditorScreen> {
     if (_saving) return;
     setState(() => _saving = true);
     try {
+      final body = _forSave();
+      final saved = _normalized(body);
       final r = await widget.client
-          .writeFile(widget.path, _forSave(), prevHash: force ? null : _hash);
+          .writeFile(widget.path, body, prevHash: force ? null : _hash);
       if (!mounted) return;
       if (r['ok'] == true) {
-        _initial = _normalized(_controller.text);
+        _initial = saved;
         _hash = r['hash'] as String? ?? _hash;
+        final dirty = _normalized(_controller.text) != saved;
         setState(() {
-          _dirty = false;
+          _dirty = dirty;
           _saving = false;
         });
         toast(context, 'Saved');

@@ -48,7 +48,8 @@ class _Stat {
   final int add;
   final int del;
   final int hunks;
-  const _Stat(this.add, this.del, [this.hunks = 0]);
+  final int fingerprint;
+  const _Stat(this.add, this.del, [this.hunks = 0, this.fingerprint = 0]);
 }
 
 Widget _delta(_Stat? s, {double size = 11}) {
@@ -72,6 +73,9 @@ class _WorkspaceTabState extends State<WorkspaceTab> {
   String _filter = '';
   bool _searching = false;
   bool _busy = false;
+  bool _refreshing = false;
+  bool _refreshAgain = false;
+  int _statGen = 0;
   Timer? _poll;
 
   @override
@@ -89,26 +93,41 @@ class _WorkspaceTabState extends State<WorkspaceTab> {
   }
 
   Future<void> _refresh() async {
+    if (_refreshing) {
+      _refreshAgain = true;
+      return;
+    }
+    _refreshing = true;
     try {
-      final s = await widget.client.gitStatus(widget.sessionId);
-      if (!mounted) return;
-      setState(() {
-        _status = s;
-        _error = s.ok ? null : (s.error ?? 'Not a git repository');
-        if (_selected != null && !s.files.any((f) => f.path == _selected)) {
-          _selected = null;
+      do {
+        _refreshAgain = false;
+        try {
+          final s = await widget.client.gitStatus(widget.sessionId);
+          if (!mounted) return;
+          setState(() {
+            _status = s;
+            _error = s.ok ? null : (s.error ?? 'Not a git repository');
+            final paths = {for (final f in s.files) f.path};
+            _stats.removeWhere((path, _) => !paths.contains(path));
+            if (_selected != null && !s.files.any((f) => f.path == _selected)) {
+              _selected = null;
+            }
+            _selected ??= s.files.isEmpty ? null : s.files.first.path;
+          });
+          final statGen = ++_statGen;
+          for (final f in s.files) {
+            unawaited(_loadStat(f, statGen));
+          }
+        } catch (e) {
+          if (mounted) setState(() => _error = '$e');
         }
-        _selected ??= s.files.isEmpty ? null : s.files.first.path;
-      });
-      for (final f in s.files) {
-        unawaited(_loadStat(f));
-      }
-    } catch (e) {
-      if (mounted) setState(() => _error = '$e');
+      } while (_refreshAgain && mounted);
+    } finally {
+      _refreshing = false;
     }
   }
 
-  Future<void> _loadStat(GitFile f) async {
+  Future<void> _loadStat(GitFile f, int gen) async {
     try {
       final p = await widget.client.gitDiff(widget.sessionId,
           file: f.path,
@@ -120,7 +139,10 @@ class _WorkspaceTabState extends State<WorkspaceTab> {
         if (l.startsWith('+') && !l.startsWith('+++')) a++;
         if (l.startsWith('-') && !l.startsWith('---')) d++;
       }
-      if (mounted) setState(() => _stats[f.path] = _Stat(a, d, h));
+      if (mounted && gen == _statGen) {
+        setState(() =>
+            _stats[f.path] = _Stat(a, d, h, Object.hash(p.length, p.hashCode)));
+      }
     } catch (_) {}
   }
 
@@ -137,6 +159,11 @@ class _WorkspaceTabState extends State<WorkspaceTab> {
     unawaited(_refresh());
   }
 
+  String _gitFail(Map<String, dynamic> r, String what) {
+    final e = ((r['stderr'] ?? r['error']) as String?)?.trim() ?? '';
+    return e.isEmpty ? '$what failed' : e;
+  }
+
   Future<void> _commit({bool push = false}) async {
     final msg = _message.text.trim();
     if (msg.isEmpty) {
@@ -144,8 +171,14 @@ class _WorkspaceTabState extends State<WorkspaceTab> {
       return;
     }
     await _run(() async {
-      await widget.client.gitCommit(widget.sessionId, msg);
-      if (push) await widget.client.gitPush(widget.sessionId);
+      final staged = await widget.client.gitStage(widget.sessionId, all: true);
+      if (staged['ok'] != true) throw _gitFail(staged, 'Stage');
+      final committed = await widget.client.gitCommit(widget.sessionId, msg);
+      if (committed['ok'] != true) throw _gitFail(committed, 'Commit');
+      if (push) {
+        final pushed = await widget.client.gitPush(widget.sessionId);
+        if (pushed['ok'] != true) throw _gitFail(pushed, 'Push');
+      }
       _message.clear();
     }, push ? 'Committed and pushed' : 'Committed');
   }
@@ -526,17 +559,25 @@ class _WorkspaceTabState extends State<WorkspaceTab> {
         client: widget.client,
         workspacePath: widget.workspacePath,
         onOpenFile: (path, name) {
-          final changed = _status?.files.any((f) => f.path == path) ?? false;
+          final rel = _rel(path);
+          final changed = _status?.files.any((f) => f.path == rel) ?? false;
           setState(() {
             if (changed) {
-              _selected = path;
+              _selected = rel;
               _openPath = null;
             } else {
-              _openPath = path;
+              _openPath = rel;
             }
           });
         },
       );
+
+  String _rel(String path) {
+    final root = widget.workspacePath.replaceAll(RegExp(r'/+$'), '');
+    return root.isNotEmpty && path.startsWith('$root/')
+        ? path.substring(root.length + 1)
+        : path;
+  }
 
   String _abs(String path) => path.startsWith('/')
       ? path
@@ -590,7 +631,8 @@ class _WorkspaceTabState extends State<WorkspaceTab> {
           action: ('Open file', () => setState(() => _openPath = path))),
       Expanded(
         child: GitFileDiffView(
-          key: ValueKey('ws-diff-$path-${file.staged}-${file.unstaged}'),
+          key: ValueKey(
+              'ws-diff-$path-${file.staged}-${file.unstaged}-${_stats[path]?.fingerprint ?? 0}'),
           client: widget.client,
           sessionId: widget.sessionId,
           file: path,

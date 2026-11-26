@@ -58,6 +58,7 @@ class _GitScreenState extends State<GitScreen> {
   final TextEditingController _commitController = TextEditingController();
   final FocusNode _commitFocus = FocusNode();
   final Set<String> _expandedSections = {};
+  int _loadGen = 0;
   static const _collapsedLimit = 8;
 
   @override
@@ -99,6 +100,7 @@ class _GitScreenState extends State<GitScreen> {
 
   Future<void> _load() async {
     if (!mounted) return;
+    final gen = ++_loadGen;
     setState(() {
       if (_st == null) {
         _loading = true;
@@ -109,7 +111,7 @@ class _GitScreenState extends State<GitScreen> {
     });
     try {
       final st = await widget.client.gitStatus(_repo);
-      if (!mounted) return;
+      if (!mounted || gen != _loadGen) return;
       setState(() {
         _st = st;
         _loading = false;
@@ -117,7 +119,7 @@ class _GitScreenState extends State<GitScreen> {
         if (!st.ok) _error = st.error ?? 'not a git repository';
       });
     } catch (e) {
-      if (mounted) {
+      if (mounted && gen == _loadGen) {
         setState(() {
           _error = '$e';
           _loading = false;
@@ -204,12 +206,12 @@ class _GitScreenState extends State<GitScreen> {
     if (ok) _commitController.clear();
   }
 
-  void _openDiff(GitFile f) {
+  void _openDiff(GitFile f, {required bool staged}) {
     Widget view() => GitFileDiffView(
           client: widget.client,
           sessionId: _repo,
           file: f.path,
-          staged: f.staged && !f.unstaged, // staged-only files show index diff
+          staged: staged && f.staged,
           untracked: f.untracked,
         );
     if (!kMobile && ShellPanelRoot.of(context) == null) {
@@ -241,6 +243,7 @@ class _GitScreenState extends State<GitScreen> {
       return;
     }
     if (!mounted) return;
+    if (anchor != null && !anchor.mounted) return;
     final picker = GitBranchPicker(
       current: data.current,
       local: data.local,
@@ -614,7 +617,7 @@ class _GitScreenState extends State<GitScreen> {
         child: Semantics(
           label: f.path,
           child: InkWell(
-            onTap: () => _openDiff(f),
+            onTap: () => _openDiff(f, staged: staged),
             child: Padding(
               padding: EdgeInsets.fromLTRB(
                   S.s12, kMobile ? 0 : S.s2, S.s4, kMobile ? 0 : S.s2),

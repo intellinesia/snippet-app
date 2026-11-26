@@ -135,6 +135,7 @@ class _FileExplorerState extends State<FileExplorer> {
     if (!ok || !mounted) return;
     final paths = _selected.toList();
     setState(() {
+      _busy = 'Deleting $n item${n == 1 ? '' : 's'}…';
       _deleting.addAll(paths);
       _selecting = false;
       _selected.clear();
@@ -144,12 +145,15 @@ class _FileExplorerState extends State<FileExplorer> {
         .then((_) => true, onError: (Object _) => false)));
     if (!mounted) return;
     final failed = results.where((ok) => !ok).length;
-    setState(() => _deleting.removeAll(paths));
+    setState(() {
+      _deleting.removeAll(paths);
+      _busy = null;
+    });
     if (failed > 0) {
       toast(context, "Couldn't delete $failed item${failed == 1 ? '' : 's'}",
           danger: true);
     }
-    _go(cwd);
+    if (_listing?.path == cwd) _go(cwd);
   }
 
   Future<void> _newFolder(String cwd) async {
@@ -520,6 +524,24 @@ class _FileExplorerState extends State<FileExplorer> {
                   if (!_selecting && listing != null && !kMobile)
                     _mobileSwitcherContext(listing),
                 ],
+                if (_busy != null)
+                  Container(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: S.s16, vertical: S.s6),
+                    decoration: BoxDecoration(
+                        border: Border(
+                            bottom: BorderSide(color: AppColors.border))),
+                    child: Row(children: [
+                      Spinner(size: 14, color: AppColors.accent),
+                      SizedBox(width: S.of(10)),
+                      Expanded(
+                        child: Text(_busy!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(12, color: AppColors.fg2)),
+                      ),
+                    ]),
+                  ),
                 if (_dirLoading && listing != null)
                   LinearProgressIndicator(
                       minHeight: 2,

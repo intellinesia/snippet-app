@@ -712,6 +712,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
   bool _busy = false;
   bool _bodyOpen = false;
   bool _checksOpen = false;
+  int _loadGen = 0;
 
   String get _key => '${widget.client.baseUrl}|${widget.session}|${widget.number}';
   List<PendingComment> get _pending => _pendingByPr.putIfAbsent(_key, () => []);
@@ -730,9 +731,10 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
 
   Future<void> _load() async {
     _diff;
+    final gen = ++_loadGen;
     try {
       final pr = await widget.client.githubPr(widget.session, widget.number);
-      if (!mounted) return;
+      if (!mounted || gen != _loadGen) return;
       setState(() {
         if (_diffOid != null && _diffOid != pr.headOid) _diff = _fetchDiff();
         _diffOid = pr.headOid;
@@ -740,7 +742,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
         _error = null;
       });
     } catch (e) {
-      if (mounted) setState(() => _error = '$e');
+      if (mounted && gen == _loadGen) setState(() => _error = '$e');
     }
   }
 

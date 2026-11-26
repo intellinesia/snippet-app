@@ -229,7 +229,7 @@ class _FileViewerState extends State<FileViewer> {
       if (r['ok'] == true) {
         _initial = text;
         _hash = r['hash'] as String? ?? _hash;
-        setState(() => _dirty = false);
+        setState(() => _dirty = _normalized(_controller.text) != text);
         return;
       }
       if (r['conflict'] == true) {
@@ -365,7 +365,9 @@ class _FileViewerState extends State<FileViewer> {
 
   void _edit() {
     if (_isMarkdown && !_source) setState(() => _source = true);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _focus.requestFocus());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focus.requestFocus();
+    });
   }
 
   Widget _desktopHeader(FileContent? f) {
@@ -396,6 +398,7 @@ class _FileViewerState extends State<FileViewer> {
   }
 
   Future<void> _load() async {
+    if (!mounted) return;
     unawaited(_loadMarks());
     setState(() => _loading = true);
     try {
@@ -717,8 +720,9 @@ class _VideoViewState extends State<_VideoView> {
   }
 
   Future<void> _init() async {
+    VideoPlayerController? vc;
     try {
-      final vc = VideoPlayerController.networkUrl(
+      final created = VideoPlayerController.networkUrl(
         Uri.parse(widget.url),
         // Mix with other audio rather than demanding exclusive audio focus — so
         // playback isn't silently blocked when something else holds focus (e.g.
@@ -728,34 +732,43 @@ class _VideoViewState extends State<_VideoView> {
             ? VideoViewType.platformView
             : VideoViewType.textureView,
       );
+      vc = created;
       // Surface a runtime playback error (decode/source failure) instead of a
       // dead play button — video_player reports these on the value, not as a throw.
-      vc.addListener(_onValue);
-      await vc.initialize();
+      created.addListener(_onValue);
+      await created.initialize();
       if (!mounted) {
-        vc.dispose();
+        created.removeListener(_onValue);
+        created.dispose();
         return;
       }
+      final chewie = ChewieController(
+        videoPlayerController: created,
+        autoPlay: true, // a tapped video should just start
+        looping: false,
+        allowFullScreen: true,
+        aspectRatio: created.value.aspectRatio == 0
+            ? 16 / 9
+            : created.value.aspectRatio,
+        errorBuilder: (ctx, msg) => EmptyState(
+            icon: 'alert-triangle', title: "Can't play video", body: msg),
+        materialProgressColors: ChewieProgressColors(
+          playedColor: AppColors.accent,
+          handleColor: AppColors.accent,
+          bufferedColor: AppColors.surface3,
+          backgroundColor: AppColors.surface2,
+        ),
+      );
       setState(() {
-        _vc = vc;
-        _chewie = ChewieController(
-          videoPlayerController: vc,
-          autoPlay: true, // a tapped video should just start
-          looping: false,
-          allowFullScreen: true,
-          aspectRatio:
-              vc.value.aspectRatio == 0 ? 16 / 9 : vc.value.aspectRatio,
-          errorBuilder: (ctx, msg) => EmptyState(
-              icon: 'alert-triangle', title: "Can't play video", body: msg),
-          materialProgressColors: ChewieProgressColors(
-            playedColor: AppColors.accent,
-            handleColor: AppColors.accent,
-            bufferedColor: AppColors.surface3,
-            backgroundColor: AppColors.surface2,
-          ),
-        );
+        _vc = created;
+        _chewie = chewie;
       });
     } catch (e) {
+      final failed = vc;
+      if (failed != null) {
+        failed.removeListener(_onValue);
+        failed.dispose();
+      }
       if (mounted) setState(() => _error = '$e');
     }
   }

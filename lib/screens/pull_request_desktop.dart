@@ -53,6 +53,7 @@ class _PrListPanelState extends State<PrListPanel> {
   bool _loadingMore = false;
   String? _error;
   String _query = '';
+  int _loadGen = 0;
   final _search = TextEditingController();
 
   @override
@@ -78,16 +79,28 @@ class _PrListPanelState extends State<PrListPanel> {
   Future<void> _load() async {
     setState(() => _error = null);
     final filter = _filter;
+    final session = widget.session;
+    final gen = ++_loadGen;
     try {
       final page = await widget.client.githubPrPage(widget.session, filter);
-      if (!mounted || filter != _filter) return;
+      if (!mounted ||
+          gen != _loadGen ||
+          filter != _filter ||
+          session != widget.session) {
+        return;
+      }
       setState(() {
         _prs = page.prs;
         _next = page.next;
       });
       widget.onLoaded?.call(page.prs);
     } catch (e) {
-      if (mounted && filter == _filter) setState(() => _error = '$e');
+      if (mounted &&
+          gen == _loadGen &&
+          filter == _filter &&
+          session == widget.session) {
+        setState(() => _error = '$e');
+      }
     }
   }
 
@@ -95,11 +108,12 @@ class _PrListPanelState extends State<PrListPanel> {
     final cursor = _next;
     if (cursor == null || _loadingMore) return;
     final filter = _filter;
+    final gen = _loadGen;
     setState(() => _loadingMore = true);
     try {
       final page = await widget.client
           .githubPrPage(widget.session, filter, cursor: cursor);
-      if (!mounted || filter != _filter) return;
+      if (!mounted || gen != _loadGen || filter != _filter) return;
       setState(() {
         _prs = appendPrs(_prs, page.prs);
         _next = page.next;

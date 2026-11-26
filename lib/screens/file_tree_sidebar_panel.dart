@@ -69,6 +69,8 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
 
   late Revalidator _triggers = _watch();
   bool _revalidating = false;
+  bool _refreshAgain = false;
+  bool _refreshAgainBackground = true;
 
   Revalidator _watch() => Revalidator(
         client: widget.client,
@@ -77,7 +79,7 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
                 .contains(e['kind']) &&
             e['workspace'] == widget.workspacePath,
         onRevalidate: ({required bool force}) {
-          if (!mounted || _uploading || _revalidating) return;
+          if (!mounted || _uploading) return;
           refresh(background: true);
         },
       );
@@ -104,6 +106,9 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
       _loadingFolders.clear();
       _childrenByPath.clear();
       _folderErrors.clear();
+      _listing = null;
+      _loading = true;
+      _error = null;
       _triggers.dispose();
       _triggers = _watch();
       refresh();
@@ -124,8 +129,28 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
       );
 
   Future<void> refresh({bool background = false}) async {
-    if (_revalidating) return;
+    if (_revalidating) {
+      _refreshAgain = true;
+      _refreshAgainBackground = _refreshAgainBackground && background;
+      return;
+    }
     _revalidating = true;
+    try {
+      var runBackground = background;
+      do {
+        _refreshAgain = false;
+        _refreshAgainBackground = true;
+        await _refreshOnce(background: runBackground);
+        runBackground = _refreshAgainBackground;
+      } while (_refreshAgain && mounted);
+    } finally {
+      _revalidating = false;
+    }
+  }
+
+  Future<void> _refreshOnce({required bool background}) async {
+    final client = widget.client;
+    final workspacePath = widget.workspacePath;
     if (!background && mounted) {
       setState(() {
         if (_listing == null) _loading = true;
@@ -133,16 +158,20 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
       });
     }
     try {
-      final res = await widget.client.fs(
-        widget.workspacePath.isEmpty ? null : widget.workspacePath,
+      final res = await client.fs(
+        workspacePath.isEmpty ? null : workspacePath,
       );
-      if (!mounted) return;
+      if (!mounted ||
+          client != widget.client ||
+          workspacePath != widget.workspacePath) {
+        return;
+      }
 
       final expandedList = _expandedFolders.toList();
       final folderResults = await Future.wait(
         expandedList.map((path) async {
           try {
-            final listing = await widget.client.fs(path);
+            final listing = await client.fs(path);
             return MapEntry<String, List<FsEntry>?>(path, listing.entries);
           } catch (_) {
             return MapEntry<String, List<FsEntry>?>(path, null);
@@ -150,7 +179,11 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
         }),
       );
 
-      if (!mounted) return;
+      if (!mounted ||
+          client != widget.client ||
+          workspacePath != widget.workspacePath) {
+        return;
+      }
 
       setState(() {
         _listing = res;
@@ -170,7 +203,6 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
         setState(() => _error = '$e');
       }
     } finally {
-      _revalidating = false;
       if (!background && mounted) {
         setState(() => _loading = false);
       }
@@ -192,9 +224,15 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
     if (_childrenByPath.containsKey(path)) return;
 
     setState(() => _loadingFolders.add(path));
+    final client = widget.client;
+    final workspacePath = widget.workspacePath;
     try {
-      final listing = await widget.client.fs(path);
-      if (!mounted) return;
+      final listing = await client.fs(path);
+      if (!mounted ||
+          client != widget.client ||
+          workspacePath != widget.workspacePath) {
+        return;
+      }
       setState(() => _childrenByPath[path] = listing.entries);
     } catch (e) {
       if (mounted) setState(() => _folderErrors[path] = '$e');

@@ -147,6 +147,7 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
       return;
     }
     if (!mounted) return;
+    if (anchor != null && !anchor.mounted) return;
     final picker = GitBranchPicker(
       current: data.current,
       local: data.local,
@@ -272,14 +273,21 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
     ]);
   }
 
+  String _gitFail(Map<String, dynamic> r, String what) {
+    final e = ((r['stderr'] ?? r['error']) as String?)?.trim() ?? '';
+    return e.isEmpty ? '$what failed' : e;
+  }
+
   Future<void> _commit() async {
     final msg = _commitCtl.text.trim();
     final sid = widget.sessionId;
     if (msg.isEmpty || sid == null || _committing) return;
     setState(() => _committing = true);
     try {
-      await widget.client.gitStage(sid, all: true);
-      await widget.client.gitCommit(sid, msg);
+      final staged = await widget.client.gitStage(sid, all: true);
+      if (staged['ok'] != true) throw _gitFail(staged, 'Stage');
+      final committed = await widget.client.gitCommit(sid, msg);
+      if (committed['ok'] != true) throw _gitFail(committed, 'Commit');
       _commitCtl.clear();
       await refresh(background: true);
     } catch (e) {
@@ -294,7 +302,8 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
     if (sid == null || _pushing) return;
     setState(() => _pushing = true);
     try {
-      await widget.client.gitPush(sid);
+      final pushed = await widget.client.gitPush(sid);
+      if (pushed['ok'] != true) throw _gitFail(pushed, 'Push');
       if (mounted) toast(context, 'Pushed');
       await refresh(background: true);
     } catch (e) {
@@ -314,7 +323,8 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
         danger: false);
     if (!ok) return;
     try {
-      await widget.client.gitStash(sid, 'push');
+      final stashed = await widget.client.gitStash(sid, 'push');
+      if (stashed['ok'] != true) throw _gitFail(stashed, 'Stash');
       await refresh(background: true);
     } catch (e) {
       if (mounted) toast(context, '$e', danger: true);
@@ -331,7 +341,8 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
         confirmLabel: 'Discard');
     if (!ok) return;
     try {
-      await widget.client.gitDiscard(sid);
+      final discarded = await widget.client.gitDiscard(sid);
+      if (discarded['ok'] != true) throw _gitFail(discarded, 'Discard');
       await refresh(background: true);
     } catch (e) {
       if (mounted) toast(context, '$e', danger: true);
