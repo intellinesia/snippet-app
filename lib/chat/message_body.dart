@@ -147,6 +147,32 @@ String _blockquotePlainText(md.Node node) {
   return children.map(_blockquotePlainText).join();
 }
 
+Widget _phoneListBullet(MarkdownBulletParameters parameters) {
+  if (!kMobile) {
+    return Text(
+      parameters.style == BulletStyle.unorderedList
+          ? '•'
+          : '${parameters.index + 1}.',
+      textAlign: parameters.style == BulletStyle.unorderedList
+          ? TextAlign.center
+          : TextAlign.right,
+      style: sans(15, color: AppColors.fg2),
+    );
+  }
+  if (parameters.style == BulletStyle.unorderedList) {
+    return Align(
+      alignment: Alignment.center,
+      child: Container(
+        width: 4,
+        height: 4,
+        decoration: BoxDecoration(color: AppColors.fg2, shape: BoxShape.circle),
+      ),
+    );
+  }
+  return Text('${parameters.index + 1}.',
+      textAlign: TextAlign.right, style: sans(15, color: AppColors.fg2));
+}
+
 /// Renders markdown blockquotes in chat bubbles as copyable draft cards.
 class DraftBlockBuilder extends MarkdownElementBuilder {
   DraftBlockBuilder({required this.mine});
@@ -567,6 +593,7 @@ class ChatMessageBody extends StatelessWidget {
         extensionSet: md.ExtensionSet.gitHubFlavored,
         styleSheet: styleSheet,
         builders: builders,
+        bulletBuilder: _phoneListBullet,
         onTapLink: (txt, href, title) => openMarkdownLink(href, context, txt),
       );
     } else if (segments.isNotEmpty) {
