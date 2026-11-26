@@ -317,6 +317,15 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             '${sessions.length} ${sessions.length == 1 ? 'session' : 'sessions'}',
         ]),
         live: _agentState(agent, mac: mac) == 'Working',
+        leading: [
+          Builder(
+            builder: (ctx) => IconBtn('plus',
+                size: 24,
+                iconSize: 13,
+                tooltip: 'Open a tab',
+                onTap: () => _showAgentAddMenu(ctx, agent.id, sessions)),
+          ),
+        ],
         actions: [
           if (agent.id != 'lead') _workViewButton(agent.id),
           _panelButton('info', 'agent info'),
@@ -343,6 +352,15 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         agentIds: ids,
         title: (request.title ?? '').trim().isEmpty ? 'Group' : request.title!,
         subtitle: names.isEmpty ? '' : '${names.join(', ')} and you',
+        leading: [
+          Builder(
+            builder: (ctx) => IconBtn('plus',
+                size: 24,
+                iconSize: 13,
+                tooltip: 'Open a tab',
+                onTap: () => _showAgentAddMenu(ctx, null, const [])),
+          ),
+        ],
         actions: [_panelButton('users', 'members')],
       );
     }
@@ -1116,6 +1134,50 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             icon: 'terminal', label: 'Shell', onTap: () => act('shell')),
         PaneAddEntry(
             icon: 'plus', label: 'New terminal', onTap: () => act('shell_new')),
+      ],
+    );
+  }
+
+  /// An agent or group pane's "+": its views, the agent's sessions and a
+  /// terminal, as the session pane's menu offers.
+  void _showAgentAddMenu(
+      BuildContext ctx, String? agentId, List<SessionInfo> sessions) {
+    final work = agentId != null && agentWorkView.value.contains(agentId);
+    final recent = [...sessions]
+      ..sort((a, b) => b.lastActive.compareTo(a.lastActive));
+    showPaneAddMenu(
+      ctx,
+      title: 'Open a tab',
+      views: [
+        if (agentId != null && agentId != 'lead') ...[
+          PaneAddEntry(
+              icon: 'chat',
+              label: 'Chat',
+              checked: !work,
+              onTap: () => setAgentWorkView(agentId, false)),
+          PaneAddEntry(
+              icon: 'layers',
+              label: 'Desk work',
+              checked: work,
+              onTap: () => setAgentWorkView(agentId, true)),
+        ],
+        PaneAddEntry(
+            icon: agentId == null ? 'users' : 'info',
+            label: agentId == null ? 'Members' : 'Agent info',
+            checked: !_panelHidden,
+            onTap: _togglePanel),
+      ],
+      crew: [
+        for (final s in recent.take(6))
+          PaneAddEntry(
+              icon: 'chat-thread',
+              label: s.title.trim().isEmpty ? '(untitled)' : s.title.trim(),
+              onTap: () => _openSessionView(s.id, s.title, s.profile)),
+      ],
+      terminals: [
+        if (_client != null)
+          PaneAddEntry(
+              icon: 'terminal', label: 'New terminal', onTap: _newGlobalShell),
       ],
     );
   }
