@@ -19,6 +19,7 @@ import '../chat_scene.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'add_instance.dart';
+import 'compact_btn.dart';
 import 'inference_profiles.dart';
 import 'recurring.dart';
 import 'routing_screen.dart';
@@ -1815,8 +1816,9 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
         SettingsPage.general => widget.v5Desktop
             ? ''
             : 'Machines this app connects to, and how sessions behave.',
-        SettingsPage.appearance =>
-          'Theme palette, accent colour, UI typeface and code font saved on this device.',
+        SettingsPage.appearance => widget.v5Desktop
+            ? 'Look of the app on this device. Does not change other machines.'
+            : 'Theme palette, UI typeface and code font saved on this device.',
         SettingsPage.routing => 'Which model does each kind of work',
         SettingsPage.usage => 'Tokens and rate limits by provider',
         SettingsPage.voice => '',
@@ -2748,45 +2750,96 @@ class AppearanceScreen extends StatelessWidget {
           );
         }
 
+        final tiles = <(String, String)>[
+          ('quiet', 'Quiet'),
+          ('quiet-light', 'Quiet Light'),
+          ('hc-dark', 'High contrast'),
+          ('hc-light', 'High contrast light'),
+        ];
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _AppearancePreviewCard(),
-            SizedBox(height: S.s16),
-            const SettingsGroup(
-              header: 'Surfaces and wallpaper',
-              footer:
-                  'Wallpaper sits behind the chat and fades into the theme so text stays readable.',
+            const SettingsSectionLabel('Theme'),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _TactileRow(),
-                _ChromeOpacityRow(),
-                _ChatWallpaperPicker()
+                for (var i = 0; i < tiles.length; i++) ...[
+                  if (i > 0) SizedBox(width: S.s12),
+                  Expanded(
+                    child: _ThemeTile(
+                      preset: allPresets.firstWhere(
+                          (p) => p.name == tiles[i].$1,
+                          orElse: () => allPresets.first),
+                      label: tiles[i].$2,
+                      selected: tm.current.name == tiles[i].$1,
+                      onTap: () => unawaited(_runThemeUpdate(
+                          context, () => tm.applyTheme(tiles[i].$1))),
+                    ),
+                  ),
+                ],
               ],
             ),
-            if (shaderSurfaceSupported)
-              const SettingsGroup(
-                header: 'Background',
-                footer:
-                    'An animated scene behind every screen, drawn on the GPU. It pauses in the background and with reduced motion.',
-                children: [_ChatSceneRow()],
-              ),
-            const SettingsGroup(
-              header: 'Window background',
-              footer:
-                  'An image replaces the window transparency. Clear it to see the desktop through the window again.',
-              children: [_WindowBackgroundRow()],
-            ),
+            SizedBox(height: S.s12),
             SettingsGroup(
-              header: 'Palette',
-              footer:
-                  'Theme and accent colour are saved locally on this device.',
-              children: paletteChildren,
+              children: [
+                SettingsRow(
+                  label: 'Match system',
+                  sub: 'Quiet or Quiet Light, following this device',
+                  onTap: () => unawaited(_runThemeUpdate(
+                      context,
+                      () => tm.followsSystem
+                          ? tm.applyTheme(tm.current.name)
+                          : tm.useSystem())),
+                  trailing: SettingsSwitch(
+                    value: tm.followsSystem,
+                    onChanged: (on) => unawaited(_runThemeUpdate(
+                        context,
+                        () => on
+                            ? tm.useSystem()
+                            : tm.applyTheme(tm.current.name))),
+                  ),
+                ),
+              ],
             ),
             SettingsGroup(
               header: 'Typography',
+              children: [
+                SettingsRow(
+                  label: 'Interface font',
+                  sub: 'Headings, chat and controls',
+                  trailing: SettingsPopup<String>(
+                    key: const Key('appearance-ui-font'),
+                    label: tm.currentFont.label,
+                    items: [for (final f in allFonts) (f.family, f.label)],
+                    selected: tm.currentFont.family,
+                    onSelected: (f) => unawaited(
+                        _runThemeUpdate(context, () => tm.setFontFamily(f))),
+                  ),
+                ),
+                SettingsRow(
+                  label: 'Code font',
+                  sub: 'Diffs, terminals and IDs',
+                  trailing: SettingsPopup<String>(
+                    key: const Key('appearance-code-font'),
+                    label: tm.currentMonoFont.label,
+                    items: [for (final f in allMonoFonts) (f.family, f.label)],
+                    selected: tm.currentMonoFont.family,
+                    onSelected: (f) => unawaited(_runThemeUpdate(
+                        context, () => tm.setMonoFontFamily(f))),
+                  ),
+                ),
+              ],
+            ),
+            SettingsGroup(
+              header: 'Background',
               footer:
-                  'UI typeface applies to headings, chat and controls; code font applies to diffs, terminals and IDs.',
-              children: typographyChildren,
+                  'Wallpaper sits behind the chat and fades into the theme so text stays readable.',
+              children: [
+                const _ChatWallpaperPicker(),
+                const _WindowBackgroundRow(),
+                if (shaderSurfaceSupported) const _ChatSceneRow(),
+                const _ChromeOpacityRow(),
+              ],
             ),
           ],
         );
@@ -2795,20 +2848,78 @@ class AppearanceScreen extends StatelessWidget {
   }
 }
 
-class _TactileRow extends StatelessWidget {
-  const _TactileRow();
+/// Flat theme tile: the palette's own ground and ink, name, and a worded
+/// selected state so selection never rests on colour alone.
+class _ThemeTile extends StatelessWidget {
+  const _ThemeTile({
+    required this.preset,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+  final ThemePreset preset;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final look = DesktopLook.instance;
-    return ListenableBuilder(
-      listenable: look,
-      builder: (context, _) => SettingsRow(
-        label: 'Tactile surfaces',
-        sub: 'Soft highlights on raised controls, inset wells for fields',
-        onTap: () => look.setTactile(!look.tactile),
-        trailing:
-            SettingsSwitch(value: look.tactile, onChanged: look.setTactile),
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '$label theme',
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: Container(
+            padding: EdgeInsets.all(S.s8),
+            decoration: BoxDecoration(
+              color: selected ? AppColors.surface2 : AppColors.surface1,
+              borderRadius: BorderRadius.circular(R.of(8)),
+              border: Border.all(
+                  color: selected ? AppColors.border2 : AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  height: 44,
+                  padding: EdgeInsets.symmetric(horizontal: S.s12),
+                  alignment: Alignment.centerLeft,
+                  decoration: BoxDecoration(
+                    color: preset.bg,
+                    borderRadius: BorderRadius.circular(R.of(6)),
+                    border: Border.all(color: preset.border),
+                  ),
+                  child: Text('Aa',
+                      style: sans(14, weight: W.label, color: preset.fg1)),
+                ),
+                SizedBox(height: S.s8),
+                SizedBox(
+                  height: 20,
+                  child: Row(children: [
+                    Expanded(
+                      child: Text(label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(12,
+                              weight: selected ? W.label : null,
+                              color: AppColors.fg1)),
+                    ),
+                    if (selected) ...[
+                      AppIcon('check', size: 12, color: AppColors.fg2),
+                      SizedBox(width: S.s4),
+                      Text('Selected',
+                          style: sans(11, color: AppColors.fg2)),
+                    ],
+                  ]),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -2834,9 +2945,8 @@ class _ChromeOpacityRow extends StatelessWidget {
                     : '${(v * 100).round()}%',
                 trailing: v == null
                     ? null
-                    : TextButton(
-                        onPressed: () => look.setChromeOpacity(null),
-                        child: const Text('Reset')),
+                    : CompactBtn('Reset',
+                        onTap: () => look.setChromeOpacity(null)),
               ),
               Padding(
                 padding: EdgeInsets.fromLTRB(S.of(14), 0, S.of(14), S.s8),
@@ -2932,12 +3042,10 @@ class _ChatWallpaperPicker extends StatelessWidget {
               ),
               trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                 if (img != null)
-                  TextButton(
-                      onPressed: look.clearWallpaper,
-                      child: const Text('Remove')),
-                TextButton(
-                    onPressed: _chooseImage,
-                    child: Text(img == null ? 'Choose image' : 'Change')),
+                  CompactBtn('Remove', onTap: look.clearWallpaper),
+                  SizedBox(width: S.s8),
+                CompactBtn(img == null ? 'Choose image' : 'Change',
+                    onTap: _chooseImage),
               ]),
             ),
             if (img != null)
@@ -3012,10 +3120,9 @@ class _WindowBackgroundRow extends StatelessWidget {
           ),
           trailing: Row(mainAxisSize: MainAxisSize.min, children: [
             if (p != null)
-              TextButton(
-                  onPressed: store.clear,
-                  child: const Text('Use transparency')),
-            TextButton(onPressed: _choose, child: const Text('Choose image')),
+              CompactBtn('Use transparency', onTap: store.clear),
+              SizedBox(width: S.s8),
+            CompactBtn('Choose image', onTap: _choose),
           ]),
         );
       },
