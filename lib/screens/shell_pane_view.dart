@@ -249,16 +249,16 @@ class ReadoutChip extends StatelessWidget {
         width: compact ? null : width,
         child: Padding(
           padding: EdgeInsets.symmetric(
-              horizontal: S.s2, vertical: compact ? S.s6 : S.of(7)),
+              horizontal: S.s2, vertical: compact ? S.s8 : S.of(7)),
           child: AnimatedContainer(
             duration: Motion.quick,
-            height: compact ? 26 : 32,
+            height: compact ? 28 : 32,
             constraints: compact ? BoxConstraints(maxWidth: width) : null,
             padding: EdgeInsets.fromLTRB(
                 compact ? S.of(9) : S.s12, 0, compact ? S.s6 : S.s8, 0),
             decoration: BoxDecoration(
               color: active
-                  ? (compact ? AppColors.surface3 : AppColors.surface2)
+                  ? AppColors.surface2
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(compact ? R.of(7) : R.card),
             ),
@@ -266,16 +266,16 @@ class ReadoutChip extends StatelessWidget {
                 mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
                 children: [
                   AppIcon(tab.icon,
-                      size: compact ? 12 : 14,
+                      size: 14,
                       color: active ? AppColors.fg1 : AppColors.fg3),
-                  SizedBox(width: compact ? S.s6 : S.s8),
+                  SizedBox(width: S.s8),
                   Flexible(
                     fit: compact ? FlexFit.loose : FlexFit.tight,
                     child: Text(
                       tab.label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(compact ? 12 : 13,
+                      style: sans(compact ? 12.5 : 13,
                           color: active ? AppColors.fg1 : AppColors.fg3),
                     ),
                   ),
@@ -363,16 +363,16 @@ class PaneTabChip extends StatelessWidget {
         width: compact ? null : width,
         child: Padding(
           padding: EdgeInsets.symmetric(
-              horizontal: S.s2, vertical: compact ? S.s6 : S.of(7)),
+              horizontal: S.s2, vertical: compact ? S.s8 : S.of(7)),
           child: AnimatedContainer(
             duration: Motion.quick,
-            height: compact ? 26 : 32,
+            height: compact ? 28 : 32,
             constraints: compact ? BoxConstraints(maxWidth: width) : null,
             padding: EdgeInsets.fromLTRB(
                 compact ? S.of(9) : S.s12, 0, compact ? S.s6 : S.s8, 0),
             decoration: BoxDecoration(
               color: active
-                  ? (compact ? AppColors.surface3 : AppColors.surface2)
+                  ? AppColors.surface2
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(compact ? R.of(7) : R.card),
             ),
@@ -382,9 +382,9 @@ class PaneTabChip extends StatelessWidget {
                   SessionStateIcon(
                     status: status,
                     icon: chat ? 'chat' : tabIconKind(tab),
-                    size: compact ? 12 : 14,
+                    size: 14,
                   ),
-                  SizedBox(width: compact ? S.s6 : S.s8),
+                  SizedBox(width: S.s8),
                   Flexible(
                     fit: compact ? FlexFit.loose : FlexFit.tight,
                     child: Text(
@@ -395,7 +395,7 @@ class PaneTabChip extends StatelessWidget {
                               : tab.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(compact ? 12 : 13,
+                      style: sans(compact ? 12.5 : 13,
                           color: active ? AppColors.fg1 : AppColors.fg3),
                     ),
                   ),
@@ -484,7 +484,7 @@ class PaneStrip extends StatelessWidget {
     final count = tabs.length + readouts.length;
     final compact = !kMobile;
     return Container(
-      height: compact ? 38 : 46,
+      height: compact ? 44 : 46,
       // Desktop: a hairline under the tabs, as in the reference.
       decoration: BoxDecoration(
         color: kMobile ? AppColors.pageCanvas : Colors.transparent,
@@ -509,7 +509,7 @@ class PaneStrip extends StatelessWidget {
     return Stack(fit: StackFit.expand, children: [
       LayoutBuilder(builder: (context, c) {
         final fit = kPaneTabWidth(c.maxWidth - 12, count);
-        final w = compact && fit > 136 ? 136.0 : fit;
+        final w = compact && fit > 180 ? 180.0 : fit;
         return ListView.separated(
           scrollDirection: Axis.horizontal,
           padding: EdgeInsets.symmetric(horizontal: S.s6),
