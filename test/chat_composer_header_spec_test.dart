@@ -8,9 +8,11 @@ import 'package:snippet/composer/chat_composer.dart';
 import 'package:snippet/composer/composer_card.dart';
 import 'package:snippet/composer/voice_note.dart';
 import 'package:snippet/theme.dart';
+import 'package:snippet/widgets.dart';
 
-// Spec C section G: composer rest 56 high, radius 24, send circle 44 in a 48
-// target, bottom 8 above the safe area; header back 48 at x0, avatar 32 at x56.
+// v19 D3: composer rest 56 high, radius 28, visual send circle 28 in a 48
+// target, bottom 8 above the safe area. v19 XO-03 supersedes the old plain
+// chat bar: header card x16 w=W-32 h58 r10, 30 avatar, one trailing icon.
 void main() {
   for (final vw in [360.0, 393.0, 430.0]) {
     for (final scale in [1.0, 1.35, 2.0]) {
@@ -57,10 +59,20 @@ void main() {
         await t.pump(const Duration(milliseconds: 400));
         final pill = t.getRect(find.byType(ComposerPillSurface));
         final send = t.getRect(find.byType(ComposerSendButton));
-        final back = t.getRect(find.byTooltip('Back'));
-        final more = t.getRect(find.byTooltip('More'));
+        final header = find.byType(StageBar);
+        final headerCard = t.getRect(find
+            .descendant(of: header, matching: find.byType(Container))
+            .first);
+        final backIcon = find.descendant(
+            of: header,
+            matching: find.byWidgetPredicate(
+                (w) => w is AppIcon && w.name == 'chevron-left'));
+        final moreIcon = find.descendant(
+            of: header,
+            matching: find.byWidgetPredicate(
+                (w) => w is AppIcon && w.name == 'more-horizontal'));
         // ignore: avoid_print
-        print('W $vw x$scale pill=$pill send=$send back=$back more=$more');
+        print('W $vw x$scale pill=$pill send=$send header=$headerCard');
         expect(pill.left, 16);
         expect(pill.right, vw - 16);
         if (scale == 1.0) expect(pill.height, 56);
@@ -68,11 +80,14 @@ void main() {
         expect(send.size, const Size(48, 48));
         expect(t.getSize(find.descendant(
             of: find.byType(ComposerSendButton),
-            matching: find.byType(SizedBox)).at(1)), const Size(44, 44));
+            matching: find.byType(SizedBox)).at(1)), const Size(28, 28));
         expect(find.bySemanticsLabel('Send, unavailable'), findsOneWidget);
-        expect(back.left, 0);
-        expect(back.size, const Size(48, 48));
-        expect(more.size, const Size(48, 48));
+        expect(headerCard.left, 16);
+        expect(headerCard.width, vw - 32);
+        if (scale == 1.0) expect(headerCard.height, 58);
+        expect(headerCard.height, greaterThanOrEqualTo(58));
+        expect(backIcon, findsOneWidget);
+        expect(moreIcon, findsOneWidget);
         expect(t.takeException(), isNull);
         expect(typed, isFalse);
         // Three lines: the controls drop to a footer row, the pill grows.
