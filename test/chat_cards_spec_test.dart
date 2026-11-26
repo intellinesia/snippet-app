@@ -5,8 +5,8 @@ import 'package:snippet/chat/chat_card.dart';
 import 'package:snippet/theme.dart';
 import 'package:snippet/turn_changes_card.dart';
 
-// Spec C CH-05 and CH-15: Allow once first, 333 x 48 style buttons at card
-// padding; Review changes 48 high; card the full 361 at 393.
+// v19 D4/D6: Allow once first, 333 x 48 style buttons at card padding;
+// turn changes is a collapsed 48-high row with no full-width review CTA.
 void main() {
   for (final vw in [360.0, 393.0, 430.0]) {
     for (final scale in [1.0, 1.35, 2.0]) {
@@ -50,21 +50,19 @@ void main() {
             of: find.text('Always allow'), matching: find.byType(Material)).first);
         final deny = t.getRect(find.ancestor(
             of: find.text('Deny'), matching: find.byType(Material)).first);
-        final review = t.getRect(find.ancestor(
-            of: find.text('Review changes'), matching: find.byType(Material)).first);
+        expect(find.text('Review changes'), findsNothing);
         final card = t.getRect(find.byType(TurnChangesCard));
         // ignore: avoid_print
         print('W $vw x$scale allowOnce=$onceBtn always=$always deny=$deny '
-            'review=$review card=${card.width}');
+            'card=${card.width}');
         expect(once.top, lessThan(always.top));
         expect(onceBtn.width, w);
         expect(onceBtn.height, greaterThanOrEqualTo(48));
         expect(always.width, closeTo((w - 8) / 2, 0.1));
         expect(deny.width, closeTo((w - 8) / 2, 0.1));
-        expect(review.height, 48);
         expect(always.height, deny.height);
         expect(card.width, w);
-        expect(find.text('4 more files'), findsOneWidget);
+        expect(find.text('7 files changed'), findsOneWidget);
         expect(t.takeException(), isNull);
         debugDefaultTargetPlatformOverride = null;
       });

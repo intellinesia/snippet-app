@@ -1838,28 +1838,6 @@ class _SessionScreenState extends State<SessionScreen>
                                                                       _latestCompactionDetail(
                                                                           events),
                                                                 ),
-                                                                // The working row is the transcript's last item, never over it.
-                                                                if (kMobile &&
-                                                                    _dockRun !=
-                                                                        null &&
-                                                                    _state?.status ==
-                                                                        'running')
-                                                                  Padding(
-                                                                    key: const ValueKey(
-                                                                        'working-row'),
-                                                                    padding: EdgeInsets
-                                                                        .only(
-                                                                            top:
-                                                                                S.s8),
-                                                                    child: ActivityDock(
-                                                                        run:
-                                                                            _dockRun!,
-                                                                        agentId:
-                                                                            _me?.displayAgentId ??
-                                                                                'snippet',
-                                                                        onOpen:
-                                                                            _openLiveActivity),
-                                                                  ),
                                                               ];
                                                               Key rowKey(
                                                                       int i) =>
@@ -1928,7 +1906,10 @@ class _SessionScreenState extends State<SessionScreen>
                                                                               .s20,
                                                                       _glassHeader
                                                                           ? _composerH +
-                                                                              S.s12
+                                                                              S.s12 +
+                                                                              (_dockRun != null
+                                                                                  ? 48
+                                                                                  : 0)
                                                                           : S.s24),
                                                                   itemCount:
                                                                       timeline
@@ -2059,6 +2040,24 @@ class _SessionScreenState extends State<SessionScreen>
                                                               ),
                                                             ),
                                                           ),
+                                                        ),
+                                                      ),
+                                                    if (_glassHeader &&
+                                                        _dockRun != null &&
+                                                        _state?.status ==
+                                                            'running')
+                                                      Positioned(
+                                                        left: 0,
+                                                        right: 0,
+                                                        bottom: _composerH + 12,
+                                                        child: Center(
+                                                          child: ActivityDock(
+                                                              run: _dockRun!,
+                                                              agentId: _me
+                                                                      ?.displayAgentId ??
+                                                                  'snippet',
+                                                              onOpen:
+                                                                  _openLiveActivity),
                                                         ),
                                                       ),
                                                     if (_glassHeader)
