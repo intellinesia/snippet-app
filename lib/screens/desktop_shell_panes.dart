@@ -1115,9 +1115,13 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       );
 
   /// Settings is an overlay (spec S0): every entry (gear, shortcut, palette)
-  /// lands on the same dialog. A repeat open while it is up is a no-op.
-  void _openShellSettings([SettingsPage? page]) {
-    if (_settingsOpen) return;
+  /// lands on the same dialog. Opening again while it is up closes it.
+  void _openShellSettings(
+      [SettingsPage? page, String? backLabel, String? targetId]) {
+    if (_settingsOpen) {
+      closeSettingsOverlay();
+      return;
+    }
     final c = _client;
     if (c == null) return;
     _settingsOpen = true;
@@ -1131,6 +1135,9 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       onSelect: _selectInstance,
       onAdd: _onInstanceAdded,
       page: page,
+      backLabel: backLabel,
+      targetId: targetId,
+      onSearchAll: (q) => _openCommandPalette(query: q),
     ).whenComplete(() => _settingsOpen = false);
   }
 
@@ -1301,7 +1308,11 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       padding: const EdgeInsets.symmetric(horizontal: 9),
       child: Row(children: [
         _FooterBtn(
-            icon: 'settings', tooltip: 'Settings', onTap: _openShellSettings),
+            icon: 'settings',
+            tooltip: 'Settings',
+            label: 'Settings',
+            hint: kMacOS ? 'Cmd ,' : 'Ctrl ,',
+            onTap: _openShellSettings),
         const SizedBox(width: 4),
         _FooterBtn(
             icon: 'help-circle',
@@ -1421,10 +1432,16 @@ class _FooterBtn extends StatefulWidget {
     required this.icon,
     required this.tooltip,
     required this.onTap,
+    this.label,
+    this.hint,
   });
   final String icon;
   final String tooltip;
   final VoidCallback? onTap;
+
+  /// A labelled row (icon, label, shortcut hint) instead of a bare icon.
+  final String? label;
+  final String? hint;
 
   @override
   State<_FooterBtn> createState() => _FooterBtnState();
@@ -1446,22 +1463,40 @@ class _FooterBtnState extends State<_FooterBtn> {
           behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
           child: Container(
-            width: 28,
+            width: widget.label == null ? 28 : null,
             height: 26,
+            padding: widget.label == null
+                ? null
+                : const EdgeInsets.only(left: 6, right: 8),
             decoration: BoxDecoration(
               color:
                   _hover && enabled ? AppColors.surface2 : Colors.transparent,
               borderRadius: BorderRadius.circular(R.of(6)),
             ),
-            child: Stack(alignment: Alignment.center, children: [
-              AppIcon(widget.icon,
-                  size: 15,
-                  color: !enabled
-                      ? AppColors.fg3
-                      : _hover
-                          ? AppColors.fg1
-                          : AppColors.fg2),
-            ]),
+            child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  AppIcon(widget.icon,
+                      size: 15,
+                      color: !enabled
+                          ? AppColors.fg3
+                          : _hover
+                              ? AppColors.fg1
+                              : AppColors.fg2),
+                  if (widget.label != null) ...[
+                    const SizedBox(width: 6),
+                    Text(widget.label!,
+                        style: sans(12,
+                            color: _hover ? AppColors.fg1 : AppColors.fg2)),
+                  ],
+                  if (widget.hint != null) ...[
+                    const SizedBox(width: 6),
+                    Text(widget.hint!,
+                        key: const Key('settings-shortcut-label'),
+                        style: sans(11, color: AppColors.fg3)),
+                  ],
+                ]),
           ),
         ),
       ),

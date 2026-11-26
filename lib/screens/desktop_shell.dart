@@ -625,8 +625,14 @@ class _DesktopShellState extends State<DesktopShell>
     onShowShortcuts: _showDesktopShortcuts,
   );
 
-  bool _handleGlobalShortcuts(KeyEvent event) =>
-      _shortcutsHandler.handleKeyEvent(event);
+  bool _handleGlobalShortcuts(KeyEvent event) {
+    // The app behind the Settings modal stays inert; only its toggle passes.
+    if (settingsOverlayOpen &&
+        event.logicalKey != LogicalKeyboardKey.comma) {
+      return false;
+    }
+    return _shortcutsHandler.handleKeyEvent(event);
+  }
 
   /// Drop every per-tab bookkeeping entry for a tab that is going away.
   ///
@@ -925,7 +931,13 @@ class _DesktopShellState extends State<DesktopShell>
 
   void _openMacGit() => _dispatchSessionAction('file_changes');
 
-  void _openCommandPalette() {
+  /// The tab a palette jump into Settings came from, for its back line.
+  String? _settingsOrigin(_ShellTab? tab) {
+    final t = tab?.title.trim() ?? '';
+    return t.isEmpty ? null : t;
+  }
+
+  void _openCommandPalette({String query = ''}) {
     final tab = _activeTab;
     final client = _client;
     final url = _active?.url ?? '';
@@ -1026,83 +1038,12 @@ class _DesktopShellState extends State<DesktopShell>
         shortcut: kMacOS ? '⌘ B' : 'Ctrl+B',
         keywords: const ['sidebar', 'collapse', 'expand', 'panel', 'left'],
       ),
-      for (final (page, icon, title, keys) in const [
-        (
-          SettingsPage.general,
-          'server',
-          'Settings: General & machines',
-          ['machines', 'connection', 'notifications', 'approvals']
-        ),
-        (
-          SettingsPage.appearance,
-          'sliders',
-          'Settings: Appearance',
-          ['theme', 'accent', 'color', 'font', 'typeface', 'cove', 'geist']
-        ),
-        (
-          SettingsPage.models,
-          'sparkles',
-          'Settings: Profiles',
-          ['inference', 'models', 'providers', 'keys']
-        ),
-        (
-          SettingsPage.routing,
-          'route',
-          'Settings: Routing',
-          ['fallback', 'limits', 'priority']
-        ),
-        (
-          SettingsPage.usage,
-          'analytics',
-          'Settings: Usage',
-          ['tokens', 'cost', 'billing', 'limits']
-        ),
-        (SettingsPage.memory, 'book', 'Settings: Memory', ['remember']),
-        (
-          SettingsPage.scheduled,
-          'repeat',
-          'Settings: Scheduled jobs',
-          ['recurring', 'cron']
-        ),
-        (
-          SettingsPage.wakes,
-          'repeat',
-          'Settings: Wakes',
-          ['wake', 'schedule', 'agents']
-        ),
-        (
-          SettingsPage.keepWarm,
-          'zap',
-          'Settings: Keep warm',
-          ['keep warm', 'cache', 'warm']
-        ),
-        (
-          SettingsPage.vault,
-          'lock-key',
-          'Settings: Vault',
-          ['secrets', 'keys', 'credentials']
-        ),
-        (
-          SettingsPage.voice,
-          'mic',
-          'Settings: Voice',
-          ['voice notes', 'transcription', 'speech model', 'microphone']
-        ),
-        (
-          SettingsPage.webSearch,
-          'globe',
-          'Settings: Web search',
-          ['exa', 'search', 'internet', 'browse']
-        ),
-        (
-          SettingsPage.accounts,
-          'users',
-          'Settings: Accounts',
-          ['subscription', 'rotation', 'chatgpt', 'xai', 'claude']
-        ),
-      ])
-        cmd(page.name, icon, title, () => _openShellSettings(page),
-            kind: PaletteKind.setting, keywords: keys),
+      for (final (_, rows) in kSettingsGroups)
+        for (final r in rows)
+          cmd(r.page.name, settingsPageIcon(r.page), 'Settings: ${r.label}',
+              () => _openShellSettings(r.page, _settingsOrigin(tab)),
+              kind: PaletteKind.setting,
+              keywords: settingsPageKeywords(r.page)),
       for (final t in _mainTabs)
         if (t != tab)
           PaletteItem(
@@ -1228,7 +1169,8 @@ class _DesktopShellState extends State<DesktopShell>
         }),
     ];
 
-    showCommandPalette(context, items: items, sources: sources);
+    showCommandPalette(context,
+        items: items, sources: sources, initialQuery: query);
   }
 
   void _showDesktopShortcuts() => showDesktopShortcutsDialog(context);
@@ -1835,6 +1777,7 @@ class _DesktopShellState extends State<DesktopShell>
         onRefreshHealth: _refreshHealth,
         mobileHome: _mobileHome,
         onMobileMenu: kMobile ? _openMobileMenu : null,
+        onOpenSettings: _openShellSettings,
         onMobileHome: (h) => setState(() {
           _mobileHome = h;
           _mobileAgent = null;

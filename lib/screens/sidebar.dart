@@ -174,6 +174,9 @@ class Sidebar extends StatefulWidget {
   final MobileHome mobileHome;
   final Widget? mobileTopBar;
   final VoidCallback? onMobileMenu;
+
+  /// The shell's Settings entry; preferred so every opener shares one path.
+  final VoidCallback? onOpenSettings;
   final ValueChanged<MobileHome> onMobileHome;
 
   /// Phone drill-down state + setter. Also shell-owned, for the same reason:
@@ -217,6 +220,7 @@ class Sidebar extends StatefulWidget {
     required this.mobileHome,
     this.mobileTopBar,
     this.onMobileMenu,
+    this.onOpenSettings,
     required this.onMobileHome,
     required this.agent,
     required this.onAgent,
@@ -608,6 +612,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   /// The gear on the phone home: Settings opens as an overlay, not a home
   /// (spec S0).
   void _openSettings() {
+    final open = widget.onOpenSettings;
+    if (open != null) return open();
     final client = widget.client;
     if (client == null) return;
     showSettings(

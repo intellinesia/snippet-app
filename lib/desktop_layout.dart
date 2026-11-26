@@ -119,6 +119,18 @@ class SettingsBack extends StatelessWidget {
   }
 }
 
+/// Set by the Settings dialog and sheet: they draw the page title, back and
+/// close, so page headers and columns inside give that chrome up.
+class SettingsChromeScope extends InheritedWidget {
+  const SettingsChromeScope({super.key, required super.child});
+
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<SettingsChromeScope>() != null;
+
+  @override
+  bool updateShouldNotify(SettingsChromeScope oldWidget) => false;
+}
+
 class SettingsHeader extends StatelessWidget {
   const SettingsHeader({
     super.key,
@@ -137,8 +149,31 @@ class SettingsHeader extends StatelessWidget {
   final bool compact;
   final VoidCallback? onBack;
 
+  /// Inside the overlay a page's own top header keeps only its description
+  /// and actions; a sub-view header with its own back stays whole.
+  Widget? _hosted(BuildContext context) {
+    if (!SettingsChromeScope.of(context) || back != null || onBack != null) {
+      return null;
+    }
+    final sub = subtitle ?? '';
+    if (sub.isEmpty && actions.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(children: [
+        Expanded(
+          child: Text(sub,
+              style: sans(kMobile ? 13 : 12,
+                  height: 1.45, color: AppColors.fg3)),
+        ),
+        for (final a in actions) ...[SizedBox(width: S.s8), a],
+      ]),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final hosted = _hosted(context);
+    if (hosted != null) return hosted;
     if (compact) {
       // Design language v7: 56 tall, 40 back circle, centred 17/600 title.
       return SizedBox(
@@ -208,6 +243,16 @@ class SettingsColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (SettingsChromeScope.of(context) && !kMobile) {
+      // Dialog content pane: 24 side padding, left-aligned (spec D3).
+      return SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: children,
+        ),
+      );
+    }
     // One centred column: 680 on phone, one 720 measure on desktop.
     return SingleChildScrollView(
       padding: kMobile

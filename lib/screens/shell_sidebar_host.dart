@@ -69,6 +69,7 @@ class ShellSidebarHost extends StatelessWidget {
     required this.mobileHome,
     this.mobileTopBar,
     this.onMobileMenu,
+    this.onOpenSettings,
     required this.onMobileHome,
     required this.mobileAgent,
     required this.onMobileAgent,
@@ -127,6 +128,7 @@ class ShellSidebarHost extends StatelessWidget {
   final MobileHome mobileHome;
   final Widget? mobileTopBar;
   final VoidCallback? onMobileMenu;
+  final VoidCallback? onOpenSettings;
   final ValueChanged<MobileHome> onMobileHome;
   final CoordinationAgent? mobileAgent;
   final ValueChanged<CoordinationAgent?> onMobileAgent;
@@ -287,6 +289,7 @@ class ShellSidebarHost extends StatelessWidget {
       mobileHome: mobileHome,
       mobileTopBar: mobileTopBar,
       onMobileMenu: onMobileMenu,
+      onOpenSettings: onOpenSettings,
       onMobileHome: onMobileHome,
       agent: mobileAgent,
       onAgent: onMobileAgent,
