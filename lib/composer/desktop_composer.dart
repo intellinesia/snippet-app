@@ -10,19 +10,14 @@ import '../tap_detector.dart';
 /// keeps the pill in composer_card.dart.
 const double _kCardRadius = 12;
 
-/// Flat s1 composer surface. The border is always 1px so focus never shifts
-/// layout; only keyboard/text focus turns it into the locked fg3 ring.
-BoxDecoration _cardDecoration(
-        {bool focus = false, bool keyboard = false, bool hairline = true}) =>
+/// Flat s1 composer surface. Focus is carried by the text caret only; the
+/// card never grows a focus ring.
+BoxDecoration _cardDecoration({bool focus = false, bool hairline = true}) =>
     BoxDecoration(
       color: AppColors.surface1,
       borderRadius: BorderRadius.circular(R.of(_kCardRadius)),
-      border: Border.all(
-          color: focus || keyboard
-              ? AppColors.fg3
-              : hairline
-                  ? AppColors.border
-                  : Colors.transparent),
+      border:
+          Border.all(color: hairline ? AppColors.border : Colors.transparent),
     );
 
 /// A 28-high hit target whose visible chip is the locked 26-high tonal plate.

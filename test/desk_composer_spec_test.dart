@@ -16,6 +16,7 @@ Future<void> _pumpComposer(
   required VoiceNoteController voice,
   bool running = false,
   List<Widget> attachments = const [],
+  FocusNode? focus,
 }) async {
   debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
   addTearDown(() => debugDefaultTargetPlatformOverride = null);
@@ -26,7 +27,7 @@ Future<void> _pumpComposer(
         alignment: Alignment.bottomCenter,
         child: ChatComposer(
           input: input,
-          focus: FocusNode(),
+          focus: focus ?? FocusNode(),
           hint: 'Message agent',
           voice: voice,
           onSend: () {},
@@ -98,6 +99,32 @@ void main() {
     expect(find.text('2 KB'), findsOneWidget);
     expect(
         tester.getSize(find.byType(ComposerAttachmentTile).first).height, 44);
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('desktop composer focus stays ringless', (tester) async {
+    tester.view.physicalSize = const Size(1100, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final input = TextEditingController();
+    final voice = VoiceNoteController(client: FakeWakeClient());
+    final focus = FocusNode();
+    addTearDown(input.dispose);
+    addTearDown(voice.dispose);
+    addTearDown(focus.dispose);
+
+    await _pumpComposer(tester, input: input, voice: voice, focus: focus);
+    focus.requestFocus();
+    await tester.pump();
+
+    final containers = tester
+        .widgetList<Container>(find.ancestor(
+            of: find.byType(TextField), matching: find.byType(Container)))
+        .toList();
+    final card = containers.firstWhere((c) => c.decoration is BoxDecoration);
+    final decoration = card.decoration as BoxDecoration;
+    expect(decoration.border?.top.color, isNot(AppColors.fg3));
+    expect(decoration.border?.top.color, Colors.transparent);
     debugDefaultTargetPlatformOverride = null;
   });
 
