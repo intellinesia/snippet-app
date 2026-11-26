@@ -7,6 +7,7 @@ import '../motion_routes.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../settings_form.dart';
+import '../settings_target.dart';
 import '../widgets.dart';
 import 'inference_profile_editor.dart';
 import 'shell_nav.dart';
@@ -24,6 +25,12 @@ class InferenceProfilesScreen extends StatefulWidget {
   final VoidCallback? onBack;
   final ValueChanged<bool>? onEditingChanged;
 
+  /// Profile name to scroll to and highlight; unknown names are ignored.
+  final String? targetId;
+
+  /// Hosted in the Settings dialog: no own title, 24 pt side padding.
+  final bool chromeless;
+
   const InferenceProfilesScreen({
     super.key,
     required this.client,
@@ -31,6 +38,8 @@ class InferenceProfilesScreen extends StatefulWidget {
     this.embedded = false,
     this.onBack,
     this.onEditingChanged,
+    this.targetId,
+    this.chromeless = false,
   });
   @override
   State<InferenceProfilesScreen> createState() =>
@@ -63,6 +72,27 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
   final Set<String> _deletingProfiles = {};
 
   void addProfile() => _edit(null);
+
+  final GlobalKey _targetKey = GlobalKey();
+  bool _targetRevealed = false;
+
+  bool _isTarget(InferenceProfile p) {
+    final t = widget.targetId?.trim().toLowerCase();
+    return t != null && t.isNotEmpty && p.name.toLowerCase() == t;
+  }
+
+  Widget _mark(InferenceProfile p, Widget row) {
+    if (!_isTarget(p)) return row;
+    if (!_targetRevealed) {
+      _targetRevealed = true;
+      revealSettingsTarget(_targetKey);
+    }
+    return KeyedSubtree(
+      key: _targetKey,
+      child: SettingsTargetPlate(
+          key: Key('settings-target-${widget.targetId!.trim()}'), child: row),
+    );
+  }
 
   void _submitted(InferenceProfile draft, Future<void> save) {
     setState(() {
@@ -275,7 +305,7 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
           else if (kMobile) ...[
             ListGroup(children: [
               for (final p in profiles)
-                SettingsRow(
+                _mark(p, SettingsRow(
                   label: p.name,
                   sub: '${p.provider} · ${p.model}',
                   leading: Container(
@@ -295,7 +325,7 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
                       Text('Active',
                           style: sans(14, color: AppColors.fg3)),
                   ]),
-                ),
+                )),
             ]),
             Padding(
               padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
@@ -321,7 +351,7 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
                   'New chats use the active profile. Lanes and background work follow Routing.',
               children: [
                 for (final p in profiles)
-                  SettingsRow(
+                  _mark(p, SettingsRow(
                     label: p.name,
                     sub: '${p.provider} · ${p.model}',
                     leading: ProviderLogo(p.provider, size: 16),
@@ -333,7 +363,7 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
                         Text('Active',
                             style: sans(12, color: AppColors.fg3)),
                     ]),
-                  ),
+                  )),
               ],
             ),
             SettingsGroup(children: [
@@ -404,22 +434,22 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
       future: _future,
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting && !snap.hasData) {
+          const loading =
+              SettingsGroup(children: [SettingsRow(label: 'Loading profiles…')]);
+          if (widget.chromeless) {
+            return const SettingsChromelessPage(children: [loading]);
+          }
           return SettingsColumn(children: [
             SettingsHeader(
               title: 'Profiles',
               subtitle: 'Models and credentials for chats and background work.',
             ),
             SizedBox(height: S.s8),
-            SettingsGroup(children: [SettingsRow(label: 'Loading profiles…')]),
+            loading,
           ]);
         }
         if (snap.hasError && !snap.hasData) {
-          return SettingsColumn(children: [
-            const SettingsHeader(
-              title: 'Profiles',
-              subtitle: 'Models and credentials for chats and background work.',
-            ),
-            SizedBox(height: S.s8),
+          final failed = <Widget>[
             SettingsGroup(children: [
               SettingsRow(
                 label: "Couldn't load profiles",
@@ -431,6 +461,17 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
                     onTap: () => setState(() => _load(force: true))),
               ),
             ]),
+          ];
+          if (widget.chromeless) {
+            return SettingsChromelessPage(children: failed);
+          }
+          return SettingsColumn(children: [
+            const SettingsHeader(
+              title: 'Profiles',
+              subtitle: 'Models and credentials for chats and background work.',
+            ),
+            SizedBox(height: S.s8),
+            ...failed,
           ]);
         }
         final cfg = snap.data;
@@ -464,13 +505,7 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
             onSubmit: _submitted,
           );
         }
-        return SettingsColumn(children: [
-          SettingsHeader(
-            title: 'Profiles',
-            subtitle: 'Models and credentials for chats and background work.',
-            actions: [HeaderAction('Add profile', onTap: () => _edit(null))],
-          ),
-          SizedBox(height: S.s8),
+        final listBody = <Widget>[
           SettingsGroup(
             header: 'Your profiles',
             footer:
@@ -479,7 +514,7 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
               if (profiles.isEmpty)
                 const SettingsRow(label: 'No inference profiles yet'),
               for (final p in profiles)
-                SettingsRow(
+                _mark(p, SettingsRow(
                   label: p.name,
                   sub: p.model.isEmpty ? p.provider : '${p.provider} · ${p.model}',
                   subMaxLines: 1,
@@ -499,7 +534,7 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
                   ]),
                   chevron: true,
                   onTap: () => _edit(p),
-                ),
+                )),
             ],
           ),
           SettingsGroup(header: 'Behaviour', children: [
@@ -510,6 +545,17 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
                   SettingsSwitch(value: keep, onChanged: _setKeepTaskProfile),
             ),
           ]),
+        ];
+        final add = HeaderAction('Add profile', onTap: () => _edit(null));
+        const desc = 'Models and credentials for chats and background work.';
+        if (widget.chromeless) {
+          return SettingsChromelessPage(
+              description: desc, action: add, children: listBody);
+        }
+        return SettingsColumn(children: [
+          SettingsHeader(title: 'Profiles', subtitle: desc, actions: [add]),
+          SizedBox(height: S.s8),
+          ...listBody,
         ]);
       },
     );

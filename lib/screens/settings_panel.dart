@@ -12,6 +12,7 @@ import '../notifications.dart';
 import '../panel.dart';
 import '../platform.dart';
 import '../settings_form.dart';
+import '../settings_target.dart';
 import '../inline_flow.dart';
 import '../store.dart';
 import '../chat_scene.dart';
@@ -1458,6 +1459,7 @@ class SettingsSectionView extends StatefulWidget {
     this.onClose,
     this.v5Desktop = false,
     this.chromeless = false,
+    this.targetId,
   });
 
   final DaemonClient client;
@@ -1479,6 +1481,10 @@ class SettingsSectionView extends StatefulWidget {
   /// the title, back and close chrome, so the page drops its own header and
   /// keeps only its optional description plus primary action.
   final bool chromeless;
+
+  /// Page-local row to reveal and highlight: a Vault secret name or a
+  /// Models profile name.
+  final String? targetId;
 
   /// Pages laid out as one column under a [SettingsHeader].
   static const plainPages = SettingsSectionViewState._plainPages;
@@ -1505,7 +1511,6 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
   bool _recurringAdding = false;
 
   String? _renamingUrl;
-  String? _openMachineUrl;
   String? _removingUrl;
   bool _connecting = false;
 
@@ -1515,7 +1520,9 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
   bool _notif = false;
   bool _notifBusy = false;
   final Map<String, bool> _health = {};
-  int? _liveCount;
+  // Per machine, read from that machine's own daemon; absent means unknown.
+  final Map<String, int> _agentCount = {};
+  final Map<String, bool> _manualBy = {};
 
   static const _plainPages = {
     SettingsPage.general,
@@ -1624,7 +1631,6 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     _loadManual();
     if (!widget.v5Desktop) return;
     _pingMachines();
-    _loadGeneralStats();
   }
 
   Future<void> _pingMachines() async {
@@ -1635,6 +1641,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
         if (mounted && _health[i.url] != ok) {
           setState(() => _health[i.url] = ok);
         }
+        if (ok) _loadMachineDetails(i.url, client);
       }).catchError((_) {
         if (mounted && _health[i.url] != false) {
           setState(() => _health[i.url] = false);
@@ -1643,12 +1650,20 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     }
   }
 
-  Future<void> _loadGeneralStats() async {
+  Future<void> _loadMachineDetails(String url, DaemonClient client) async {
     try {
-      final sessions = await widget.client.sessions();
-      if (mounted) {
-        setState(() => _liveCount = sessions.where((s) => !s.settled).length);
-      }
+      final sessions = await client.sessions();
+      final agents = {
+        for (final s in sessions)
+          if (s.running && !s.settled)
+            if ((s.workerAgentId ?? s.agentId ?? '').isNotEmpty)
+              (s.workerAgentId ?? s.agentId)!
+      };
+      if (mounted) setState(() => _agentCount[url] = agents.length);
+    } catch (_) {}
+    try {
+      final c = await client.getConfig();
+      if (mounted) setState(() => _manualBy[url] = c.manualApproval);
     } catch (_) {}
   }
 
@@ -1882,47 +1897,72 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     ];
   }
 
-  List<Widget> _v5MachineRows(Instance i) {
-    final removing = _removingUrl == i.url;
-    final open = _openMachineUrl == i.url && _renamingUrl != i.url;
-    final canConnect = i.url != widget.active?.url && widget.onSelect != null;
-    return [
-      if (removing) _removeStrip(i) else _v5MachineRow(i),
-      if (open && !removing)
-        InlineActionsStrip(
-          onClose: () => setState(() => _openMachineUrl = null),
-          actions: [
-            if (canConnect)
-              Btn('Connect', small: true, onTap: () {
-                setState(() => _openMachineUrl = null);
-                widget.onSelect?.call(i);
-              }),
-            Btn('Rename', small: true, variant: BtnVariant.secondary,
-                onTap: () {
-              setState(() => _openMachineUrl = null);
-              _startRename(i);
-            }),
-            Btn('Remove',
-                small: true,
-                variant: BtnVariant.danger,
-                onTap: () => setState(() {
-                      _openMachineUrl = null;
-                      _removingUrl = i.url;
-                    })),
-          ],
-        ),
-    ];
+  Future<void> _connected(Instance inst) async {
+    setState(() => _connecting = false);
+    await _saveInstances((items) => items
+      ..removeWhere((e) => e.url == inst.url || e.token == inst.token)
+      ..add(inst));
+    widget.onAdd?.call(inst);
   }
 
-  Widget _v5MachineRow(Instance i) {
+  Widget _tableCell(String text, {Color? color}) => Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: sans(12.5, color: color ?? AppColors.fg2),
+      );
+
+  Widget _machineTable() {
+    Widget header(String t) => Text(t,
+        style: sans(11, weight: FontWeight.w500, color: AppColors.fg3));
+    Widget line() => Container(height: 1, color: AppColors.line);
+    final rows = <Widget>[
+      _tableRow(header('Machine'), header('Status'), header('Agents'),
+          header('Approvals'), const SizedBox.shrink(),
+          height: 28),
+      for (final i in _instances) ...[
+        line(),
+        if (_removingUrl == i.url)
+          _removeStrip(i)
+        else
+          _machineTableRow(i),
+      ],
+    ];
+    return Padding(
+      padding: EdgeInsets.only(bottom: S.s8),
+      child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ...rows,
+            line(),
+            Padding(
+              padding: const EdgeInsets.only(top: 8, bottom: 16),
+              child: Text('Approvals apply to every session on that machine.',
+                  style: sans(12, weight: W.body, color: AppColors.fg3)),
+            ),
+          ]),
+    );
+  }
+
+  Widget _tableRow(Widget a, Widget b, Widget c, Widget d, Widget e,
+          {double height = 32}) =>
+      SizedBox(
+        height: height,
+        child: Row(children: [
+          Expanded(flex: 4, child: a),
+          Expanded(flex: 3, child: b),
+          Expanded(flex: 2, child: c),
+          Expanded(flex: 3, child: d),
+          SizedBox(width: 28, child: e),
+        ]),
+      );
+
+  Widget _machineTableRow(Instance i) {
     final isActive = i.url == widget.active?.url;
-    final connected = _health[i.url] ?? isActive;
     if (_renamingUrl == i.url) {
-      return SettingsRow(
-        label: i.label,
-        iconData: PhIcons.monitor,
-        iconColor: isActive ? AppColors.ok : null,
-        labelWidget: InlineEditField(
+      return SizedBox(
+        height: 40,
+        child: InlineEditField(
           controller: _renameController,
           hint: 'Machine name',
           commitOnTapOutside: false,
@@ -1932,61 +1972,61 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
         ),
       );
     }
+    final health = _health[i.url];
+    final status = health == null
+        ? 'Checking'
+        : health
+            ? 'Online'
+            : 'Offline';
+    final agents = _agentCount[i.url];
+    final manual = isActive ? (_manual ?? _manualBy[i.url]) : _manualBy[i.url];
     final canConnect = !isActive && widget.onSelect != null;
-    final live = _liveCount;
-    final host = hostOf(i.url);
-    return Builder(
-      builder: (anchor) => SettingsRow(
-        iconData: PhIcons.monitor,
-        iconColor: isActive ? AppColors.ok : null,
-        label: i.label.isEmpty ? host : i.label,
-        sub: isActive && live != null ? '$host · $live live' : host,
-        value: isActive
-            ? 'Active'
-            : !connected
-                ? 'Offline'
-                : canConnect
-                    ? 'Connect'
-                    : null,
-        chevron: true,
-        // The row expands in place: Connect, Rename and Remove.
-        onTap: () => setState(
-            () => _openMachineUrl = _openMachineUrl == i.url ? null : i.url),
-      ),
+    return _tableRow(
+      Row(children: [
+        Container(
+          width: 6,
+          height: 6,
+          decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isActive ? AppColors.ok : AppColors.fg4),
+        ),
+        SizedBox(width: S.s8),
+        Flexible(
+            child: _tableCell(i.label.isEmpty ? hostOf(i.url) : i.label,
+                color: AppColors.fg1)),
+        if (isActive) ...[
+          SizedBox(width: S.s8),
+          Text('Active', style: sans(11, color: AppColors.fg3)),
+        ],
+      ]),
+      _tableCell(status),
+      _tableCell(agents == null ? '\u2014' : '$agents'),
+      _tableCell(manual == null
+          ? '\u2014'
+          : manual
+              ? 'Ask first'
+              : 'Auto'),
+      _machineMenu(i, connect: canConnect),
     );
-  }
-
-  Future<void> _connected(Instance inst) async {
-    setState(() => _connecting = false);
-    await _saveInstances((items) => items
-      ..removeWhere((e) => e.url == inst.url || e.token == inst.token)
-      ..add(inst));
-    widget.onAdd?.call(inst);
   }
 
   List<Widget> _v5General() {
     final manual = _manual;
     return [
-      SettingsGroup(
-        header: 'Connected',
-        footer:
-            'Snippet talks to the daemon on each machine. Run snippet serve on a new one and add its link.',
-        children: [
-          if (_connecting)
-            _ConnectMachinePanel(
-              onCancel: () => setState(() => _connecting = false),
-              onConnected: _connected,
-            ),
-          if (_instances.isEmpty && !_connecting)
-            const SettingsRow(
-              iconData: PhIcons.monitor,
-              label: 'No saved machines',
-              sub: 'Run snippet serve on one and add its link.',
-            )
-          else
-            for (final i in _instances) ..._v5MachineRows(i),
-        ],
-      ),
+      if (_connecting)
+        _ConnectMachinePanel(
+          onCancel: () => setState(() => _connecting = false),
+          onConnected: _connected,
+        ),
+      if (_instances.isEmpty && !_connecting)
+        const SettingsGroup(children: [
+          SettingsRow(
+            iconData: PhIcons.monitor,
+            label: 'No saved machines',
+            sub: 'Run snippet serve on one and add its link.',
+          ),
+        ])
+      else if (_instances.isNotEmpty) _machineTable(),
       SettingsGroup(
         header: 'Sessions',
         children: [
@@ -2263,6 +2303,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
             key: _modelsKey,
             client: widget.client,
             embedded: true,
+            targetId: widget.targetId,
             onEditingChanged: (editing) =>
                 setState(() => _modelsEditing = editing),
           ),
@@ -2282,10 +2323,13 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
             key: _vaultKey,
             client: widget.client,
             embedded: true,
+            targetId: widget.targetId,
             onAddingChanged: (adding) => setState(() => _vaultAdding = adding),
           ),
-        SettingsPage.wakes =>
-          WakesScreen(client: widget.client, embedded: true),
+        SettingsPage.wakes => WakesScreen(
+            client: widget.client,
+            embedded: true,
+            onOpenKeepWarm: _openKeepWarm),
         SettingsPage.keepWarm =>
           WakesScreen(client: widget.client, embedded: true, keepWarm: true),
         SettingsPage.scheduled => RecurringScreen(
@@ -2297,12 +2341,18 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
           ),
       };
 
+  VoidCallback? get _openKeepWarm => widget.onSelectPage == null
+      ? null
+      : () => widget.onSelectPage!(SettingsPage.keepWarm);
+
   Widget _pageBody() {
     return switch (widget.page) {
       SettingsPage.models => InferenceProfilesScreen(
           key: _modelsKey,
           client: widget.client,
           embedded: true,
+          chromeless: widget.chromeless,
+          targetId: widget.targetId,
           onEditingChanged: (editing) =>
               setState(() => _modelsEditing = editing),
         ),
@@ -2318,15 +2368,20 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
           key: _vaultKey,
           client: widget.client,
           embedded: true,
+          chromeless: widget.chromeless,
+          targetId: widget.targetId,
           onAddingChanged: (adding) => setState(() => _vaultAdding = adding),
         ),
       SettingsPage.wakes => WakesScreen(
           client: widget.client,
           embedded: true,
+          chromeless: widget.chromeless,
+          onOpenKeepWarm: _openKeepWarm,
         ),
       SettingsPage.keepWarm => WakesScreen(
           client: widget.client,
           embedded: true,
+          chromeless: widget.chromeless,
           keepWarm: true,
         ),
       SettingsPage.scheduled => RecurringScreen(
@@ -2377,8 +2432,15 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
       final subtitle = addingMachine
           ? 'Add another machine running snippet serve.'
           : _pageSubtitle(page);
-      child = SettingsColumn(children: [
-        if (!widget.chromeless)
+      if (widget.chromeless) {
+        // The host draws the title; the page keeps its description and action.
+        child = SettingsChromelessPage(
+          description: subtitle,
+          action: action,
+          children: _plainBody(page),
+        );
+      } else {
+        child = SettingsColumn(children: [
           SettingsHeader(
             title: addingMachine ? 'Connect a machine' : _pageTitle(page),
             subtitle: subtitle,
@@ -2393,22 +2455,11 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
                 GroupedCircleButton(
                     icon: 'x', tooltip: 'Close', onTap: widget.onClose),
             ],
-          )
-        else if (subtitle.isNotEmpty || action != null)
-          // Inside the overlay the host draws the title; the page keeps its
-          // optional one-line description and primary action (spec D3).
-          Row(children: [
-            Expanded(
-              child: Text(subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(12, weight: W.body, color: AppColors.fg3)),
-            ),
-            if (action != null) ...[SizedBox(width: S.s8), action],
-          ]),
-        SizedBox(height: S.s16),
-        ..._plainBody(page),
-      ]);
+          ),
+          SizedBox(height: S.s16),
+          ..._plainBody(page),
+        ]);
+      }
     } else {
       child = _pageBody();
     }

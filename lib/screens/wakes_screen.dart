@@ -13,6 +13,7 @@ import '../shell_panel.dart';
 import '../theme.dart';
 import '../wake_models.dart';
 import '../widgets.dart';
+import '../settings_target.dart';
 import 'agent_wake_panel.dart';
 import 'session.dart';
 import 'shell_nav.dart';
@@ -28,6 +29,8 @@ class WakesScreen extends StatefulWidget {
     this.keepWarm = false,
     this.onBack,
     this.tab = false,
+    this.onOpenKeepWarm,
+    this.chromeless = false,
   });
 
   final DaemonClient client;
@@ -39,6 +42,12 @@ class WakesScreen extends StatefulWidget {
 
   /// Shown as a workspace tab rather than inside Settings.
   final bool tab;
+
+  /// Opens the dedicated Keep warm page from the summary row.
+  final VoidCallback? onOpenKeepWarm;
+
+  /// Hosted in the Settings dialog: no own title, 24 pt side padding.
+  final bool chromeless;
 
   @override
   State<WakesScreen> createState() => _WakesScreenState();
@@ -143,6 +152,17 @@ class _WakesScreenState extends State<WakesScreen> {
               ),
             ),
           ])
+        : desk && widget.chromeless
+            ? SettingsChromelessPage(
+                description: subtitle,
+                action: !warmPage && _agents != null
+                    ? Builder(
+                        builder: (ctx) => Btn('New wake',
+                            small: true,
+                            variant: BtnVariant.secondary,
+                            onTap: () => _newWake(ctx, _agents!)))
+                    : null,
+                children: children)
         : desk
             ? SettingsColumn(children: [
                 SettingsHeader(title: title, subtitle: subtitle, actions: [
@@ -195,6 +215,15 @@ class _WakesScreenState extends State<WakesScreen> {
           ],
         );
         if (warmPage) return page([warmGroup]);
+        final warmSummary = SettingsGroup(children: [
+          SettingsRow(
+            key: const Key('keep-warm-summary'),
+            label: 'Keep warm',
+            value: warm == null ? null : '${warmOn.length} on',
+            chevron: widget.onOpenKeepWarm != null,
+            onTap: widget.onOpenKeepWarm,
+          ),
+        ]);
         if (book.isEmpty) {
           // One empty state that fills the pane; a scrolling column cannot centre it.
           final empty = EmptyState(
@@ -214,7 +243,7 @@ class _WakesScreenState extends State<WakesScreen> {
                 onTap: () => _newWake(context, agents),
               ),
             ]),
-            warmGroup,
+            warmSummary,
           ]);
         }
         return page([
@@ -240,7 +269,7 @@ class _WakesScreenState extends State<WakesScreen> {
             SettingsGroup(header: 'Watches', children: [
               for (final w in book.watches) _watchRow(context, w, agents),
             ]),
-          warmGroup,
+          warmSummary,
         ]);
       },
     );
