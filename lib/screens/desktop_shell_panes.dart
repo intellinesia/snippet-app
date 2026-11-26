@@ -1484,9 +1484,11 @@ class _FooterBtnState extends State<_FooterBtn> {
                           : _hover
                               ? AppColors.fg1
                               : AppColors.fg2),
+                  // Footer chrome keeps its locked 26 px scale.
                   if (widget.label != null) ...[
                     const SizedBox(width: 6),
                     Text(widget.label!,
+                        textScaler: TextScaler.noScaling,
                         style: sans(12,
                             color: _hover ? AppColors.fg1 : AppColors.fg2)),
                   ],
@@ -1494,6 +1496,7 @@ class _FooterBtnState extends State<_FooterBtn> {
                     const SizedBox(width: 6),
                     Text(widget.hint!,
                         key: const Key('settings-shortcut-label'),
+                        textScaler: TextScaler.noScaling,
                         style: sans(11, color: AppColors.fg3)),
                   ],
                 ]),

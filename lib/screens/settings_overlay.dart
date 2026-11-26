@@ -201,6 +201,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
   final _headingFocus = FocusNode(debugLabel: 'Settings heading');
   final _listScroll = ScrollController();
   int _sel = 0;
+  // The list's focus ring shows once the keyboard has moved its cursor.
+  bool _keyed = false;
 
   bool get _searching => _query.text.trim().isNotEmpty;
   List<SettingsHit> get _results => searchSettingsPages(_query.text);
@@ -274,7 +276,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
     if (k == LogicalKeyboardKey.home && inList) to = 0;
     if (k == LogicalKeyboardKey.end && inList) to = n - 1;
     if (to != null) {
-      setState(() => inSearch ? _sel = to! : _cursor = to!);
+      setState(() {
+        _keyed = true;
+        inSearch ? _sel = to! : _cursor = to!;
+      });
       return KeyEventResult.handled;
     }
     final enter = k == LogicalKeyboardKey.enter ||
@@ -355,10 +360,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
           sortKey: const OrdinalSortKey(1),
           textField: true,
           label: 'Search settings',
-          child: SizedBox(
+          child: Container(
             key: const Key('settings-search'),
             width: width,
-            height: 28,
+            constraints: const BoxConstraints(minHeight: 28),
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: _searchFocus.hasFocus
@@ -447,7 +452,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
         groupRows.add(_ListRow(
           row: r,
           selected: r.page == _page && !_searching,
-          focused: _listFocus.hasFocus && _cursor == i,
+          focused: _keyed && _listFocus.hasFocus && _cursor == i,
           onTap: () {
             _open(r.page);
             _listFocus.requestFocus();
@@ -463,8 +468,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SizedBox(
-                height: 24,
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 24),
                 child: Padding(
                   padding: const EdgeInsets.only(left: 16),
                   child: Align(
@@ -500,8 +505,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
-            child: SizedBox(
-              height: 28,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 28),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text('Settings',
@@ -697,8 +702,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
             key: const Key('settings-back-line'),
             onTap: _close,
             radius: 8,
-            child: SizedBox(
-              height: 28,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 28),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 const SizedBox(width: 8),
                 Icon(PhIcons.arrowLeft, size: 13, color: AppColors.fg2),
@@ -823,9 +828,9 @@ class _ListRow extends StatelessWidget {
             radius: 8,
             fill: selected ? AppColors.surface2 : null,
             ring: focused,
-            child: SizedBox(
-              height: 28,
-              child: Stack(children: [
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 28),
+              child: Stack(alignment: Alignment.centerLeft, children: [
                 if (selected)
                   Positioned(
                     left: 0,
@@ -840,7 +845,9 @@ class _ListRow extends StatelessWidget {
                       ),
                     ),
                   ),
-                Row(children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(children: [
                   const SizedBox(width: 8),
                   settingsRowIcon(
                       row, 14, selected ? AppColors.fg1 : AppColors.fg2),
@@ -854,6 +861,7 @@ class _ListRow extends StatelessWidget {
                             color: selected ? AppColors.fg1 : AppColors.fg2)),
                   ),
                 ]),
+                ),
               ]),
             ),
           ),
@@ -884,9 +892,9 @@ class _ResultRow extends StatelessWidget {
         onTap: onTap,
         radius: 8,
         fill: selected ? AppColors.surface3 : null,
-        child: SizedBox(
-          height: 52,
-          child: Stack(children: [
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 52),
+          child: Stack(alignment: Alignment.centerLeft, children: [
             if (selected)
               Positioned(
                 left: 0,
@@ -895,7 +903,7 @@ class _ResultRow extends StatelessWidget {
                 child: Container(width: 2, color: AppColors.fg1),
               ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(children: [
                 Expanded(
                   child: Column(
@@ -1077,7 +1085,7 @@ class _TonalButtonState extends State<_TonalButton> {
           child: GestureDetector(
             onTap: widget.onTap,
             child: Container(
-              height: 28,
+              constraints: const BoxConstraints(minHeight: 28),
               padding: const EdgeInsets.symmetric(horizontal: 10),
               decoration: BoxDecoration(
                 color: _hover ? AppColors.surface3 : AppColors.surface1,

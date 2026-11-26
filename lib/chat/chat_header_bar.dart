@@ -36,9 +36,10 @@ class ChatHeaderBar extends StatelessWidget {
           );
     return Container(
       key: const ValueKey('chat-header-bar'),
-      height: height,
+      // Grows with large text instead of overflowing.
+      constraints: BoxConstraints(minHeight: height),
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-      padding: const EdgeInsets.only(left: 12, right: 10),
+      padding: const EdgeInsets.only(left: 12, right: 10, top: 4, bottom: 4),
       decoration: BoxDecoration(
         color: AppColors.surface1,
         borderRadius: BorderRadius.circular(10),

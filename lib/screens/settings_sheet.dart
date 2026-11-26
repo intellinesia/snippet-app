@@ -527,10 +527,10 @@ class _IndexRow extends StatelessWidget {
                       children: [name, if (value.isNotEmpty) val],
                     )
                   : Row(children: [
-                      Expanded(child: name),
+                      Expanded(flex: 3, child: name),
                       if (value.isNotEmpty) ...[
                         const SizedBox(width: 8),
-                        Flexible(child: val),
+                        Expanded(flex: 2, child: val),
                       ],
                     ]),
             ),
