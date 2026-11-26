@@ -130,21 +130,21 @@ void main() {
           expect(r.width, w);
           expect(r.height, greaterThanOrEqualTo(56));
         }
-        // Amber discipline: AppColors.run only on the hand glyph (at most one
-        // per row), AppColors.danger nowhere, and Text never uses run.
+        // v19 amber discipline: AppColors.run only on the 6 px needs-you dot
+        // (at most one per row), AppColors.danger nowhere, and Text never uses run.
         const amberIds = {'t-r1', 't-b1'};
         final amberSeen = <String>{};
         void checkColours() {
           for (final e in find.byType(PhoneTaskCard).evaluate()) {
             final cardFinder = find.byElementPredicate((x) => x == e);
             final key = (e.widget.key as ValueKey?)?.value;
-            var runIcons = 0;
+            var runDots = 0;
             for (final i in find
                 .descendant(of: cardFinder, matching: find.byType(Icon))
                 .evaluate()) {
               final c = (i.widget as Icon).color;
               expect(c, isNot(AppColors.danger), reason: 'red icon in $key');
-              if (c == AppColors.run) runIcons++;
+              expect(c, isNot(AppColors.run), reason: 'amber icon in $key');
             }
             for (final a in find
                 .descendant(of: cardFinder, matching: find.byType(AppIcon))
@@ -152,8 +152,18 @@ void main() {
               final w2 = a.widget as AppIcon;
               expect(w2.color, isNot(AppColors.danger),
                   reason: 'red AppIcon in $key');
-              if (w2.color == AppColors.run) {
-                expect(w2.name, 'hand', reason: 'amber on non-hand in $key');
+              expect(w2.color, isNot(AppColors.run),
+                  reason: 'amber AppIcon in $key');
+            }
+            for (final c in find
+                .descendant(of: cardFinder, matching: find.byType(Container))
+                .evaluate()) {
+              final w2 = c.widget as Container;
+              final deco = w2.decoration;
+              if (deco is BoxDecoration &&
+                  deco.color == AppColors.run &&
+                  deco.shape == BoxShape.circle) {
+                runDots++;
               }
             }
             for (final t in find
@@ -172,11 +182,11 @@ void main() {
               expect(colours, isNot(contains(AppColors.danger)),
                   reason: 'red text in $key');
             }
-            expect(runIcons, lessThanOrEqualTo(1),
-                reason: 'more than one amber icon in $key');
-            if (runIcons > 0) {
+            expect(runDots, lessThanOrEqualTo(1),
+                reason: 'more than one amber dot in $key');
+            if (runDots > 0) {
               expect(amberIds.contains(key), isTrue,
-                  reason: 'amber icon in unexpected row $key');
+                  reason: 'amber dot in unexpected row $key');
               amberSeen.add('$key');
             }
           }
@@ -191,13 +201,22 @@ void main() {
         final doingY = tester.getTopLeft(find.byKey(const ValueKey('group-Doing'))).dy;
         expect(r1Rect.top, lessThan(doingY));
         expect(f1Rect.top, lessThan(doingY));
-        // glyphs: in_review & blocked -> hand, failed -> x (not check)
+        // v19 glyphs: in_review & blocked use the 6 px amber dot; failed -> x.
+        Finder amberDot(String key) => find.descendant(
+            of: find.byKey(ValueKey(key)),
+            matching: find.byWidgetPredicate((w) =>
+                w is Container &&
+                w.decoration is BoxDecoration &&
+                (w.decoration as BoxDecoration).color == AppColors.run &&
+                (w.decoration as BoxDecoration).shape == BoxShape.circle));
         String iconOf(String key) => tester
             .widget<AppIcon>(find.descendant(
                 of: find.byKey(ValueKey(key)), matching: find.byType(AppIcon)))
             .name;
-        expect(iconOf('t-r1'), 'hand');
-        expect(iconOf('t-b1'), 'hand');
+        expect(amberDot('t-r1'), findsOneWidget);
+        expect(amberDot('t-b1'), findsOneWidget);
+        expect(tester.getSize(amberDot('t-r1')), const Size(6, 6));
+        expect(tester.getSize(amberDot('t-b1')), const Size(6, 6));
         expect(iconOf('t-f1'), 'x');
         // priority word & time in sub line
         final r1Rich = tester.widget<Text>(find.descendant(

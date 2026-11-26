@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:snippet/api.dart';
 import 'package:snippet/models.dart';
-import 'package:snippet/screens/tasks/task_phone.dart';
 import 'package:snippet/screens/tasks/task_phone_detail.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/theme.dart';
@@ -190,7 +189,7 @@ void main() {
     print('brief-more height=${more.height}');
   });
 
-  phoneTest('amber only on the in-review hand, never red', (tester) async {
+  phoneTest('amber only on the in-review dot, never red', (tester) async {
     Set<Color> pageColours() {
       final out = <Color>{};
       void walk(InlineSpan? s) {
@@ -211,6 +210,10 @@ void main() {
         final c = (e.widget as AppIcon).color;
         if (c != null) out.add(c);
       }
+      for (final e in find.byType(Container).evaluate()) {
+        final deco = (e.widget as Container).decoration;
+        if (deco is BoxDecoration && deco.color != null) out.add(deco.color!);
+      }
       return out;
     }
 
@@ -223,16 +226,17 @@ void main() {
           reason: 'red present on $st detail');
     }
     await pump(tester, Fake(row('in_review')), 393, 1);
-    final runIcons = find.byWidgetPredicate(
-        (x) => x is Icon && x.color == AppColors.run);
-    expect(runIcons, findsOneWidget);
-    final hand = tester.widget<AppIcon>(find.byWidgetPredicate(
-        (x) => x is AppIcon && x.name == 'hand'));
-    expect(hand.color, AppColors.run);
+    final runDots = find.byWidgetPredicate((x) =>
+        x is Container &&
+        x.decoration is BoxDecoration &&
+        (x.decoration as BoxDecoration).color == AppColors.run &&
+        (x.decoration as BoxDecoration).shape == BoxShape.circle);
+    expect(runDots, findsOneWidget);
+    expect(tester.getSize(runDots), const Size(6, 6));
     final colours = pageColours();
     expect(colours.contains(AppColors.danger), isFalse);
     // ignore: avoid_print
-    print('detail in_review runIcons=${runIcons.evaluate().length} '
-        'hand size=${hand.size} color=${hand.color}');
+    print('detail in_review runDots=${runDots.evaluate().length} '
+        'dot size=${tester.getSize(runDots).width}x${tester.getSize(runDots).height}');
   });
 }
