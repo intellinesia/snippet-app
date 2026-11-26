@@ -763,6 +763,9 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
           List<SessionInfo> liveOf(Iterable<String> ids) {
             final seenIds = <String>{};
             final out = <SessionInfo>[];
+            // Desktop agents are a flat destination: sessions belong to the
+            // Sessions surface, never nested under people or groups.
+            if (!kMobile) return out;
             for (final id in ids) {
               for (final s in crew[id]?.sessions ?? const <SessionInfo>[]) {
                 if (!s.settled && seenIds.add(s.id)) out.add(s);

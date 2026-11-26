@@ -492,7 +492,10 @@ class _AgentCardState extends State<AgentCard> {
             : working > 0);
     final presence = widget.client.presence.presenceForAgentId(agent.id);
     final group = widget.group ?? agentGroupFor(agent, presence: presence);
-    final needs = group == AgentGroup.needsYou || agent.needsYou > 0;
+    // Desktop agent rows carry state but no needs-you count/badge; session
+    // surfaces own that attention signal.
+    final needs =
+        kMobile && (group == AgentGroup.needsYou || agent.needsYou > 0);
     final crew = widget.crew;
     final lead = crew?.lead;
     final at =
