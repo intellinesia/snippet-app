@@ -434,15 +434,25 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Hello'));
       await tester.pumpAndSettle();
-      final openLabel =
-          find.text('Open chat').evaluate().isNotEmpty ? 'Open chat' : 'Open';
+      final openLabel = find.text('View').evaluate().isNotEmpty
+          ? 'View'
+          : (find.text('Open chat').evaluate().isNotEmpty
+              ? 'Open chat'
+              : 'Open');
       if (find.text(openLabel).evaluate().isNotEmpty) {
         await tester.tap(find.text(openLabel));
         await tester.pumpAndSettle();
       }
-      expect(opened?['destination']['id'], 'target');
-      expect(opened?['session'], type == 'session' ? 'target' : 'recipient');
-      expect(find.text('Hello'), findsNothing);
+      if (type == 'conversation') {
+        // v19 RC-18 maps conversation notifications to the inline Reply action;
+        // the first tap expands composition rather than opening the destination.
+        expect(opened, isNull);
+        expect(find.text('Hello'), findsOneWidget);
+      } else {
+        expect(opened?['destination']['id'], 'target');
+        expect(opened?['session'], type == 'session' ? 'target' : 'recipient');
+        expect(find.text('Hello'), findsNothing);
+      }
     });
   }
 }
