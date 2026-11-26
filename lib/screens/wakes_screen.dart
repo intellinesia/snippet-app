@@ -65,8 +65,10 @@ class _WakesScreenState extends State<WakesScreen> {
 
   Map<String, String> _sessionTitles = const {};
   List<CoordinationAgent>? _agents;
+  int _loadGen = 0;
 
   Future<(WakeBook, KeepWarmList?, List<CoordinationAgent>)> _load() async {
+    final gen = ++_loadGen;
     final c = widget.client;
     final wakes = await c.wakeBook();
     final warm = await c
@@ -80,14 +82,18 @@ class _WakesScreenState extends State<WakesScreen> {
                 false) ||
             wakes.every.any((w) => w.ownerKind == 'session') ||
             wakes.once.any((w) => w.ownerKind == 'session');
+    var titles = const <String, String>{};
     if (needTitles) {
       final sessions = await c.sessions().catchError((_) => <SessionInfo>[]);
-      _sessionTitles = {
+      titles = {
         for (final s in sessions)
           if (s.title.trim().isNotEmpty) s.id: s.title.trim()
       };
     }
-    _agents = agents;
+    if (gen == _loadGen) {
+      _sessionTitles = titles;
+      _agents = agents;
+    }
     return (wakes, warm, agents);
   }
 
@@ -189,14 +195,24 @@ class _WakesScreenState extends State<WakesScreen> {
       future: _future,
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting && !snap.hasData) {
-          return desk ? page(const []) : const ListSkeleton();
+          return desk
+              ? page([
+                  SettingsGroup(children: const [
+                    SettingsRow(label: 'Loading wakes…'),
+                  ]),
+                ])
+              : const ListSkeleton();
         }
         if (snap.hasError) {
           return page([
-            Padding(
-              padding: EdgeInsets.fromLTRB(S.s4, S.s8, S.s4, S.s24),
-              child: Text('${snap.error}', style: TS.ui(AppColors.run)),
-            ),
+            SettingsGroup(children: [
+              SettingsRow(
+                label: "Couldn't load wakes",
+                sub: '${snap.error}',
+                danger: true,
+                trailing: Btn('Retry', small: true, onTap: _refresh),
+              ),
+            ]),
           ]);
         }
         final (book, warm, agents) = snap.data!;

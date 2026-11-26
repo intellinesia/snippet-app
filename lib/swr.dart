@@ -111,7 +111,7 @@ class SwrEntry<T> extends ChangeNotifier {
   T? data;
   Object? error;
   DateTime? updatedAt;
-  Future<T>? _inFlight;
+  Future<T?>? _inFlight;
 
   bool get validating => _inFlight != null;
 
@@ -123,12 +123,15 @@ class SwrEntry<T> extends ChangeNotifier {
   Future<T?> revalidate(Future<T> Function() fetch,
       {bool force = false, Duration dedupe = Duration.zero}) {
     final running = _inFlight;
-    if (running != null) return running;
+    if (running != null) {
+      if (!force) return running;
+      return running
+          .then((_) => revalidate(fetch, force: true, dedupe: dedupe));
+    }
     if (!force && isFresh(dedupe)) return Future.value(data);
     final pending = fetch();
-    _inFlight = pending;
-    notifyListeners();
-    return pending.then<T?>((value) {
+    late final Future<T?> tracked;
+    tracked = pending.then<T?>((value) {
       data = value;
       error = null;
       updatedAt = DateTime.now();
@@ -137,9 +140,12 @@ class SwrEntry<T> extends ChangeNotifier {
       error = e;
       return data;
     }).whenComplete(() {
-      if (identical(_inFlight, pending)) _inFlight = null;
+      if (identical(_inFlight, tracked)) _inFlight = null;
       notifyListeners();
     });
+    _inFlight = tracked;
+    notifyListeners();
+    return tracked;
   }
 
   void mutate(T value) {

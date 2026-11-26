@@ -194,6 +194,7 @@ class _DesktopShellState extends State<DesktopShell>
   // and is shared with the "recent sessions" placeholder.
   List<SessionInfo>? _sessions;
   bool _sessionsLoading = false;
+  int _sessionsLoadSerial = 0;
   // Non-null when the last session fetch failed — rendered as an offline/retry
   // state so an unreachable daemon doesn't masquerade as "No chats yet".
   String? _sessionsError;
@@ -261,6 +262,7 @@ class _DesktopShellState extends State<DesktopShell>
   bool _sidebarGit = false;
   bool _sidebarHidden = false;
   bool _settingsOpen = false;
+  bool _paletteOpen = false;
 
   /// The user's dragged width; null follows [sidebarWidthFor] the window.
   double? _sidebarWidthPref;
@@ -387,6 +389,11 @@ class _DesktopShellState extends State<DesktopShell>
 
   void _closeRightTab(String key) {
     if (!mounted) return;
+    final shellIndex = _tabs.indexWhere((t) => t.readout?.key == key);
+    if (shellIndex >= 0) {
+      _closeTab(shellIndex);
+      return;
+    }
     setState(() {
       for (final tab in _rightTabs.where((t) => t.key == key)) {
         tab.request?.complete();
@@ -563,6 +570,9 @@ class _DesktopShellState extends State<DesktopShell>
     DesktopLook.instance.removeListener(_onLookChanged);
     for (final tab in _rightTabs) {
       tab.request?.complete();
+    }
+    for (final tab in _tabs) {
+      tab.readout?.request?.complete();
     }
     reportVisibleNotificationSession(null, null);
     WidgetsBinding.instance.removeObserver(this);
@@ -938,6 +948,7 @@ class _DesktopShellState extends State<DesktopShell>
   }
 
   void _openCommandPalette({String query = ''}) {
+    if (_paletteOpen) return;
     final tab = _activeTab;
     final client = _client;
     final url = _active?.url ?? '';
@@ -1169,8 +1180,10 @@ class _DesktopShellState extends State<DesktopShell>
         }),
     ];
 
+    _paletteOpen = true;
     showCommandPalette(context,
-        items: items, sources: sources, initialQuery: query);
+            items: items, sources: sources, initialQuery: query)
+        .whenComplete(() => _paletteOpen = false);
   }
 
   void _showDesktopShortcuts() => showDesktopShortcutsDialog(context);
@@ -1283,6 +1296,7 @@ class _DesktopShellState extends State<DesktopShell>
   }
 
   Future<void> _loadSessions() async {
+    final serial = ++_sessionsLoadSerial;
     final c = _client;
     if (c == null) {
       setState(() {
@@ -1295,7 +1309,9 @@ class _DesktopShellState extends State<DesktopShell>
     _loadTabProviders(c);
     final statusRevision = _liveStatus.revision;
     unawaited(c.coordinationAgents().then((all) {
-      if (!mounted || !identical(c, _client)) return;
+      if (!mounted || !identical(c, _client) || serial != _sessionsLoadSerial) {
+        return;
+      }
       final mc = all.where((a) => a.id == 'lead').firstOrNull;
       setState(() {
         _coordinationAgents = all;
@@ -1307,7 +1323,7 @@ class _DesktopShellState extends State<DesktopShell>
       final s = await c.sessions(limit: 60);
       // A slow response for a PREVIOUS instance must not render under (or route
       // taps to) the one selected since.
-      if (!identical(c, _client)) return;
+      if (!identical(c, _client) || serial != _sessionsLoadSerial) return;
       // Lead stays pinned at the top of the list; leftover titled
       // chats that alias it are still collapsed so it isn't listed twice.
       // Agent inboxes are mailboxes, never human chat sessions.
@@ -1342,7 +1358,7 @@ class _DesktopShellState extends State<DesktopShell>
       // the request above so a coordination outage can never blank the list.
     } catch (_) {
       // Unreachable daemon must not masquerade as "No chats yet" — surface it.
-      if (identical(c, _client) && mounted) {
+      if (identical(c, _client) && serial == _sessionsLoadSerial && mounted) {
         setState(() {
           _sessionsLoading = false;
           _sessionsError =

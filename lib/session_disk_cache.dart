@@ -59,7 +59,6 @@ class SessionDiskCache {
     final entry = _pending.remove(key);
     if (entry == null) return;
     final (state, start) = entry;
-    if (state.events.isEmpty) return;
     try {
       final text = await compute(jsonEncode, <String, dynamic>{
         'v': _version,
@@ -69,9 +68,12 @@ class SessionDiskCache {
         'title': state.title,
         'events': state.events,
       });
-      if (text.length > _maxBytes) return;
       final dir = await _dir();
       final file = File('${dir.path}/${_name(key)}.json');
+      if (state.events.isEmpty || text.length > _maxBytes) {
+        if (await file.exists()) await file.delete();
+        return;
+      }
       final tmp = File('${file.path}.tmp');
       await tmp.writeAsString(text, flush: true);
       await tmp.rename(file.path);

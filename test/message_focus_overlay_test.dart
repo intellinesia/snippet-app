@@ -275,6 +275,52 @@ void main() {
       }
     });
 
+    testWidgets('Escape dismisses on desktop', (t) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      t.view.physicalSize = const Size(1024, 700);
+      t.view.devicePixelRatio = 1;
+      addTearDown(t.view.reset);
+      try {
+        await t.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: MessageBubbleInteractive(
+                  text: 'Desktop message',
+                  onReply: () {},
+                  onReact: (_) {},
+                  focusBuilder: (_) => const ChatBubble(
+                    mine: false,
+                    child: Text('Desktop message'),
+                  ),
+                  builder: (_, __, bubbleKey) => ChatBubbleRow(
+                    mine: false,
+                    child: KeyedSubtree(
+                      key: bubbleKey,
+                      child: const ChatBubble(
+                        mine: false,
+                        child: Text('Desktop message'),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await t.longPress(find.text('Desktop message'));
+        await _pumpFrames(t);
+        expect(find.byType(MessageFocusOverlay), findsOneWidget);
+
+        await t.sendKeyEvent(LogicalKeyboardKey.escape);
+        await _pumpFrames(t);
+        expect(find.byType(MessageFocusOverlay), findsNothing);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
   });
 
   group('Group chat interactions', () {

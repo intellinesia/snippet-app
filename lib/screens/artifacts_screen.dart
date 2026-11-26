@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../toast_avoid.dart';
@@ -51,6 +53,8 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
   String _query = '';
   String? _kind;
   bool _creating = false;
+  Timer? _poll;
+  int _loadSeq = 0;
 
   static const _kinds = <(String?, String)>[
     (null, 'All'),
@@ -64,20 +68,34 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
   @override
   void initState() {
     super.initState();
-    _load();
+    unawaited(_load());
+    if (!kMobile) {
+      _poll = Timer.periodic(
+          const Duration(seconds: 10), (_) => unawaited(_load(quiet: true)));
+    }
   }
 
-  Future<void> _load() async {
-    setState(() => _error = null);
+  @override
+  void dispose() {
+    _poll?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _load({bool quiet = false}) async {
+    final seq = ++_loadSeq;
+    if (!quiet) setState(() => _error = null);
     try {
       final raw = await widget.client.getArtifactCards();
-      if (!mounted) return;
-      setState(() => _all = [
-            for (final j in raw) ArtifactCard.fromJson(j),
-          ].where((c) => c.id.isNotEmpty).toList());
+      if (!mounted || seq != _loadSeq) return;
+      setState(() {
+        _all = [
+          for (final j in raw) ArtifactCard.fromJson(j),
+        ].where((c) => c.id.isNotEmpty).toList();
+        _error = null;
+      });
     } catch (e) {
-      if (!mounted) return;
-      setState(() => _error = '$e');
+      if (!mounted || seq != _loadSeq) return;
+      if (!quiet || _all == null) setState(() => _error = '$e');
     }
   }
 

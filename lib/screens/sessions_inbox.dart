@@ -44,6 +44,7 @@ class _SessionsInboxViewState extends State<SessionsInboxView> {
   Map<String, String> _names = const {};
   SessionsFilter _filter = SessionsFilter.all;
   Timer? _poll;
+  int _loadSeq = 0;
 
   @override
   void initState() {
@@ -59,14 +60,16 @@ class _SessionsInboxViewState extends State<SessionsInboxView> {
   }
 
   Future<void> _load() async {
+    final seq = ++_loadSeq;
     try {
       final all = await widget.client.sessions();
-      if (mounted) setState(() => _sessions = all);
+      if (!mounted || seq != _loadSeq) return;
+      setState(() => _sessions = all);
     } catch (_) {}
-    if (_names.isNotEmpty) return;
+    if (!mounted || seq != _loadSeq || _names.isNotEmpty) return;
     try {
       final agents = await widget.client.coordinationAgents();
-      if (!mounted) return;
+      if (!mounted || seq != _loadSeq) return;
       setState(() => _names = {
             for (final a in agents)
               if (a.displayName.trim().isNotEmpty) a.id: a.displayName.trim(),

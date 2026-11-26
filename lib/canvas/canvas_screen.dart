@@ -155,6 +155,9 @@ class _CanvasScreenState extends State<CanvasScreen>
   bool _appResumed = true;
   bool _staleWhileHidden = false;
   final Set<String> _pendingInvalidations = <String>{};
+  int _canvasLoadSeq = 0;
+  int _pinsLoadSeq = 0;
+  int _opsLoadSeq = 0;
 
   @override
   void initState() {
@@ -316,13 +319,14 @@ class _CanvasScreenState extends State<CanvasScreen>
       return;
     }
     final client = _client!;
+    final seq = ++_canvasLoadSeq;
     setState(() {
       _loading = _snapshot == null;
       _error = null;
     });
     try {
       final snap = await client.fetchCanvas();
-      if (!mounted) return;
+      if (!mounted || seq != _canvasLoadSeq) return;
       _index.rebuild(snap.frames);
       final liveIds = {for (final f in snap.frames) f.id};
       _layouts.removeWhere((id, _) => !liveIds.contains(id));
@@ -343,7 +347,7 @@ class _CanvasScreenState extends State<CanvasScreen>
         });
       }
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || seq != _canvasLoadSeq) return;
       setState(() {
         _error = canvasLoadMessage(e);
         _loading = false;
@@ -354,9 +358,10 @@ class _CanvasScreenState extends State<CanvasScreen>
   Future<void> _loadPins() async {
     final client = _client;
     if (client == null) return;
+    final seq = ++_pinsLoadSeq;
     try {
       final list = await client.fetchPins();
-      if (!mounted) return;
+      if (!mounted || seq != _pinsLoadSeq) return;
       _paintVersion++;
       setState(() => _pins = list);
       for (final p in list) {
@@ -370,9 +375,10 @@ class _CanvasScreenState extends State<CanvasScreen>
   Future<void> _loadOps({int since = 0}) async {
     final client = _client;
     if (client == null) return;
+    final seq = ++_opsLoadSeq;
     try {
       final list = await client.fetchOps(since: since);
-      if (!mounted) return;
+      if (!mounted || seq != _opsLoadSeq) return;
       setState(() => _ops = list);
     } catch (_) {}
   }

@@ -51,6 +51,8 @@ class VoiceNoteController extends ChangeNotifier {
   bool _disposed = false;
   int _take = 0;
   bool _confirming = false;
+  bool _starting = false;
+  Future<void>? _stopping;
 
   /// The take's upload, started as soon as recording stops so Send is instant.
   Future<String>? _takeUpload;
@@ -141,8 +143,15 @@ class VoiceNoteController extends ChangeNotifier {
     }
   }
 
-  Future<void> start() async {
-    if (!kCanRecord || _disposed) return;
+  Future<void> start() {
+    if (!kCanRecord || _disposed || _starting) return Future.value();
+    _starting = true;
+    return _start().whenComplete(() => _starting = false);
+  }
+
+  Future<void> _start() async {
+    if (hasTake) await discard();
+    if (_disposed) return;
     _isRecording = true;
     _recordingElapsed = Duration.zero;
     _waveform
@@ -153,7 +162,7 @@ class VoiceNoteController extends ChangeNotifier {
     final granted = kMobile
         ? (await Permission.microphone.request()).isGranted
         : await _recorder.hasPermission();
-    if (_disposed) return;
+    if (_disposed || !_isRecording) return;
     if (!granted) {
       _isRecording = false;
       _notify();
@@ -175,7 +184,7 @@ class VoiceNoteController extends ChangeNotifier {
               .getConfig()
               .timeout(const Duration(seconds: 3)))
           .voice;
-      if (_disposed) return;
+      if (_disposed || !_isRecording) return;
       if (!voice.enabled) {
         _isRecording = false;
         _notify();
@@ -185,13 +194,10 @@ class VoiceNoteController extends ChangeNotifier {
       _maxRecordingDuration = Duration(seconds: voice.maxSeconds);
     } catch (_) {}
 
-    if (_disposed) return;
+    if (_disposed || !_isRecording) return;
     try {
-      if (hasTake) {
-        await discard();
-      }
       final tempDir = await getTemporaryDirectory();
-      if (_disposed) return;
+      if (_disposed || !_isRecording) return;
       final path =
           '${tempDir.path}/$filePrefix-${DateTime.now().microsecondsSinceEpoch}.$voiceNoteExtension';
       await _recorder.start(
@@ -205,11 +211,16 @@ class VoiceNoteController extends ChangeNotifier {
         ),
         path: path,
       );
-      if (_disposed) {
+      if (_disposed || !_isRecording) {
         unawaited(_recorder.cancel().catchError((_) {}));
         return;
       }
-      if (!await _recorder.isRecording()) {
+      final recording = await _recorder.isRecording();
+      if (_disposed || !_isRecording) {
+        unawaited(_recorder.cancel().catchError((_) {}));
+        return;
+      }
+      if (!recording) {
         await _recorder.cancel();
         _isRecording = false;
         _notify();
@@ -249,8 +260,16 @@ class VoiceNoteController extends ChangeNotifier {
     }
   }
 
-  Future<void> stop() async {
-    if (!_isRecording) return;
+  Future<void> stop() {
+    final active = _stopping;
+    if (active != null) return active;
+    if (!_isRecording) return Future.value();
+    final done = _stop().whenComplete(() => _stopping = null);
+    _stopping = done;
+    return done;
+  }
+
+  Future<void> _stop() async {
     final take = _take;
     _isRecording = false;
     _notify();
@@ -263,7 +282,7 @@ class VoiceNoteController extends ChangeNotifier {
           await Diag.span('recorder.stop', () => _recorder.stop());
       final path = stoppedPath ?? _recordingPath;
       if (path == null) {
-        _toast('No recording was captured.');
+        if (!_starting) _toast('No recording was captured.');
         return;
       }
       final bytes = await _waitForRecordingFile(path);
@@ -361,6 +380,8 @@ class VoiceNoteController extends ChangeNotifier {
   Future<bool> confirmTake([
     Future<void> Function(Uint8List bytes, String name)? accept,
   ]) async {
+    final stopping = _stopping;
+    if (stopping != null) await stopping;
     final fn = accept ?? onConfirmTake;
     if (fn == null || _isRecording || _confirming) return false;
     final path = _recordingPath;

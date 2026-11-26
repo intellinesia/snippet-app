@@ -96,6 +96,8 @@ class DaemonClient {
   List<RecurringJob>? _recurringCache;
   Future<List<RecurringJob>>? _recurringInFlight;
   int _configGeneration = 0;
+  int _vaultGeneration = 0;
+  int _recurringGeneration = 0;
 
   DaemonClient(this.baseUrl, this.token);
 
@@ -344,9 +346,9 @@ class DaemonClient {
     if (!force && _configCache != null) return _configCache!;
     if (!force && _configInFlight != null) return _configInFlight!;
     final pending = () async {
+      final generation = _configGeneration;
       final r = await _get(_uri('/config'));
       if (r.statusCode != 200) throw _err('load config', r);
-      final generation = _configGeneration;
       final cfg =
           ServerConfig.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
       if (generation == _configGeneration) _configCache = cfg;
@@ -364,6 +366,12 @@ class DaemonClient {
     _configGeneration++;
     _configCache = null;
     _configInFlight = null;
+  }
+
+  void _invalidateRecurring() {
+    _recurringGeneration++;
+    _recurringCache = null;
+    _recurringInFlight = null;
   }
 
   Future<String> putProfile({
@@ -433,13 +441,14 @@ class DaemonClient {
     if (_vaultCache != null) return [..._vaultCache!];
     if (_vaultInFlight != null) return _vaultInFlight!;
     final pending = () async {
+      final generation = _vaultGeneration;
       final r = await _get(_uri('/vault'));
       if (r.statusCode != 200) throw _err('vault', r);
       final value =
           ((jsonDecode(r.body) as Map<String, dynamic>)['names'] as List? ??
                   const [])
               .cast<String>();
-      _vaultCache = value;
+      if (generation == _vaultGeneration) _vaultCache = value;
       return [...value];
     }();
     _vaultInFlight = pending;
@@ -454,11 +463,19 @@ class DaemonClient {
     final r = await _put(_uri('/vault'),
         headers: _json, body: jsonEncode({'name': name, 'value': value}));
     if (r.statusCode != 200) throw _err('vault set', r);
+    _invalidateVault();
   }
 
   Future<void> vaultDelete(String name) async {
     final r = await _delete(_uri('/vault', {'name': name}));
     if (r.statusCode != 200) throw _err('vault delete', r);
+    _invalidateVault();
+  }
+
+  void _invalidateVault() {
+    _vaultGeneration++;
+    _vaultCache = null;
+    _vaultInFlight = null;
   }
 
   /// Begin xAI (Grok/X subscription) device-code sign-in. Returns the user code
@@ -1757,8 +1774,8 @@ class DaemonClient {
       r = await _patch(_uri('/wakes/${Uri.encodeComponent(existing.id)}'),
           headers: _json, body: jsonEncode(body));
     }
-    _recurringCache = null;
     if (r.statusCode != 200) throw _err('save wake', r);
+    _invalidateRecurring();
     return WakeSchedule.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
 
@@ -1767,15 +1784,17 @@ class DaemonClient {
   Future<void> patchWake(String id, Map<String, dynamic> body) async {
     final r = await _patch(_uri('/wakes/${Uri.encodeComponent(id)}'),
         headers: _json, body: jsonEncode(body));
-    _recurringCache = null;
     if (r.statusCode != 200) throw _err('update wake', r);
+    _invalidateRecurring();
   }
 
   /// DELETE /wakes/{id}: removes a schedule or watch, cancels a one-off.
   Future<void> deleteWake(String id) async {
     final r = await _delete(_uri('/wakes/${Uri.encodeComponent(id)}'));
-    _recurringCache = null;
-    if (r.statusCode != 200 && r.statusCode != 404) throw _err('delete wake', r);
+    if (r.statusCode != 200 && r.statusCode != 404) {
+      throw _err('delete wake', r);
+    }
+    _invalidateRecurring();
   }
 
   /// Deletes the owner's wake called [name] (null for its default wake).
@@ -2478,13 +2497,14 @@ class DaemonClient {
     if (_recurringCache != null) return [..._recurringCache!];
     if (_recurringInFlight != null) return _recurringInFlight!;
     final pending = () async {
+      final generation = _recurringGeneration;
       final r = await _get(_uri('/wakes', {'kind': 'every'}));
       if (r.statusCode != 200) throw _err('list recurring jobs', r);
       final list = [
         for (final e in (jsonDecode(r.body) as Map)['wakes'] as List)
           if (e is Map<String, dynamic>) RecurringJob.fromJson(e)
       ];
-      _recurringCache = list;
+      if (generation == _recurringGeneration) _recurringCache = list;
       return [...list];
     }();
     _recurringInFlight = pending;
@@ -2510,8 +2530,8 @@ class DaemonClient {
       'schedule': schedule,
     };
     final r = await _post(_uri('/wakes'), headers: _json, body: jsonEncode(body));
-    _recurringCache = null;
     if (r.statusCode != 200) throw _err('create recurring job', r);
+    _invalidateRecurring();
     return RecurringJob.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
 
@@ -2530,16 +2550,16 @@ class DaemonClient {
     if (enabled != null) body['enabled'] = enabled;
     final r = await _patch(_uri('/wakes/${Uri.encodeComponent(id)}'),
         headers: _json, body: jsonEncode(body));
-    _recurringCache = null;
     if (r.statusCode != 200) throw _err('update recurring job', r);
+    _invalidateRecurring();
     return RecurringJob.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
 
   /// DELETE /wakes/{id}.
   Future<void> deleteRecurring(String id) async {
     final r = await _delete(_uri('/wakes/${Uri.encodeComponent(id)}'));
-    _recurringCache = null;
     if (r.statusCode != 200) throw _err('delete recurring job', r);
+    _invalidateRecurring();
   }
 
   /// Canvas endpoints (`/canvas`, thumbnails, layout rects, hit, pins, ops, revert).

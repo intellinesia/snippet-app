@@ -205,7 +205,10 @@ class _AgentProfilePopoverCardState extends State<AgentProfilePopoverCard> {
         ),
         Expanded(
           child: lead ??
-              Text(value == null ? 'Loading' : (value.isEmpty ? 'Open' : value),
+              Text(
+                  value == null
+                      ? 'Loading'
+                      : (value.isEmpty ? 'Unknown' : value),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: sans(13,

@@ -647,7 +647,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   bool _loadingOlder = false;
   Map<String, MessageDelivery> _deliveries = const {};
   bool _loading = true;
-  final bool _sending = false;
+  bool _sending = false;
   // Local bubbles that rise in from the composer once; the echo replaces them.
   final Set<String> _sendInIds = {};
   // Server event id -> the local id its bubble was first drawn under.
@@ -927,6 +927,19 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
 
   Future<void> _send() async {
     if (_sending) return;
+    setState(() => _sending = true);
+    try {
+      await _sendUnlocked();
+    } finally {
+      if (mounted) {
+        setState(() => _sending = false);
+      } else {
+        _sending = false;
+      }
+    }
+  }
+
+  Future<void> _sendUnlocked() async {
     if (_voice.isRecording) {
       await _voice.stop();
     }

@@ -313,7 +313,7 @@ class ShellTab {
                           : isTerminal
                               ? '$instanceUrl|term|${termSessionKey ?? 'global'}|$termId'
                               : isDiff
-                                  ? '$instanceUrl|diff|$diffPath|$diffStaged'
+                                  ? '$instanceUrl|diff|${sessionId ?? ''}|$diffPath|$diffStaged|$diffUntracked'
                                   : isFile
                                       ? '$instanceUrl|file|$filePath'
                                       : isLead

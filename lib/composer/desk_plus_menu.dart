@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../app_popover.dart';
+import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'desktop_composer.dart';
@@ -56,7 +57,7 @@ class DeskComposerPlusButton extends StatelessWidget {
       items: [
         _item('photo', 'image', 'Photo'),
         _item('file', 'file', 'File'),
-        _item('voice', 'mic', 'Voice'),
+        if (kCanRecord) _item('voice', 'mic', 'Voice'),
         _item('canvas', 'canvas', 'Canvas'),
       ],
     );

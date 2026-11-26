@@ -361,10 +361,13 @@ extension _DesktopShellTabsExt on _DesktopShellState {
       kept,
     ];
     final keptKeys = survivors.map((tab) => tab.key).toSet();
-    final removedKeys = _tabs
+    final removed = _tabs
         .where((tab) => !keptKeys.contains(tab.key))
-        .map((tab) => tab.key)
         .toList();
+    final removedKeys = removed.map((tab) => tab.key).toList();
+    for (final tab in removed) {
+      tab.readout?.request?.complete();
+    }
     _setState(() {
       _tabs
         ..clear()
@@ -385,6 +388,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     _setState(() {
       for (final tab in _tabs.where((t) =>
           !t.isLead || (url != null && t.instanceUrl != url))) {
+        tab.readout?.request?.complete();
         _clearTabState(tab.key);
       }
       _tabs.removeWhere(
@@ -430,13 +434,16 @@ extension _DesktopShellTabsExt on _DesktopShellState {
   void _closeTab(int i, {bool force = false}) {
     if (i < 0 || i >= _tabs.length) return;
     if (!force && !_canCloseTab(_tabs[i])) return;
-    final key = _tabs[i].key;
+    final closing = _tabs[i];
+    closing.readout?.request?.complete();
+    final key = closing.key;
     _setState(() {
       final orphans = [
         for (final t in _tabs)
           if (t.groupSessionKey == key) t,
       ];
       for (final t in orphans) {
+        t.readout?.request?.complete();
         _clearTabState(t.key);
         _activeKey.removeWhere((_, k) => k == t.key);
       }
@@ -622,6 +629,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
       return _tabs.length - 1;
     }
     final old = _tabs[r];
+    old.readout?.request?.complete();
     _tabs[r] = tab;
     _clearTabState(old.key);
     _activeKey.removeWhere((_, k) => k == old.key);
@@ -785,8 +793,10 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     final existing = _tabs.indexWhere((t) =>
         t.isDiff &&
         t.instanceUrl == url &&
+        t.sessionId == sessionId &&
         t.diffPath == f.path &&
-        t.diffStaged == staged);
+        t.diffStaged == staged &&
+        t.diffUntracked == f.untracked);
     _setState(() {
       if (existing >= 0) {
         final t = _tabs[existing];

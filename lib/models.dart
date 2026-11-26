@@ -405,7 +405,9 @@ class SessionInfo {
         finishedAt: finishedAt,
         userSeenAt: seenAt ?? userSeenAt,
         resultSummary: resultSummary,
-        attention: attention,
+        attention: status == null || status == 'waiting_for_input'
+            ? attention
+            : null,
         originFolder: originFolder,
         branch: branch,
         lanes: lanes,

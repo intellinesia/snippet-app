@@ -1500,12 +1500,21 @@ class _SubSignInState extends State<_SubSignIn> {
   }
 
   Future<void> _refresh() async {
-    final on = await widget.signedIn(widget.client);
-    if (mounted) {
-      setState(() {
-        _signedIn = on;
-        _loading = false;
-      });
+    try {
+      final on = await widget.signedIn(widget.client);
+      if (mounted) {
+        setState(() {
+          _signedIn = on;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _err = '$e';
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -1524,16 +1533,18 @@ class _SubSignInState extends State<_SubSignIn> {
       });
       _poll?.cancel();
       _poll = Timer.periodic(const Duration(seconds: 3), (_) async {
-        if (await widget.signedIn(widget.client)) {
-          _poll?.cancel();
-          if (mounted) {
-            setState(() {
-              _signedIn = true;
-              _code = null;
-              _url = null;
-            });
+        try {
+          if (await widget.signedIn(widget.client)) {
+            _poll?.cancel();
+            if (mounted) {
+              setState(() {
+                _signedIn = true;
+                _code = null;
+                _url = null;
+              });
+            }
           }
-        }
+        } catch (_) {}
       });
     } catch (e) {
       if (mounted) {
@@ -1546,8 +1557,12 @@ class _SubSignInState extends State<_SubSignIn> {
   }
 
   Future<void> _signOut() async {
-    await widget.signOut(widget.client);
-    if (mounted) setState(() => _signedIn = false);
+    try {
+      await widget.signOut(widget.client);
+      if (mounted) setState(() => _signedIn = false);
+    } catch (e) {
+      if (mounted) toast(context, "Couldn't sign out: $e", danger: true);
+    }
   }
 
   @override

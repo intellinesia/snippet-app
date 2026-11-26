@@ -1,10 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../chat_scene.dart' show ChatScene;
 import '../platform.dart';
 import '../theme.dart';
 import 'shell_models.dart';
-import 'shell_nav.dart' show kPaneMinWidth;
+import 'shell_nav.dart' show kPaneMinWidth, kPaneSplitHandleWidth;
 import 'shell_pane_view.dart';
 import 'shell_rail.dart' show kSidebarWidth;
 import '../motion.dart';
@@ -359,6 +361,11 @@ class _ShellSplitViewState extends State<ShellSplitView>
                         widget.readouts
                             .any((r) => r.pane == ShellPane.right)))));
     final showLeft = !(widget.leftCollapsed && widget.leftTabs.isNotEmpty);
+    final centreWidth = MediaQuery.sizeOf(context).width -
+        (widget.sidebarHidden ? 0 : widget.sidebarWidth);
+    // Both panes need their minimum width; the fixed right pane must not eat the left.
+    final maxPaneWidth = math.max(kPaneMinWidth,
+        centreWidth - kPaneMinWidth - kPaneSplitHandleWidth);
 
     final body = Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         if (!widget.sidebarHidden)
@@ -442,7 +449,7 @@ class _ShellSplitViewState extends State<ShellSplitView>
                                               SizedBox(
                                                 width: widget.paneWidth.clamp(
                                                     kPaneMinWidth,
-                                                    double.infinity),
+                                                    maxPaneWidth),
                                                 child: _dropOn(
                                                   ShellPane.right,
                                                   _paneView(ShellPane.right,

@@ -92,7 +92,11 @@ class _RoutingScreenState extends State<RoutingScreen> {
       await widget.client.setRouting(route, next);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _routes[route] = before);
+      final current = _routes[route] ?? const <String>[];
+      final unchanged = current.length == next.length &&
+          [for (var i = 0; i < current.length; i++) current[i] == next[i]]
+              .every((x) => x);
+      if (unchanged) setState(() => _routes[route] = before);
       toast(context, "Couldn't save the route: $e", danger: true);
     }
   }

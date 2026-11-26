@@ -57,8 +57,13 @@ class _VoiceScreenState extends State<VoiceScreen> {
   @override
   void dispose() {
     _tick?.cancel();
-    _sampleSub?.cancel();
-    _sampleRecorder?.dispose();
+    final sub = _sampleSub;
+    final rec = _sampleRecorder;
+    _sampleSub = null;
+    _sampleRecorder = null;
+    sub?.cancel();
+    rec?.dispose();
+    _phrases.dispose();
     _live.dispose();
     super.dispose();
   }
@@ -98,7 +103,9 @@ class _VoiceScreenState extends State<VoiceScreen> {
     _sampleRecorder = rec;
     setState(() => _enrolError = null);
     try {
-      if (!await rec.hasPermission()) {
+      final permitted = await rec.hasPermission();
+      if (!mounted) return;
+      if (!permitted) {
         await _teardownRecorder();
         if (mounted) {
           setState(
@@ -121,6 +128,7 @@ class _VoiceScreenState extends State<VoiceScreen> {
           androidConfig: AndroidRecordConfig(manageBluetooth: false),
         ),
       );
+      if (!mounted) return;
       _sampleSub = stream.listen((data) {
         _chunks.add(data);
         _rawLevel = pcmLevel(data);

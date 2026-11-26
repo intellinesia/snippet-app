@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -457,26 +459,25 @@ class SlashMenuView extends StatelessWidget {
         ]);
       }
     }
+    final maxHeight = kMobile
+        ? 6 * 52 + 8.0
+        : math.min(320.0, MediaQuery.sizeOf(context).height * 0.5);
     return Container(
       // Phone: the full content width, above the composer, 6 rows then scroll.
       width: kMobile ? double.infinity : 300,
-      constraints: kMobile ? const BoxConstraints(maxHeight: 6 * 52 + 8) : null,
+      constraints: BoxConstraints(maxHeight: maxHeight),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: AppColors.surface2,
         borderRadius: BorderRadius.circular(kMobile ? 10 : 8),
         boxShadow: kMobile ? null : overlayShadow,
       ),
-      child: kMobile
-          ? SingleChildScrollView(
-              child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: rows))
-          : Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: rows),
+      child: SingleChildScrollView(
+        child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: rows),
+      ),
     );
   }
 

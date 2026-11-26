@@ -264,7 +264,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
       _searchFocus.requestFocus();
       return KeyEventResult.handled;
     }
-    final inSearch = _searchFocus.hasFocus && _searching;
+    final inSearch =
+        _searching && (_searchFocus.hasFocus || _listFocus.hasFocus);
     final inList = _listFocus.hasFocus;
     if (!inSearch && !inList) return KeyEventResult.ignored;
     final n = inSearch ? _results.length : _flat.length;

@@ -86,11 +86,6 @@ class ThreadComposerKit {
   void _interceptBigPaste() {
     final prev = _lastInput;
     final now = input.text;
-    if (now.length - prev.length < _pasteCardChars &&
-        (now.length <= prev.length || !now.contains('\n'))) {
-      _lastInput = now;
-      return;
-    }
     var p = 0;
     while (p < prev.length && p < now.length && prev[p] == now[p]) {
       p++;

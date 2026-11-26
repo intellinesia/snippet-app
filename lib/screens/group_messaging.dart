@@ -173,6 +173,7 @@ Future<void> openGroupThread(
     await Navigator.of(context).push<void>(AppPageRoute<void>(builder: page));
     return;
   }
+  void Function()? reloadGroup;
   presentScreen(
     context,
     style: PanelStyle.drawer,
@@ -190,12 +191,14 @@ Future<void> openGroupThread(
       docked: true,
       onOpenTasks: () =>
           openTasksPage(ctx, client, agentIds: group.agentIds.toSet()),
+      onChanged: () => reloadGroup?.call(),
       onClose: closeTab,
     ),
     builder: (_, close) => GroupThreadScreen(
       client: client,
       group: group,
       onClose: close,
+      registerGroupReload: (reload) => reloadGroup = reload,
       showBack: false,
     ),
   );
@@ -958,6 +961,7 @@ class GroupThreadScreen extends StatefulWidget {
     required this.client,
     required this.group,
     this.onClose,
+    this.registerGroupReload,
     this.embedded = false,
     this.showBack = true,
     @visibleForTesting this.voiceController,
@@ -967,6 +971,7 @@ class GroupThreadScreen extends StatefulWidget {
   final DaemonClient client;
   final GroupSummary group;
   final VoidCallback? onClose;
+  final void Function(void Function())? registerGroupReload;
 
   /// Nested under a host that already draws `NavBackRow`.
   final bool embedded;
@@ -1054,6 +1059,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     });
     _kit.start();
     _loadAgents();
+    widget.registerGroupReload?.call(() => unawaited(_reloadGroup()));
     _thread = Swr<List<CoordinationEvent>>(
       client: widget.client,
       key: 'group-thread:${widget.group.id}',
@@ -1240,6 +1246,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     final typed = _input.text.trim();
     if (typed.isEmpty && _attachments.isEmpty) return;
     setState(() => _sending = true);
+    final sentAttachments = _attachments.readyDrafts();
     try {
       var body = typed;
       final extraMarkers = <String>[
@@ -1250,6 +1257,10 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         body = body.isEmpty ? joined : '$body\n\n$joined';
       }
       final mentions = extractGroupMentions(_input.text, _mentionIds);
+      SendFlight.arm(_inputFieldKey);
+      _input.clear();
+      _attachments.clear();
+      await _voice.discard();
       final ev = await widget.client.postGroup(
         widget.group.id,
         body: body,
@@ -1258,10 +1269,6 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       if (!mounted) return;
       _pending.add(ev);
       _sendInIds.add(ev.eventId);
-      SendFlight.arm(_inputFieldKey);
-      _input.clear();
-      _attachments.clear();
-      await _voice.discard();
       if (!mounted) return;
       _rowsSeeded = true;
       _bottom.stickToBottom = true;
@@ -1269,7 +1276,15 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       _thread.refresh();
       _jumpToBottom(animated: true);
     } catch (e) {
-      if (mounted) toast(context, '$e', danger: true);
+      if (mounted) {
+        if (_input.text.isEmpty) {
+          _input.value = TextEditingValue(
+              text: typed,
+              selection: TextSelection.collapsed(offset: typed.length));
+        }
+        _attachments.restore(sentAttachments);
+        toast(context, '$e', danger: true);
+      }
     } finally {
       if (mounted) setState(() => _sending = false);
     }

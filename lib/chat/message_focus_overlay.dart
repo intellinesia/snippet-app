@@ -280,11 +280,15 @@ class MessageFocusOverlay extends StatelessWidget {
         )
         .toDouble();
 
-    return Material(
-      type: MaterialType.transparency,
-      child: AnimatedBuilder(
-        animation: animation,
-        builder: (context, _) {
+    return CallbackShortcuts(
+      bindings: {SingleActivator(LogicalKeyboardKey.escape): onDismiss},
+      child: Focus(
+        autofocus: true,
+        child: Material(
+          type: MaterialType.transparency,
+          child: AnimatedBuilder(
+            animation: animation,
+            builder: (context, _) {
           final raw = animation.value;
           final t = raw.clamp(0.0, 1.0);
           final curveT = animation.status == AnimationStatus.reverse
@@ -409,7 +413,9 @@ class MessageFocusOverlay extends StatelessWidget {
                 ),
             ],
           );
-        },
+            },
+          ),
+        ),
       ),
     );
   }

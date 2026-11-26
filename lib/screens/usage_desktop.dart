@@ -279,6 +279,12 @@ class _ChartCard extends StatefulWidget {
 class _ChartCardState extends State<_ChartCard> {
   int? _hover;
 
+  @override
+  void didUpdateWidget(covariant _ChartCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.range != widget.range) _hover = null;
+  }
+
   String _bucketLabel(DateTime d) => switch (widget.range) {
         _Range.day => _hour(d),
         _Range.all => 'Week of ${_day(d)}',

@@ -88,7 +88,7 @@ class _TaskListViewState extends State<TaskListView> {
 
   String _workspace(TaskItem t) {
     final f = _sessions[t.sessionId]?.projectFolder ?? '';
-    return f.isEmpty ? '' : f.split('/').where((p) => p.isNotEmpty).last;
+    return lastPathSegment(f);
   }
 
   List<TaskItem> get _visible => [

@@ -153,7 +153,8 @@ class ShellShortcutsHandler {
         ctrlDown &&
         !altDown &&
         !metaDown) {
-      onActivateRelativeTab(shiftDown ? -1 : 1);
+      onActivateRelativeTab(
+          key == LogicalKeyboardKey.tab && shiftDown ? -1 : 1);
       return true;
     }
     if (key == LogicalKeyboardKey.pageUp &&

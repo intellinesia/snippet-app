@@ -490,6 +490,7 @@ class _ScopeViewState extends State<_ScopeView> {
   List<String> _files = const [];
   List<MemoryCommit>? _history;
   String? _error;
+  String? _historyError;
   final _search = TextEditingController();
   MemoryEntry? _topic;
   MemoryEntry? _note;
@@ -510,29 +511,31 @@ class _ScopeViewState extends State<_ScopeView> {
   }
 
   Future<void> _loadFile() async {
+    final path = _path;
     setState(() {
       _content = null;
       _error = null;
     });
     try {
-      final f = await widget.client.memoryFile(widget.scopeKey, path: _path);
-      if (mounted) {
+      final f = await widget.client.memoryFile(widget.scopeKey, path: path);
+      if (mounted && path == _path) {
         setState(() {
           _content = f.content;
           _files = f.files;
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _error = '$e');
+      if (mounted && path == _path) setState(() => _error = '$e');
     }
   }
 
   Future<void> _loadHistory() async {
+    setState(() => _historyError = null);
     try {
       final h = await widget.client.memoryHistory(widget.scopeKey);
       if (mounted) setState(() => _history = h);
     } catch (e) {
-      if (mounted) setState(() => _error = '$e');
+      if (mounted) setState(() => _historyError = '$e');
     }
   }
 
@@ -634,14 +637,19 @@ class _ScopeViewState extends State<_ScopeView> {
   Widget _memory(double side) {
     final content = _content;
     if (content == null) {
+      final error = _error;
+      if (error == null) return const Center(child: Spinner(size: 20));
       return Center(
-        child: _error == null
-            ? const Spinner(size: 20)
-            : const EmptyState(
-                icon: 'brain',
-                title: 'Nothing remembered yet',
-                body: 'This memory fills in as work happens here.',
-              ),
+        child: Padding(
+          padding: EdgeInsets.all(S.s24),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text(error,
+                textAlign: TextAlign.center,
+                style: sans(13, height: 1.4, color: AppColors.danger)),
+            SizedBox(height: S.s12),
+            Btn('Retry', small: true, onTap: _loadFile),
+          ]),
+        ),
       );
     }
     final hasEntries = content
@@ -852,7 +860,22 @@ class _ScopeViewState extends State<_ScopeView> {
 
   Widget _historyList(double side) {
     final history = _history;
-    if (history == null) return const Center(child: Spinner(size: 20));
+    if (history == null) {
+      final error = _historyError;
+      if (error == null) return const Center(child: Spinner(size: 20));
+      return Center(
+        child: Padding(
+          padding: EdgeInsets.all(S.s24),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text(error,
+                textAlign: TextAlign.center,
+                style: sans(13, height: 1.4, color: AppColors.danger)),
+            SizedBox(height: S.s12),
+            Btn('Retry', small: true, onTap: _loadHistory),
+          ]),
+        ),
+      );
+    }
     return PageBody(
       topPadding: 4,
       children: [

@@ -173,7 +173,7 @@ class TasksPanelState extends State<TasksPanel> {
       setState(() => _sessions = {for (final x in sessions) x.id: x});
       setState(() => _sessionFolders = {
             for (final s in sessions)
-              s.id: s.projectFolder.split('/').where((p) => p.isNotEmpty).last,
+              s.id: lastPathSegment(s.projectFolder),
           });
     } catch (_) {}
   }

@@ -1034,6 +1034,7 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
   Future<String>? _text;
   String? _textFor;
   Timer? _poll;
+  int _loadSeq = 0;
 
   @override
   void initState() {
@@ -1051,10 +1052,11 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
   }
 
   Future<void> _load({bool latest = false, bool quiet = false}) async {
+    final seq = ++_loadSeq;
     try {
       final all = await widget.client.artifacts(widget.session);
       final found = all.where((a) => a.id == widget.id).firstOrNull;
-      if (!mounted) return;
+      if (!mounted || seq != _loadSeq) return;
       final before = _artifact?.latest?.n;
       final after = found?.latest?.n;
       if (quiet && found != null && before == after) return;
@@ -1066,7 +1068,7 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
         _textFor = null;
       });
     } catch (e) {
-      if (mounted && !quiet) setState(() => _error = '$e');
+      if (mounted && seq == _loadSeq && !quiet) setState(() => _error = '$e');
     }
   }
 
@@ -1603,6 +1605,11 @@ class _WebPreviewState extends State<_WebPreview> {
   @override
   void initState() {
     super.initState();
+    _armSlowTimer();
+  }
+
+  void _armSlowTimer() {
+    _slow?.cancel();
     _slow = Timer(const Duration(seconds: 20), () {
       if (mounted && _progress < 100) {
         setState(() => _failed = 'This page is taking too long to load.');
@@ -1652,6 +1659,7 @@ class _WebPreviewState extends State<_WebPreview> {
       _failed = null;
       _progress = 0;
     });
+    _armSlowTimer();
     _controller.loadRequest(widget.uri);
   }
 
@@ -1807,6 +1815,8 @@ class _SessionDeliverablesState extends State<SessionDeliverables> {
   String? _error;
   String? _selected;
   bool _dismissed = false;
+  Timer? _poll;
+  int _loadSeq = 0;
 
   /// Desktop list beside the open artifact; narrow hosts keep the list alone
   /// and open artifacts in a drawer.
@@ -1857,11 +1867,30 @@ class _SessionDeliverablesState extends State<SessionDeliverables> {
   @override
   void initState() {
     super.initState();
-    widget.client.artifacts(widget.session).then((a) {
-      if (mounted) setState(() => _artifacts = a);
-    }).catchError((Object e) {
-      if (mounted) setState(() => _error = '$e');
-    });
+    unawaited(_load());
+    _poll = Timer.periodic(
+        const Duration(seconds: 5), (_) => unawaited(_load(quiet: true)));
+  }
+
+  @override
+  void dispose() {
+    _poll?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _load({bool quiet = false}) async {
+    final seq = ++_loadSeq;
+    try {
+      final artifacts = await widget.client.artifacts(widget.session);
+      if (!mounted || seq != _loadSeq) return;
+      setState(() {
+        _artifacts = artifacts;
+        _error = null;
+      });
+    } catch (e) {
+      if (!mounted || seq != _loadSeq) return;
+      if (!quiet || _artifacts == null) setState(() => _error = '$e');
+    }
   }
 
   @override

@@ -68,6 +68,7 @@ class RecurringScreenState extends State<RecurringScreen>
   bool _adding = false;
   bool get isAdding => _adding;
   bool _submitting = false;
+  int _sessionsGen = 0;
   final _titleCtrl = TextEditingController();
   final _promptCtrl = TextEditingController();
   final _dailyCtrl = TextEditingController(text: '09:00');
@@ -84,8 +85,18 @@ class RecurringScreenState extends State<RecurringScreen>
     if (oldWidget.client != widget.client ||
         oldWidget.sessionId != widget.sessionId) {
       _future = widget.client.recurringJobs();
-      if (oldWidget.client != widget.client) _watchEvents();
+      if (oldWidget.client != widget.client) {
+        _watchEvents();
+        _loadSessions();
+      }
     }
+  }
+
+  void _loadSessions() {
+    final gen = ++_sessionsGen;
+    widget.client.sessions().then((s) {
+      if (mounted && gen == _sessionsGen) setState(() => _sessions = s);
+    }).catchError((_) {});
   }
 
   @override
@@ -122,9 +133,7 @@ class RecurringScreenState extends State<RecurringScreen>
     super.initState();
     _future = widget.client.recurringJobs();
     _watchEvents();
-    widget.client.sessions().then((s) {
-      if (mounted) setState(() => _sessions = s);
-    }).catchError((_) {});
+    _loadSessions();
   }
 
   void _refresh() {
@@ -406,8 +415,7 @@ class RecurringScreenState extends State<RecurringScreen>
       }
       return;
     }
-    setState(() => _adding = false);
-    widget.onAddingChanged?.call(false);
+    setState(() => _submitting = true);
     try {
       await widget.client.createRecurring(
         title: t,
@@ -415,9 +423,14 @@ class RecurringScreenState extends State<RecurringScreen>
         prompt: p,
         schedule: sched,
       );
+      if (!mounted) return;
+      setState(() => _adding = false);
+      widget.onAddingChanged?.call(false);
       _refresh();
     } catch (e) {
       if (mounted) toast(context, "Couldn't create $t: $e", danger: true);
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
   }
 

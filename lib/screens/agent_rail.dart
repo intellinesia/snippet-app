@@ -87,11 +87,14 @@ class AgentRail extends StatelessWidget {
   Widget _row(SessionInfo s) {
     final needs = sessionNeedsYou(s);
     final busy = !needs && sessionBusy(s) && !s.settled;
+    final idle = !needs && !busy && !s.settled;
     final word = needs
         ? 'Waiting on you'
         : busy
             ? 'Running'
-            : 'Completed';
+            : idle
+                ? 'Idle'
+                : 'Completed';
     return TapDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => onOpenSession(s),
@@ -105,7 +108,9 @@ class AgentRail extends StatelessWidget {
                 ? const QuietHand(size: 14)
                 : busy
                     ? Spinner(size: 14, color: AppColors.fg1)
-                    : AppIcon('check', size: 14, color: AppColors.fg3),
+                    : idle
+                        ? AppIcon('circle', size: 14, color: AppColors.fg3)
+                        : AppIcon('check', size: 14, color: AppColors.fg3),
           ),
           Expanded(
             child: Column(
