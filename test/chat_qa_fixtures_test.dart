@@ -61,7 +61,7 @@ void main() {
         debugDefaultTargetPlatformOverride = null;
       });
 
-      testWidgets('CH-04/05/11/13/14/15 cards at W, $vw x$scale', (t) async {
+      testWidgets('v19 ask/changes/question cards at W, $vw x$scale', (t) async {
         await pump(
             t,
             vw,
@@ -69,12 +69,13 @@ void main() {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(children: [
-                // CH-05 pending, CH-04 pending (amber outline)
+                // v19 pending asks: tonal card, dot-led Needs you row, no amber plate.
                 ChatCard(fill: AppColors.surface2, children: const [
                   NeedsYouRow(trailing: 'Sashy - 12:41'),
                   SizedBox(height: 12),
                 ]),
-                ChatCard(border: const Color(0xFFE9B44C), children: const [
+                ChatCard(fill: AppColors.surface2, children: const [
+                  NeedsYouRow(trailing: 'Sashy - 12:42'),
                   ChatCardHeader(title: 'Which density?', subtitle: 'r14'),
                 ]),
                 // CH-05 resolved and expired, CH-04 answered
@@ -122,7 +123,7 @@ void main() {
         final deny = t.getSize(find
             .ancestor(of: find.text('Deny'), matching: find.byType(Material))
             .first);
-        expect(deny.height, greaterThanOrEqualTo(48));
+        expect(deny.height, 36);
         expect(t.takeException(), isNull);
         debugDefaultTargetPlatformOverride = null;
       });

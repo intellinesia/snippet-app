@@ -361,11 +361,11 @@ class AskOptionCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: SizedBox(
-            height: 80,
+            height: kMobile ? 74 : 80,
             child: Padding(
-              padding: const EdgeInsets.all(8),
+              padding: EdgeInsets.all(kMobile ? 7 : 8),
               child: Row(children: [
-                SizedBox(width: 80, height: 64, child: thumb),
+                SizedBox(width: kMobile ? 64 : 80, height: kMobile ? 60 : 64, child: thumb),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -422,11 +422,14 @@ class AskOptionGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(builder: (context, box) {
-        final two = box.maxWidth >= 390 && options.length > 1;
+        final two = !kMobile && box.maxWidth >= 390 && options.length > 1;
         final width = two ? (box.maxWidth - 10) / 2 : box.maxWidth;
-        return Wrap(spacing: 10, runSpacing: 10, children: [
-          for (final option in options) SizedBox(width: width, child: option),
-        ]);
+        return Wrap(
+            spacing: 10,
+            runSpacing: kMobile ? 8 : 10,
+            children: [
+              for (final option in options) SizedBox(width: width, child: option),
+            ]);
       });
 }
 

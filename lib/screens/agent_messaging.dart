@@ -1540,9 +1540,11 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              const Padding(
-                                padding: EdgeInsets.only(bottom: 8),
-                                child: UnreadDivider(),
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: UnreadDivider(
+                                    count: _initialUnread ?? 1,
+                                    onJump: () => _jumpToBottom()),
                               ),
                               row,
                             ],

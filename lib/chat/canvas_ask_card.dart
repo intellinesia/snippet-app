@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../canvas/canvas_nav.dart';
+import '../platform.dart';
 import '../theme.dart';
 import 'ask_kit.dart';
 import 'decided_card.dart';
@@ -251,6 +252,52 @@ class _CanvasAskCardState extends State<CanvasAskCard> {
     }
   }
 
+
+  String? get _selectedLabel {
+    if (_selected.isEmpty) return null;
+    final id = _selected.first;
+    for (final option in _options) {
+      if ('${option['id'] ?? option['label'] ?? ''}' == id) {
+        return '${option['label'] ?? id}';
+      }
+    }
+    return id;
+  }
+
+  /// ASK-10 phone actions: selection-only tiles, then two full-width 36pt
+  /// buttons stacked in decision order. [DesktopAskCard] owns a row, so the
+  /// phone stack is one flexible child inside that row.
+  List<Widget> _phoneActions() {
+    final label = _selectedLabel;
+    return [
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AskButton(
+              label == null ? 'Answer' : 'Answer with $label',
+              key: const ValueKey('canvas-answer-button'),
+              variant: AskButtonVariant.primary,
+              busy: _busy,
+              onTap: widget.onAnswer == null || _selected.isEmpty
+                  ? null
+                  : () => _answer(_selected.join(', ')),
+            ),
+            const SizedBox(height: 8),
+            AskButton(
+              'Open on canvas',
+              key: const ValueKey('canvas-open-button'),
+              variant: AskButtonVariant.secondary,
+              icon: 'external-link',
+              onTap: _busy ? null : _openCanvas,
+            ),
+          ],
+        ),
+      ),
+    ];
+  }
+
   List<Widget> _actions() {
     final open = AskButton(
       'Open on canvas',
@@ -386,7 +433,9 @@ class _CanvasAskCardState extends State<CanvasAskCard> {
       meta: meta,
       title: _prompt,
       payload: _payload(),
-      actions: _actions(),
+      actions: kMobile && (_kind == 'choose_one' || _kind == 'choose_many')
+          ? _phoneActions()
+          : _actions(),
     );
   }
 }

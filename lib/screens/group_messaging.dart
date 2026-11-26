@@ -1938,9 +1938,11 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const Padding(
-                            padding: EdgeInsets.only(bottom: 8),
-                            child: UnreadDivider(),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: UnreadDivider(
+                                count: widget.group.unread,
+                                onJump: () => _jumpToBottom()),
                           ),
                           item,
                         ],

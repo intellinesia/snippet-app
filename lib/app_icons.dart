@@ -16,6 +16,7 @@ const appIcons = <String, IconData>{
   'arrow-left-right': PhIcons.arrowsLeftRight,
   'arrow-right': PhIcons.arrowRight,
   'arrow-up': PhIcons.arrowUp,
+  'arrow-down': PhIcons.caretDown,
   'audio-lines': PhIcons.waveform,
   'bell': PhIcons.bell,
   'bell-off': PhIcons.bellSlash,

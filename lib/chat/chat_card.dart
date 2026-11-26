@@ -737,7 +737,7 @@ class ApprovalDecideButtons extends StatelessWidget {
 
 
 
-/// "Needs you" with the amber hand, the first line of a pending approval.
+/// Dot-led "Needs you" row, the first line of a pending approval.
 class NeedsYouRow extends StatelessWidget {
   const NeedsYouRow({super.key, this.trailing});
   final String? trailing;
@@ -755,11 +755,20 @@ class NeedsYouRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Text('Needs you',
-              style: sans(13, weight: FontWeight.w500, color: AppColors.fg2)),
-          const Spacer(),
+          Expanded(
+            child: Text('Needs you',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(13, weight: FontWeight.w500, color: AppColors.fg2)),
+          ),
           if (trailing != null)
-            Text(trailing!, style: sans(12, color: AppColors.fg2)),
+            Flexible(
+              flex: 0,
+              child: Text(trailing!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(12, color: AppColors.fg2)),
+            ),
         ]),
       );
 }

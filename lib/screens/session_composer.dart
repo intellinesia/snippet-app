@@ -1027,6 +1027,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
             builder: (_, __) => ComposerTray(
                 controller: _tray, bleed: M.gutter, child: _trayPage(running)),
           ),
+        composerPinCardForSession(widget.sessionId),
         if (!widget.readOnly) _phoneShortcutStrip(running),
         if (_heldQueue.isNotEmpty) _queuedCard(),
         if (_mentionQuery != null && !_isLead) _mentionList(),
