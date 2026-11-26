@@ -158,13 +158,13 @@ Future<void> _pumpCapture(
   WidgetTester t, {
   required Size size,
   required bool light,
-  required Widget scene,
+  required Widget Function() scene,
 }) async {
   debugDefaultTargetPlatformOverride = TargetPlatform.android;
   t.view.devicePixelRatio = 1;
   t.view.physicalSize = size;
   await ThemeManager.instance.setName(light ? 'quiet-light' : 'quiet');
-  await t.pumpWidget(_shell(scene));
+  await t.pumpWidget(_shell(scene()));
   await t.pump(const Duration(milliseconds: 150));
 }
 
@@ -178,7 +178,7 @@ void main() {
       testWidgets('v19 phone core $suffix', (t) async {
         const dir = String.fromEnvironment('SHOT_DIR');
         addTearDown(t.view.reset);
-        await _pumpCapture(t, size: size, light: light, scene: _coreScene());
+        await _pumpCapture(t, size: size, light: light, scene: _coreScene);
         expect(t.takeException(), isNull);
         if (dir.isNotEmpty) await _shot(t, dir, 'v19-phone-core-$suffix');
         debugDefaultTargetPlatformOverride = null;
@@ -187,7 +187,7 @@ void main() {
       testWidgets('v19 needs-you approval $suffix', (t) async {
         const dir = String.fromEnvironment('SHOT_DIR');
         addTearDown(t.view.reset);
-        await _pumpCapture(t, size: size, light: light, scene: _needsYouScene());
+        await _pumpCapture(t, size: size, light: light, scene: _needsYouScene);
         expect(t.takeException(), isNull);
         if (dir.isNotEmpty) await _shot(t, dir, 'v19-needs-you-approval-$suffix');
         debugDefaultTargetPlatformOverride = null;
@@ -196,7 +196,7 @@ void main() {
       testWidgets('v19 ASK-10 option ask $suffix', (t) async {
         const dir = String.fromEnvironment('SHOT_DIR');
         addTearDown(t.view.reset);
-        await _pumpCapture(t, size: size, light: light, scene: _ask10Scene());
+        await _pumpCapture(t, size: size, light: light, scene: _ask10Scene);
         await t.tap(find.text('Compact'));
         await t.pump(const Duration(milliseconds: 100));
         expect(t.takeException(), isNull);
