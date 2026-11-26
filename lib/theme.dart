@@ -1113,6 +1113,12 @@ class AppColors {
   static Color get line => currentTheme.border;
   static Color get lineStrong => currentTheme.border2;
 
+  /// Pane rows, pane dividers and the panel edge: Capy keeps these barely
+  /// above the pane fill, fainter than card outlines.
+  static Color get paneLine => identical(currentTheme, _quietCapy)
+      ? const Color(0xFF121212)
+      : currentTheme.border;
+
   // Spec: dark rgba(0,0,0,0.58); light rgba(20,20,18,0.36) so paper stays warm.
   static Color get scrim => ThemeManager.instance.resolved.translucency.scrim ==
               0.6 &&
@@ -1252,6 +1258,17 @@ Color get readingBg => AppColors.canvas;
 // Radius — small and precise. Large radii read consumer/toy; a developer tool
 // wants edges that feel engineered.
 // ---------------------------------------------------------------------------
+
+/// Desktop pane rows and their tab pills (Capy metrics), shared by the
+/// window tabs, the pane rows and the right panel.
+abstract final class PaneRow {
+  static const double height = 32;
+  static const double pill = 22;
+  static const double radius = 6;
+  static const double label = 12;
+  static const double icon = 13;
+  static Color get labelOff => Color.lerp(AppColors.fg2, AppColors.fg3, 0.45)!;
+}
 
 class R {
   static ThemeShapeTokens get _shape => ThemeManager.instance.resolved.shape;

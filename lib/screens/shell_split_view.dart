@@ -11,7 +11,7 @@ import 'shell_pane_view.dart';
 import 'shell_rail.dart' show kSidebarWidth;
 import '../motion.dart';
 import 'session_rail.dart'
-    show sessionRailCollapsed, sessionRailFraction;
+    show sessionRailCollapsed, sessionRailGeometry;
 
 /// The two-pane desktop body row with drag-and-drop between split panes.
 class ShellSplitView extends StatefulWidget {
@@ -267,7 +267,7 @@ class _ShellSplitViewState extends State<ShellSplitView>
         return ListenableBuilder(
           key: ValueKey('tab-${t.key}'),
           listenable:
-              Listenable.merge([sessionRailCollapsed, sessionRailFraction]),
+              Listenable.merge([sessionRailCollapsed, sessionRailGeometry]),
           builder: (_, __) => LayoutBuilder(
             builder: (_, box) => Padding(
               padding: EdgeInsets.only(
@@ -492,13 +492,13 @@ class _ShellSplitViewState extends State<ShellSplitView>
     if (kMobile) return child;
     final radius = widget.sidebarHidden
         ? BorderRadius.zero
-        : BorderRadius.only(topLeft: Radius.circular(R.of(12)));
+        : BorderRadius.only(topLeft: Radius.circular(R.of(9)));
     return DecoratedBox(
       key: const ValueKey('shell-panes'),
       decoration: BoxDecoration(
         color: AppColors.panelFill,
         borderRadius: radius,
-        border: Border.all(color: AppColors.line, width: 1),
+        border: Border.all(color: AppColors.paneLine, width: 1),
       ),
       child: ClipRRect(borderRadius: radius, child: child),
     );

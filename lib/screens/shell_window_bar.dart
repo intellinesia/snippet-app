@@ -181,30 +181,30 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
             // Capy pill: the active tab is a filled plate, others are bare text.
             child: Center(
               child: Container(
-                height: 28,
+                height: 26,
                 decoration: BoxDecoration(
                   color: active
                       ? AppColors.surface2
                       : (_hover || _focus)
                           ? AppColors.hoverPlate
                           : Colors.transparent,
-                  borderRadius: BorderRadius.circular(R.of(7)),
+                  borderRadius: BorderRadius.circular(PaneRow.radius + 1),
                   border: _focus
                       ? Border.all(color: AppColors.border2, width: 1)
                       : null,
                 ),
-                padding: const EdgeInsets.fromLTRB(10, 0, 4, 0),
+                padding: const EdgeInsets.fromLTRB(9, 0, 4, 0),
                 child: Row(children: [
                   SizedBox(width: 14, child: Center(child: _icon())),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 7),
                   Expanded(
                     child: Text(
                       _label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(12.5,
+                      style: sans(PaneRow.label,
                           weight: W.body,
-                          color: active ? AppColors.fg1 : AppColors.fg3),
+                          color: active ? AppColors.fg1 : PaneRow.labelOff),
                     ),
                   ),
                   if (marker != null) ...[

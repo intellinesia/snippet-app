@@ -249,18 +249,18 @@ class ReadoutChip extends StatelessWidget {
         width: compact ? null : width,
         child: Padding(
           padding: EdgeInsets.symmetric(
-              horizontal: S.s2, vertical: compact ? S.s8 : S.of(7)),
+              horizontal: S.s2, vertical: compact ? 5 : S.of(7)),
           child: AnimatedContainer(
             duration: Motion.quick,
-            height: compact ? 28 : 32,
+            height: compact ? PaneRow.pill : 32,
             constraints: compact ? BoxConstraints(maxWidth: width) : null,
             padding: EdgeInsets.fromLTRB(
-                compact ? S.of(9) : S.s12, 0, compact ? S.s6 : S.s8, 0),
+                compact ? 8 : S.s12, 0, compact ? 4 : S.s8, 0),
             decoration: BoxDecoration(
               color: active
                   ? AppColors.surface2
                   : Colors.transparent,
-              borderRadius: BorderRadius.circular(compact ? R.of(7) : R.card),
+              borderRadius: BorderRadius.circular(compact ? PaneRow.radius : R.card),
             ),
             child: Row(
                 mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
@@ -275,8 +275,8 @@ class ReadoutChip extends StatelessWidget {
                       tab.label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(compact ? 12.5 : 13,
-                          color: active ? AppColors.fg1 : AppColors.fg3),
+                      style: sans(compact ? PaneRow.label : 13,
+                          color: active ? AppColors.fg1 : PaneRow.labelOff),
                     ),
                   ),
                   if (pinned)
@@ -363,18 +363,18 @@ class PaneTabChip extends StatelessWidget {
         width: compact ? null : width,
         child: Padding(
           padding: EdgeInsets.symmetric(
-              horizontal: S.s2, vertical: compact ? S.s8 : S.of(7)),
+              horizontal: S.s2, vertical: compact ? 5 : S.of(7)),
           child: AnimatedContainer(
             duration: Motion.quick,
-            height: compact ? 28 : 32,
+            height: compact ? PaneRow.pill : 32,
             constraints: compact ? BoxConstraints(maxWidth: width) : null,
             padding: EdgeInsets.fromLTRB(
-                compact ? S.of(9) : S.s12, 0, compact ? S.s6 : S.s8, 0),
+                compact ? 8 : S.s12, 0, compact ? 4 : S.s8, 0),
             decoration: BoxDecoration(
               color: active
                   ? AppColors.surface2
                   : Colors.transparent,
-              borderRadius: BorderRadius.circular(compact ? R.of(7) : R.card),
+              borderRadius: BorderRadius.circular(compact ? PaneRow.radius : R.card),
             ),
             child: Row(
                 mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
@@ -395,8 +395,8 @@ class PaneTabChip extends StatelessWidget {
                               : tab.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(compact ? 12.5 : 13,
-                          color: active ? AppColors.fg1 : AppColors.fg3),
+                      style: sans(compact ? PaneRow.label : 13,
+                          color: active ? AppColors.fg1 : PaneRow.labelOff),
                     ),
                   ),
                   if (canDismiss) ...[
@@ -484,12 +484,12 @@ class PaneStrip extends StatelessWidget {
     final count = tabs.length + readouts.length;
     final compact = !kMobile;
     return Container(
-      height: compact ? 44 : 46,
+      height: compact ? PaneRow.height : 46,
       // Desktop: a hairline under the tabs, as in the reference.
       decoration: BoxDecoration(
         color: kMobile ? AppColors.pageCanvas : Colors.transparent,
         border:
-            kMobile ? null : Border(bottom: BorderSide(color: AppColors.line)),
+            kMobile ? null : Border(bottom: BorderSide(color: AppColors.paneLine)),
       ),
       child: LayoutBuilder(builder: (context, outer) {
         final list = _chips(count, compact);

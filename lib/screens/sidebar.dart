@@ -1516,7 +1516,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
 
   /// Capy's brand row: the mark, then search and a new session at the right.
   Widget _brandRow() => SizedBox(
-        height: 40,
+        height: PaneRow.height,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
           child: Row(children: [

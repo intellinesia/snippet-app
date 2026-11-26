@@ -386,8 +386,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       leading: [
         Builder(
           builder: (ctx) => IconBtn('plus',
-              size: 26,
-              iconSize: 14,
+              size: 24,
+              iconSize: 13,
               tooltip: 'Open a tab',
               onTap: () => _showPaneAddMenu(ctx)),
         ),
@@ -404,8 +404,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         builder: (_, work, __) {
           final on = work.contains(agentId);
           return IconBtn('layers',
-              size: 28,
-              iconSize: 14,
+              size: 24,
+              iconSize: 13,
               active: on,
               tooltip: on ? 'Back to chat' : 'Show desk work',
               onTap: () => setAgentWorkView(agentId, !on));
@@ -414,8 +414,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
 
   /// The agent, Lead or group panel: opened only from the chat header.
   Widget _panelButton(String icon, String what) => IconBtn(icon,
-      size: 28,
-      iconSize: 14,
+      size: 24,
+      iconSize: 13,
       active: !_panelHidden,
       tooltip: _panelHidden ? 'Show $what' : 'Hide $what',
       onTap: _togglePanel);
@@ -430,8 +430,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           // Docked open, the panel's own row carries the toggle.
           if (docked && on) return const SizedBox.shrink();
           return IconBtn('sidebar',
-              size: 28,
-              iconSize: 14,
+              size: 24,
+              iconSize: 13,
               active: on,
               tooltip: on ? 'Hide session panel' : 'Show session panel',
               onTap: () {

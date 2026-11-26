@@ -176,9 +176,13 @@ class PanePill extends StatefulWidget {
       required this.label,
       required this.active,
       this.onTap,
-      this.onClose});
+      this.onClose,
+      this.leading});
 
   final String icon;
+
+  /// Replaces the icon, e.g. an agent avatar on a chat's own pill.
+  final Widget? leading;
   final String label;
   final bool active;
   final VoidCallback? onTap;
@@ -202,37 +206,44 @@ class _PanePillState extends State<PanePill> {
           behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
           child: Container(
-            height: 28,
+            height: PaneRow.pill,
             padding: EdgeInsets.fromLTRB(
-                10, 0, widget.onClose == null ? 12 : 4, 0),
+                8, 0, widget.onClose == null ? 9 : 2, 0),
             decoration: BoxDecoration(
               color: widget.active
                   ? AppColors.surface2
                   : _hover
                       ? AppColors.hoverPlate
                       : null,
-              borderRadius: BorderRadius.circular(R.of(7)),
+              borderRadius: BorderRadius.circular(PaneRow.radius),
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              AppIcon(widget.icon,
-                  size: 14,
-                  color: widget.active ? AppColors.fg2 : AppColors.fg3),
-              const SizedBox(width: 8),
+              widget.leading ??
+                  AppIcon(widget.icon,
+                      size: PaneRow.icon,
+                      color: widget.active
+                          ? AppColors.fg2
+                          : PaneRow.labelOff),
+              const SizedBox(width: 6),
               Flexible(
                 child: Text(widget.label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(12.5,
-                        color:
-                            widget.active ? AppColors.fg1 : AppColors.fg3)),
+                    style: sans(PaneRow.label,
+                        color: widget.active
+                            ? AppColors.fg1
+                            : PaneRow.labelOff)),
               ),
               if (widget.onClose != null) ...[
-                const SizedBox(width: 4),
-                IconBtn('x',
-                    size: 20,
-                    iconSize: 12,
-                    tooltip: 'Close tab',
-                    onTap: widget.onClose),
+                const SizedBox(width: 2),
+                Opacity(
+                  opacity: widget.active || _hover ? 1 : 0,
+                  child: IconBtn('x',
+                      size: 18,
+                      iconSize: 10,
+                      tooltip: 'Close tab',
+                      onTap: widget.onClose),
+                ),
               ],
             ]),
           ),

@@ -99,64 +99,93 @@ extension _RailPages on _SessionRailState {
       );
 
   void _go(String? page) => _set(() {
+        if (page != null && !_openTabs.contains(page)) _openTabs.add(page);
         _page = page;
         _laneFilter = 0;
         _armedRewind = null;
       });
 
-  /// The panel's pane row: Overview and the open page as pills, + for more.
+  void _closeTab(String page) {
+    final i = _openTabs.indexOf(page);
+    if (i < 0) return;
+    _set(() => _openTabs.removeAt(i));
+    if (_page != page) return;
+    _go(_openTabs.isEmpty ? null : _openTabs[i.clamp(0, _openTabs.length - 1)]);
+  }
+
+  static (String, String)? _tabMeta(String page) => switch (page) {
+        'lanes' => ('git-branch', 'Lanes'),
+        'jobs' => ('activity', 'Activity'),
+        'checkpoints' => ('history', 'Checkpoints'),
+        'wakes' => ('clock', 'Wakes'),
+        'usage' => ('gauge', 'Usage'),
+        'memory' => ('book-marked', 'Memory'),
+        'changes' => ('file-diff', 'Diffs'),
+        'files' => ('folder', 'Files'),
+        _ => null,
+      };
+
+  /// The panel's pane row: Overview, then every tab opened from + (they
+  /// stay until closed), then expand and hide at the right end.
   Widget _railTabs() {
     final page = _page;
-    final open = switch (page) {
-      'lanes' => ('git-branch', 'Lanes'),
-      'jobs' => ('activity', 'Activity'),
-      'checkpoints' => ('history', 'Checkpoints'),
-      'wakes' => ('clock', 'Wakes'),
-      'usage' => ('gauge', 'Usage'),
-      'memory' => ('book-marked', 'Memory'),
-      'changes' => ('file-diff', 'Diffs'),
-      'files' => ('folder', 'Files'),
-      _ => null,
-    };
+    final tabs = [
+      for (final t in _openTabs)
+        if (_tabMeta(t) != null) t,
+      if (page != null && !_openTabs.contains(page) && _tabMeta(page) != null)
+        page,
+    ];
     return Container(
       key: const ValueKey('rail-tabs'),
-      height: 44,
-      padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
+      height: PaneRow.height,
+      padding: const EdgeInsets.fromLTRB(6, 0, 6, 0),
       decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.line))),
+          border: Border(bottom: BorderSide(color: AppColors.paneLine))),
       child: Row(children: [
         Flexible(
-          child: PanePill(
-              icon: 'list',
-              label: widget.isLead ? 'Lead' : 'Overview',
-              active: open == null,
-              onTap: open == null ? null : () => _go(null)),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              PanePill(
+                  icon: 'list',
+                  label: widget.isLead ? 'Lead' : 'Overview',
+                  active: page == null,
+                  onTap: page == null ? null : () => _go(null)),
+              for (final t in tabs) ...[
+                const SizedBox(width: 2),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 150),
+                  child: PanePill(
+                      key: ValueKey('rail-tab-$t'),
+                      icon: _tabMeta(t)!.$1,
+                      label: _tabMeta(t)!.$2,
+                      active: page == t,
+                      onTap: page == t ? null : () => _go(t),
+                      onClose: () => _closeTab(t)),
+                ),
+              ],
+              if (!widget.isLead) ...[
+                const SizedBox(width: 2),
+                Builder(
+                  builder: (ctx) => IconBtn('plus',
+                      size: 24,
+                      iconSize: 13,
+                      tooltip: 'Open a tab',
+                      onTap: () => _railAddMenu(ctx)),
+                ),
+              ],
+            ]),
+          ),
         ),
-        if (open != null) ...[
-          const SizedBox(width: 4),
-          Flexible(
-            child: PanePill(
-                icon: open.$1,
-                label: open.$2,
-                active: true,
-                onClose: () => _go(null)),
-          ),
-        ],
-        if (!widget.isLead) ...[
-          const SizedBox(width: 2),
-          Builder(
-            builder: (ctx) => IconBtn('plus',
-                size: 26,
-                iconSize: 14,
-                tooltip: 'Open a tab',
-                onTap: () => _railAddMenu(ctx)),
-          ),
-        ],
         const Spacer(),
+        IconBtn(sessionRailWide.value ? 'minimize-2' : 'maximize-2',
+            size: 24,
+            iconSize: 12,
+            tooltip: sessionRailWide.value ? 'Restore panel' : 'Expand panel',
+            onTap: () => sessionRailWide.value = !sessionRailWide.value),
         IconBtn('sidebar',
-            size: 28,
-            iconSize: 14,
-            active: true,
+            size: 24,
+            iconSize: 13,
             tooltip: 'Hide panel',
             onTap: () => setSessionRailCollapsed(true)),
       ]),

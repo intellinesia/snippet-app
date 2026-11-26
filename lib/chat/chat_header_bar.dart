@@ -19,7 +19,7 @@ class ChatHeaderBar extends StatelessWidget {
     this.actions = const [],
   });
 
-  static const double height = 44;
+  static const double height = PaneRow.height;
 
   /// One id draws the agent; two or more draw the group cluster.
   final List<String> agentIds;
@@ -40,39 +40,39 @@ class ChatHeaderBar extends StatelessWidget {
   Widget build(BuildContext context) {
     Theme.of(context);
     final avatar = agentIds.length > 1
-        ? AgentCluster(ids: agentIds, size: 16)
+        ? AgentCluster(ids: agentIds, size: 14)
         : ClipOval(
             child: AgentMochi(
                 agentIds.isEmpty ? 'snippet' : agentIds.first,
-                size: 16),
+                size: 14),
           );
     return Container(
       key: const ValueKey('chat-header-bar'),
       constraints: BoxConstraints(minHeight: height),
-      padding: const EdgeInsets.fromLTRB(10, 4, 8, 4),
+      padding: const EdgeInsets.fromLTRB(6, 0, 6, 0),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.line)),
+        border: Border(bottom: BorderSide(color: AppColors.paneLine)),
       ),
       child: Row(children: [
         Flexible(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 320),
+            constraints: const BoxConstraints(maxWidth: 260),
             child: Container(
               key: const ValueKey('chat-header-pill'),
-              height: 28,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              height: PaneRow.pill,
+              padding: const EdgeInsets.fromLTRB(7, 0, 9, 0),
               decoration: BoxDecoration(
                 color: AppColors.surface2,
-                borderRadius: BorderRadius.circular(R.of(7)),
+                borderRadius: BorderRadius.circular(PaneRow.radius),
               ),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 avatar,
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Flexible(
                   child: Text(title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(12.5, color: AppColors.fg1)),
+                      style: sans(PaneRow.label, color: AppColors.fg1)),
                 ),
               ]),
             ),
@@ -104,7 +104,7 @@ class ChatHeaderBar extends StatelessWidget {
                   child: Text(subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(12, color: AppColors.fg3)),
+                      style: sans(11.5, color: AppColors.fg3)),
                 ),
               ]),
             ),

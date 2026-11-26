@@ -51,9 +51,16 @@ final ValueNotifier<double> sessionRailFraction =
 
 /// Docked panel width (gutters included) for a session column; the panel
 /// and the strip above both use this so their dividers meet.
+/// The panel's expand: as wide as the chat's minimum allows, not saved.
+final ValueNotifier<bool> sessionRailWide = ValueNotifier<bool>(false);
+
+/// Everything that changes the docked panel's width.
+final Listenable sessionRailGeometry =
+    Listenable.merge([sessionRailFraction, sessionRailWide]);
+
 double sessionRailOuterWidth(double column) {
   final max = column - kSessionRailMinChat;
-  final w = column * sessionRailFraction.value;
+  final w = sessionRailWide.value ? max : column * sessionRailFraction.value;
   return (max < kSessionRailMinOuter
           ? kSessionRailMinOuter
           : w.clamp(kSessionRailMinOuter, max))
@@ -313,6 +320,9 @@ class _SessionRailState extends State<SessionRail> {
 
   /// Desktop drill-in page (lanes, jobs, checkpoints, wakes, usage); null is the root.
   String? _page;
+
+  /// Panel tabs opened from its +, kept in order after Overview (Capy).
+  final List<String> _openTabs = [];
   int _laneFilter = 0;
   List<Map<String, dynamic>> _procs = const [];
   List<WakeSchedule> _wakes = const [];
@@ -489,7 +499,7 @@ class _SessionRailState extends State<SessionRail> {
   Widget build(BuildContext context) {
     if (widget.floating) return _card(640);
     return ListenableBuilder(
-      listenable: Listenable.merge([sessionRailCollapsed, sessionRailFraction]),
+      listenable: Listenable.merge([sessionRailCollapsed, sessionRailGeometry]),
       builder: (_, __) {
         final collapsed = sessionRailCollapsed.value;
         // Hidden: the chat header carries the actions and the show toggle.
@@ -513,7 +523,7 @@ class _SessionRailState extends State<SessionRail> {
             : Container(
                 width: outer,
                 decoration: BoxDecoration(
-                    border: Border(left: BorderSide(color: AppColors.line))),
+                    border: Border(left: BorderSide(color: AppColors.paneLine))),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -546,6 +556,7 @@ class _SessionRailState extends State<SessionRail> {
                     onDrag: (dx) {
                       final w = (outer - dx).clamp(
                           kSessionRailMinOuter, column! - kSessionRailMinChat);
+                      sessionRailWide.value = false;
                       sessionRailFraction.value = w / column;
                     },
                     onDragging: (v) => setState(() => _resizing = v),
