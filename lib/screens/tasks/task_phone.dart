@@ -98,8 +98,14 @@ class TaskGlyph extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Widget g = switch (status) {
-      TaskStatus.inReview || TaskStatus.blocked =>
-        AppIcon('hand', size: size, color: AppColors.run),
+      TaskStatus.inReview || TaskStatus.blocked => Center(
+          child: Container(
+            width: 6,
+            height: 6,
+            decoration:
+                BoxDecoration(color: AppColors.run, shape: BoxShape.circle),
+          ),
+        ),
       TaskStatus.failed || TaskStatus.cancelled =>
         AppIcon('x', size: size, color: AppColors.fg3),
       TaskStatus.inProgress => _Ring(size: size),

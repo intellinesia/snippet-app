@@ -5,10 +5,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'ambient_loop.dart';
 import 'chat/ledger_line.dart';
 import 'chat/tool_call_row.dart';
+import 'chat/tool_output_sheet.dart';
 import 'chat/signal_row.dart';
 import 'api.dart' show DaemonClient;
 import 'crew_widgets.dart' show AgentProviderMark;
@@ -388,13 +390,11 @@ class _FlatRow extends StatelessWidget {
     required this.title,
     required this.onTap,
     this.live = false,
-    this.meta = const [],
   });
 
   final InlineSpan title;
   final VoidCallback? onTap;
   final bool live;
-  final List<Widget> meta;
 
   @override
   Widget build(BuildContext context) {
@@ -411,7 +411,6 @@ class _FlatRow extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: sans(kMobile ? 15 : 13, height: 1.35)),
           ),
-          for (final m in meta) ...[const SizedBox(width: 10), m],
           if (live) ...[
             const SizedBox(width: 8),
             RunSpinner(size: 12, color: AppColors.accent),
@@ -420,84 +419,6 @@ class _FlatRow extends StatelessWidget {
       ),
     );
   }
-}
-
-enum _Object { text, path, code }
-
-/// A step as (verb, object, how to draw the object).
-(String, String, _Object) _rowParts(ToolStep step) {
-  final name = toolBaseName(step.tool);
-  final running = step.running;
-  final a = step.args is Map ? step.args as Map : const {};
-  final (verb, object) = toolSentenceParts(step);
-  switch (name) {
-    case 'bash':
-      final label = (a['label'] ?? '').toString().trim();
-      // A label already reads as a sentence; a bare command is "Ran <command>".
-      if (label.isNotEmpty) return (label, '', _Object.text);
-      return (running ? 'Running' : 'Ran', stepTarget(step), _Object.code);
-    case 'read_file':
-    case 'view_file':
-      final listing = step.data?['entries'] is List;
-      return (
-        listing ? (running ? 'Listing' : 'Listed') : verb,
-        stepTarget(step),
-        _Object.path
-      );
-    case 'list_dir':
-      return (running ? 'Listing' : 'Listed', object, _Object.path);
-    case 'search_content':
-    case 'grep_search':
-    case 'find_by_name':
-    case 'glob':
-      return (running ? 'Searching' : 'Searched', object, _Object.code);
-    case 'view_image':
-    case 'present_file':
-      return (verb, stepTarget(step), _Object.path);
-    case 'change_files':
-      final many = RegExp(r'^\d+ files?$').hasMatch(object);
-      return (
-        verb,
-        object,
-        many || object.isEmpty ? _Object.text : _Object.path
-      );
-  }
-  return (verb, object, _Object.text);
-}
-
-/// Trailing facts of a step: lines, hits, +/− counts, a result, the time.
-List<Widget> _rowMeta(ToolStep step) {
-  final base = kMobile
-      ? sans(13, color: AppColors.fg2, tabular: true)
-      : mono(11.5, color: AppColors.fg2);
-  final chip = stepChip(step);
-  final out = <Widget>[];
-  if (chip != null && (chip.added > 0 || chip.removed > 0)) {
-    out.add(Text.rich(TextSpan(style: base, children: [
-      TextSpan(text: '+${chip.added}', style: TextStyle(color: AppColors.fg2)),
-      TextSpan(
-          text: ' −${chip.removed}', style: TextStyle(color: AppColors.fg2)),
-    ])));
-  } else if (chip != null) {
-    final danger = chip.tone == StepChipTone.danger;
-    out.add(Text(danger ? chip.text.split(', ').last : chip.text,
-        maxLines: 1,
-        style: base.copyWith(
-            color: switch (chip.tone) {
-          StepChipTone.ok => AppColors.fg2,
-          StepChipTone.danger => AppColors.fg1,
-          StepChipTone.neutral => AppColors.fg2,
-        })));
-  } else if (!step.running && toolBaseName(step.tool) == 'search_content') {
-    final hits = step.data?['matches'] ?? step.data?['results'];
-    if (hits is List) {
-      out.add(Text('${hits.length} ${hits.length == 1 ? 'hit' : 'hits'}',
-          style: base));
-    }
-  }
-  final took = stepDuration(step);
-  if (took != null) out.add(Text(took, maxLines: 1, style: base));
-  return out;
 }
 
 class DenseToolRow extends StatefulWidget {
@@ -555,52 +476,16 @@ class _DenseToolRowState extends State<DenseToolRow> {
     final liveCommand = _isCommand && step.running && step.args is Map;
     final canExpand = toolHasDetail(step) || liveCommand;
     final open = _open && canExpand;
-    final danger = stepChip(step)?.tone == StepChipTone.danger;
-    final (verb, object, kind) = _rowParts(step);
-    final live = step.running;
-    final objectStyle = !kMobile
-        ? switch (kind) {
-            _Object.code =>
-              mono(11.5, color: live ? AppColors.fg1 : AppColors.fg2),
-            _ => sans(13,
-                weight: FontWeight.w500,
-                color: live ? AppColors.fg1 : AppColors.fg2),
-          }
-        : switch (kind) {
-            _Object.path => sans(kMobile ? 15 : 13, color: AppColors.accent),
-            _Object.code => mono(kMobile ? 13 : 12.5,
-                color: live ? AppColors.fg1 : AppColors.fg3),
-            _Object.text => sans(kMobile ? 15 : 13,
-                color: live ? AppColors.fg1 : AppColors.fg3),
-          };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Desktop TC-04/05: the shared tool-call row anatomy.
-        if (!kMobile)
-          ToolCallRow(
-            step: step,
-            onTap: canExpand ? _toggle : null,
-            open: open,
-            showChevron: canExpand,
-          )
-        else
-        _FlatRow(
-          live: live,
+        // TC-04/05: the shared collapsed tool row on both platforms. On
+        // phone it is the v19 48-high surface-1 card; tapping opens the detail.
+        ToolCallRow(
+          step: step,
           onTap: canExpand ? _toggle : null,
-          title: TextSpan(children: [
-            TextSpan(
-                text: verb,
-                style: TextStyle(
-                    color: danger
-                        ? AppColors.fg1
-                        : kMobile || live
-                            ? AppColors.fg1
-                            : AppColors.fg3)),
-            if (object.isNotEmpty)
-              TextSpan(text: ' $object', style: objectStyle),
-          ]),
-          meta: _rowMeta(step),
+          open: open,
+          showChevron: canExpand,
         ),
         SpringExpand(
           open: open,
@@ -630,6 +515,55 @@ Widget? toolRowBody(DenseToolRow r) {
 }
 
 final _ansiCodes = RegExp(r'\x1B\[[0-9;]*[A-Za-z]');
+final _ansiColourCode = RegExp(r'\x1B\[([0-9;]*)m');
+
+const _ansiUserColours = <int, Color>{
+  31: Color(0xFFE07B72),
+  91: Color(0xFFE07B72),
+  32: Color(0xFF6FBF8B),
+  92: Color(0xFF6FBF8B),
+  33: Color(0xFFD8B45A),
+  93: Color(0xFFD8B45A),
+  34: Color(0xFF6FA8DC),
+  94: Color(0xFF6FA8DC),
+};
+
+InlineSpan ansiOutputSpan(String line, TextStyle base) {
+  if (!line.contains('\x1B[')) {
+    return TextSpan(text: line, style: base);
+  }
+  final spans = <TextSpan>[];
+  var at = 0;
+  Color? colour;
+  for (final m in _ansiColourCode.allMatches(line)) {
+    if (m.start > at) {
+      final text = line.substring(at, m.start).replaceAll(_ansiCodes, '');
+      if (text.isNotEmpty) {
+        spans.add(TextSpan(
+            text: text,
+            style: colour == null ? base : base.copyWith(color: colour)));
+      }
+    }
+    final codes = (m.group(1) ?? '0')
+        .split(';')
+        .map((p) => int.tryParse(p) ?? 0)
+        .toList();
+    if (codes.any((c) => c == 0)) {
+      colour = null;
+    }
+    for (final c in codes) {
+      if (_ansiUserColours.containsKey(c)) colour = _ansiUserColours[c];
+    }
+    at = m.end;
+  }
+  final tail = line.substring(at).replaceAll(_ansiCodes, '');
+  if (tail.isNotEmpty) {
+    spans.add(TextSpan(
+        text: tail,
+        style: colour == null ? base : base.copyWith(color: colour)));
+  }
+  return TextSpan(style: base, children: spans);
+}
 
 /// A command opened: "$ command", its output capped at a few lines with a
 /// fade, and the exit code in the corner.
@@ -640,7 +574,7 @@ class TerminalBlock extends StatefulWidget {
     this.commandLines,
     this.outputCap = 8,
     this.tail = false,
-    this.size = 12,
+    this.size,
   });
   final ToolStep step;
 
@@ -652,7 +586,7 @@ class TerminalBlock extends StatefulWidget {
 
   /// Show the last lines of the output, as a running command does.
   final bool tail;
-  final double size;
+  final double? size;
 
   @override
   State<TerminalBlock> createState() => _TerminalBlockState();
@@ -660,14 +594,13 @@ class TerminalBlock extends StatefulWidget {
 
 class _TerminalBlockState extends State<TerminalBlock> {
   static const _lineHeight = 1.6;
-  double get _size => widget.size;
+  double get _size => widget.size ?? (kMobile ? 11 : 12);
   int get _cap => widget.outputCap;
   bool _full = false;
   bool _cmdFull = false;
 
   static String _clean(Object? v) => (v ?? '')
       .toString()
-      .replaceAll(_ansiCodes, '')
       .replaceAll(r'\r\n', '\n')
       .replaceAll(r'\n', '\n')
       .trimRight();
@@ -702,15 +635,21 @@ class _TerminalBlockState extends State<TerminalBlock> {
         ? null
         : Text.rich(TextSpan(style: base, children: [
             for (var i = 0; i < outShown.length; i++)
-              TextSpan(
-                  text: '${i == 0 ? '' : '\n'}${outShown[i]}',
-                  style: errorLineMarker.hasMatch(outShown[i])
-                      ? TextStyle(color: AppColors.fg1, fontWeight: W.label)
-                      : null),
+              TextSpan(children: [
+                if (i > 0) const TextSpan(text: '\n'),
+                ansiOutputSpan(
+                    outShown[i],
+                    errorLineMarker.hasMatch(outShown[i])
+                        ? base.copyWith(
+                            color: AppColors.fg1, fontWeight: W.label)
+                        : base),
+              ]),
             for (var i = 0; i < errShown.length; i++)
-              TextSpan(
-                  text: '${outShown.isEmpty && i == 0 ? '' : '\n'}${errShown[i]}',
-                  style: TextStyle(color: AppColors.fg1, fontWeight: W.label)),
+              TextSpan(children: [
+                if (outShown.isNotEmpty || i > 0) const TextSpan(text: '\n'),
+                ansiOutputSpan(errShown[i],
+                    base.copyWith(color: AppColors.fg1, fontWeight: W.label)),
+              ]),
           ]));
     final exit = step.exitCode;
     final (String, bool)? badge = step.running
@@ -722,10 +661,28 @@ class _TerminalBlockState extends State<TerminalBlock> {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-          color: AppColors.surface2, borderRadius: BorderRadius.circular(10)),
+          color: kMobile ? AppColors.surface1 : AppColors.surface2,
+          borderRadius: BorderRadius.circular(kMobile ? 6 : 10)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (kMobile)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(children: [
+                TapDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => showToolOutputSheet(context,
+                      input: cmd, output: stdout, error: stderr),
+                  child: Text('bash',
+                      style: sans(11, weight: W.label, color: AppColors.fg3)),
+                ),
+                const Spacer(),
+                if (step.running)
+                  Text('running ${stepDuration(step) ?? ''}'.trim(),
+                      style: mono(11, color: AppColors.fg3)),
+              ]),
+            ),
           if (cmdLines.isNotEmpty)
             Text.rich(
                 TextSpan(style: base, children: [
@@ -793,7 +750,10 @@ class _TerminalBlockState extends State<TerminalBlock> {
                   )
                 : output,
           ],
-          if (overflow || badge != null || (step.running && widget.tail))
+          if (overflow ||
+              badge != null ||
+              (step.running && widget.tail) ||
+              kMobile)
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Row(children: [
@@ -808,14 +768,12 @@ class _TerminalBlockState extends State<TerminalBlock> {
                   Text('Following',
                       style: sans(12, weight: W.label, color: AppColors.fg3)),
                 const Spacer(),
-                if (badge != null)
+                if (badge != null && !kMobile)
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
                     decoration: BoxDecoration(
-                      color: badge.$2
-                          ? AppColors.surface3
-                          : AppColors.surface3,
+                      color: AppColors.surface3,
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(badge.$1,
@@ -823,6 +781,27 @@ class _TerminalBlockState extends State<TerminalBlock> {
                             color: badge.$2 ? AppColors.fg1 : AppColors.fg2,
                             tabular: true)),
                   ),
+                if (kMobile) ...[
+                  if (badge != null)
+                    Text(badge.$1,
+                        style: mono(11, color: AppColors.fg3)),
+                  if (stepDuration(step) != null) ...[
+                    const SizedBox(width: 8),
+                    Text(stepDuration(step)!,
+                        style: mono(11, color: AppColors.fg3)),
+                  ],
+                  const SizedBox(width: 10),
+                  TapDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => Clipboard.setData(ClipboardData(
+                        text: [stdout, stderr]
+                            .where((p) => p.trim().isNotEmpty)
+                            .join('\n'))),
+                    child: Text('Copy',
+                        style: sans(11,
+                            weight: W.label, color: AppColors.fg3)),
+                  ),
+                ],
               ]),
             ),
         ],
@@ -1143,23 +1122,22 @@ class _LaneControlButtonState extends State<LaneControlButton> {
           borderRadius: BorderRadius.circular(R.sm),
           onTap: _busy ? null : _onTap,
           child: Container(
-            height: kMobile ? 44.0 : 26.0,
+            height: kMobile ? 36.0 : 26.0,
             padding: EdgeInsets.symmetric(horizontal: S.s8),
             alignment: Alignment.center,
             child: Text(label,
                 style: sans(12,
                     weight: W.label,
-                    color: running ? AppColors.danger : AppColors.fg2)),
+                    color: AppColors.fg2)),
           ),
         ),
       );
     }
-    final fg = running ? AppColors.danger : AppColors.fg1;
-    final bg = running ? AppColors.dangerBg : AppColors.surface2;
-    final border =
-        running ? AppColors.danger.withValues(alpha: 0.3) : AppColors.border;
-    final height = kMobile ? 44.0 : 28.0;
-    final radius = BorderRadius.circular(kMobile ? R.pill : R.sm);
+    final fg = AppColors.fg1;
+    final bg = AppColors.surface2;
+    final border = AppColors.line;
+    final height = kMobile ? 36.0 : 28.0;
+    final radius = BorderRadius.circular(kMobile ? 6 : R.sm);
     return Opacity(
       opacity: _busy ? 0.5 : 1.0,
       child: Material(

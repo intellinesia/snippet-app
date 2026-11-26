@@ -338,10 +338,10 @@ Widget _chatCardShell({
   final cleanBody = body?.trim() ?? '';
   return Container(
     width: double.infinity,
-    padding: EdgeInsets.all(S.of(14)),
+    padding: EdgeInsets.all(kMobile ? 12 : S.of(14)),
     decoration: BoxDecoration(
       color: kMobile ? AppColors.surface1 : AppColors.surface2,
-      borderRadius: BorderRadius.circular(kMobile ? 12 : R.of(8)),
+      borderRadius: BorderRadius.circular(R.of(8)),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -366,8 +366,8 @@ Widget _chatCardShell({
           Text(
             cleanTitle,
             style: sans(
-              kMobile ? 15 : 13,
-              weight: W.title,
+              13,
+              weight: W.label,
               color: AppColors.fg1,
             ),
           ),
@@ -376,7 +376,9 @@ Widget _chatCardShell({
           SizedBox(height: cleanTitle.isEmpty ? 6 : 4),
           Text(
             cleanBody,
-            style: chatText(mine: false).copyWith(color: ChatColors.meta),
+            style: kMobile
+                ? sans(12.5, height: 17 / 12.5, color: AppColors.fg2)
+                : chatText(mine: false).copyWith(color: ChatColors.meta),
           ),
         ],
         if (child != null) ...[
@@ -404,21 +406,21 @@ Widget _chatPill({
   final pill = Opacity(
     opacity: disabled ? 0.5 : 1,
     child: Container(
-      height: kMobile ? 48 : 30,
+      height: kMobile ? 36 : 30,
       alignment: Alignment.center,
-      padding: EdgeInsets.symmetric(horizontal: kMobile ? S.s16 : S.s12),
+      padding: EdgeInsets.symmetric(horizontal: kMobile ? 12 : S.s12),
       decoration: BoxDecoration(
         color: kMobile && !primary ? AppColors.surface2 : bg,
-        borderRadius: BorderRadius.circular(kMobile ? 10 : R.pill),
+        borderRadius: BorderRadius.circular(kMobile ? 6 : R.pill),
         border:
-            kMobile && !primary ? Border.all(color: AppColors.border) : null,
+            kMobile && !primary ? Border.all(color: AppColors.line) : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             label,
-            style: sans(kMobile ? 15 : 13, weight: W.label, color: fg),
+            style: sans(kMobile ? 12.5 : 13, weight: W.label, color: fg),
           ),
           if (badge != null && badge.isNotEmpty) ...[
             SizedBox(width: S.s6),

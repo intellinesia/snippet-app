@@ -209,102 +209,154 @@ class _TurnChangesCardState extends State<TurnChangesCard> {
     if (!kMobile) {
       return _desktop(context, files: files, total: total, hidden: hidden);
     }
-    // Phone spec CH-15: three rows, then "N more files", then Review changes.
-    final shown = _open ? files : files.take(3).toList();
-    final more = total - shown.length;
+    // v19 TC-09: the collapsed entry is the row itself. Opening it reveals
+    // per-file rows; there is no full-width review CTA on phone.
+    final status = _status;
+    final reverting = status == 'reverting';
+    final reverted = status == 'reverted';
+    final title = reverting
+        ? 'Reverting $total ${total == 1 ? 'file' : 'files'}'
+        : reverted
+            ? 'Reverted $total ${total == 1 ? 'file' : 'files'}'
+            : '$total ${total == 1 ? 'file' : 'files'} changed';
+    final names = files.take(3).map((f) => f.path.split('/').last).join(', ');
+    final fileLine = [
+      names,
+      if (total > 3) '+${total - 3}'
+    ].where((x) => x.isNotEmpty).join(' ');
+
+    Widget action(String label, double width, VoidCallback? onTap) {
+      return TapDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          width: width,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.surface2,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: AppColors.line),
+          ),
+          child: Text(label,
+              style: sans(12.5, weight: W.label, color: AppColors.fg1)),
+        ),
+      );
+    }
+
     return Padding(
       padding: EdgeInsets.symmetric(vertical: S.s4),
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child:
-            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 48),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              child: Row(children: [
-                AppIcon('file-diff', size: 20, color: AppColors.fg2),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text('$total ${total == 1 ? 'file' : 'files'} changed',
-                      style: sans(15, weight: W.label, color: AppColors.fg1)),
-                ),
-                _Delta(_n(e['add']), _n(e['del']), size: 13),
-              ]),
-            ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.circular(6),
           ),
-          for (final f in shown)
-            InkWell(
-              onTap: widget.onOpenFile == null
-                  ? null
-                  : () => widget.onOpenFile!(f.path),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 44),
+          clipBehavior: Clip.antiAlias,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            TapDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => setState(() => _open = !_open),
+              child: SizedBox(
+                height: 48,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  padding: const EdgeInsets.fromLTRB(7, 0, 8, 0),
                   child: Row(children: [
-                    FileGlyph(f.path.split('/').last, size: 20),
+                    SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: Center(
+                        child: reverting
+                            ? Spinner(size: 13, color: AppColors.fg2)
+                            : AppIcon(reverted ? 'check' : 'file-diff',
+                                size: 14,
+                                color: reverted ? AppColors.fg3 : AppColors.fg2),
+                      ),
+                    ),
+                    const SizedBox(width: 7),
+                    Expanded(
+                      child: Text(title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(14, color: AppColors.fg2)),
+                    ),
                     const SizedBox(width: 10),
-                    Expanded(child: _Path(f.path)),
-                    const SizedBox(width: 10),
-                    _Delta(f.add, f.del, size: 13, color: AppColors.fg3),
+                    _Delta(_n(e['add']), _n(e['del']), size: 12.5),
+                    const SizedBox(width: 8),
+                    AnimatedRotation(
+                      turns: _open ? 0.25 : 0,
+                      duration: Motion.fast,
+                      child: AppIcon('chevron-right',
+                          size: 12, color: AppColors.fg3),
+                    ),
                   ]),
                 ),
               ),
             ),
-          if (more > 0)
-            InkWell(
-              // Shows the rest inline when the event carries them, else opens all.
-              onTap: hidden > 0 && !_open
-                  ? (widget.onReview ?? () => setState(() => _open = true))
-                  : () => setState(() => _open = true),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 48),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text('$more more ${more == 1 ? 'file' : 'files'}',
-                        style: sans(13, color: AppColors.fg3)),
-                  ),
-                ),
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 4, 14, 14),
-            child: Semantics(
-              button: true,
-              label: 'Review changes',
-              excludeSemantics: true,
-              child: Material(
-                color: AppColors.fg1,
-                borderRadius: BorderRadius.circular(10),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(10),
-                  onTap: widget.onReview,
+            if (_open) ...[
+              Container(height: 1, color: AppColors.line),
+              for (final f in files)
+                TapDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: widget.onOpenFile == null
+                      ? null
+                      : () => widget.onOpenFile!(f.path),
                   child: SizedBox(
                     height: 48,
-                    child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          AppIcon('file-diff', size: 18, color: AppColors.bg),
-                          const SizedBox(width: 8),
-                          Text('Review changes',
-                              style: sans(14,
-                                  weight: W.label, color: AppColors.bg)),
-                        ]),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: Row(children: [
+                        FileGlyph(f.path.split('/').last, size: 15),
+                        const SizedBox(width: 9),
+                        Expanded(child: _Path(f.path)),
+                        const SizedBox(width: 10),
+                        _Delta(f.add, f.del, size: 12.5, color: AppColors.fg3),
+                      ]),
+                    ),
                   ),
                 ),
+              if (hidden > 0)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(32, 0, 10, 0),
+                  child: SizedBox(
+                    height: 32,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('$hidden more ${hidden == 1 ? 'file' : 'files'}',
+                          style: sans(12, color: AppColors.fg3)),
+                    ),
+                  ),
+                ),
+              Container(
+                height: 48,
+                padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+                decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: AppColors.line))),
+                child: Row(children: [
+                  if (reverting)
+                    Text('Reverting', style: sans(12, color: AppColors.fg2))
+                  else if (reverted)
+                    Text('Reverted', style: sans(12, color: AppColors.fg3)),
+                  const Spacer(),
+                  if (reverted)
+                    action('Undo', 90, widget.onReview)
+                  else if (!reverting)
+                    action('Revert all', 120, widget.onReview),
+                ]),
               ),
-            ),
+            ],
+          ]),
+        ),
+        if (!_open && fileLine.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: 32, top: 2),
+            child: Text(fileLine,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(12, color: AppColors.fg3)),
           ),
-        ]),
-      ),
+      ]),
     );
   }
 }

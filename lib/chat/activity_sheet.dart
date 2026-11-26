@@ -302,7 +302,17 @@ class _ListPage extends StatelessWidget {
                 bottom: 24 + MediaQuery.of(context).padding.bottom),
             children: [
               if (kMobile) PhoneLedgerCard(steps: steps),
-              ...rows,
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                decoration: BoxDecoration(
+                  color: AppColors.surface1,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: rows),
+              ),
             ],
           ),
         ),

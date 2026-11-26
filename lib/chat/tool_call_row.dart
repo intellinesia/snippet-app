@@ -12,9 +12,9 @@ import '../tap_detector.dart';
 /// without duplicating the section-0/TC geometry.
 ///
 /// Geometry is locked on desktop: s1 fill, radius 7, a 28–32pt row, state
-/// icon centred at x+14, label at x+32 and mono meta at the right. Phone
-/// callers should keep their existing rows; this widget deliberately stays
-/// desktop-first and only falls back to a slightly taller transparent row.
+/// icon centred at x+14, label at x+32 and mono meta at the right. Phone uses
+/// the v19 row: s1 fill, radius 6, 48pt high, the same icon/text seam and
+/// mono 12.5 target/meta.
 class ToolCallRow extends StatelessWidget {
   const ToolCallRow({
     super.key,
@@ -79,8 +79,9 @@ class ToolCallRow extends StatelessWidget {
         TextSpan(
           text: ' $object',
           style: _monoSubject(step)
-              ? mono(12, color: running ? AppColors.fg1 : AppColors.fg2)
-              : TextStyle(color: running ? AppColors.fg1 : AppColors.fg2),
+              ? mono(kMobile ? 12.5 : 12,
+                  color: kMobile || running || bad ? AppColors.fg1 : AppColors.fg2)
+              : TextStyle(color: running || bad ? AppColors.fg1 : AppColors.fg2),
         ),
     ]);
   }
@@ -115,25 +116,26 @@ class ToolCallRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final desktop = !kMobile;
-    final radius = BorderRadius.circular(desktop ? 7 : 8);
+    final radius = BorderRadius.circular(desktop ? 7 : 6);
     final meta = metaParts(step);
     final child = Container(
-      constraints: BoxConstraints(minHeight: desktop ? 28 : 36),
+      constraints: BoxConstraints(minHeight: desktop ? 28 : 48),
       padding: padding ??
-          EdgeInsets.fromLTRB(desktop ? 10 : 12, 0, desktop ? 8 : 12, 0),
+          EdgeInsets.fromLTRB(desktop ? 10 : 7, 0, desktop ? 8 : 8, 0),
       child: Row(children: [
         SizedBox(
           width: desktop ? 14 : 18,
           height: desktop ? 14 : 18,
           child: Center(child: stateIcon(step)),
         ),
-        SizedBox(width: desktop ? 8 : 10),
+        SizedBox(width: desktop ? 8 : 7),
         Expanded(
           child: Text.rich(
             titleSpan(step),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: sans(desktop ? 12 : 13, height: desktop ? 17 / 12 : 1.35),
+            style: sans(desktop ? 12 : 14,
+                height: desktop ? 17 / 12 : 18.9 / 14),
           ),
         ),
         if (meta.isNotEmpty) ...[
@@ -144,12 +146,12 @@ class ToolCallRow extends StatelessWidget {
               meta.join(' · '),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: mono(desktop ? 11 : 11.5, color: AppColors.fg3),
+              style: mono(desktop ? 11 : 12.5, color: AppColors.fg3),
             ),
           ),
         ],
         if (showChevron) ...[
-          const SizedBox(width: 6),
+          SizedBox(width: desktop ? 6 : 8),
           AnimatedRotation(
             turns: open ? 0.25 : 0,
             duration: Motion.fast,
@@ -167,7 +169,7 @@ class ToolCallRow extends StatelessWidget {
         onTap: onTap,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: filled && desktop ? AppColors.surface1 : Colors.transparent,
+            color: filled ? AppColors.surface1 : Colors.transparent,
             borderRadius: radius,
           ),
           child: child,
