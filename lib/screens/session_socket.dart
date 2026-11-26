@@ -18,7 +18,16 @@ extension _SessionScreenSocketExt on _SessionScreenState {
     _freshConn = true;
     _serverSupportsHeartbeat = false;
     _decodeQueue = null;
-    final ch = widget.client.attach(widget.sessionId);
+    _packed.reset();
+    _inflater.reset();
+    _lastAttachRevision = 0;
+    final resume = _noResume ? null : _resumePoint();
+    final ch = widget.client.attach(
+      widget.sessionId,
+      packed: true,
+      resumeFrom: resume?.$1,
+      resumeAt: resume?.$2,
+    );
     _channel = ch;
     _armLivenessWatchdog(ch, initial: true);
     _sub = ch.stream.listen(
@@ -42,6 +51,14 @@ extension _SessionScreenSocketExt on _SessionScreenState {
           _outbox.clear();
         }
         try {
+          if (msg is List<int> && isPackedFrame(msg)) {
+            final frame = _packed.add(msg);
+            if (frame != null) {
+              _queuePackedFrame(
+                  ch, frame.stream ? _inflater.inflate(frame.bytes) : frame);
+            }
+            return;
+          }
           // web_socket_channel can deliver either a String or binary bytes for
           // the same text frame depending on platform/proxy. Casting only to
           // String throws, the catch resyncs forever, and the canvas stays empty.
@@ -239,7 +256,7 @@ extension _SessionScreenSocketExt on _SessionScreenState {
       // First full snapshot after a (re)connect is authoritative: anything
       // still in _pending was never received by the server — resend it with
       // the same nonce so the server deduplicates if it DID land.
-      if (_freshConn && wire != 'delta') {
+      if (_freshConn && (wire != 'delta' || j['resumed'] == true)) {
         _freshConn = false;
         for (var i = 0; i < _pending.length; i++) {
           final m = _pending[i];
@@ -316,12 +333,14 @@ extension _SessionScreenSocketExt on _SessionScreenState {
       if (wire == 'snapshot') {
         final offset = (j['event_offset'] as num?)?.toInt();
         _transcriptStart = offset ?? 0;
+        _noResume = false;
       }
       final cache = _SessionScreenState._sessionStateCache;
       if (cache.length >= 16 && !cache.containsKey(_cacheKey)) {
         cache.remove(cache.keys.first);
       }
       cache[_cacheKey] = (next, _transcriptStart);
+      SessionDiskCache.save(_cacheKey, next, _transcriptStart);
       // A tab opened hidden with nothing cached connects for its first
       // snapshot; without this it stays attached until shown and hidden again.
       if (wire == 'snapshot' && !_live && !_parked) {
@@ -426,7 +445,7 @@ extension _SessionScreenSocketExt on _SessionScreenState {
   void _armLivenessWatchdog(WebSocketChannel ch, {bool initial = false}) {
     _connectionWatchdog?.cancel();
     final wait = initial
-        ? Duration(seconds: _state == null ? 4 : 8)
+        ? const Duration(seconds: 10)
         : const Duration(seconds: 8);
     _connectionWatchdog = Timer(wait, () {
       if (_closed || _parked || !identical(ch, _channel)) return;
@@ -449,10 +468,40 @@ extension _SessionScreenSocketExt on _SessionScreenState {
     });
   }
 
+  (int, int)? _resumePoint() {
+    final events = _state?.events;
+    if (events == null || events.isEmpty) return null;
+    final at = events.last['at_ms'];
+    if (at is! int) return null;
+    return (_transcriptStart + events.length, at);
+  }
+
+  void _queuePackedFrame(WebSocketChannel ch, Object frame) {
+    late final Future<void> queued;
+    queued = (_decodeQueue ?? Future<void>.value()).then((_) async {
+      final decoded = switch (frame) {
+        final Uint8List b when b.length < _kInlineDecodeLimit =>
+          decodeJsonBytes(b),
+        final Uint8List b => await compute(decodeJsonBytes, b),
+        final PackedFrame f when f.length < _kInlinePackedLimit =>
+          decodePackedFrame(f),
+        final PackedFrame f => await compute(decodePackedFrame, f),
+        _ => null,
+      };
+      if (identical(ch, _channel)) _applyFrame(ch, decoded);
+    }).catchError((Object _) {
+      if (identical(ch, _channel)) _resync(ch);
+    }).whenComplete(() {
+      if (identical(_decodeQueue, queued)) _decodeQueue = null;
+    });
+    _decodeQueue = queued;
+  }
+
   // Tear down this socket and rejoin — the fresh connection opens with a full
   // snapshot, which reconciles any local drift.
   void _resync(WebSocketChannel ch) {
     if (!identical(ch, _channel)) return;
+    _noResume = true;
     ch.sink.close();
     _scheduleReconnect(ch);
   }
@@ -548,5 +597,6 @@ extension _SessionScreenSocketExt on _SessionScreenState {
 }
 
 const int _kInlineDecodeLimit = 256 * 1024;
+const int _kInlinePackedLimit = 48 * 1024;
 
 Object? _decodeFrame(String raw) => jsonDecode(raw);

@@ -235,7 +235,8 @@ class DaemonClient {
     return RepoWorktrees.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
 
-  WebSocketChannel attach(String sessionId) {
+  WebSocketChannel attach(String sessionId,
+      {bool packed = false, int? resumeFrom, int? resumeAt}) {
     final base = Uri.parse(baseUrl);
     final wsScheme = base.scheme == 'https' ? 'wss' : 'ws';
     final uri = base.replace(
@@ -244,7 +245,13 @@ class DaemonClient {
       queryParameters: {
         'session': sessionId,
         'token': token,
-        'stream_delta': '1'
+        'compact': '1',
+        'stream_delta': '1',
+        if (packed) 'enc': 'zstream',
+        if (resumeFrom != null && resumeAt != null) ...{
+          'from': '$resumeFrom',
+          'at': '$resumeAt',
+        },
       },
     );
     return _connectWs(

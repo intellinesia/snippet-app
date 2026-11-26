@@ -67,6 +67,8 @@ import 'session_actions_page.dart';
 import '../share_inbound.dart';
 import '../session_seen.dart';
 import '../widgets.dart';
+import '../wire_frames.dart';
+import '../session_disk_cache.dart';
 import '../plain_text.dart';
 import '../turn_changes_card.dart';
 import 'artifact_viewer.dart';
@@ -780,6 +782,9 @@ class _SessionScreenState extends State<SessionScreen>
   Timer? _connectionWatchdog;
   int _reconnectAttempt = 0;
   int _lastAttachRevision = 0;
+  bool _noResume = false;
+  final PackedFrameAssembler _packed = PackedFrameAssembler();
+  final StreamInflater _inflater = StreamInflater();
   bool _closed = false;
   // A message can silently die on a socket that looks alive (dropped network, no
   // onError/onDone) — it sits in _pending, shown as "sending", forever. Guard:
@@ -1184,6 +1189,20 @@ class _SessionScreenState extends State<SessionScreen>
   }
 
   Future<void> _startSession() async {
+    if (_state == null) {
+      final key = _cacheKey;
+      final disk = await SessionDiskCache.load(key)
+          .timeout(const Duration(milliseconds: 400), onTimeout: () => null);
+      if (!mounted || key != _cacheKey) return;
+      if (disk != null && _state == null) {
+        _sessionStateCache[key] = disk;
+        _setState(() {
+          _state = disk.$1;
+          _transcriptStart = disk.$2;
+          _transcriptDirty = true;
+        });
+      }
+    }
     _connect();
     if (_isLead) {
       unawaited(widget.client
