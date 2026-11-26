@@ -162,6 +162,7 @@ MarkdownStyleSheet chatMarkdownStyle(BuildContext context,
     tableHeadCellsDecoration:
         BoxDecoration(color: kMobile ? AppColors.surface2 : null),
     tableCellsDecoration: const BoxDecoration(),
+    tableColumnWidth: kMobile ? const FlexColumnWidth() : base.tableColumnWidth,
     codeblockDecoration: BoxDecoration(
         color: AppColors.surface1, borderRadius: BorderRadius.circular(10)),
     h1: prose.copyWith(
