@@ -389,9 +389,10 @@ void main() {
         ),
       ));
 
-      // Phones show Use draft (copies when no chat is open), desktop Copy.
-      final action = find.text(kMobile ? 'Use draft' : 'Copy');
+      // v19 phone draft blocks use Copy + Post to group; desktop keeps Use draft.
+      final action = find.text(kMobile ? 'Copy' : 'Use draft');
       expect(action, findsOneWidget);
+      if (kMobile) expect(find.text('Post to group'), findsOneWidget);
       expect(find.textContaining('First line of the draft.'), findsOneWidget);
 
       await tester.tap(action);
