@@ -464,7 +464,7 @@ class _SystemNoticeLineState extends State<SystemNoticeLine> {
         ];
 
   Widget _detail() {
-    final text = sans(12, height: 17 / 12, color: AppColors.fg2);
+    final text = sans(kMobile ? 14 : 12, height: kMobile ? 19 / 14 : 17 / 12, color: AppColors.fg2);
     return Padding(
       padding: const EdgeInsets.only(left: 22, bottom: 6),
       child: Container(
@@ -521,7 +521,7 @@ class _SystemNoticeLineState extends State<SystemNoticeLine> {
           ],
           Expanded(
             child: Text(notice.summary,
-                style: sans(12, height: 17 / 12, color: AppColors.fg2)),
+                style: sans(kMobile ? 14 : 12, height: kMobile ? 19 / 14 : 17 / 12, color: AppColors.fg2)),
           ),
           if (notice.progress != null) ...[
             const SizedBox(width: 8),

@@ -1813,7 +1813,28 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                 liveRegion: true,
                 label: who.isEmpty ? 'Working' : '$who is working',
                 excludeSemantics: true,
-                child: SizedBox(
+                child: kMobile
+                    ? Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 5),
+                          decoration: BoxDecoration(
+                              color: AppColors.surface2,
+                              borderRadius: BorderRadius.circular(20)),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            AgentMochi(id ?? '', size: 22),
+                            const SizedBox(width: 8),
+                            Text(who.isEmpty ? 'Someone is typing' : '$who is typing',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: sans(14, color: AppColors.fg2)),
+                            const SizedBox(width: 8),
+                            const WorkingBars(),
+                          ]),
+                        ),
+                      )
+                    : SizedBox(
                   height: 48,
                   child: Row(children: [
                     SizedBox.square(

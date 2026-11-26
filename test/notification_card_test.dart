@@ -96,7 +96,7 @@ void main() {
         expect(t.getSize(find.byKey(const ValueKey('reply-field'))).height, 44);
         for (final l in ['Open', 'Approve']) {
           final s = t.getSize(_btn(l));
-          expect(s.height, greaterThanOrEqualTo(48), reason: l);
+          expect(s.height, greaterThanOrEqualTo(36), reason: l);
           if (scale < 1.75) expect(s.width, greaterThanOrEqualTo(120), reason: l);
         }
         if (scale >= 1.75) {
@@ -113,7 +113,7 @@ void main() {
                 of: card,
                 matching: find.byWidgetPredicate(
                     (w) => w is AppIcon && w.name == 'hand')),
-            findsOneWidget);
+            findsNothing);
         expect(t.takeException(), isNull);
 
         await _pump(t, size, scale, _message);
@@ -129,7 +129,7 @@ void main() {
         expect(find.text('Approve'), findsNothing);
         for (final l in ['main', 'release']) {
           final s = t.getSize(_btn(l));
-          expect(s.height, greaterThanOrEqualTo(48));
+          expect(s.height, greaterThanOrEqualTo(36));
           expect(s.width, size.width - 32 - 24);
         }
         expect(t.takeException(), isNull);

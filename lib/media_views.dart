@@ -279,12 +279,23 @@ class _ImageThumbContentState extends State<_ImageThumbContent> {
         color: AppColors.surface2,
         child: Center(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            AppIcon('image', size: 18, color: AppColors.fg4),
+            Row(mainAxisSize: MainAxisSize.min, children: [
+              AppIcon('image', size: 16, color: AppColors.fg3),
+              const SizedBox(width: 4),
+              AppIcon('x', size: 14, color: AppColors.fg2),
+            ]),
             if (widget.height >= 72) ...[
-              SizedBox(height: S.s4),
-              Text('Couldn’t load image',
+              const SizedBox(height: 6),
+              Text('Could not load',
                   textAlign: TextAlign.center,
-                  style: sans(11, color: AppColors.fg4)),
+                  style: sans(13, color: AppColors.fg2)),
+            ],
+            if (widget.height >= 116) ...[
+              const SizedBox(height: 6),
+              DesktopRichButton('Retry',
+                  variant: DesktopRichButtonVariant.secondary,
+                  parentSurface: 2,
+                  onTap: _retryLoad),
             ],
           ]),
         ),
@@ -337,8 +348,9 @@ class _ImageThumbContentState extends State<_ImageThumbContent> {
           sync || frame != null ? child : _loading(),
       errorBuilder: (_, __, ___) => _error(),
     );
-    final showAffordance =
-        !kMobile && _hover && widget.width >= 112 && widget.height >= 48;
+    final showAffordance = kMobile
+        ? widget.width >= 120 && widget.height >= 72
+        : _hover && widget.width >= 112 && widget.height >= 48;
     return Semantics(
       image: true,
       label: baseName(widget.path),
@@ -366,17 +378,18 @@ class _ImageThumbContentState extends State<_ImageThumbContent> {
                     opacity: showAffordance ? 1 : 0,
                     duration: Motion.quick,
                     child: Container(
-                      height: 28,
+                      width: kMobile ? 111 : null,
+                      height: kMobile ? 36 : 28,
                       padding: const EdgeInsets.symmetric(horizontal: 9),
                       decoration: BoxDecoration(
                         color: AppColors.surface1,
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(kMobile ? 22 : 14),
                       ),
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        AppIcon('eye', size: 13, color: AppColors.fg1),
+                        AppIcon('eye', size: kMobile ? 14 : 13, color: AppColors.fg1),
                         const SizedBox(width: 5),
-                        Text('Click to view',
-                            style: sans(12,
+                        Text(kMobile ? 'Tap to view' : 'Click to view',
+                            style: sans(kMobile ? 13 : 12,
                                 weight: FontWeight.w500,
                                 height: 1,
                                 color: AppColors.fg1)),
@@ -411,31 +424,77 @@ class ImageGallery extends StatelessWidget {
       return SingleImage(client: client, path: paths.first);
     }
     if (kMobile) {
-      // Phone spec CH-16: a label, then tiles 90 high, three to a row, gap 8.
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Text('${paths.length} images',
-                style: sans(11, weight: W.label, color: AppColors.fg3)),
-          ),
-          LayoutBuilder(builder: (_, c) {
-            final w = c.maxWidth.isFinite ? c.maxWidth : 361.0;
-            final tile = ((w - 16) / 3).floorToDouble();
-            return Wrap(spacing: 8, runSpacing: 8, children: [
-              for (final path in paths)
-                ImageThumb(
-                    client: client,
-                    path: path,
-                    width: tile,
-                    height: 90,
-                    gallery: paths),
-            ]);
-          }),
-        ],
-      );
+      return LayoutBuilder(builder: (_, c) {
+        final w = (c.maxWidth.isFinite ? c.maxWidth : maxWidth)
+            .clamp(0.0, 361.0)
+            .toDouble();
+        Widget thumb(String path, double tw, double th, {int overflow = 0}) {
+          final tile = ImageThumb(
+              client: client, path: path, width: tw, height: th, gallery: paths);
+          if (overflow <= 0) return tile;
+          return TapDetector(
+            onTap: () => openMedia(context, client, path, gallery: paths),
+            child: SizedBox(
+              width: tw,
+              height: th,
+              child: Stack(fit: StackFit.expand, children: [
+                tile,
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: ColoredBox(
+                    color: const Color(0xFF121211).withValues(alpha: 0.74),
+                    child: Center(
+                      child: Text('+$overflow',
+                          style: sans(17,
+                              weight: FontWeight.w500, color: AppColors.fg1)),
+                    ),
+                  ),
+                ),
+              ]),
+            ),
+          );
+        }
+
+        const gap = 5.0;
+        if (paths.length == 2) {
+          final tw = ((w - gap) / 2).clamp(0.0, 178.5).toDouble();
+          return Row(children: [
+            thumb(paths[0], tw, 150),
+            const SizedBox(width: gap),
+            thumb(paths[1], tw, 150),
+          ]);
+        }
+        if (paths.length == 3) {
+          final bigW = w * (214 / 361);
+          final sideW = w - bigW - 4;
+          return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            thumb(paths[0], bigW, 150),
+            const SizedBox(width: 4),
+            Column(children: [
+              thumb(paths[1], sideW, 73),
+              const SizedBox(height: 4),
+              thumb(paths[2], sideW, 73),
+            ]),
+          ]);
+        }
+        final tw = ((w - gap) / 2).clamp(0.0, 178.5).toDouble();
+        final shown = paths.take(4).toList();
+        Widget gridTile(int i) => thumb(shown[i], tw, 73,
+            overflow: i == 3 && paths.length > 4 ? paths.length - 4 : 0);
+        return Column(mainAxisSize: MainAxisSize.min, children: [
+          Row(children: [
+            gridTile(0),
+            const SizedBox(width: gap),
+            gridTile(1),
+          ]),
+          const SizedBox(height: 4),
+          Row(children: [
+            gridTile(2),
+            const SizedBox(width: gap),
+            gridTile(3),
+          ]),
+        ]);
+      });
     }
     final width = maxWidth.clamp(220.0, 420.0);
     Widget tile(String path) => LayoutBuilder(builder: (_, c) {
@@ -522,7 +581,7 @@ class _SingleImageState extends State<SingleImage> {
   double get _maxWidth =>
       widget.maxWidth ??
       (MediaQuery.sizeOf(context).width - 32)
-          .clamp(160.0, kMobile ? 240.0 : 420.0);
+          .clamp(160.0, kMobile ? 361.0 : 420.0);
 
   // The same decode the thumb shows, so the image is fetched once.
   int get _cacheWidth =>
@@ -563,8 +622,8 @@ class _SingleImageState extends State<SingleImage> {
     final size = _size;
     final maxHeight =
         kMobile ? _maxHeight : math.min(_maxHeight, maxWidth * 0.7);
-    var w = (kMobile ? 200.0 : 260.0).clamp(0.0, maxWidth);
-    var h = kMobile ? 150.0 : math.min(180.0, maxHeight);
+    var w = (kMobile ? 174.5 : 260.0).clamp(0.0, maxWidth);
+    var h = kMobile ? 174.0 : math.min(180.0, maxHeight);
     if (size != null && size.width > 0 && size.height > 0) {
       final scale = [maxWidth / size.width, maxHeight / size.height, 1.0]
           .reduce((a, b) => a < b ? a : b);
@@ -632,8 +691,6 @@ class FileChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final kind = mediaKindOf(path);
     final label = name ?? baseName(path);
-    final ext =
-        label.contains('.') ? label.split('.').last.toUpperCase() : 'FILE';
     final tap = onTap ??
         (client == null ? null : () => openMedia(context, client!, path));
     if (!kMobile) {
@@ -652,59 +709,40 @@ class FileChip extends StatelessWidget {
         trailing: trailing,
       );
     }
-    final radius = kMobile ? 8.0 : 14.0;
+    var bytes = sizeBytes;
+    if (bytes == null) {
+      try {
+        final file = File(path);
+        if (file.existsSync()) bytes = file.lengthSync();
+      } catch (_) {}
+    }
+    final size = bytes == null ? '' : desktopFileSizeLabel(bytes);
     return Material(
       color: AppColors.surface2,
-      borderRadius: BorderRadius.circular(radius),
+      borderRadius: BorderRadius.circular(6),
       child: InkWell(
         onTap: tap,
-        borderRadius: BorderRadius.circular(radius),
+        borderRadius: BorderRadius.circular(6),
         child: Container(
-          constraints: BoxConstraints(
-              maxWidth: kMobile ? 280 : 260, minHeight: kMobile ? 48 : 0),
-          padding: kMobile
-              ? EdgeInsets.fromLTRB(S.of(10), S.s6, S.s12, S.s6)
-              : EdgeInsets.fromLTRB(S.s8, S.of(7), S.of(10), S.of(7)),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(radius),
-          ),
+          height: 36,
+          constraints: const BoxConstraints(maxWidth: 320),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-              width: kMobile ? 32 : 30,
-              height: kMobile ? 32 : 30,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: kind == MediaKind.pdf && !kMobile
-                    ? AppColors.dangerBg
-                    : AppColors.surface3,
-                borderRadius: BorderRadius.circular(kMobile ? 10 : R.sm),
-              ),
-              child: AppIcon(_iconFor(kind),
-                  size: 15,
-                  color: kind == MediaKind.pdf && !kMobile
-                      ? AppColors.danger
-                      : AppColors.fg2),
-            ),
-            SizedBox(width: S.of(9)),
+            AppIcon(_iconFor(kind), size: 14, color: AppColors.fg2),
+            const SizedBox(width: 8),
             Flexible(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(kMobile ? 14 : 13,
-                          weight: W.label, color: AppColors.fg1)),
-                  if (kMobile) SizedBox(height: S.s2),
-                  Text(ext.length > 6 ? 'FILE' : ext,
-                      style: kMobile
-                          ? sans(12, color: AppColors.fg3)
-                          : sans(10, color: AppColors.fg3)),
-                ],
-              ),
+              child: Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(13.5, height: 1, color: AppColors.fg1)),
             ),
-            if (trailing != null) ...[SizedBox(width: S.s8), trailing!],
+            if (size.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              Text(size,
+                  maxLines: 1,
+                  style: sans(12, height: 1, color: AppColors.fg2)),
+            ],
+            if (trailing != null) ...[const SizedBox(width: 4), trailing!],
           ]),
         ),
       ),
@@ -853,91 +891,94 @@ class _VoiceNoteState extends State<VoiceNote> {
     final active = _playing || _position > Duration.zero;
     final time = _error ??
         (_duration == Duration.zero
-            ? (active ? _clock(_position) : 'Voice note')
-            : _clock(active ? _position : _duration));
-    final ink = widget.ink ?? AppColors.fg1;
-    final muted = widget.ink?.withValues(alpha: 0.6) ?? AppColors.fg3;
-    final glyph = widget.ink == null
-        ? AppColors.bg
-        : (ink.computeLuminance() > 0.5 ? Colors.black : Colors.white);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(mainAxisSize: MainAxisSize.min, children: [
-          Semantics(
-            button: true,
-            label: _playing ? 'Pause voice note' : 'Play voice note',
-            child: Padding(
-              padding: EdgeInsets.all(kMobile ? 4 : 0),
-              child: Material(
-                color: _error == null ? ink : ink.withValues(alpha: 0.3),
-                shape: const CircleBorder(),
-                child: InkWell(
-                  onTap: _error == null ? _toggle : null,
-                  customBorder: const CircleBorder(),
-                  // A 40 circle inside a 48 target.
-                  child: SizedBox(
-                    width: kMobile ? 40 : 36,
-                    height: kMobile ? 40 : 36,
-                    child: Center(
-                      child: _loading
-                          ? Spinner(size: 14, color: glyph)
-                          : Padding(
-                              padding:
-                                  EdgeInsets.only(left: _playing ? 0 : S.s2),
-                              child: AppIcon(_playing ? 'pause' : 'play',
-                                  size: 15, color: glyph),
-                            ),
-                    ),
-                  ),
+            ? (active ? _clock(_position) : '--:--')
+            : active && _position > Duration.zero
+                ? '${_clock(_position)} / ${_clock(_duration)}'
+                : _clock(_duration));
+    return Container(
+      width: double.infinity,
+      height: 56,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(children: [
+        const SizedBox(width: 8),
+        Semantics(
+          button: true,
+          label: _playing ? 'Pause voice note' : 'Play voice note',
+          child: Material(
+            color: AppColors.surface3,
+            borderRadius: BorderRadius.circular(22),
+            child: InkWell(
+              onTap: _error == null ? _toggle : null,
+              borderRadius: BorderRadius.circular(22),
+              child: SizedBox(
+                width: 44,
+                height: 36,
+                child: Center(
+                  child: _loading
+                      ? Spinner(size: 14, color: AppColors.fg1)
+                      : Padding(
+                          padding: EdgeInsets.only(left: _playing ? 0 : 1.5),
+                          child: AppIcon(_playing ? 'pause' : 'play',
+                              size: 14, color: AppColors.fg1),
+                        ),
                 ),
               ),
             ),
           ),
-          SizedBox(width: S.of(10)),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              GestureDetector(
+        ),
+        const SizedBox(width: 8),
+        if (_error != null) ...[
+          Expanded(
+            child: Text('Could not play voice note',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(13, color: AppColors.fg2)),
+          ),
+          SizedBox(
+            width: 55,
+            child: DesktopRichButton('Retry',
+                variant: DesktopRichButtonVariant.secondary,
+                parentSurface: 1,
+                onTap: _toggle),
+          ),
+          const SizedBox(width: 8),
+        ] else ...[
+          Expanded(
+            child: LayoutBuilder(builder: (_, box) {
+              return GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onTapDown: (d) => _seekTo(d.localPosition.dx / _waveWidth),
-                onHorizontalDragUpdate: (d) =>
-                    _seekTo(d.localPosition.dx / _waveWidth),
+                onTapDown: (d) => _seekTo(
+                    (d.localPosition.dx / box.maxWidth).clamp(0.0, 1.0)),
+                onHorizontalDragUpdate: (d) => _seekTo(
+                    (d.localPosition.dx / box.maxWidth).clamp(0.0, 1.0)),
                 child: SizedBox(
-                  width: _waveWidth,
-                  height: 26,
+                  height: 42,
                   child: CustomPaint(
                     painter: _NoteWave(
                       seed: (widget.url ?? widget.path).hashCode,
                       progress: progress,
-                      played: ink,
-                      rest: widget.ink?.withValues(alpha: 0.4) ??
-                          AppColors.fg4.withValues(alpha: 0.5),
+                      played: AppColors.fg1,
+                      rest: AppColors.fg3,
                     ),
                   ),
                 ),
-              ),
-              SizedBox(height: S.of(3)),
-              Text(time,
-                  style: sans(12,
-                      tabular: true,
-                      color: _error == null ? muted : AppColors.danger)),
-            ],
+              );
+            }),
           ),
-          SizedBox(width: S.s4),
-        ]),
-        // Only when the audio can't play: the words are the fallback.
-        if (_error != null && widget.transcript != null) ...[
-          SizedBox(height: S.s6),
-          widget.transcript!,
+          const SizedBox(width: 8),
+          Text(time,
+              maxLines: 1,
+              style: sans(13, tabular: true, color: AppColors.fg2)),
+          const SizedBox(width: 12),
         ],
-      ],
+      ]),
     );
   }
 
-  static double get _waveWidth => kMobile ? 168 : 196;
 
   @override
   Widget build(BuildContext context) {
@@ -1150,7 +1191,7 @@ class _NoteWave extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    const bar = 3.0;
+    final bar = kMobile ? 2.0 : 3.0;
     const gap = 2.0;
     final count = ((size.width + gap) / (bar + gap)).floor();
     if (count <= 0) return;
@@ -1628,62 +1669,90 @@ class _PastedTextCardState extends State<PastedTextCard> {
 
   Widget _phone() {
     final lines = widget.text.split('\n');
-    final preview = lines.take(3).join('\n');
-    final chars = widget.text.length;
+    final lineCount = lines.length;
+    final collapsed = lines.take(3).join('\n');
+    final expandedLines = lines.take(9).toList();
+    final bodyText = _open ? expandedLines.join('\n') : collapsed;
     return Container(
       width: double.infinity,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-          color: AppColors.surface1, borderRadius: BorderRadius.circular(10)),
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
-            child: Row(children: [
-              AppIcon('file-text', size: 16, color: AppColors.fg2),
-              const SizedBox(width: 8),
-              Text('Pasted text',
-                  style: sans(12, weight: W.label, color: AppColors.fg2)),
-              const Spacer(),
-              Text('$chars chars', style: sans(11.5, color: AppColors.fg3)),
-            ]),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-            child: _open
-                ? ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 360),
-                    child: SingleChildScrollView(
-                      child: SelectableText(widget.text,
-                          style:
-                              codeMono(12, height: 1.45, color: AppColors.fg2)),
-                    ),
-                  )
-                : Text(preview,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: codeMono(12, height: 1.45, color: AppColors.fg2)),
-          ),
-          Container(height: 1, color: AppColors.border),
           InkWell(
             onTap: () => setState(() => _open = !_open),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 48),
+            child: SizedBox(
+              height: 44,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Row(children: [
+                  AppIcon('file-text', size: 14, color: AppColors.fg2),
+                  const SizedBox(width: 8),
+                  Text('Pasted text',
+                      style: sans(15,
+                          weight: FontWeight.w500, color: AppColors.fg1)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text('$lineCount lines',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(13, color: AppColors.fg3)),
+                  ),
+                  AppIcon(_open ? 'chevron-up' : 'chevron-down',
+                      size: 14, color: AppColors.fg2),
+                ]),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Container(
+              height: _open ? 178 : 70,
+              padding: const EdgeInsets.all(8),
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: AppColors.surface2,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: SingleChildScrollView(
+                physics: _open
+                    ? const ClampingScrollPhysics()
+                    : const NeverScrollableScrollPhysics(),
+                child: SelectableText(
+                  bodyText,
+                  style: codeMono(12, height: 18 / 12, color: AppColors.fg2),
+                ),
+              ),
+            ),
+          ),
+          if (_open)
+            SizedBox(
+              height: 44,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 child: Row(children: [
                   Expanded(
                     child: Text(
-                        _open ? 'Show less' : 'Show all $chars characters',
-                        style: sans(13, weight: W.label, color: AppColors.fg1)),
+                      'Showing ${expandedLines.length} of $lineCount lines',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12, color: AppColors.fg3),
+                    ),
                   ),
-                  AppIcon(_open ? 'chevron-up' : 'chevron-down',
-                      size: 16, color: AppColors.fg3),
+                  DesktopRichButton('Collapse',
+                      variant: DesktopRichButtonVariant.secondary,
+                      parentSurface: 1,
+                      onTap: () => setState(() => _open = false)),
                 ]),
               ),
-            ),
-          ),
+            )
+          else
+            const SizedBox(height: 10),
         ],
       ),
     );

@@ -3,7 +3,9 @@ import 'chat_style.dart';
 import '../phosphor_icons.dart';
 
 import '../mochi.dart';
+import '../platform.dart';
 import '../theme.dart';
+import '../tap_detector.dart';
 import '../widgets.dart';
 
 /// Desktop posts (MSG-02/03): avatar column plus gap, so text, cards and
@@ -412,11 +414,29 @@ class SentMeta extends StatelessWidget {
         SendState.sent => Text(time, style: meta),
         SendState.read => Text(read ?? 'Read $time', style: meta),
         SendState.failed => Text('Not delivered',
-            style: sans(11, weight: FontWeight.w500, color: AppColors.fg2)),
+            style: sans(kMobile ? 14 : 11,
+                weight: kMobile ? FontWeight.w400 : FontWeight.w500,
+                color: AppColors.fg2)),
       },
       if (s == SendState.failed && onRetry != null) ...[
         const SizedBox(width: 8),
-        ChatButton(label: 'Retry', onTap: onRetry),
+        kMobile
+            ? TapDetector(
+                onTap: onRetry,
+                child: Container(
+                  width: 73,
+                  height: 32,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface3,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text('Retry',
+                      style: sans(13,
+                          weight: FontWeight.w500, color: AppColors.fg1)),
+                ),
+              )
+            : ChatButton(label: 'Retry', onTap: onRetry),
       ],
       if (selected) ...[
         const SizedBox(width: 8),

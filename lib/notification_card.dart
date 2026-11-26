@@ -154,26 +154,30 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
     final mq = MediaQuery.of(context);
     final tight = mq.size.height <= 640 || mq.viewInsets.bottom > 0;
     final maxLines = tight ? 2 : 4;
-    final controlH = compact ? 28.0 : 48.0;
-    final labelSize = compact ? 12.0 : 14.0;
-    final amber = AppColors.run;
-
+    final controlH = compact ? 28.0 : 36.0;
+    final labelSize = compact ? 12.0 : 12.5;
     final needsMark = compact
         ? const NeedsYouMark(fontSize: 12)
         : Row(mainAxisSize: MainAxisSize.min, children: [
-            AppIcon('hand', size: 14, color: amber),
-            const SizedBox(width: 4),
-            Text('Needs you', style: sans(12, weight: W.label, color: amber)),
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                  color: AppColors.run, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 6),
+            Text('Needs you',
+                style: sans(13, weight: FontWeight.w500, color: AppColors.fg2)),
           ]);
 
     final header = Row(children: [
       Container(
-        width: 36,
-        height: 36,
+        width: compact ? 36 : 20,
+        height: compact ? 36 : 20,
         decoration: BoxDecoration(
-            color: AppColors.surface2, borderRadius: BorderRadius.circular(18)),
+            color: AppColors.surface2, borderRadius: BorderRadius.circular(compact ? 18 : 10)),
         clipBehavior: Clip.antiAlias,
-        child: AgentMochi('${p['agent_id'] ?? 'snippet'}', size: 36),
+        child: AgentMochi('${p['agent_id'] ?? 'snippet'}', size: compact ? 36 : 20),
       ),
       const SizedBox(width: 10),
       Expanded(
@@ -184,20 +188,20 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
             Text(name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: sans(14, weight: W.label, color: AppColors.fg1)),
+                style: sans(compact ? 14 : 13, weight: W.label, color: AppColors.fg1)),
             if (needs) needsMark,
           ],
         ),
       ),
       const SizedBox(width: 8),
       Text(notificationAgo(p['created_at']),
-          style: sans(11, color: AppColors.fg2)),
+          style: sans(compact ? 11 : 12, color: AppColors.fg2)),
     ]);
 
     final more = Builder(builder: (context) {
       final style = compact
           ? sans(13, height: 19 / 13, color: AppColors.fg1)
-          : sans(13.5, height: 19 / 13.5, color: AppColors.fg1);
+          : sans(15, height: 21 / 15, color: AppColors.fg1);
       final painter = TextPainter(
         text: TextSpan(text: body, style: style),
         textDirection: TextDirection.ltr,
@@ -256,7 +260,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
         child: Material(
           color: fill,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(compact ? 6 : 8),
             side: primary || compact || disabled
                 ? BorderSide.none
                 : BorderSide(color: AppColors.border),
@@ -264,7 +268,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
           child: InkWell(
             onTap: onTap,
             customBorder:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(compact ? 6 : 8)),
             child: Container(
               constraints: BoxConstraints(
                   minHeight: controlH, minWidth: compact ? 0 : 48),
@@ -429,8 +433,8 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
       container: true,
       label: '$name, ${needs ? 'needs you' : 'message'}, $body',
       child: Material(
-        color: needs && !compact ? AppColors.attentionTint : AppColors.surface2,
-        borderRadius: BorderRadius.circular(14),
+        color: AppColors.surface2,
+        borderRadius: BorderRadius.circular(compact ? 14 : 8),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(
