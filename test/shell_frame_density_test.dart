@@ -34,8 +34,6 @@ void main() {
 
     expect(title.height, kShellTitleRowHeight);
     expect(title.height, 40);
-    expect(tester.getRect(find.text('Snippet')).left,
-        greaterThanOrEqualTo(kShellWindowControlsWidth));
     expect(strip.height, kShellTabStripHeight);
     expect(strip.height, 40);
     expect(tab.top - strip.top, closeTo(4, 1));

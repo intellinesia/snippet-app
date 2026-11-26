@@ -154,7 +154,14 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       );
     }
     // The header rides inside the session so the docked panel spans full height.
-    return LayoutBuilder(builder: (context, box) => SessionScreen(
+    final info = _sessions?.where((x) => x.id == t.sessionId).firstOrNull;
+    // Capy's line under the composer: machine, project and branch.
+    return DeskComposerMeta(
+      machine: _active?.label ?? '',
+      project: lastPathSegment(info?.folder ?? t.workspacePath),
+      branch: (info?.branch ?? '').trim(),
+      online: _sessionsError == null,
+      child: LayoutBuilder(builder: (context, box) => SessionScreen(
       chatHeader: kMobile ? null : _chatHeaderFor(t, box.maxWidth),
       onTogglePanel: null,
       onDeskInfo: t.isLead ? _showAgentInfo : null,
@@ -200,7 +207,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       onOpenDiffTab: !kMobile
           ? (f) => _openDiffTab(t.client, t.instanceUrl, t.sessionId!, f)
           : null,
-    ));
+    )));
   }
 
   /// Desktop chat tabs (Lead, session, agent, group) sit under the XO-03
@@ -632,7 +639,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         mainHeader: kMobile ? _macWindowBar() : _tabStripBand(),
         sidebarFooter: kMobile ? null : _sidebarFooter(),
         tabOwnsStrip: _ownsPaneRow,
-        statusBar: kMobile ? null : _statusBarBand(),
         leftStripAfter: _sessionStripAdd(),
         leftStripTrailing: _sessionStripTools(),
         sidebarHeader: _effectiveSection == ShellSection.sessions ||
@@ -747,34 +753,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   }
 
   /// Full-width status band; the frame owns its height, fill and hairline.
-  Widget _statusBarBand() {
-    final hostsOnline =
-        _instances.where((i) => _health[i.url] ?? i.url == _active?.url).length;
-    final daemonDown = _client != null && _sessionsError != null;
-    return Builder(builder: (barContext) {
-      return ShellStatusBarFrame(
-        child: ShellStatusBar(
-          usage: _usageItems,
-          needsYouCount: _mcAttentionCount,
-          connected: _sessionsError == null,
-          daemonDown: daemonDown,
-          hostsOnline: hostsOnline,
-          hostsTotal: _instances.length,
-          rightPanelEnabled: _activeTab?.isHome != true,
-          onOpenUsage: _client == null
-              ? null
-              : () => showUsagePopover(barContext, _client!),
-          onRefreshUsage: _client == null ? null : _refreshUsage,
-          onOpenNeedsYou: _openHomeTab,
-          onOpenTerminal: _client == null ? null : _newGlobalShell,
-          onOpenHosts: () => _openShellSettings(SettingsPage.general),
-          onToggleRightPanel: _togglePanel,
-          onRetry: _loadSessions,
-        ),
-      );
-    });
-  }
-
   _ShellTab? get _openRunningSessionTab {
     for (final s in _sessions ?? const <SessionInfo>[]) {
       if (!s.running) continue;
@@ -1402,36 +1380,109 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   }
 
   Widget _sidebarFooterRow(bool needsYou) {
-    final runningTab = _openRunningSessionTab;
-    // Sits at the right of the sidebar's icon footer, after the places.
+    // Capy has no status bar: needs-you, usage and hosts sit here as icons,
+    // the rarer tools behind the more menu.
+    final hostsOnline =
+        _instances.where((i) => _health[i.url] ?? i.url == _active?.url).length;
+    final down = _client != null && _sessionsError != null;
+    final need = _mcAttentionCount;
     return Padding(
-      padding: const EdgeInsets.only(right: 6),
+      padding: const EdgeInsets.only(left: 6, right: 6),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (need > 0)
+          Tooltip(
+            message: 'Open needs you',
+            child: InkWell(
+              key: const ValueKey('footer-needs-you'),
+              onTap: _openHomeTab,
+              borderRadius: BorderRadius.circular(R.of(6)),
+              child: Container(
+                height: 26,
+                padding: const EdgeInsets.symmetric(horizontal: 7),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                        color: AppColors.run, shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: 5),
+                  Text('$need',
+                      style: sans(11.5, color: AppColors.fg2, tabular: true)),
+                ]),
+              ),
+            ),
+          ),
+        if (_client != null)
+          Builder(
+            builder: (ctx) => _FooterBtn(
+                icon: 'gauge',
+                tooltip: 'Usage',
+                onTap: () => showUsagePopover(ctx, _client!)),
+          ),
+        _FooterBtn(
+            icon: 'server',
+            dot: down
+                ? AppColors.danger
+                : (_sessionsError == null ? AppColors.ok : AppColors.run),
+            tooltip: down
+                ? 'Agent offline, retry'
+                : '$hostsOnline of ${_instances.length} '
+                    '${_instances.length == 1 ? 'host' : 'hosts'} online',
+            onTap: down
+                ? _loadSessions
+                : () => _openShellSettings(SettingsPage.general)),
         _FooterBtn(
             icon: 'settings',
             tooltip: kMacOS ? 'Settings  Cmd ,' : 'Settings  Ctrl ,',
             onTap: _openShellSettings),
-        const SizedBox(width: 2),
-        _FooterBtn(
-            icon: 'help-circle',
-            tooltip: 'Keyboard shortcuts',
-            onTap: _showDesktopShortcuts),
-        const SizedBox(width: 2),
-        _FooterBtn(
-            icon: 'goal',
-            tooltip: runningTab == null
-                ? 'No open running session tab'
-                : 'Locate running session',
-            onTap: runningTab == null ? null : _locateRunningSession),
-        const SizedBox(width: 4),
         Builder(
           builder: (ctx) => _FooterBtn(
-              icon: 'columns-3',
-              tooltip: _chatTab == null ? 'No session pane' : 'Pane layout',
-              onTap: _chatTab == null ? null : () => _showPaneAddMenu(ctx)),
+              icon: 'more-horizontal',
+              tooltip: 'More',
+              onTap: () => _footerMore(ctx)),
         ),
       ]),
     );
+  }
+
+  Future<void> _footerMore(BuildContext anchor) async {
+    final runningTab = _openRunningSessionTab;
+    final pick = await showAppMenu<String>(
+      context,
+      anchor: anchor,
+      items: [
+        if (_client != null)
+          appMenuItem(value: 'terminal', icon: 'terminal', label: 'New terminal'),
+        if (runningTab != null)
+          appMenuItem(
+              value: 'locate', icon: 'scan', label: 'Locate running session'),
+        if (_chatTab != null)
+          appMenuItem(value: 'pane', icon: 'columns-3', label: 'Pane layout'),
+        if (_activeTab?.isHome != true)
+          appMenuItem(
+              value: 'panel', icon: 'sidebar', label: 'Toggle right panel'),
+        if (_client != null)
+          appMenuItem(value: 'usage', icon: 'refresh', label: 'Refresh usage'),
+        appMenuItem(
+            value: 'keys', icon: 'help-circle', label: 'Keyboard shortcuts'),
+      ],
+    );
+    if (!mounted || pick == null) return;
+    switch (pick) {
+      case 'terminal':
+        _newGlobalShell();
+      case 'locate':
+        _locateRunningSession();
+      case 'pane':
+        if (anchor.mounted) _showPaneAddMenu(anchor);
+      case 'panel':
+        _togglePanel();
+      case 'usage':
+        _refreshUsage();
+      case 'keys':
+        _showDesktopShortcuts();
+    }
   }
 
   /// Desktop centre band: the tab strip, with the title-row cluster over its
@@ -1530,10 +1581,14 @@ class _FooterBtn extends StatefulWidget {
     required this.icon,
     required this.tooltip,
     required this.onTap,
+    this.dot,
   });
   final String icon;
   final String tooltip;
   final VoidCallback? onTap;
+
+  /// A small status dot over the glyph's corner.
+  final Color? dot;
 
   @override
   State<_FooterBtn> createState() => _FooterBtnState();
@@ -1566,13 +1621,26 @@ class _FooterBtnState extends State<_FooterBtn> {
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  AppIcon(widget.icon,
-                      size: 15,
-                      color: !enabled
-                          ? AppColors.fg3
-                          : _hover
-                              ? AppColors.fg1
-                              : AppColors.fg2),
+                  Stack(clipBehavior: Clip.none, children: [
+                    AppIcon(widget.icon,
+                        size: 15,
+                        color: !enabled
+                            ? AppColors.fg3
+                            : _hover
+                                ? AppColors.fg1
+                                : AppColors.fg2),
+                    if (widget.dot != null)
+                      Positioned(
+                        right: -2,
+                        bottom: -1,
+                        child: Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                              color: widget.dot, shape: BoxShape.circle),
+                        ),
+                      ),
+                  ]),
                 ]),
           ),
         ),

@@ -46,7 +46,8 @@ Object? _groupsExtra(String path) {
 }
 
 Future<void> _openHomeThenGroup(WidgetTester tester) async {
-  await tester.tap(find.text('Home').first);
+  // Places live in the sidebar's icon footer.
+  await tester.tap(find.byTooltip('Home').first);
   await settle(tester);
   expect(find.byType(DesktopHome), findsOneWidget);
 

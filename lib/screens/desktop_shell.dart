@@ -69,6 +69,7 @@ import 'settings_overlay.dart';
 import 'file_changes.dart' show sessionChangeSteps;
 import '../tool_activity.dart' show fileChanges;
 import 'pane_add_menu.dart';
+import '../composer/desktop_composer.dart' show DeskComposerMeta;
 import 'session_rail.dart'
     show
         kSessionRailMinColumn,
