@@ -184,34 +184,53 @@ class _DraftCardState extends State<_DraftCard> {
   Widget _phone() => Container(
         width: double.infinity,
         margin: EdgeInsets.symmetric(vertical: S.s4),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-            color: AppColors.surface1, borderRadius: BorderRadius.circular(10)),
+            color: AppColors.surface1, borderRadius: BorderRadius.circular(8)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Row(children: [
-              AppIcon('edit', size: 16, color: AppColors.fg2),
-              const SizedBox(width: 8),
-              Text('Draft reply',
-                  style: sans(12, weight: W.label, color: AppColors.fg2)),
-            ]),
-            const SizedBox(height: 8),
-            Text(text,
-                maxLines: 4,
-                overflow: TextOverflow.ellipsis,
-                style: sans(15, height: 1.4, color: AppColors.fg1)),
-            const SizedBox(height: 12),
-            DraftActions(
-              onUse: () {
-                if (!DraftSink.use(text)) {
-                  Clipboard.setData(ClipboardData(text: text));
-                  toast(context, 'Copied');
-                }
-              },
-              onDismiss: () => setState(() => _dismissed = true),
+            Text('Draft message',
+                style:
+                    sans(13, weight: FontWeight.w500, color: AppColors.fg1)),
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              height: 126,
+              padding: const EdgeInsets.all(8),
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: AppColors.surface2,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: SingleChildScrollView(
+                child: Text(text,
+                    style: sans(15, height: 1.4, color: AppColors.fg1)),
+              ),
             ),
+            const SizedBox(height: 12),
+            Row(children: [
+              SizedBox(
+                width: 72,
+                child: DesktopRichButton('Copy',
+                    variant: DesktopRichButtonVariant.secondary,
+                    parentSurface: 1,
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: text));
+                      toast(context, 'Copied');
+                    }),
+              ),
+              const SizedBox(width: 8),
+              DesktopRichButton('Post to group',
+                  parentSurface: 1,
+                  onTap: () {
+                    if (!DraftSink.use(text)) {
+                      Clipboard.setData(ClipboardData(text: text));
+                      toast(context, 'Draft copied');
+                    }
+                  }),
+            ]),
           ],
         ),
       );
@@ -258,71 +277,63 @@ class _LinkCard extends StatelessWidget {
         ),
       );
     }
-    final radius = BorderRadius.circular(kMobile ? 10 : R.lg);
     return Container(
-      width: kMobile ? double.infinity : null,
-      constraints: BoxConstraints(minHeight: kMobile ? 76 : 0),
+      width: double.infinity,
+      height: 146,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: AppColors.surface1,
-        borderRadius: radius,
-        border: kMobile ? null : Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Material(
         type: MaterialType.transparency,
         child: InkWell(
-          borderRadius: radius,
           onTap: () => openMarkdownLink(url, context),
           child: Padding(
-            padding: EdgeInsets.symmetric(
-                horizontal: kMobile ? 12 : S.s12, vertical: S.of(10)),
-            child: Row(
-              mainAxisSize: kMobile ? MainAxisSize.max : MainAxisSize.min,
-              children: [
-                if (kMobile)
-                  Container(
-                    width: 52,
-                    height: 52,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                        color: AppColors.surface3,
-                        borderRadius: BorderRadius.circular(8)),
-                    child: AppIcon('globe', size: 20, color: AppColors.fg3),
-                  )
-                else
-                  AppIcon('globe', size: 15, color: AppColors.fg3),
-                SizedBox(width: S.of(10)),
-                Flexible(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        info.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(13, weight: W.label, color: AppColors.fg1),
-                      ),
-                      SizedBox(height: S.s2),
-                      Text(
-                        info.host,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: codeMono(11, color: AppColors.fg3),
-                      ),
-                    ],
-                  ),
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                AppIcon('link', size: 12, color: AppColors.fg3),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(info.host,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(13, color: AppColors.fg3)),
                 ),
-                if (kMobile) ...[
-                  const SizedBox(width: 8),
-                  AppIcon('external-link', size: 16, color: AppColors.fg3),
-                ],
-              ],
-            ),
+              ]),
+              const SizedBox(height: 10),
+              Text(info.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style:
+                      sans(15, weight: FontWeight.w500, color: AppColors.fg1)),
+              const SizedBox(height: 6),
+              Expanded(
+                child: Text(url,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13, height: 1.35, color: AppColors.fg2)),
+              ),
+            ]),
           ),
         ),
       ),
     );
   }
+}
+
+String _sentIconFor(String path) {
+  final ext = path.split('.').last.toLowerCase();
+  return switch (ext) {
+    'md' || 'txt' || 'log' => 'file-text',
+    'jpg' || 'jpeg' || 'png' || 'gif' || 'webp' => 'image',
+    'zip' || 'tar' || 'gz' => 'archive',
+    'mp3' || 'wav' || 'm4a' || 'ogg' => 'file-audio',
+    'mp4' || 'mov' || 'webm' => 'file-video',
+    _ => 'file',
+  };
 }
 
 /// A chat bubble's content: text as markdown plus sent images, files, voice
@@ -417,7 +428,7 @@ class ChatMessageBody extends StatelessWidget {
         pasted.isNotEmpty;
     if (!hasExtras) return styledText ?? const SizedBox.shrink();
     final maxWidth = kMobile
-        ? (MediaQuery.sizeOf(context).width - 32).clamp(160.0, 280.0)
+        ? (MediaQuery.sizeOf(context).width - 32).clamp(160.0, 361.0)
         : (MediaQuery.sizeOf(context).width - 40).clamp(220.0, 420.0);
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -434,7 +445,13 @@ class ChatMessageBody extends StatelessWidget {
         if (files.isNotEmpty) ...[
           for (var i = 0; i < files.length; i++) ...[
             if (i > 0) SizedBox(height: S.s6),
-            FileChip(client: client, path: files[i]),
+            kMobile
+                ? DesktopSentAttachmentRow(
+                    icon: _sentIconFor(files[i]),
+                    name: baseName(files[i]),
+                    onOpen: () => openMedia(context, client, files[i]),
+                  )
+                : FileChip(client: client, path: files[i]),
           ],
           if (styledText != null || audio.isNotEmpty || pasted.isNotEmpty)
             SizedBox(height: S.s6),
@@ -444,13 +461,19 @@ class ChatMessageBody extends StatelessWidget {
             client: client,
             path: audio[i],
             ink: mine ? ChatColors.sentTextIn(context) : AppColors.fg1,
-            transcript: i < transcripts.length
-                ? AudioTranscriptCard(items: [transcripts[i]])
-                : (transcripts.isEmpty
-                    ? Text('Transcribing…',
-                        style: chatText(mine: mine, context: context))
-                    : null),
+            transcript: kMobile
+                ? null
+                : (i < transcripts.length
+                    ? AudioTranscriptCard(items: [transcripts[i]])
+                    : (transcripts.isEmpty
+                        ? Text('Transcribing…',
+                            style: chatText(mine: mine, context: context))
+                        : null)),
           ),
+          if (kMobile && i < transcripts.length) ...[
+            SizedBox(height: S.s6),
+            AudioTranscriptCard(items: [transcripts[i]]),
+          ],
           if (styledText != null || pasted.isNotEmpty || i < audio.length - 1)
             SizedBox(height: S.s6),
         ],

@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../platform.dart';
+import '../tap_detector.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -32,6 +34,8 @@ class DesktopRichButton extends StatelessWidget {
   Widget build(BuildContext context) {
     Theme.of(context);
     final inactive = disabled || busy || onTap == null;
+    final phone = kMobile;
+    final radius = phone ? 8.0 : 6.0;
     final fill = switch (variant) {
       DesktopRichButtonVariant.primary =>
         inactive ? AppColors.surface3 : AppColors.fg1,
@@ -52,12 +56,12 @@ class DesktopRichButton extends StatelessWidget {
       label: label,
       child: Material(
         color: fill,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(radius),
         child: InkWell(
           onTap: inactive ? null : onTap,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(radius),
           child: SizedBox(
-            height: 28,
+            height: phone ? 36 : 28,
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: icon == null ? 12 : 10),
               child: Row(
@@ -420,6 +424,86 @@ class DesktopSentAttachmentRow extends StatelessWidget {
           Text('Upload failed', style: sans(11.5, color: AppColors.fg2)),
         ]),
     };
+    if (kMobile) {
+      final meta = switch (state) {
+        DesktopAttachmentState.sent => 'Sent',
+        DesktopAttachmentState.uploading =>
+          'Uploading ${(progress.clamp(0.0, 1.0) * 100).round()}%',
+        DesktopAttachmentState.failed => 'Upload failed',
+      };
+      return Material(
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          onTap: state == DesktopAttachmentState.sent ? onOpen : null,
+          borderRadius: BorderRadius.circular(8),
+          child: SizedBox(
+            height: 64,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface2,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Center(
+                      child: AppIcon(icon, size: 16, color: AppColors.fg2)),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(15, height: 1, color: AppColors.fg1)),
+                      const SizedBox(height: 3),
+                      Row(children: [
+                        Flexible(
+                          child: Text(meta,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: sans(13, height: 1, color: AppColors.fg2)),
+                        ),
+                        if (state == DesktopAttachmentState.uploading) ...[
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(1.5),
+                              child: LinearProgressIndicator(
+                                value: progress.clamp(0.0, 1.0),
+                                color: AppColors.fg3,
+                                backgroundColor: AppColors.surface2,
+                                minHeight: 3,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ]),
+                    ],
+                  ),
+                ),
+                if (state == DesktopAttachmentState.failed) ...[
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 55,
+                    child: DesktopRichButton('Retry',
+                        variant: DesktopRichButtonVariant.secondary,
+                        parentSurface: 1,
+                        onTap: onRetry),
+                  ),
+                ],
+              ]),
+            ),
+          ),
+        ),
+      );
+    }
     return Material(
       color: AppColors.surface1,
       borderRadius: BorderRadius.circular(8),
@@ -1076,6 +1160,76 @@ class DesktopPullRequestCard extends StatelessWidget {
       DesktopPullRequestState.closed => 'Closed',
       DesktopPullRequestState.checksFailing => 'Checks failing',
     };
+    if (kMobile) {
+      final chipLabel = state == DesktopPullRequestState.checksFailing
+          ? 'Open'
+          : stateLabel;
+      return TapDetector(
+        onTap: onOpen,
+        child: Container(
+          width: double.infinity,
+          height: 94,
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+          decoration: BoxDecoration(
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              AppIcon('pull-request', size: 14, color: AppColors.fg1),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('#$number $title',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(15,
+                        weight: FontWeight.w500, color: AppColors.fg1)),
+              ),
+            ]),
+            const SizedBox(height: 6),
+            Row(children: [
+              Container(
+                height: 22,
+                padding: const EdgeInsets.symmetric(horizontal: 6.5),
+                decoration: BoxDecoration(
+                  color: AppColors.surface3,
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  AppIcon('pull-request', size: 11, color: AppColors.fg1),
+                  const SizedBox(width: 4),
+                  Text(chipLabel,
+                      style: sans(13,
+                          weight: FontWeight.w500, color: AppColors.fg1)),
+                ]),
+              ),
+              if (checksTotal > 0) ...[
+                const SizedBox(width: 10),
+                AppIcon(failing ? 'x' : 'check', size: 12, color: AppColors.fg2),
+                const SizedBox(width: 4),
+                Text(
+                  failing
+                      ? 'Checks failing: $checksPassed/$checksTotal'
+                      : 'Checks $checksPassed/$checksTotal',
+                  style: sans(13, color: AppColors.fg2),
+                ),
+              ],
+            ]),
+            const Spacer(),
+            Text(
+              switch (state) {
+                DesktopPullRequestState.merged => 'Merged',
+                DesktopPullRequestState.closed => 'Closed without merging',
+                _ => 'Pull request',
+              },
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(12, color: AppColors.fg3),
+            ),
+          ]),
+        ),
+      );
+    }
     return Container(
       constraints: const BoxConstraints(maxWidth: 460),
       padding: const EdgeInsets.all(10),
@@ -1144,7 +1298,64 @@ class DesktopCommitCard extends StatelessWidget {
   final VoidCallback? onOpen;
 
   @override
-  Widget build(BuildContext context) => Material(
+  Widget build(BuildContext context) => kMobile
+      ? Material(
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(8),
+          child: InkWell(
+            onTap: onOpen,
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              height: 68,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      AppIcon('commit', size: 14, color: AppColors.fg2),
+                      const SizedBox(width: 8),
+                      Text(hash.length > 7 ? hash.substring(0, 7) : hash,
+                          style: codeMono(12.5, color: AppColors.fg2)),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(message,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(15,
+                                weight: FontWeight.w500, color: AppColors.fg1)),
+                      ),
+                    ]),
+                    const SizedBox(height: 6),
+                    Row(children: [
+                      Container(
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          color: AppColors.surface2,
+                          borderRadius: BorderRadius.circular(9),
+                        ),
+                        child: authorAvatar == null
+                            ? null
+                            : ClipRRect(
+                                borderRadius: BorderRadius.circular(9),
+                                child: authorAvatar),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(time,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(13, color: AppColors.fg3)),
+                      ),
+                    ]),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        )
+      : Material(
         color: AppColors.surface1,
         borderRadius: BorderRadius.circular(6),
         child: InkWell(

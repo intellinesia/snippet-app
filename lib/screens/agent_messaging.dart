@@ -1597,26 +1597,25 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       : Padding(
           key: const Key('agentTypingRow'),
           padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(children: [
-            AgentMochi(widget.agentId, size: 24),
-            const SizedBox(width: 8),
-            Container(
-              width: 74,
-              height: 28,
-              alignment: Alignment.center,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
               decoration: BoxDecoration(
                   color: AppColors.surface2,
-                  borderRadius: BorderRadius.circular(14)),
-              child: const _TypingDots(key: Key('agentTypingDots')),
+                  borderRadius: BorderRadius.circular(20)),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                AgentMochi(widget.agentId, size: 22),
+                const SizedBox(width: 8),
+                Text('${widget.agentName} is typing',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(14, color: AppColors.fg2)),
+                const SizedBox(width: 8),
+                const _TypingDots(key: Key('agentTypingDots')),
+              ]),
             ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text('${widget.agentName} typing',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(12, color: AppColors.fg3)),
-            ),
-          ]),
+          ),
         );
 
   Widget _bubbleBody(CoordinationEvent e, {required bool mine}) =>

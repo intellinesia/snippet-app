@@ -1646,6 +1646,94 @@ class _AudioTranscriptCardState extends State<AudioTranscriptCard> {
   @override
   Widget build(BuildContext context) {
     Theme.of(context);
+    if (kMobile) {
+      final first = widget.items.isEmpty ? '' : _lineFor(widget.items.first);
+      final body = widget.items.map(_lineFor).join('\n');
+      final quote = first.replaceAll(RegExp(r'\s+'), ' ').trim();
+      return Padding(
+        padding: EdgeInsets.only(top: S.s4),
+        child: Container(
+          width: double.infinity,
+          height: _expanded ? 180 : 76,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            InkWell(
+              onTap: () => setState(() => _expanded = !_expanded),
+              child: SizedBox(
+                height: 48,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: Row(children: [
+                    AppIcon('file-text', size: 14, color: AppColors.fg2),
+                    const SizedBox(width: 8),
+                    Text('Voice transcript',
+                        style: sans(13.5,
+                            weight: FontWeight.w500, color: AppColors.fg1)),
+                    const Spacer(),
+                    AppIcon(_expanded ? 'chevron-up' : 'chevron-down',
+                        size: 14, color: AppColors.fg2),
+                  ]),
+                ),
+              ),
+            ),
+            if (!_expanded)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Text('"$quote"',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13, color: AppColors.fg2)),
+              )
+            else
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: SingleChildScrollView(
+                    child: Text(body,
+                        style: sans(15, height: 1.45, color: AppColors.fg1)),
+                  ),
+                ),
+              ),
+            if (_expanded)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 6, 14, 10),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Material(
+                    color: AppColors.surface2,
+                    borderRadius: BorderRadius.circular(6),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(6),
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: body));
+                        toast(context, 'Copied');
+                      },
+                      child: SizedBox(
+                        height: 36,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            AppIcon('copy', size: 14, color: AppColors.fg1),
+                            const SizedBox(width: 6),
+                            Text('Copy text',
+                                style: sans(13,
+                                    weight: FontWeight.w500,
+                                    color: AppColors.fg1)),
+                          ]),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ]),
+        ),
+      );
+    }
     return Padding(
       padding: EdgeInsets.only(top: S.s4),
       child: InkWell(

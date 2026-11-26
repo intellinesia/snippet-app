@@ -234,6 +234,41 @@ class _MdDiffBlockState extends State<_MdDiffBlock> {
         ? 'diff'
         : parsed.file!.split('/').last;
 
+    if (kMobile && !_expanded) {
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: S.s8),
+        child: Material(
+          color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(8),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: () => setState(() => _expanded = true),
+            child: SizedBox(
+              height: 52,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(children: [
+                  AppIcon('file-code', size: 14, color: AppColors.fg2),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(13,
+                            weight: FontWeight.w500, color: AppColors.fg1)),
+                  ),
+                  Text('+${parsed.adds} -${parsed.dels}',
+                      style: codeMono(13, color: AppColors.fg2)),
+                  const SizedBox(width: 10),
+                  AppIcon('chevron-down', size: 14, color: AppColors.fg2),
+                ]),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     Widget buildRows({required bool wrapped}) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -249,13 +284,9 @@ class _MdDiffBlockState extends State<_MdDiffBlock> {
         width: double.infinity,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: kMobile
-              ? Color.lerp(AppColors.bg, Colors.black, 0.35)
-              : AppColors.surface1,
-          borderRadius: BorderRadius.circular(kMobile ? 14 : 8),
-          border: kMobile
-              ? Border.all(color: AppColors.fg1.withValues(alpha: 0.08))
-              : null,
+          color: kMobile ? AppColors.surface2 : AppColors.surface1,
+          borderRadius: BorderRadius.circular(8),
+          border: null,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -279,13 +310,13 @@ class _MdDiffBlockState extends State<_MdDiffBlock> {
                   SizedBox(width: S.s6),
                   Text('+${parsed.adds}',
                       style: codeMono(11,
-                          weight: FontWeight.w600, color: AppColors.diffAddFg)),
+                          weight: FontWeight.w600, color: AppColors.fg2)),
                 ],
                 if (parsed.dels > 0) ...[
                   SizedBox(width: S.s6),
                   Text('-${parsed.dels}',
                       style: codeMono(11,
-                          weight: FontWeight.w600, color: AppColors.diffDelFg)),
+                          weight: FontWeight.w600, color: AppColors.fg2)),
                 ],
                 SizedBox(width: S.s6),
                 IconBtn(
@@ -361,9 +392,7 @@ class _MdDiffBlockState extends State<_MdDiffBlock> {
   Widget _buildLine(_MdDiffLine l, double gutterW, {required bool wrapped}) {
     if (l.kind == _MdDiffKind.hunk || l.kind == _MdDiffKind.meta) {
       return Container(
-        color: kMobile
-            ? AppColors.surface1.withValues(alpha: 0.6)
-            : AppColors.surface2,
+        color: kMobile ? AppColors.surface3 : AppColors.surface2,
         padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.of(3)),
         child: Text(
           l.text,
@@ -374,16 +403,28 @@ class _MdDiffBlockState extends State<_MdDiffBlock> {
       );
     }
     final (Color? bg, Color fg, Color numColor, String sign) = switch (l.kind) {
+      _MdDiffKind.add when kMobile => (
+          AppColors.surface3,
+          AppColors.fg1,
+          AppColors.fg3,
+          '+'
+        ),
+      _MdDiffKind.del when kMobile => (
+          AppColors.bg,
+          AppColors.fg3,
+          AppColors.fg3,
+          '-'
+        ),
       _MdDiffKind.add => (
-          AppColors.diffAddBg,
-          AppColors.diffAddFg,
-          AppColors.diffAddFg.withValues(alpha: 0.6),
+          AppColors.surface2,
+          AppColors.fg1,
+          AppColors.fg3,
           '+'
         ),
       _MdDiffKind.del => (
-          AppColors.diffDelBg,
-          AppColors.diffDelFg,
-          AppColors.diffDelFg.withValues(alpha: 0.6),
+          null,
+          AppColors.fg3,
+          AppColors.fg4,
           '-'
         ),
       _ => (null, AppColors.fg2, AppColors.fg4, ' '),
@@ -434,6 +475,7 @@ class _MdCodeBlock extends StatefulWidget {
 }
 
 class _MdCodeBlockState extends State<_MdCodeBlock> {
+  bool _expanded = false;
   late bool _wrap = const {'md', 'markdown', 'mdx', 'text', 'txt'}
       .contains(widget.language.trim().toLowerCase());
 
@@ -446,46 +488,74 @@ class _MdCodeBlockState extends State<_MdCodeBlock> {
     if (!kMobile) {
       return _desktop(lines, lang, () => setState(() => _wrap = !_wrap));
     }
-    // Phone spec CH-22: surface1 radius 10, language label, copy 48 target,
-    // horizontal scroll and never a wrap; keywords differ by weight only.
+    // Phone RC-12: surface2 radius 8, 12 px language header, hairline, and
+    // two visible code lines before the expand row.
+    final visible = _expanded ? lines : lines.take(2).toList();
+    final hidden = lines.length - visible.length;
     return Padding(
       padding: EdgeInsets.symmetric(vertical: S.s8),
       child: Container(
         width: double.infinity,
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(10),
+          color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 0, 0),
-              child: Row(children: [
-                Text(lang,
-                    style: sans(11, weight: W.label, color: AppColors.fg3)),
-                const Spacer(),
-                IconBtn(
-                  'copy',
-                  size: 48,
-                  iconSize: 20,
-                  tooltip: 'Copy',
-                  onTap: () {
-                    Clipboard.setData(ClipboardData(text: widget.code));
-                    toast(context, 'Copied');
-                  },
-                ),
-              ]),
-            ),
-            NotificationListener<ScrollNotification>(
-              onNotification: (_) => true,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-                child: SelectableText.rich(highlightedCodeSpan(widget.code,
-                    language: widget.language, fontSize: 11, height: 1.55)),
+            SizedBox(
+              height: 36,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 12, right: 4),
+                child: Row(children: [
+                  Text(lang,
+                      style: sans(12,
+                          weight: FontWeight.w500, color: AppColors.fg3)),
+                  const Spacer(),
+                  IconBtn(
+                    'copy',
+                    size: 36,
+                    iconSize: 14,
+                    tooltip: 'Copy',
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: widget.code));
+                      toast(context, 'Copied');
+                    },
+                  ),
+                ]),
               ),
             ),
+            Container(height: 1, color: AppColors.border),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 7, 12, 7),
+              child: NotificationListener<ScrollNotification>(
+                onNotification: (_) => true,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SelectableText.rich(highlightedCodeSpan(
+                      visible.join('\n'),
+                      language: widget.language,
+                      fontSize: 12,
+                      height: 18 / 12)),
+                ),
+              ),
+            ),
+            if (hidden > 0 || _expanded) ...[
+              Container(height: 1, color: AppColors.border),
+              InkWell(
+                onTap: () => setState(() => _expanded = !_expanded),
+                child: SizedBox(
+                  height: 44,
+                  child: Center(
+                    child: Text(
+                      _expanded ? 'Collapse' : 'Show $hidden more lines',
+                      style: sans(13, color: AppColors.fg2),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

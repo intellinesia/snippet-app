@@ -69,14 +69,14 @@ class ChatEmptyIntro extends StatelessWidget {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           const SizedBox(height: 56),
           ids.length > 1
-              ? AgentCluster(ids: ids, size: 64)
-              : AgentMochi(ids.isEmpty ? '' : ids.first, size: 64),
+              ? AgentCluster(ids: ids, size: 48)
+              : AgentMochi(ids.isEmpty ? '' : ids.first, size: 48),
           const SizedBox(height: 14),
           Text(name,
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: sans(20, weight: FontWeight.w500, color: AppColors.fg1)),
+              style: sans(16, weight: FontWeight.w500, color: AppColors.fg1)),
           if (purpose.isNotEmpty) ...[
             const SizedBox(height: 6),
             Padding(
@@ -85,11 +85,11 @@ class ChatEmptyIntro extends StatelessWidget {
                   textAlign: TextAlign.center,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(14, height: 1.45, color: AppColors.fg3)),
+                  style: sans(14, height: 1.45, color: AppColors.fg2)),
             ),
           ],
           const SizedBox(height: 24),
-          for (final text in suggestions)
+          for (final text in kMobile ? const <String>[] : suggestions)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Semantics(

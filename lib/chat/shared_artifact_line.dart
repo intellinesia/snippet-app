@@ -243,6 +243,38 @@ class _SharedArtifactLineState extends State<SharedArtifactLine> {
         ),
       );
     }
+    if (kMobile) {
+      return TapDetector(
+        onTap: _open,
+        child: Container(
+          width: double.infinity,
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(children: [
+            AppIcon(icon, size: 16, color: iconColor),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                widget.title.isEmpty ? 'Artifact' : widget.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(13, weight: FontWeight.w500, color: AppColors.fg1),
+              ),
+            ),
+            if (meta.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              Text(meta, style: sans(12, color: AppColors.fg3)),
+            ],
+            const SizedBox(width: 8),
+            AppIcon('chevron-right', size: 14, color: AppColors.fg3),
+          ]),
+        ),
+      );
+    }
     return TapDetector(
       onTap: _open,
       child: Container(

@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/material.dart';
 
 import 'platform.dart';
@@ -190,8 +189,8 @@ class _ToastCardState extends State<_ToastCard>
     if (reduceMotion(context)) _c.value = 1;
     final curve = CurvedAnimation(parent: _c, curve: Curves.easeOut);
     final hasAction = d.actionLabel != null;
-    final style = sans(13,
-            weight: d.danger ? FontWeight.w500 : FontWeight.w400,
+    final style = sans(14,
+            weight: d.actionLabel != null ? FontWeight.w400 : FontWeight.w400,
             color: AppColors.fg1)
         .copyWith(decoration: TextDecoration.none);
     return Material(
@@ -227,20 +226,19 @@ class _ToastCardState extends State<_ToastCard>
                 },
                 child: Container(
                   key: Key('toastCard-${d.message}'),
-                  constraints: const BoxConstraints(minHeight: 48),
+                  constraints: BoxConstraints(minHeight: d.danger ? 48 : 36),
                   padding: EdgeInsets.only(left: 16, right: hasAction ? 0 : 16),
                   decoration: BoxDecoration(
                     color: AppColors.surface3,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(children: [
-                    if (d.danger) ...[
-                      AppIcon('x', size: 16, color: AppColors.fg1),
-                      const SizedBox(width: 8),
-                    ],
+                    AppIcon(d.danger ? 'x' : 'check',
+                        size: 14, color: AppColors.fg1),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: EdgeInsets.symmetric(vertical: d.danger ? 12 : 7),
                         child: Text(d.message,
                             maxLines: hasAction ? 1 : 2,
                             overflow: TextOverflow.ellipsis,
@@ -256,10 +254,14 @@ class _ToastCardState extends State<_ToastCard>
                         },
                         child: Container(
                           key: const Key('toastAction'),
-                          constraints:
-                              const BoxConstraints(minWidth: 48, minHeight: 48),
+                          width: 60,
+                          height: 36,
+                          margin: const EdgeInsets.all(6),
                           alignment: Alignment.center,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface2,
+                            borderRadius: BorderRadius.circular(22),
+                          ),
                           child: Text(d.actionLabel!,
                               style:
                                   style.copyWith(fontWeight: FontWeight.w500)),
