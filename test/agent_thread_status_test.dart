@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/mochi.dart';
 import 'package:snippet/chat/chat_style.dart';
+import 'package:snippet/chat/run_head.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/presence.dart';
 import 'package:snippet/screens/agent_messaging.dart';
@@ -224,7 +225,7 @@ void main() {
     await t.pumpWidget(const SizedBox());
   });
 
-  testWidgets('agent bubble omits per-bubble time and groups runs with stamps',
+  testWidgets('flat agent prose groups runs with stamps',
       (t) async {
     await _open(
       t,
@@ -236,11 +237,13 @@ void main() {
     expect(find.text('10:00'), findsNothing);
     expect(find.byType(ChatSystemLine), findsOneWidget);
     // The list is reversed, so build order runs newest first.
-    final bubbles =
-        t.widgetList<ChatBubble>(find.byType(ChatBubble)).toList().reversed.toList();
-    expect(bubbles, hasLength(2));
-    expect(bubbles[0].tail, isFalse);
-    expect(bubbles[1].tail, isTrue);
+    final rows =
+        t.widgetList<SoftLane>(find.byType(SoftLane)).toList().reversed.toList();
+    expect(rows, hasLength(2));
+    expect(rows[0].first, isTrue);
+    expect(rows[0].last, isFalse);
+    expect(rows[1].first, isFalse);
+    expect(rows[1].last, isTrue);
     await t.pumpWidget(const SizedBox());
   });
 
@@ -273,9 +276,9 @@ void main() {
     expect(find.text('Yesterday 10:15 pm'), findsOneWidget);
     expect(find.text('Today 9:00 am'), findsOneWidget);
     expect(find.text('Today 9:20 am'), findsOneWidget);
-    final bubbles = t.widgetList<ChatBubble>(find.byType(ChatBubble)).toList();
-    expect(bubbles, hasLength(3));
-    expect(bubbles.every((b) => b.tail), isTrue);
+    final rows = t.widgetList<SoftLane>(find.byType(SoftLane)).toList();
+    expect(rows, hasLength(3));
+    expect(rows.every((r) => r.first && r.last), isTrue);
     await t.pumpWidget(const SizedBox());
   });
 
