@@ -376,5 +376,21 @@ void main() {
         .first);
     expect(yolo.top >= seg.top && yolo.bottom <= seg.bottom, isTrue);
     expect(yolo.top, greaterThan(t.getRect(find.text('Approvals').last).bottom));
+    // List names wrap rather than truncate; the list scrolls to its end.
+    final label = t.widget<Text>(find.descendant(
+        of: find.byKey(const Key('settings-row-models')),
+        matching: find.text('Inference profiles')));
+    expect(label.maxLines, isNull);
+    await t.scrollUntilVisible(
+        find.byKey(const Key('settings-row-appearance')), 40,
+        scrollable: find.descendant(
+            of: find.byKey(const Key('settings-list-rows')),
+            matching: find.byType(Scrollable)));
+    await t.ensureVisible(find.byKey(const Key('settings-row-appearance')));
+    await t.pumpAndSettle();
+    final list = t.getRect(find.byKey(const Key('settings-list')));
+    final last = t.getRect(find.byKey(const Key('settings-row-appearance')));
+    expect(last.bottom, lessThanOrEqualTo(list.bottom));
+    expect(t.takeException(), isNull);
   });
 }

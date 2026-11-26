@@ -853,9 +853,14 @@ class _ListRow extends StatelessWidget {
                       row, 14, selected ? AppColors.fg1 : AppColors.fg2),
                   const SizedBox(width: 10),
                   Expanded(
+                    // Large text wraps the name rather than truncating it.
                     child: Text(row.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        maxLines: MediaQuery.textScalerOf(context).scale(1) > 1.5
+                            ? null
+                            : 1,
+                        overflow: MediaQuery.textScalerOf(context).scale(1) > 1.5
+                            ? null
+                            : TextOverflow.ellipsis,
                         style: sans(13,
                             weight: selected ? W.label : W.body,
                             color: selected ? AppColors.fg1 : AppColors.fg2)),
