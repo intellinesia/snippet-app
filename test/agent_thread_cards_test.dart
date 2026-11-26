@@ -14,7 +14,6 @@ import 'package:snippet/chat/run_head.dart';
 import 'package:snippet/chat/chat_style.dart';
 import 'package:snippet/media_views.dart';
 import 'package:snippet/models.dart';
-import 'package:snippet/mochi.dart';
 import 'package:snippet/screens/agent_messaging.dart';
 import 'package:snippet/screens/agent_thread_cards.dart';
 import 'package:snippet/screens/artifact_viewer.dart';

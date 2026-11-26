@@ -20,7 +20,7 @@ void main() {
               fill: fill,
               child: fill
                   ? Container(height: 40, color: Colors.red)
-                  : ChatBubble(mine: mine, child: Container(width: 1000, height: 40)),
+                  : ChatBubble(mine: mine, child: SizedBox(width: 1000, height: 40)),
             );
         await t.pumpWidget(MaterialApp(
           theme: buildAppTheme(),

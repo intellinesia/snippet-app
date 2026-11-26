@@ -43,7 +43,6 @@ void main() {
           ),
         ));
         final w = vw - 32;
-        final once = t.getRect(find.text('Allow once'));
         final onceBtn = t.getRect(find.ancestor(
             of: find.text('Allow once'), matching: find.byType(Material)).first);
         final always = t.getRect(find.ancestor(
