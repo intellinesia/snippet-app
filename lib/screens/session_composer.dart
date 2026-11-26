@@ -910,86 +910,6 @@ extension _SessionScreenComposerExt on _SessionScreenState {
   bool get _hasDraft =>
       _input.text.trim().isNotEmpty || _attachments.isNotEmpty;
 
-
-  Widget _shortcutChip(String label,
-      {required bool primary,
-      required bool enabled,
-      required VoidCallback? onTap}) {
-    final fill = !enabled
-        ? AppColors.surface2
-        : primary
-            ? AppColors.fg1
-            : AppColors.surface3;
-    final ink = !enabled
-        ? AppColors.fg3
-        : primary
-            ? AppColors.bg
-            : AppColors.fg1;
-    return TapDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: enabled ? onTap : null,
-      child: Container(
-        height: 36,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: fill,
-          borderRadius: BorderRadius.circular(22),
-        ),
-        child: Text(label,
-            style: sans(12.5, weight: FontWeight.w500, color: ink)),
-      ),
-    );
-  }
-
-  /// CMP-16: fast session actions in a tonal card directly above the pill.
-  Widget _phoneShortcutStrip(bool running) {
-    void continueNow() {
-      if (!_canSend && !running) return;
-      _input.value = const TextEditingValue(
-          text: 'Continue', selection: TextSelection.collapsed(offset: 8));
-      unawaited(_sendMessage());
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.fromLTRB(10, 10, 10, 9),
-      decoration: BoxDecoration(
-        color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(children: [
-              _shortcutChip('Continue',
-                  primary: false, enabled: !widget.readOnly, onTap: continueNow),
-              const SizedBox(width: 8),
-              _shortcutChip('Summarise',
-                  primary: false,
-                  enabled: !widget.readOnly,
-                  onTap: () => _performMacAction('compact')),
-              const SizedBox(width: 8),
-              _shortcutChip('Stop',
-                  primary: running,
-                  enabled: running,
-                  onTap: running ? () => _send({'kind': 'interrupt'}) : null),
-            ]),
-          ),
-          const SizedBox(height: 8),
-          Text(
-              running
-                  ? 'Continue queues behind this run.'
-                  : 'Stop is available while the agent is running.',
-              style: sans(13, height: 18 / 13, color: AppColors.fg2)),
-        ],
-      ),
-    );
-  }
-
   Widget _inputBar(bool running, {Widget? top}) {
     var agent = (_meAgentName ?? '').trim();
     // A desk session belongs to its agent; never address it as "Snippet".
@@ -1031,7 +951,6 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                 controller: _tray, bleed: M.gutter, child: _trayPage(running)),
           ),
         composerPinCardForSession(widget.sessionId),
-        if (!widget.readOnly) _phoneShortcutStrip(running),
         if (_heldQueue.isNotEmpty) _queuedCard(),
         if (_mentionQuery != null && !_isLead) _mentionList(),
         SlashMenuPopover(controller: _slash),

@@ -79,7 +79,9 @@ Future<void> loadSessionRailPref() async {
   if (_railPrefLoaded) return;
   _railPrefLoaded = true;
   final p = await SharedPreferences.getInstance();
-  sessionRailCollapsed.value = p.getBool(kSessionRailCollapsedPref) ?? true;
+  // Every launch starts closed; opening the rail is an explicit, bounded
+  // on-demand action rather than restored persistent chrome.
+  sessionRailCollapsed.value = true;
   sessionRailFraction.value =
       p.getDouble(kSessionRailFractionPref) ?? kSessionRailDefaultFraction;
 }
@@ -270,7 +272,9 @@ class _SessionRailState extends State<SessionRail> {
       if (_lineCounts.containsKey(key)) continue;
       try {
         final patch = await widget.client.gitDiff(widget.sessionId,
-            file: f.path, staged: f.staged && !f.unstaged, untracked: f.untracked);
+            file: f.path,
+            staged: f.staged && !f.unstaged,
+            untracked: f.untracked);
         var a = 0, r = 0;
         for (final l in patch.split('\n')) {
           if (l.startsWith('+') && !l.startsWith('+++')) a++;
@@ -281,6 +285,7 @@ class _SessionRailState extends State<SessionRail> {
       } catch (_) {}
     }
   }
+
   WakeSchedule? _wake;
   bool _wakeKnown = false;
   bool? _warm;
@@ -575,10 +580,9 @@ class _SessionRailState extends State<SessionRail> {
                 );
               },
               child: Column(
-                key: ValueKey(
-                    _page == null || kMobile || widget.isLead
-                        ? 'rail-root'
-                        : 'rail-$_page'),
+                key: ValueKey(_page == null || kMobile || widget.isLead
+                    ? 'rail-root'
+                    : 'rail-$_page'),
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: _railBody(),
@@ -958,8 +962,7 @@ class _SessionRailState extends State<SessionRail> {
                     _RailRow(icon: i.$1, label: i.$2, onTap: () => run(i.$3)),
               ),
             if (widget.onDelete != null || widget.onDeleteNow != null) ...[
-              if (items.isNotEmpty)
-                const SizedBox(height: 8),
+              if (items.isNotEmpty) const SizedBox(height: 8),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6),
                 child: widget.onDeleteNow == null
@@ -1122,66 +1125,6 @@ class _SessionRailState extends State<SessionRail> {
         ),
     ]);
   }
-
-  static List<Map>? _plan(HarnessState? s) {
-    final events = s?.events ?? const <Map<String, dynamic>>[];
-    for (var i = events.length - 1; i >= 0; i--) {
-      final e = events[i];
-      if (e['kind'] != 'plan_updated') continue;
-      final steps = (e['steps'] as List? ?? const []).whereType<Map>().toList();
-      return steps.isEmpty ? null : steps;
-    }
-    return null;
-  }
-
-  static int _stepState(Map step) => switch (step['status']?.toString()) {
-        'done' || 'completed' => 2,
-        'in_progress' => 1,
-        _ => 0,
-      };
-
-  List<Widget> _planRows(List<Map> plan) => [
-        for (final p in plan)
-          ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 26),
-            child: Row(children: [
-              SizedBox(
-                width: 14,
-                child: Center(
-                  child: switch (_stepState(p)) {
-                    2 => AppIcon('check', size: 12, color: AppColors.fg2),
-                    1 => Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: AppColors.fg1,
-                          shape: BoxShape.circle,
-                        )),
-                    _ => Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border:
-                                Border.all(color: AppColors.fg3, width: 1.3))),
-                  },
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(p['step']?.toString() ?? '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(13,
-                        color: switch (_stepState(p)) {
-                          2 => AppColors.fg2,
-                          1 => AppColors.fg1,
-                          _ => AppColors.fg3,
-                        })),
-              ),
-            ]),
-          ),
-      ];
 
   /// The lane's agent when it runs as another one, else its provider.
   Widget _laneMark(LaneInfo l) {

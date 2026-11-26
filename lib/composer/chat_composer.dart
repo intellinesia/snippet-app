@@ -184,7 +184,7 @@ class ChatComposer extends StatelessWidget {
     Widget field = TextField(
       controller: input,
       focusNode: focus,
-      contentInsertionConfiguration: contentInsertion,
+      contentInsertionConfiguration: kMobile ? contentInsertion : null,
       minLines: 1,
       maxLines: 4,
       cursorWidth: 1.5,
