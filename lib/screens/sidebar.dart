@@ -4,8 +4,6 @@ import 'agent_profile_panel.dart' show showAgentProfileSettings;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart'
-    show kMiddleMouseButton, PointerDeviceKind;
 import 'package:flutter/services.dart';
 
 import '../api.dart';
@@ -20,7 +18,6 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'agents_sidebar_panel.dart';
 import 'lead.dart';
-import 'lead/coordination_agent_detail.dart';
 import 'settings_overlay.dart' show showSettings;
 import 'shell_models.dart';
 import 'shell_nav.dart';
@@ -40,7 +37,6 @@ import '../quiet.dart' show QuietOfflineBanner, QuietPlace;
 import 'mobile_home/quiet_home.dart';
 import 'mobile_home/quiet_lists.dart';
 import 'tasks/tasks_panel.dart' show TasksPanel;
-import 'mobile_session_home.dart';
 import 'phone_hero.dart';
 import '../session_quick_send.dart';
 import 'artifacts_screen.dart' show openArtifactsList;
@@ -236,7 +232,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   DateTime? _chatsShownAt;
   // The session list now lives in the shell (passed via widget.sessions); the
   // sidebar is presentational, so opening the drawer doesn't refetch.
-  String _filterQuery = '';
+  final String _filterQuery = '';
   String _agentFilterQuery = '';
 
   final GlobalKey<AgentsSidebarPanelState> _agentsPanelKey =
@@ -247,7 +243,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   final GlobalKey<AgentsSidebarPanelState> _agentsMirrorKey =
       GlobalKey<AgentsSidebarPanelState>();
   bool _selecting = false;
-  static bool _settledOpen = false;
 
   // The desktop title bar's one "new" button reaches the mounted sidebar here.
   static SidebarState? _desktop;
@@ -275,8 +270,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   double get _scrollBottomPad => _selecting ? 24.0 : 0.0;
 
   /// Desktop search in section headers.
-  final TextEditingController _desktopChatsSearchCtl = TextEditingController();
-  final FocusNode _desktopChatsSearchFocus = FocusNode();
   final TextEditingController _desktopAgentsSearchCtl = TextEditingController();
   final FocusNode _desktopAgentsSearchFocus = FocusNode();
   bool _agentSearchOpen = false;
@@ -465,8 +458,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     _homeAnimC?.dispose();
     _renameCtl.dispose();
     _renameFocus.dispose();
-    _desktopChatsSearchCtl.dispose();
-    _desktopChatsSearchFocus.dispose();
     _desktopAgentsSearchCtl.dispose();
     _desktopAgentsSearchFocus.dispose();
     super.dispose();
@@ -478,7 +469,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   List<SessionInfo>? get _sessions => _deleting.isEmpty
       ? widget.sessions
       : widget.sessions?.where((s) => !_deleting.contains(s.id)).toList();
-  bool get _loading => widget.sessionsLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -694,7 +684,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             agents: _heroAgents,
             groups: _heroGroups,
             sessions: list,
-            onOpenAgent: (a) => widget.onAgent?.call(a),
+            onOpenAgent: (a) => widget.onAgent(a),
             onOpenGroup: (g) =>
                 openGroupThread(context, client: client, group: g),
             onOpenSession: (s) =>
@@ -810,7 +800,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
               ),
             ),
         ]);
-
     }
   }
 
@@ -851,32 +840,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         onOpenAgent: (a) =>
             kMobile ? widget.onAgent(a) : widget.onOpenAgent?.call(a),
       );
-
-  Widget _selectionHeader() {
-    final n = _selected.length;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(S.s4, S.s16, M.gutter, S.s6),
-      child: SizedBox(
-        height: M.minTarget,
-        child: Row(children: [
-          IconBtn('x',
-              size: M.minTarget,
-              iconSize: 20,
-              tooltip: 'Cancel',
-              onTap: _exitSelect),
-          SizedBox(width: S.s4),
-          Expanded(
-            child: Text(n == 0 ? 'Select chats' : '$n selected',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sans(kMobile ? M.sectionTitle : 15,
-                    weight: W.label, color: AppColors.fg1)),
-          ),
-          _selectAllToggle(),
-        ]),
-      ),
-    );
-  }
 
   Widget _emptySessions({bool searching = false}) => Padding(
         padding: EdgeInsets.only(top: kMobile ? 72 : S.s32),
@@ -926,262 +889,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     final sorted = sessions.toList();
     sorted.sort((a, b) => b.lastActive.compareTo(a.lastActive));
     return sorted;
-  }
-
-  Widget _sessionList() {
-    if (_loading && _sessions == null) {
-      return Center(child: DelayedSpinner(size: 20));
-    }
-    final all = _sessions ?? const <SessionInfo>[];
-    if (all.isEmpty) {
-      // Offline ≠ empty: a failed fetch gets an explicit error + retry.
-      if (widget.sessionsError != null) {
-        return ListView(
-            padding: EdgeInsets.fromLTRB(M.gutter, S.s2, M.gutter, S.s32),
-            children: [
-              Padding(
-                  padding: EdgeInsets.all(S.s20),
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    AppIcon('wifi-off', size: 20, color: AppColors.fg4),
-                    SizedBox(height: S.of(10)),
-                    Text(widget.sessionsError!,
-                        textAlign: TextAlign.center, style: TS.meta()),
-                    SizedBox(height: S.s12),
-                    TextButton(
-                        onPressed: widget.onRefreshSessions,
-                        child: Text('Retry',
-                            style: sans(12, color: AppColors.accent))),
-                  ])),
-            ]);
-      }
-      return ListView(
-          padding: EdgeInsets.fromLTRB(M.gutter, S.s2, M.gutter, S.s32),
-          children: [_emptySessions()]);
-    }
-    final split = splitSettled(_sortSessionsByRecency(all.where((s) =>
-        !isDedicatedLeadSession(s.id) &&
-        !isInboxSessionRow(s) &&
-        _matchesQuery(s))));
-    final children = <Widget>[
-      if (kMobile && _filterQuery.trim().isEmpty) _phoneHero(split.main),
-      ...(kMobile
-          ? _mobileGroupedRows(split.main)
-          : _groupedRows(split.main, attentionFirst: true)),
-    ];
-    if (kMobile && split.settled.isNotEmpty) {
-      children.add(_mobileSettledCard(split.settled));
-    } else if (split.settled.isNotEmpty) {
-      final settledOpen = _settledOpen || _filterQuery.trim().isNotEmpty;
-      children.add(SessionGroupHeader(
-        'Settled',
-        count: split.settled.length,
-        collapsed: !settledOpen,
-        chevronRight: true,
-        onToggle: () => setState(() => _settledOpen = !_settledOpen),
-      ));
-      children.add(Reveal(
-        show: settledOpen,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (var i = 0; i < split.settled.length; i++)
-              _listRow(split.settled[i],
-                  above: i > 0 ? split.settled[i - 1] : null,
-                  below: i + 1 < split.settled.length
-                      ? split.settled[i + 1]
-                      : null,
-                  divider: kMobile && i + 1 < split.settled.length),
-          ],
-        ),
-      ));
-    }
-    if (children.isEmpty) {
-      children.add(_emptySessions(searching: _filterQuery.trim().isNotEmpty));
-    }
-    final list = PullToRefresh(
-      onRefresh: () async => widget.onRefreshSessions(),
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding:
-            EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, _scrollBottomPad),
-        children: children,
-      ),
-    );
-    return list;
-  }
-
-  /// Phone list: pinned sessions first, live sessions as cards, then each folder in its own card.
-  List<Widget> _mobileGroupedRows(List<SessionInfo> sorted) {
-    if (sorted.isEmpty) return const [];
-    final out = <Widget>[];
-    final filtering = _filterQuery.trim().isNotEmpty;
-    _chatsShownAt ??= DateTime.now();
-    var n = 0;
-    final pinned = _pinnedSessions(sorted);
-    final pinnedIds = {for (final s in pinned) s.id};
-    if (pinned.isNotEmpty) {
-      out.add(MobileSectionLabel('Pinned',
-          icon: 'pin', count: pinned.length, top: 2));
-      bool isLive(SessionInfo s) =>
-          !filtering &&
-          (sessionNeedsYou(s) || sessionCameBack(s) || sessionBusy(s));
-      final rest = [
-        ...pinned.where(isLive),
-        ...pinned.where((s) => !isLive(s))
-      ];
-      if (rest.isNotEmpty) {
-        out.add(Appear(
-          key: const ValueKey('folder-pinned'),
-          index: n++,
-          since: _chatsShownAt,
-          child: MobileGroupCard(children: [
-            for (var i = 0; i < rest.length; i++)
-              _listRow(rest[i],
-                  above: i > 0 ? rest[i - 1] : null,
-                  below: i + 1 < rest.length ? rest[i + 1] : null,
-                  divider: i + 1 < rest.length,
-                  showProject: true),
-          ]),
-        ));
-      }
-    }
-    final remaining = [
-      for (final s in sorted)
-        if (!pinnedIds.contains(s.id)) s,
-    ];
-    final needs = filtering
-        ? const <SessionInfo>[]
-        : [
-            for (final s in remaining)
-              if (sessionNeedsYou(s)) s
-          ];
-    final cameBack = filtering
-        ? const <SessionInfo>[]
-        : [
-            for (final s in remaining)
-              if (sessionCameBack(s)) s
-          ];
-    final running = filtering
-        ? const <SessionInfo>[]
-        : [
-            for (final s in remaining)
-              if (!sessionNeedsYou(s) && !sessionCameBack(s) && sessionBusy(s))
-                s,
-          ];
-    var top = pinned.isEmpty ? 2.0 : 18.0;
-    void liveSection(String label, List<SessionInfo> rows) {
-      if (rows.isEmpty) return;
-      out.add(MobileSectionLabel(label, top: top));
-      top = 18;
-      // Same rows as the folders; detail (plans, lanes, asks) lives in the hero.
-      out.add(Appear(
-        key: ValueKey('live-$label'),
-        index: n++,
-        since: _chatsShownAt,
-        child: MobileGroupCard(children: [
-          for (var i = 0; i < rows.length; i++)
-            _listRow(rows[i],
-                above: i > 0 ? rows[i - 1] : null,
-                below: i + 1 < rows.length ? rows[i + 1] : null,
-                divider: i + 1 < rows.length,
-                showProject: true),
-        ]),
-      ));
-    }
-
-    liveSection('Needs you', needs);
-    liveSection('Running', running);
-    liveSection('Completed', cameBack);
-    final liveIds = {
-      for (final s in [...needs, ...cameBack, ...running]) s.id
-    };
-    final byFolder = <String, List<SessionInfo>>{};
-    for (final s in remaining) {
-      if (liveIds.contains(s.id)) continue;
-      byFolder.putIfAbsent(projectKey(s), () => []).add(s);
-    }
-    final labelCount = <String, int>{};
-    for (final rows in byFolder.values) {
-      final l = projectLabel(rows.first);
-      labelCount[l] = (labelCount[l] ?? 0) + 1;
-    }
-    var first = top == 2;
-    for (final rows in byFolder.values) {
-      var label = projectLabel(rows.first);
-      if ((labelCount[label] ?? 0) > 1) label = _projectPath(rows.first);
-      out.add(MobileSectionLabel(label,
-          icon: 'folder', count: rows.length, top: first ? 2 : 18));
-      first = false;
-      out.add(Appear(
-        key: ValueKey('folder-${projectKey(rows.first)}'),
-        index: n++,
-        since: _chatsShownAt,
-        child: MobileGroupCard(children: [
-          for (var i = 0; i < rows.length; i++)
-            _listRow(rows[i],
-                above: i > 0 ? rows[i - 1] : null,
-                below: i + 1 < rows.length ? rows[i + 1] : null,
-                divider: i + 1 < rows.length),
-        ]),
-      ));
-    }
-    return out;
-  }
-
-  /// Settled sessions as the last card in the phone list, expanding in place.
-  Widget _mobileSettledCard(List<SessionInfo> rows) {
-    final open = _settledOpen || _filterQuery.trim().isNotEmpty;
-    return Padding(
-      padding: EdgeInsets.only(top: S.of(18)),
-      child: MobileGroupCard(children: [
-        Semantics(
-          button: true,
-          expanded: open,
-          label: 'Settled, ${rows.length}',
-          child: ExcludeSemantics(
-            child: InkWell(
-              overlayColor: const WidgetStatePropertyAll(Colors.transparent),
-              splashFactory: NoSplash.splashFactory,
-              highlightColor: Colors.transparent,
-              onTap: () {
-                pickHaptic();
-                setState(() => _settledOpen = !_settledOpen);
-              },
-              child: SizedBox(
-                height: M.minTarget + 4,
-                child: Row(children: [
-                  AppIcon('archive', size: 16, color: AppColors.fg3),
-                  SizedBox(width: S.s12),
-                  Expanded(
-                      child:
-                          Text('Settled', style: TS.rowTitle(AppColors.fg2))),
-                  Text('${rows.length}', style: TS.meta()),
-                  SizedBox(width: S.s6),
-                  AnimatedRotation(
-                    turns: open ? 0.25 : 0,
-                    duration: Motion.base,
-                    curve: Curves.easeOutCubic,
-                    child: AppIcon('chevron-right',
-                        size: 14, color: AppColors.fg3),
-                  ),
-                ]),
-              ),
-            ),
-          ),
-        ),
-        Reveal(
-          show: open,
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(height: 1, color: AppColors.line),
-            for (var i = 0; i < rows.length; i++)
-              _listRow(rows[i],
-                  above: i > 0 ? rows[i - 1] : null,
-                  below: i + 1 < rows.length ? rows[i + 1] : null,
-                  divider: i + 1 < rows.length),
-          ]),
-        ),
-      ]),
-    );
   }
 
   /// Rows under their project's header, with cross-project Needs you first on
@@ -1450,60 +1157,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
 
   /// The quiet search field: a palette opener when one is wired, else an
   /// inline filter for both lists.
-  Widget _sidebarSearch() {
-    final palette = widget.onOpenPalette;
-    if (palette != null) {
-      return _searchBox(
-        onTap: palette,
-        child: Row(children: [
-          AppIcon('search', size: 13, color: AppColors.fg2),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text('Search', style: sans(12, color: AppColors.fg2)),
-          ),
-          Text('Cmd K', style: sans(11, color: AppColors.fg3)),
-        ]),
-      );
-    }
-    final ctl = _desktopChatsSearchCtl;
-    return _searchBox(
-      child: Row(children: [
-        AppIcon('search', size: 13, color: AppColors.fg2),
-        const SizedBox(width: 8),
-        Expanded(
-          child: TextField(
-            controller: ctl,
-            focusNode: _desktopChatsSearchFocus,
-            onChanged: (v) => setState(() {
-              _filterQuery = v;
-              _agentFilterQuery = v;
-            }),
-            style: sans(12, color: AppColors.fg1),
-            decoration: InputDecoration(
-              isCollapsed: true,
-              border: InputBorder.none,
-              hintText: 'Search',
-              hintStyle: sans(12, color: AppColors.fg2),
-            ),
-          ),
-        ),
-        if (ctl.text.isEmpty)
-          Text('Cmd K', style: sans(11, color: AppColors.fg3))
-        else
-          IconBtn('x', size: 24, iconSize: 10, tooltip: 'Clear', onTap: () {
-            ctl.clear();
-            setState(() {
-              _filterQuery = '';
-              _agentFilterQuery = '';
-            });
-          }),
-      ]),
-    );
-  }
-
-  Widget _searchBox({VoidCallback? onTap, required Widget child}) =>
-      _SidebarSearchBox(onTap: onTap, child: child);
-
   /// Desktop sidebar: one scroll holding the agents (Lead first,
   /// then groups) and the recency-ordered sessions. Workspace is metadata on
   /// each row, never a grouping or sort key.
@@ -1559,37 +1212,27 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   }
 
   /// Home sits above the agents.
-  Widget _desktopNav() => Padding(
-        padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
-        child: ValueListenableBuilder<String>(
-          valueListenable: activeShellPlace,
-          builder: (_, place, __) => Column(children: [
-            _PlaceRow(
-              label: 'Home',
-              icon: 'home',
-              selected: place == 'home' && _place != QuietPlace.sessions,
-              onTap: () => _selectPlace(QuietPlace.home),
-            ),
-            _PlaceRow(
-              label: 'Sessions',
-              icon: 'chat-thread',
-              selected: place == 'sessions',
-              onTap: _openSessionsPage,
-            ),
-            _PlaceRow(
-              label: 'Tasks',
-              icon: 'list-checks',
-              selected: _place == QuietPlace.tasks,
-              onTap: () => _selectPlace(QuietPlace.tasks),
-            ),
-            _PlaceRow(
-              label: 'Artifacts',
-              icon: 'file-stack',
-              selected: false,
-              onTap: () => openArtifactsList(context),
-            ),
-          ]),
-        ),
+  Widget _desktopNav() => ValueListenableBuilder<String>(
+        valueListenable: activeShellPlace,
+        builder: (_, place, __) {
+          Widget b(String icon, String tip, bool on, VoidCallback tap) =>
+              IconBtn(icon,
+                  size: 28,
+                  iconSize: 15,
+                  active: on,
+                  tooltip: tip,
+                  onTap: tap);
+          return Row(mainAxisSize: MainAxisSize.min, children: [
+            b('home', 'Home', place == 'home' && _place != QuietPlace.sessions,
+                () => _selectPlace(QuietPlace.home)),
+            b('chat-thread', 'Sessions', place == 'sessions',
+                _openSessionsPage),
+            b('list-checks', 'Tasks', _place == QuietPlace.tasks,
+                () => _selectPlace(QuietPlace.tasks)),
+            b('file-stack', 'Artifacts', false,
+                () => openArtifactsList(context)),
+          ]);
+        },
       );
 
   void _toggleAgentSearch() {
@@ -1638,14 +1281,14 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   Widget _agentInlineSearch() => Padding(
         padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
         child: Container(
-          height: 28,
+          height: 32,
           padding: const EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
-            color: AppColors.surface2,
+            color: AppColors.surface1,
             borderRadius: BorderRadius.circular(R.of(8)),
           ),
           child: Row(children: [
-            AppIcon('search', size: 12, color: AppColors.fg3),
+            AppIcon('search', size: 13, color: AppColors.fg3),
             const SizedBox(width: 8),
             Expanded(
               child: TextField(
@@ -1690,53 +1333,47 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         .length;
     final loadedCount = _agentsCount ?? panelCount ?? cachedCount;
     final visibleCount = loadedCount == 0 ? null : loadedCount;
-    return Padding(
-      padding: const EdgeInsets.only(top: 2),
-      child: SidebarSectionHeader(
-        'Agents',
-        collapsed: _agentsCollapsed,
-        count: _agentsCollapsed
-            ? (_collapsedAgentsCount ?? visibleCount)
-            : visibleCount,
-        onToggle: _toggleAgentsCollapsed,
-        actions: [
-          SidebarSectionAction(
-            icon: 'search',
-            tooltip: 'Search agents',
-            onTap: (_) => _toggleAgentSearch(),
-          ),
-          SidebarSectionAction(
-            icon: 'sliders-horizontal',
-            tooltip: 'Filter agents',
-            onTap: (ctx) {
-              _openAgentStateFilter(ctx);
-            },
-          ),
-          SidebarSectionAction(
-            icon: 'plus',
-            tooltip: 'New agent or group',
-            onTap: (ctx) =>
-                _agentsPanelKey.currentState?.openCreateMenu(ctx, above: false),
-          ),
-        ],
-      ),
+    return SidebarSectionHeader(
+      'Agents',
+      collapsed: _agentsCollapsed,
+      count: _agentsCollapsed
+          ? (_collapsedAgentsCount ?? visibleCount)
+          : visibleCount,
+      onToggle: _toggleAgentsCollapsed,
+      actions: [
+        SidebarSectionAction(
+          icon: 'search',
+          tooltip: 'Search agents',
+          onTap: (_) => _toggleAgentSearch(),
+        ),
+        SidebarSectionAction(
+          icon: 'sliders-horizontal',
+          tooltip: 'Filter agents',
+          onTap: (ctx) {
+            _openAgentStateFilter(ctx);
+          },
+        ),
+        SidebarSectionAction(
+          icon: 'plus',
+          tooltip: 'New agent or group',
+          onTap: (ctx) =>
+              _agentsPanelKey.currentState?.openCreateMenu(ctx, above: false),
+        ),
+      ],
     );
   }
 
-  Widget _pinnedArtifactsHeader() => Padding(
-        padding: const EdgeInsets.only(top: 2, bottom: 2),
-        child: SidebarSectionHeader(
-          'Pinned artifacts',
-          collapsed: true,
-          count: 0,
-          actions: const [
-            SidebarSectionAction(
-              icon: 'plus',
-              tooltip: 'No artifact picker available',
-              enabled: false,
-            ),
-          ],
-        ),
+  Widget _pinnedArtifactsHeader() => SidebarSectionHeader(
+        'Pinned artifacts',
+        collapsed: true,
+        count: 0,
+        actions: const [
+          SidebarSectionAction(
+            icon: 'plus',
+            tooltip: 'No artifact picker available',
+            enabled: false,
+          ),
+        ],
       );
 
   String? _focusedRowId(String prefix) {
@@ -1841,7 +1478,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                 onRefresh: () async => widget.onRefreshSessions(),
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                  padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
                   children: [
                     if (!_agentsCollapsed)
                       _agentList(widget.client!,
@@ -1854,25 +1491,51 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             ),
           ]);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      if (hasClient)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
-          child: _sidebarSearch(),
-        ),
+      if (hasClient) _brandRow(),
       Expanded(
         child: SidebarHoverScope(
-          child: _withSidebarKeyboard(
-            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              if (hasClient) _desktopNav(),
-              Expanded(child: body),
-            ]),
-          ),
+          child: _withSidebarKeyboard(body),
         ),
       ),
       if (hasClient) _pinnedArtifactsHeader(),
-      if (widget.desktopFooter != null) widget.desktopFooter!,
+      // Capy footer: places and tools as one quiet row of icons.
+      SizedBox(
+        height: 44,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 0, 0, 0),
+          // The shell pins its footer tools over the right end of this row.
+          child: Row(children: [
+            if (hasClient) _desktopNav(),
+            const Spacer(),
+            if (widget.desktopFooter != null) widget.desktopFooter!,
+          ]),
+        ),
+      ),
     ]);
   }
+
+  /// Capy's brand row: the mark, then search and a new session at the right.
+  Widget _brandRow() => SizedBox(
+        height: 40,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
+          child: Row(children: [
+            const AgentMochi('snippet', size: 20),
+            const Spacer(),
+            if (widget.onOpenPalette != null)
+              IconBtn('search',
+                  size: 28,
+                  iconSize: 15,
+                  tooltip: kMacOS ? 'Search  Cmd K' : 'Search  Ctrl K',
+                  onTap: widget.onOpenPalette),
+            IconBtn('square-pen',
+                size: 28,
+                iconSize: 15,
+                tooltip: 'New session',
+                onTap: widget.onNewSession),
+          ]),
+        ),
+      );
 
   Future<void> _sessionsMenu(BuildContext anchor) async {
     final pick = await showAppMenu<String>(
@@ -2238,196 +1901,5 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     } catch (e) {
       if (mounted) toast(context, '$e', danger: true);
     }
-  }
-}
-
-class _SidebarSearchBox extends StatefulWidget {
-  const _SidebarSearchBox({required this.child, this.onTap});
-
-  final Widget child;
-  final VoidCallback? onTap;
-
-  @override
-  State<_SidebarSearchBox> createState() => _SidebarSearchBoxState();
-}
-
-class _SidebarSearchBoxState extends State<_SidebarSearchBox> {
-  bool _hover = false;
-  bool _focus = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(R.of(8));
-    final tappable = widget.onTap != null;
-    final fill = _focus
-        ? AppColors.sidebarFocus
-        : _hover && tappable
-            ? AppColors.hoverPlate
-            : AppColors.surface2;
-    final box = ClipRRect(
-      borderRadius: radius,
-      child: Stack(children: [
-        AnimatedContainer(
-          duration: reduceMotion(context) ? Duration.zero : Motion.quick,
-          curve: Curves.easeOut,
-          height: 28,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          decoration: BoxDecoration(color: fill, borderRadius: radius),
-          child: widget.child,
-        ),
-        if (_focus)
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: 2,
-            child: ColoredBox(color: AppColors.fg1),
-          ),
-      ]),
-    );
-    final focused = Focus(
-      canRequestFocus: false,
-      skipTraversal: true,
-      onFocusChange: (v) => setState(() => _focus = v &&
-          FocusManager.instance.highlightMode ==
-              FocusHighlightMode.traditional),
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hover = true),
-        onExit: (_) => setState(() => _hover = false),
-        cursor: tappable ? SystemMouseCursors.click : SystemMouseCursors.basic,
-        child: tappable
-            ? Material(
-                type: MaterialType.transparency,
-                child: InkWell(
-                  borderRadius: radius,
-                  hoverColor: Colors.transparent,
-                  focusColor: Colors.transparent,
-                  splashFactory: NoSplash.splashFactory,
-                  onTap: widget.onTap,
-                  child: box,
-                ),
-              )
-            : box,
-      ),
-    );
-    if (!tappable) return focused;
-    return Tooltip(
-      message: kMacOS ? 'Search or jump (⌘K)' : 'Search or jump (Ctrl+K)',
-      child: focused,
-    );
-  }
-}
-
-class _PlaceRow extends StatefulWidget {
-  const _PlaceRow({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-  final String label;
-  final String icon;
-  final bool selected;
-  final VoidCallback? onTap;
-
-  @override
-  State<_PlaceRow> createState() => _PlaceRowState();
-}
-
-class _PlaceRowState extends State<_PlaceRow> {
-  bool _hover = false;
-  bool _focus = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = widget.onTap != null;
-    final fill = _focus
-        ? AppColors.sidebarFocus
-        : widget.selected
-            ? AppColors.sidebarPlate
-            : _hover && enabled
-                ? AppColors.hoverPlate
-                : Colors.transparent;
-    final fg = !enabled
-        ? AppColors.fg4
-        : widget.selected
-            ? AppColors.fg1
-            : AppColors.fg2;
-    final radius = BorderRadius.circular(R.of(8));
-    return Focus(
-      canRequestFocus: false,
-      skipTraversal: true,
-      onFocusChange: (v) => setState(() => _focus = v &&
-          FocusManager.instance.highlightMode ==
-              FocusHighlightMode.traditional),
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hover = true),
-        onExit: (_) => setState(() => _hover = false),
-        cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-        child: Listener(
-          onPointerDown: !enabled
-              ? null
-              : (e) {
-                  if (e.kind == PointerDeviceKind.mouse &&
-                      e.buttons & kMiddleMouseButton != 0) {
-                    middleClickOpen = true;
-                    widget.onTap!();
-                    middleClickOpen = false;
-                  }
-                },
-          child: Material(
-            type: MaterialType.transparency,
-            child: InkWell(
-              borderRadius: radius,
-              hoverColor: Colors.transparent,
-              focusColor: Colors.transparent,
-              splashFactory: NoSplash.splashFactory,
-              onTap: enabled
-                  ? () {
-                      tapHaptic();
-                      widget.onTap!();
-                    }
-                  : null,
-              child: ClipRRect(
-                borderRadius: radius,
-                child: Stack(children: [
-                  AnimatedContainer(
-                    duration:
-                        reduceMotion(context) ? Duration.zero : Motion.quick,
-                    curve: Curves.easeOut,
-                    height: 28,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration:
-                        BoxDecoration(color: fill, borderRadius: radius),
-                    child: Row(children: [
-                      AppIcon(widget.icon, size: 14, color: fg),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          widget.label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(13,
-                              weight: widget.selected ? W.label : W.body,
-                              color: fg),
-                        ),
-                      ),
-                    ]),
-                  ),
-                  if (_focus)
-                    Positioned(
-                      left: 0,
-                      top: 0,
-                      bottom: 0,
-                      width: 2,
-                      child: ColoredBox(color: AppColors.fg1),
-                    ),
-                ]),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }

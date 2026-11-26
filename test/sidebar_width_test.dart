@@ -90,7 +90,7 @@ void main() {
       expect(prefs.getDouble(kSidebarWidthPref), kSidebarMinWidth);
     });
 
-    // Double-click resets to the window default (240 at 1440) and drops the
+    // Double-click resets to the window default (264 at 1440) and drops the
     // stored width so the default keeps following the window.
     final handleCenter = tester.getCenter(handleFinder);
     await tester.tapAt(handleCenter);

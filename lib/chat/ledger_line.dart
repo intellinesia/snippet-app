@@ -213,6 +213,7 @@ class LedgerLine extends StatefulWidget {
 
 class _LedgerLineState extends State<LedgerLine> {
   int? _phrase;
+  bool _hover = false;
 
   // Kept after closing so the collapse animates the rows it was showing.
   int _shown = 0;
@@ -254,100 +255,109 @@ class _LedgerLineState extends State<LedgerLine> {
       // Desktop TC-01/02: one s1 surface, a state icon at x+14, the sentence
       // at x+32, mono duration at the right and expansion behind one hairline.
       final lifted = _phrase != null && !widget.open;
-      return Container(
-        decoration: BoxDecoration(
-          color: lifted ? AppColors.surface2 : AppColors.surface1,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TapDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: widget.onTap,
-              child: SizedBox(
-                height: 30,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 0, 4, 0),
-                  child: Row(children: [
-                    SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: Center(
-                        child: AppIcon(bad ? 'x' : 'check',
-                            size: bad ? 14 : 13,
-                            color: bad ? AppColors.fg1 : AppColors.fg3),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text.rich(
-                        TextSpan(children: spans),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: base,
-                      ),
-                    ),
-                    if (took != null) ...[
-                      const SizedBox(width: 10),
-                      Text(formatWorkDuration(took),
-                          style: mono(11, color: AppColors.fg3)),
-                    ],
-                    const SizedBox(width: 4),
-                    SizedBox(
-                      width: 28,
-                      height: 28,
-                      child: Center(
-                        child: AnimatedRotation(
-                          turns: widget.open ? 0.25 : 0,
-                          duration: const Duration(milliseconds: 160),
-                          child: AppIcon('chevron-right',
-                              size: 12, color: AppColors.fg3),
+      // Capy: steps read as quiet text; a plate only on hover or when open.
+      return MouseRegion(
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: Container(
+          decoration: BoxDecoration(
+            color: lifted
+                ? AppColors.surface2
+                : (widget.open || _hover)
+                    ? AppColors.surface1
+                    : null,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TapDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: widget.onTap,
+                child: SizedBox(
+                  height: 30,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 0, 4, 0),
+                    child: Row(children: [
+                      SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: Center(
+                          child: AppIcon(bad ? 'x' : 'check',
+                              size: bad ? 14 : 13,
+                              color: bad ? AppColors.fg1 : AppColors.fg3),
                         ),
                       ),
-                    ),
-                  ]),
-                ),
-              ),
-            ),
-            SpringExpand(
-              open: widget.open,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(height: 1, color: AppColors.line),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
-                    child: LedgerGantt(
-                        steps: widget.steps, rows: widget.rows, total: took),
-                  ),
-                ],
-              ),
-            ),
-            SpringExpand(
-              open: _phrase != null && !widget.open,
-              child: shown == null
-                  ? const SizedBox.shrink()
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Container(height: 1, color: AppColors.line),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
-                          child: LedgerGantt(
-                            steps: [
-                              for (final k in shown.indices) widget.steps[k]
-                            ],
-                            rows: [
-                              for (final k in shown.indices) widget.rows[k]
-                            ],
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text.rich(
+                          TextSpan(children: spans),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: base,
+                        ),
+                      ),
+                      if (took != null) ...[
+                        const SizedBox(width: 10),
+                        Text(formatWorkDuration(took),
+                            style: mono(11, color: AppColors.fg3)),
+                      ],
+                      const SizedBox(width: 4),
+                      SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: Center(
+                          child: AnimatedRotation(
+                            turns: widget.open ? 0.25 : 0,
+                            duration: const Duration(milliseconds: 160),
+                            child: AppIcon('chevron-right',
+                                size: 12, color: AppColors.fg3),
                           ),
                         ),
-                      ],
+                      ),
+                    ]),
+                  ),
+                ),
+              ),
+              SpringExpand(
+                open: widget.open,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(height: 1, color: AppColors.line),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+                      child: LedgerGantt(
+                          steps: widget.steps, rows: widget.rows, total: took),
                     ),
-            ),
-          ],
+                  ],
+                ),
+              ),
+              SpringExpand(
+                open: _phrase != null && !widget.open,
+                child: shown == null
+                    ? const SizedBox.shrink()
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Container(height: 1, color: AppColors.line),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+                            child: LedgerGantt(
+                              steps: [
+                                for (final k in shown.indices) widget.steps[k]
+                              ],
+                              rows: [
+                                for (final k in shown.indices) widget.rows[k]
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ],
+          ),
         ),
       );
     }

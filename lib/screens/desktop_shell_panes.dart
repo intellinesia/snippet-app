@@ -244,6 +244,47 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   static String _line(List<String> parts) =>
       parts.where((p) => p.trim().isNotEmpty).join(' \u00b7 ');
 
+  /// Whether a left-pane tab draws its own pane row (and so lists the tabs).
+  bool _ownsPaneRow(_ShellTab t) {
+    if (kMobile) return false;
+    final readout = t.readout;
+    if ((readout?.agent ?? (t.isLead ? _mcAgent : null)) != null) return true;
+    final request = readout?.request;
+    if (request != null) {
+      return request.id.startsWith('group:') && request.sidePanel != null;
+    }
+    return t.isSessionChat && readout == null;
+  }
+
+  /// The pane's other tabs as pills, for a chat's own pane row.
+  List<Widget> _paneTabsFor(_ShellTab t) {
+    final left = _tabsIn(_Pane.left);
+    if (!left.contains(t)) return const [];
+    VoidCallback? dismiss(_ShellTab x) => x.isTerminal
+        ? () => _hideTabView(_Pane.left, x)
+        : (_canCloseTab(x) ? () => _closePaneTab(x) : null);
+    return [
+      for (final x in left)
+        if (x.key != t.key)
+          PanePill(
+              key: ValueKey('pane-pill-${x.key}'),
+              icon: tabIconKind(x),
+              label: x.title.trim().isEmpty ? '(untitled)' : x.title.trim(),
+              active: false,
+              onTap: () => _activateIn(_Pane.left, x),
+              onClose: dismiss(x)),
+      for (final r in _rightTabs)
+        if (r.pane == _Pane.left)
+          PanePill(
+              key: ValueKey('pane-pill-${r.key}'),
+              icon: r.icon,
+              label: r.label,
+              active: false,
+              onTap: () => _setState(() => _activeKey[_Pane.left] = r.key),
+              onClose: () => _closeRightTab(r.key)),
+    ];
+  }
+
   Widget? _chatHeaderFor(_ShellTab t, double width) {
     final readout = t.readout;
     final agent = readout?.agent ?? (t.isLead ? _mcAgent : null);
@@ -257,6 +298,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           if (s.displayAgentId == agent.id) s
       ];
       return ChatHeaderBar(
+      tabs: _paneTabsFor(t),
         agentIds: [agent.id],
         title: name,
         subtitle: _line([
@@ -290,6 +332,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
               id,
       ];
       return ChatHeaderBar(
+      tabs: _paneTabsFor(t),
         agentIds: ids,
         title: (request.title ?? '').trim().isEmpty ? 'Group' : request.title!,
         subtitle: names.isEmpty ? '' : '${names.join(', ')} and you',
@@ -323,6 +366,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             : ' ${ran.inHours}h ${ran.inMinutes % 60}m';
     final state = needs ? 'Needs you' : (running ? 'Running$runFor' : 'Idle');
     return ChatHeaderBar(
+      tabs: _paneTabsFor(t),
       agentIds: [owner ?? 'snippet'],
       title: t.title.trim().isEmpty ? 'Session' : t.title.trim(),
       // "Running 14m · Duke · Opus"
@@ -587,6 +631,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         sidebarTop: _sidebarTop(),
         mainHeader: kMobile ? _macWindowBar() : _tabStripBand(),
         sidebarFooter: kMobile ? null : _sidebarFooter(),
+        tabOwnsStrip: _ownsPaneRow,
         statusBar: kMobile ? null : _statusBarBand(),
         leftStripAfter: _sessionStripAdd(),
         leftStripTrailing: _sessionStripTools(),
@@ -1358,22 +1403,20 @@ extension _DesktopShellPanesExt on _DesktopShellState {
 
   Widget _sidebarFooterRow(bool needsYou) {
     final runningTab = _openRunningSessionTab;
+    // Sits at the right of the sidebar's icon footer, after the places.
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 9),
-      child: LayoutBuilder(builder: (context, box) => Row(children: [
+      padding: const EdgeInsets.only(right: 6),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
         _FooterBtn(
             icon: 'settings',
-            tooltip: 'Settings',
-            label: 'Settings',
-            // The narrowest sidebar has no room for the shortcut hint.
-            hint: box.maxWidth < 210 ? null : (kMacOS ? 'Cmd ,' : 'Ctrl ,'),
+            tooltip: kMacOS ? 'Settings  Cmd ,' : 'Settings  Ctrl ,',
             onTap: _openShellSettings),
-        const SizedBox(width: 4),
+        const SizedBox(width: 2),
         _FooterBtn(
             icon: 'help-circle',
             tooltip: 'Keyboard shortcuts',
             onTap: _showDesktopShortcuts),
-        const Spacer(),
+        const SizedBox(width: 2),
         _FooterBtn(
             icon: 'goal',
             tooltip: runningTab == null
@@ -1387,7 +1430,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
               tooltip: _chatTab == null ? 'No session pane' : 'Pane layout',
               onTap: _chatTab == null ? null : () => _showPaneAddMenu(ctx)),
         ),
-      ])),
+      ]),
     );
   }
 
@@ -1487,16 +1530,10 @@ class _FooterBtn extends StatefulWidget {
     required this.icon,
     required this.tooltip,
     required this.onTap,
-    this.label,
-    this.hint,
   });
   final String icon;
   final String tooltip;
   final VoidCallback? onTap;
-
-  /// A labelled row (icon, label, shortcut hint) instead of a bare icon.
-  final String? label;
-  final String? hint;
 
   @override
   State<_FooterBtn> createState() => _FooterBtnState();
@@ -1518,11 +1555,8 @@ class _FooterBtnState extends State<_FooterBtn> {
           behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
           child: Container(
-            width: widget.label == null ? 28 : null,
+            width: 28,
             height: 26,
-            padding: widget.label == null
-                ? null
-                : const EdgeInsets.only(left: 6, right: 8),
             decoration: BoxDecoration(
               color:
                   _hover && enabled ? AppColors.surface2 : Colors.transparent,
@@ -1539,21 +1573,6 @@ class _FooterBtnState extends State<_FooterBtn> {
                           : _hover
                               ? AppColors.fg1
                               : AppColors.fg2),
-                  // Footer chrome keeps its locked 26 px scale.
-                  if (widget.label != null) ...[
-                    const SizedBox(width: 6),
-                    Text(widget.label!,
-                        textScaler: TextScaler.noScaling,
-                        style: sans(12,
-                            color: _hover ? AppColors.fg1 : AppColors.fg2)),
-                  ],
-                  if (widget.hint != null) ...[
-                    const SizedBox(width: 6),
-                    Text(widget.hint!,
-                        key: const Key('settings-shortcut-label'),
-                        textScaler: TextScaler.noScaling,
-                        style: sans(11, color: AppColors.fg3)),
-                  ],
                 ]),
           ),
         ),

@@ -7,6 +7,7 @@ import '../desk_attention.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import '../tap_detector.dart';
+import 'slash_menu.dart';
 
 /// Desktop composer surfaces: one calm card, pinned cards above it. The phone
 /// keeps the pill in composer_card.dart.
@@ -14,12 +15,12 @@ const double _kCardRadius = 12;
 
 /// Flat s1 composer surface. Focus is carried by the text caret only; the
 /// card never grows a focus ring.
-BoxDecoration _cardDecoration({bool focus = false, bool hairline = true}) =>
+BoxDecoration _cardDecoration(
+        {bool focus = false, bool hairline = true, double? radius}) =>
     BoxDecoration(
       color: AppColors.surface1,
-      borderRadius: BorderRadius.circular(R.of(_kCardRadius)),
-      border:
-          Border.all(color: hairline ? AppColors.border : Colors.transparent),
+      borderRadius: BorderRadius.circular(R.of(radius ?? _kCardRadius)),
+      border: Border.all(color: hairline ? AppColors.line : Colors.transparent),
     );
 
 /// A 28-high hit target whose visible chip is the locked 26-high tonal plate.
@@ -195,16 +196,19 @@ class DeskActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color fill;
     final Color ink;
-    if (on || soft || danger) {
-      fill = AppColors.surface2;
+    if (icon == 'arrow-up' || icon == 'mic' || icon == 'stop') {
+      fill = AppColors.accent;
+      ink = AppColors.accentFg;
+    } else if (on || soft || danger) {
+      fill = AppColors.surface3;
       ink = AppColors.fg1;
     } else {
-      fill = AppColors.surface2;
+      fill = AppColors.surface3;
       ink = AppColors.fg3;
     }
     return DeskButton(
-      size: 28,
-      radius: R.of(8),
+      size: 26,
+      radius: R.of(7),
       fill: fill,
       hoverFill: on || soft || danger ? fill.withValues(alpha: 0.85) : fill,
       tooltip: tooltip,
@@ -256,9 +260,119 @@ class DeskHint extends StatelessWidget {
       );
 }
 
-/// The composer card: [banner] and [attachments] above the text, then a
-/// toolbar row with attach, the model chip and the audience on the left, mic
-/// and the action on the right.
+// ChatComposer builds this leaf before the card, so only the leaf is rebuilt.
+Widget _desktopComposerField(Widget child) {
+  if (child is CallbackShortcuts) {
+    return CallbackShortcuts(
+      key: child.key,
+      bindings: child.bindings,
+      child: _desktopComposerField(child.child),
+    );
+  }
+  if (child is SlashKeys) {
+    return SlashKeys(
+      key: child.key,
+      controller: child.controller,
+      child: _desktopComposerField(child.child),
+    );
+  }
+  if (child is! TextField || child.maxLines != 4) return child;
+  return TextField(
+    key: child.key,
+    controller: child.controller,
+    focusNode: child.focusNode,
+    contentInsertionConfiguration: child.contentInsertionConfiguration,
+    minLines: child.minLines,
+    maxLines: 8,
+    cursorWidth: child.cursorWidth,
+    cursorColor: child.cursorColor,
+    onChanged: child.onChanged,
+    onSubmitted: child.onSubmitted,
+    style: child.style,
+    decoration: child.decoration,
+    keyboardType: child.keyboardType,
+    textInputAction: child.textInputAction,
+    strutStyle: child.strutStyle,
+    textAlignVertical: child.textAlignVertical,
+    enabled: child.enabled,
+  );
+}
+
+/// Session metadata rendered under the desktop composer when a host supplies it.
+class DeskComposerMeta extends InheritedWidget {
+  const DeskComposerMeta({
+    super.key,
+    required super.child,
+    this.machine = '',
+    this.project = '',
+    this.branch = '',
+    this.online = false,
+  });
+
+  final String machine;
+  final String project;
+  final String branch;
+  final bool online;
+
+  bool get hasParts =>
+      machine.trim().isNotEmpty ||
+      project.trim().isNotEmpty ||
+      branch.trim().isNotEmpty;
+
+  static DeskComposerMeta? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<DeskComposerMeta>();
+
+  @override
+  bool updateShouldNotify(DeskComposerMeta old) =>
+      machine != old.machine ||
+      project != old.project ||
+      branch != old.branch ||
+      online != old.online;
+}
+
+/// The quiet machine, project and branch line under the desktop composer.
+class DeskMachineLine extends StatelessWidget {
+  const DeskMachineLine({super.key, required this.meta});
+
+  final DeskComposerMeta meta;
+
+  @override
+  Widget build(BuildContext context) {
+    final parts = [
+      meta.machine.trim(),
+      meta.project.trim(),
+      meta.branch.trim(),
+    ].where((p) => p.isNotEmpty).join(' · ');
+    if (parts.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        AppIcon('laptop', size: 13, color: AppColors.fg3),
+        const SizedBox(width: 7),
+        Flexible(
+          child: Text(parts,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(12, height: 16 / 12, color: AppColors.fg3)),
+        ),
+        if (meta.online) ...[
+          const SizedBox(width: 7),
+          Container(
+            width: 6,
+            height: 6,
+            decoration:
+                BoxDecoration(shape: BoxShape.circle, color: AppColors.ok),
+          ),
+        ],
+        const SizedBox(width: 4),
+        AppIcon('chevron-up', size: 11, color: AppColors.fg4),
+      ]),
+    );
+  }
+}
+
+/// The composer card: attachments and quiet status sit outside it; inside are
+/// the text, then a toolbar with attach, model and chips left, mic/action right.
 class DeskComposerCard extends StatelessWidget {
   const DeskComposerCard({
     super.key,
@@ -313,55 +427,62 @@ class DeskComposerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget card(bool focused) => Container(
-          decoration:
-              _cardDecoration(focus: focused || highlight, hairline: false),
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+          decoration: _cardDecoration(
+              focus: focused || highlight, hairline: true, radius: 10),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (banner != null)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                  padding: const EdgeInsets.only(bottom: 8),
                   child: Align(alignment: Alignment.centerLeft, child: banner),
                 ),
-              if (attachments != null)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-                  child: attachments!,
-                ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 12, 8),
-                child: field,
-              ),
+              _desktopComposerField(field),
+              const SizedBox(height: 12),
               SizedBox(
-                height: 36,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 8, 0),
-                  child: Row(children: [
-                    if (attach != null) attach!,
-                    if (model != null) ...[const SizedBox(width: 6), model!],
-                    if (cold != null) ...[const SizedBox(width: 6), cold!],
-                    if (hint != null) ...[const SizedBox(width: 6), hint!],
-                    const Spacer(),
-                    if (recipient != null) ...[
-                      recipient!,
-                      const SizedBox(width: 8),
-                    ],
-                    if (mic != null) ...[mic!, const SizedBox(width: 2)],
-                    action,
-                  ]),
-                ),
+                height: 28,
+                child: Row(children: [
+                  if (attach != null) ...[attach!, const SizedBox(width: 8)],
+                  Expanded(
+                    child: Row(children: [
+                      if (model != null)
+                        Flexible(fit: FlexFit.loose, child: model!),
+                      if (cold != null) ...[
+                        const SizedBox(width: 8),
+                        Flexible(fit: FlexFit.loose, child: cold!),
+                      ],
+                      if (hint != null) ...[
+                        const SizedBox(width: 8),
+                        Flexible(fit: FlexFit.loose, child: hint!),
+                      ],
+                      if (recipient != null) ...[
+                        const SizedBox(width: 8),
+                        Flexible(fit: FlexFit.loose, child: recipient!),
+                      ],
+                    ]),
+                  ),
+                  if (mic != null) ...[mic!, const SizedBox(width: 2)],
+                  action,
+                ]),
               ),
             ],
           ),
         );
-    // One flat card with a hairline, no tray around it.
+    final meta = DeskComposerMeta.maybeOf(context);
     Widget body(bool focused) => Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             DeskAttentionBar(exclude: attentionExclude),
+            if (attachments != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: attachments!,
+              ),
             card(focused),
+            if (meta != null && meta.hasParts) DeskMachineLine(meta: meta),
           ],
         );
     if (focus == null) return body(false);
@@ -376,33 +497,38 @@ class DeskComposerCard extends StatelessWidget {
 class DeskModelChip extends StatelessWidget {
   const DeskModelChip(
       {super.key,
-      required this.icon,
+      this.icon,
       required this.label,
-      required this.onTap});
+      required this.onTap,
+      this.effort});
 
-  final String icon;
+  final String? icon;
   final String label;
+  final String? effort;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => DeskTonalChip(
+  Widget build(BuildContext context) => DeskButton(
         onTap: onTap,
         tooltip: 'Model',
+        padding: const EdgeInsets.symmetric(horizontal: 4),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          AppIcon(icon, size: 13, color: AppColors.fg2),
-          const SizedBox(width: 5),
           ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 180),
+            constraints: const BoxConstraints(maxWidth: 150),
             child: Text(label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: sans(11,
-                    weight: FontWeight.w500,
-                    height: 15 / 11,
-                    color: AppColors.fg2)),
+                style: sans(12.5, height: 16 / 12.5, color: AppColors.fg2)),
           ),
-          const SizedBox(width: 4),
-          AppIcon('chevron-down', size: 11, color: AppColors.fg3),
+          if ((effort ?? '').trim().isNotEmpty) ...[
+            const SizedBox(width: 5),
+            Text(effort!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(12.5, height: 16 / 12.5, color: AppColors.fg3)),
+          ],
+          const SizedBox(width: 3),
+          AppIcon('chevron-down', size: 11, color: AppColors.fg4),
         ]),
       );
 }
@@ -437,11 +563,16 @@ class DeskRecipientChip extends StatelessWidget {
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 leading,
                 const SizedBox(width: 5),
-                Text(label,
-                    style: sans(11,
-                        weight: FontWeight.w500,
-                        height: 15 / 11,
-                        color: AppColors.fg2)),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 160),
+                  child: Text(label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(11,
+                          weight: FontWeight.w500,
+                          height: 15 / 11,
+                          color: AppColors.fg2)),
+                ),
               ]),
             ),
           ),
@@ -517,6 +648,32 @@ class DeskQueueCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          SizedBox(
+            height: 28,
+            child: Row(children: [
+              Text('Queued',
+                  style: sans(12,
+                      weight: FontWeight.w500,
+                      height: 16 / 12,
+                      color: AppColors.fg2)),
+              const Spacer(),
+              DeskButton(
+                height: 24,
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                onTap: onClear,
+                child: Text('Clear',
+                    style: sans(11.5, height: 15 / 11.5, color: AppColors.fg3)),
+              ),
+              const SizedBox(width: 2),
+              DeskButton(
+                height: 24,
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                onTap: onSendAll,
+                child: Text('Send all',
+                    style: sans(11.5, height: 15 / 11.5, color: AppColors.fg2)),
+              ),
+            ]),
+          ),
           ConstrainedBox(
             constraints: BoxConstraints(maxHeight: maxHeight),
             child: SingleChildScrollView(
@@ -557,6 +714,8 @@ class DeskQueueCard extends StatelessWidget {
                     color: e.muted ? AppColors.fg3 : AppColors.fg2)),
           ),
           if (e.extra != null) ...[const SizedBox(width: 6), e.extra!],
+          DeskIconButton('arrow-up',
+              tooltip: 'Send now', onTap: e.onSendNow, iconSize: 12),
           DeskIconButton('edit',
               tooltip: 'Edit queued message', onTap: e.onEdit, iconSize: 12),
           DeskIconButton('x',
@@ -982,6 +1141,95 @@ bool deskPlainEnter(KeyEvent e) =>
     !HardwareKeyboard.instance.isShiftPressed &&
     !HardwareKeyboard.instance.isAltPressed;
 
+String _deskRunningElapsed(DateTime? at) {
+  if (at == null) return '';
+  final d = DateTime.now().difference(at.toLocal());
+  if (d.isNegative) return '';
+  if (d.inMinutes < 1) return ' ${d.inSeconds}s';
+  if (d.inHours < 1) return ' ${d.inMinutes}m';
+  return ' ${d.inHours}h ${d.inMinutes % 60}m';
+}
+
+/// Quiet running status above the composer, with queued work counted at the right.
+class DeskComposerRunningLine extends StatefulWidget {
+  const DeskComposerRunningLine({
+    super.key,
+    this.startedAt,
+    this.step,
+    this.queued = 0,
+  });
+
+  final DateTime? startedAt;
+  final String? step;
+  final int queued;
+
+  @override
+  State<DeskComposerRunningLine> createState() =>
+      _DeskComposerRunningLineState();
+}
+
+class _DeskComposerRunningLineState extends State<DeskComposerRunningLine> {
+  Timer? _tick;
+
+  @override
+  void initState() {
+    super.initState();
+    _tick = Timer.periodic(
+        const Duration(seconds: 1), (_) => mounted ? setState(() {}) : null);
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final step = (widget.step ?? '').trim();
+    final label =
+        'Running${_deskRunningElapsed(widget.startedAt)}${step.isEmpty ? '' : ' · $step'}';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 0, 0, 8),
+      child: SizedBox(
+        height: 22,
+        child: Row(children: [
+          SizedBox(
+            width: 14,
+            height: 14,
+            child: Center(child: Spinner(size: 12, color: AppColors.fg3)),
+          ),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(12,
+                    height: 16 / 12, color: AppColors.fg2, tabular: true)),
+          ),
+          if (widget.queued > 0) ...[
+            const SizedBox(width: 8),
+            Container(
+              height: 22,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.surface2,
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: Text(
+                widget.queued == 1 ? '1 queued' : '${widget.queued} queued',
+                maxLines: 1,
+                style: sans(11.5, height: 15 / 11.5, color: AppColors.fg2),
+              ),
+            ),
+          ],
+        ]),
+      ),
+    );
+  }
+}
+
 /// Frame 09 running state: "<agent> running 12s" in the control row.
 class DeskRunningLabel extends StatefulWidget {
   const DeskRunningLabel({super.key, required this.name, this.startedAt});
@@ -1009,15 +1257,7 @@ class _DeskRunningLabelState extends State<DeskRunningLabel> {
     super.dispose();
   }
 
-  String get _elapsed {
-    final at = widget.startedAt;
-    if (at == null) return '';
-    final d = DateTime.now().difference(at.toLocal());
-    if (d.isNegative) return '';
-    if (d.inMinutes < 1) return ' ${d.inSeconds}s';
-    if (d.inHours < 1) return ' ${d.inMinutes}m ${d.inSeconds % 60}s';
-    return ' ${d.inHours}h ${d.inMinutes % 60}m';
-  }
+  String get _elapsed => _deskRunningElapsed(widget.startedAt);
 
   @override
   Widget build(BuildContext context) => Text(

@@ -167,3 +167,75 @@ class StripChip extends StatelessWidget {
         ]),
       );
 }
+
+/// A Capy-style tab pill for a pane row (chat header, session panel).
+class PanePill extends StatefulWidget {
+  const PanePill(
+      {super.key,
+      required this.icon,
+      required this.label,
+      required this.active,
+      this.onTap,
+      this.onClose});
+
+  final String icon;
+  final String label;
+  final bool active;
+  final VoidCallback? onTap;
+  final VoidCallback? onClose;
+
+  @override
+  State<PanePill> createState() => _PanePillState();
+}
+
+class _PanePillState extends State<PanePill> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        cursor: widget.onTap == null
+            ? MouseCursor.defer
+            : SystemMouseCursors.click,
+        child: TapDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          child: Container(
+            height: 28,
+            padding: EdgeInsets.fromLTRB(
+                10, 0, widget.onClose == null ? 12 : 4, 0),
+            decoration: BoxDecoration(
+              color: widget.active
+                  ? AppColors.surface2
+                  : _hover
+                      ? AppColors.hoverPlate
+                      : null,
+              borderRadius: BorderRadius.circular(R.of(7)),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              AppIcon(widget.icon,
+                  size: 14,
+                  color: widget.active ? AppColors.fg2 : AppColors.fg3),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(widget.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(12.5,
+                        color:
+                            widget.active ? AppColors.fg1 : AppColors.fg3)),
+              ),
+              if (widget.onClose != null) ...[
+                const SizedBox(width: 4),
+                IconBtn('x',
+                    size: 20,
+                    iconSize: 12,
+                    tooltip: 'Close tab',
+                    onTap: widget.onClose),
+              ],
+            ]),
+          ),
+        ),
+      );
+}

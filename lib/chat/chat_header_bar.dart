@@ -15,6 +15,7 @@ class ChatHeaderBar extends StatelessWidget {
     this.subtitle = '',
     this.live = false,
     this.leading = const [],
+    this.tabs = const [],
     this.actions = const [],
   });
 
@@ -30,6 +31,9 @@ class ChatHeaderBar extends StatelessWidget {
 
   /// Sits right after the pill (the pane's "+").
   final List<Widget> leading;
+
+  /// The pane's other tabs, as pills after the chat's own (one row, as Capy).
+  final List<Widget> tabs;
   final List<Widget> actions;
 
   @override
@@ -74,6 +78,11 @@ class ChatHeaderBar extends StatelessWidget {
             ),
           ),
         ),
+        for (final w in tabs) ...[
+          const SizedBox(width: 4),
+          Flexible(child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 180), child: w)),
+        ],
         for (final w in leading) ...[const SizedBox(width: 4), w],
         const Spacer(),
         if (subtitle.isNotEmpty)

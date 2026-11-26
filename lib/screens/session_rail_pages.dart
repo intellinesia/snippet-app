@@ -126,7 +126,7 @@ extension _RailPages on _SessionRailState {
           border: Border(bottom: BorderSide(color: AppColors.line))),
       child: Row(children: [
         Flexible(
-          child: _RailTabPill(
+          child: PanePill(
               icon: 'list',
               label: widget.isLead ? 'Lead' : 'Overview',
               active: open == null,
@@ -135,7 +135,7 @@ extension _RailPages on _SessionRailState {
         if (open != null) ...[
           const SizedBox(width: 4),
           Flexible(
-            child: _RailTabPill(
+            child: PanePill(
                 icon: open.$1,
                 label: open.$2,
                 active: true,

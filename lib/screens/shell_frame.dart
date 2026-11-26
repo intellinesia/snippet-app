@@ -87,12 +87,8 @@ class ShellTitleRow extends StatelessWidget {
                     3 * 28 -
                     6)
                 .clamp(0.0, reserveWindowControls ? 68.0 : 122.0),
-            child: Text(
-              'Snippet',
-              maxLines: 1,
-              overflow: TextOverflow.clip,
-              style: sans(12, weight: FontWeight.w500, color: AppColors.fg2),
-            ),
+            // The brand sits in the sidebar's own row below, as in Capy.
+            child: const SizedBox.shrink(),
           ),
           _toggle(),
           const Spacer(),
@@ -220,9 +216,7 @@ class ShellFooterFrame extends StatelessWidget {
     return Container(
       key: const ValueKey('shell-sidebar-footer'),
       constraints: const BoxConstraints(minHeight: kShellFooterHeight),
-      decoration: BoxDecoration(border: Border(top: shellHairline())),
-      alignment: Alignment.centerLeft,
-      child: child,
+      child: Center(widthFactor: 1, child: child),
     );
   }
 }

@@ -85,14 +85,71 @@ class SidebarSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget btn(String icon, String tip, void Function(BuildContext) tap) =>
+    Widget btn(String icon, String tip, void Function(BuildContext) tap,
+            {double iconSize = 12}) =>
         Builder(
-          builder: (ctx) =>
-              _SectionBtn(icon: icon, tooltip: tip, onTap: () => tap(ctx)),
+          builder: (ctx) => _SectionBtn(
+              icon: icon,
+              tooltip: tip,
+              iconSize: iconSize,
+              onTap: () => tap(ctx)),
         );
     final add = addBuilder ?? (onAdd == null ? null : (_) => onAdd!());
     final more = moreBuilder ?? (onMore == null ? null : (_) => onMore!());
     final collapsible = onToggle != null || collapsed;
+    if (!kMobile) {
+      final toggle = onToggle;
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(12, 16, 6, 0),
+        child: SizedBox(
+          height: 30,
+          child: Row(children: [
+            Expanded(
+              child: MouseRegion(
+                cursor: toggle != null
+                    ? SystemMouseCursors.click
+                    : SystemMouseCursors.basic,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: toggle,
+                  // Capy: a plain bold title; collapse by clicking it.
+                  child: Row(children: [
+                    Flexible(
+                      child: Text(title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(13, weight: W.label, color: AppColors.fg1)),
+                    ),
+                    if (count != null) ...[
+                      const SizedBox(width: 6),
+                      Text('$count', style: sans(11.5, color: AppColors.fg3)),
+                    ],
+                  ]),
+                ),
+              ),
+            ),
+            Row(mainAxisSize: MainAxisSize.min, children: [
+              for (final action in actions)
+                Builder(
+                  builder: (ctx) => _SectionBtn(
+                    icon: action.icon,
+                    tooltip: action.tooltip,
+                    iconSize: 14,
+                    enabled: action.enabled && action.onTap != null,
+                    onTap:
+                        action.onTap == null ? null : () => action.onTap!(ctx),
+                  ),
+                ),
+              if (add != null)
+                btn('plus', addTooltip ?? 'New', add, iconSize: 14),
+              if (more != null)
+                btn('more-horizontal', moreTooltip ?? 'More', more,
+                    iconSize: 14),
+            ]),
+          ]),
+        ),
+      );
+    }
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: SizedBox(
@@ -115,12 +172,8 @@ class SidebarSectionHeader extends StatelessWidget {
                 child: Text(title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    // Desktop: the reference's 12px medium section label.
-                    style: kMobile
-                        ? sans(12,
-                            weight: FontWeight.w500, color: AppColors.fg3)
-                        : sans(12,
-                            weight: FontWeight.w500, color: AppColors.fg2)),
+                    style: sans(12,
+                        weight: FontWeight.w500, color: AppColors.fg3)),
               ),
               if (count != null) ...[
                 const SizedBox(width: 4),

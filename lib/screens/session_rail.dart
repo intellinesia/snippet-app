@@ -21,7 +21,7 @@ import '../shell_panel.dart' show ShellPanelPurpose;
 import '../chat/mc_panel_sections.dart' show mcNeeds, McNeedsYou;
 import 'agent_records.dart' show AgentInboxView, AgentBoardView;
 import '../tap_detector.dart';
-import 'pane_add_menu.dart' show showPaneAddMenu, PaneAddEntry;
+import 'pane_add_menu.dart' show showPaneAddMenu, PaneAddEntry, PanePill;
 
 part 'session_rail_pages.dart';
 
@@ -1851,77 +1851,6 @@ class _RailResizeHandleState extends State<_RailResizeHandle> {
       ),
     );
   }
-}
-
-/// A Capy-style tab pill in the panel's pane row.
-class _RailTabPill extends StatefulWidget {
-  const _RailTabPill(
-      {required this.icon,
-      required this.label,
-      required this.active,
-      this.onTap,
-      this.onClose});
-
-  final String icon;
-  final String label;
-  final bool active;
-  final VoidCallback? onTap;
-  final VoidCallback? onClose;
-
-  @override
-  State<_RailTabPill> createState() => _RailTabPillState();
-}
-
-class _RailTabPillState extends State<_RailTabPill> {
-  bool _hover = false;
-
-  @override
-  Widget build(BuildContext context) => MouseRegion(
-        onEnter: (_) => setState(() => _hover = true),
-        onExit: (_) => setState(() => _hover = false),
-        cursor: widget.onTap == null
-            ? MouseCursor.defer
-            : SystemMouseCursors.click,
-        child: TapDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: widget.onTap,
-          child: Container(
-            height: 28,
-            padding: EdgeInsets.fromLTRB(
-                10, 0, widget.onClose == null ? 12 : 4, 0),
-            decoration: BoxDecoration(
-              color: widget.active
-                  ? AppColors.surface2
-                  : _hover
-                      ? AppColors.hoverPlate
-                      : null,
-              borderRadius: BorderRadius.circular(R.of(7)),
-            ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              AppIcon(widget.icon,
-                  size: 14,
-                  color: widget.active ? AppColors.fg2 : AppColors.fg3),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(widget.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(12.5,
-                        color:
-                            widget.active ? AppColors.fg1 : AppColors.fg3)),
-              ),
-              if (widget.onClose != null) ...[
-                const SizedBox(width: 4),
-                IconBtn('x',
-                    size: 20,
-                    iconSize: 12,
-                    tooltip: 'Close tab',
-                    onTap: widget.onClose),
-              ],
-            ]),
-          ),
-        ),
-      );
 }
 
 /// One quick way into another panel tab, on the Overview.

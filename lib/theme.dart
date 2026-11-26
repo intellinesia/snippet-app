@@ -287,6 +287,31 @@ final _quiet = _palette(
   diffDelBg: const Color(0xFF2A1D1C),
 );
 
+// Desktop Quiet dark takes Capy's near-black greys, sampled from the app.
+final _quietCapy = _palette(
+  name: 'quiet',
+  label: 'Quiet',
+  bg: const Color(0xFF070707),
+  surface1: const Color(0xFF0E0E0E),
+  surface2: const Color(0xFF171717),
+  surface3: const Color(0xFF232323),
+  border: const Color(0xFF1A1A1A),
+  border2: const Color(0xFF2A2A2A),
+  accent: const Color(0xFF6A8CF8),
+  accentFg: const Color(0xFFFFFFFF),
+  fg1: const Color(0xFFDADADA),
+  fg2: const Color(0xFFA6A6A6),
+  fg3: const Color(0xFF767676),
+  fg4: const Color(0xFF4E4E4E),
+  ok: const Color(0xFF4CC38A),
+  run: const Color(0xFFE9B44C),
+  danger: const Color(0xFFF08A80),
+  diffAddFg: const Color(0xFF6CC48C),
+  diffDelFg: const Color(0xFFE8857C),
+  diffAddBg: const Color(0xFF0F1D14),
+  diffDelBg: const Color(0xFF221111),
+);
+
 final _quietLight = _palette(
   name: 'quiet-light',
   label: 'Quiet Light',
@@ -1043,7 +1068,10 @@ class ThemeManager extends ChangeNotifier {
 }
 
 /// Convenience accessor — same as `ThemeManager.instance.current`.
-ThemePreset get currentTheme => ThemeManager.instance.current;
+ThemePreset get currentTheme {
+  final t = ThemeManager.instance.current;
+  return !kMobile && t.name == 'quiet' ? _quietCapy : t;
+}
 
 /// Marks every descendant element dirty so theme token updates reach subtrees
 /// that read static getters without depending on [Theme.of].
@@ -1124,7 +1152,7 @@ class AppColors {
                   // Capy depth: chrome sits darker than the reading panel.
                   ? (_quietDeskLight
                       ? currentTheme.surface2
-                      : const Color(0xFF0A0A09))
+                      : const Color(0xFF000000))
                   : Color.lerp(currentTheme.bg, currentTheme.surface1, 0.45)!)
           .withValues(alpha: chromeAlpha ?? 1);
 
@@ -1140,7 +1168,7 @@ class AppColors {
 
   /// Pointer hover plate, between s1 and s2 (1F1F1D dark, F4F4F0 light).
   static Color get hoverPlate => _quietDesk
-      ? (_quietDeskLight ? const Color(0xFFF4F4F0) : const Color(0xFF1F1F1D))
+      ? (_quietDeskLight ? const Color(0xFFF4F4F0) : const Color(0xFF121212))
       : Color.lerp(currentTheme.surface1, currentTheme.surface2, 0.5)!;
 
   /// Desktop window chrome; see-through while a scene plays behind the window.

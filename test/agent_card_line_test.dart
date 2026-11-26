@@ -173,7 +173,7 @@ void main() {
   });
 
   testWidgets(
-      'desktop row pitch, avatar, status line and expansion chevron match H3',
+      'desktop row spacing, avatar, preview and expansion chevron match Capy',
       (t) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     var toggles = 0;
@@ -206,13 +206,15 @@ void main() {
         matching: find.byType(AnimatedContainer));
     expect(rowFinder, findsOneWidget);
     final row = t.getRect(rowFinder);
-    expect(row.height, 40);
+    expect(row.height, 48);
+    expect(row.left, 8);
     final avatar = t.getRect(find.byKey(const ValueKey('test-avatar')));
     expect(avatar.width, 28);
     expect(avatar.height, 28);
-    expect(avatar.top - row.top, 6);
+    expect(avatar.left - row.left, 8);
+    expect(avatar.top - row.top, 7);
     final status = t.getRect(find.text('Running visual QA'));
-    expect(status.top - row.top, closeTo(21, 0.1));
+    expect(status.top - row.top, closeTo(26, 0.1));
 
     expect(
         find.byKey(const ValueKey('agent-expansion-toggle')), findsOneWidget);
@@ -224,7 +226,7 @@ void main() {
   });
 
   testWidgets(
-      'desktop working rows show live work and a spinner, not stale chat',
+      'desktop working rows keep the last message and mark the avatar live',
       (t) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     final a = _agent(
@@ -251,9 +253,10 @@ void main() {
     ));
     await t.pump();
 
-    expect(find.text('Quiet Build QA'), findsOneWidget);
-    expect(find.text('Old direct message'), findsNothing);
-    expect(find.byType(Spinner), findsOneWidget);
+    expect(find.text('Quiet Build QA'), findsNothing);
+    expect(find.text('Old direct message'), findsOneWidget);
+    expect(find.byType(Spinner), findsNothing);
+    expect(find.byKey(const ValueKey('agent-live-dot')), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
   });
 
@@ -274,7 +277,7 @@ void main() {
     await t.pump();
     expect(find.textContaining('needs you'), findsNothing);
     expect(find.byKey(const ValueKey('agent-needs-dot')), findsNothing);
-    expect(find.text('Idle'), findsOneWidget);
+    expect(find.text('Idle'), findsNothing);
     debugDefaultTargetPlatformOverride = null;
   });
 }

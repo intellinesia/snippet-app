@@ -388,6 +388,16 @@ class _AgentCardState extends State<AgentCard> {
     return line;
   }
 
+  String _lastMessageLine(CoordinationAgent agent) {
+    final last = agent.lastMessage;
+    if (last == null || last.text.trim().startsWith('Snippet restarted')) {
+      return agent.available ? 'No messages yet' : '';
+    }
+    final text = cleanAgentStatusText(last.text,
+        groupTitles: widget.groupTitles ?? const {});
+    return last.fromUser && text.isNotEmpty ? 'You: $text' : text;
+  }
+
   @override
   Widget build(BuildContext context) {
     final agent = widget.agent;
@@ -497,13 +507,17 @@ class _AgentCardState extends State<AgentCard> {
         kMobile && (group == AgentGroup.needsYou || agent.needsYou > 0);
     final crew = widget.crew;
     final lead = crew?.lead;
-    final at =
-        crew != null && crew.state != CrewState.standingBy && lead != null
-            ? DateTime.fromMillisecondsSinceEpoch(lead.lastActive * 1000)
-            : last?.at;
+    final at = kMobile &&
+            crew != null &&
+            crew.state != CrewState.standingBy &&
+            lead != null
+        ? DateTime.fromMillisecondsSinceEpoch(lead.lastActive * 1000)
+        : last?.at;
     final time = kMobile ? agentRowTime(at) : agentRowAgo(at);
     final detail = agent.presence?.detail.trim() ?? '';
-    var line2 = _phoneLine(agent, crew, presence);
+    // Desktop previews the thread's last message, never the running command.
+    var line2 =
+        kMobile ? _phoneLine(agent, crew, presence) : _lastMessageLine(agent);
     if (kMobile && ring && crew == null && detail.isNotEmpty) line2 = detail;
     final running = !needs &&
         agent.available &&
@@ -520,7 +534,7 @@ class _AgentCardState extends State<AgentCard> {
             : running
                 ? AgentRowStatusKind.running
                 : AgentRowStatusKind.idle;
-    if (!agent.available) line2 = 'Wakes when you send';
+    if (kMobile && !agent.available) line2 = 'Wakes when you send';
     return AgentRowShell(
       selected: widget.selected,
       onTap: widget.onOpen,
@@ -702,19 +716,7 @@ class _AgentRowShellState extends State<AgentRowShell> {
     return KeyEventResult.handled;
   }
 
-  String get _statusText {
-    final text = widget.preview.trim();
-    return switch (_kind) {
-      AgentRowStatusKind.offline =>
-        'Offline - ${widget.offlineHost?.trim().isNotEmpty == true ? widget.offlineHost!.trim() : 'host'}',
-      AgentRowStatusKind.error => text.isEmpty ? 'Error' : text,
-      AgentRowStatusKind.rateLimited => text.isEmpty ? 'Rate limited' : text,
-      AgentRowStatusKind.paused => text.isEmpty ? 'Paused by you' : text,
-      AgentRowStatusKind.running => text.isEmpty ? 'Running' : text,
-      AgentRowStatusKind.needsYou => text,
-      AgentRowStatusKind.idle => text.isEmpty ? 'Idle' : text,
-    };
-  }
+  String get _statusText => widget.preview.trim();
 
   Widget _desktopRow(BuildContext context) {
     final focused = _focusNode.hasFocus;
@@ -728,28 +730,12 @@ class _AgentRowShellState extends State<AgentRowShell> {
     final still = reduceMotion(context);
     final kind = _kind;
     final offline = kind == AgentRowStatusKind.offline;
-    final strongName = widget.selected || widget.unread;
-    final nameColor = offline
-        ? AppColors.fg3
-        : strongName
-            ? AppColors.fg1
-            : AppColors.fg2;
-    final needs = kind == AgentRowStatusKind.needsYou;
-    final needsCount = widget.needsCount > 0
-        ? widget.needsCount
-        : widget.needs
-            ? 1
-            : 0;
-    final statusStyle = switch (kind) {
-      AgentRowStatusKind.needsYou => sans(12,
-          weight: FontWeight.w500, height: 16 / 12, color: AppColors.fg2),
-      AgentRowStatusKind.error || AgentRowStatusKind.rateLimited => sans(12,
-          weight: FontWeight.w400, height: 16 / 12, color: AppColors.fg2),
-      _ => sans(12,
-          weight: FontWeight.w400, height: 16 / 12, color: AppColors.fg3),
-    };
+    final nameColor = offline ? AppColors.fg3 : AppColors.fg1;
+    final statusStyle = sans(12,
+        height: 15 / 12, color: widget.unread ? AppColors.fg1 : AppColors.fg3);
 
     Widget avatar = widget.avatar;
+    if (avatar is AgentMochi) avatar = ClipOval(child: avatar);
     if (offline) {
       avatar = ColorFiltered(
         colorFilter: ColorFilter.mode(
@@ -758,73 +744,123 @@ class _AgentRowShellState extends State<AgentRowShell> {
       );
     }
 
-    final statusChildren = <Widget>[];
-    if (needs) {
-      statusChildren.addAll([
+    final statusChildren = <Widget>[
+      if (kind == AgentRowStatusKind.error ||
+          kind == AgentRowStatusKind.rateLimited) ...[
+        AppIcon('x', size: 10, color: AppColors.fg2),
+        const SizedBox(width: 5),
+      ] else if (kind == AgentRowStatusKind.paused) ...[
+        AppIcon('pause', size: 10, color: AppColors.fg3),
+        const SizedBox(width: 5),
+      ],
+      Expanded(
+        child: Text(_statusText,
+            maxLines: 1, overflow: TextOverflow.ellipsis, style: statusStyle),
+      ),
+      if (widget.unread) ...[
+        const SizedBox(width: 6),
         Container(
-          key: const ValueKey('agent-needs-dot'),
+          key: const ValueKey('agent-unread'),
           width: 6,
           height: 6,
           decoration:
-              BoxDecoration(color: AppColors.run, shape: BoxShape.circle),
+              BoxDecoration(color: AppColors.fg1, shape: BoxShape.circle),
         ),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            '$needsCount needs you',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: statusStyle,
-          ),
-        ),
-      ]);
-    } else {
-      if (kind == AgentRowStatusKind.error ||
-          kind == AgentRowStatusKind.rateLimited) {
-        statusChildren.addAll([
-          AppIcon('x', size: 10, color: AppColors.fg2),
-          const SizedBox(width: 5),
-        ]);
-      } else if (kind == AgentRowStatusKind.paused) {
-        statusChildren.addAll([
-          AppIcon('pause', size: 10, color: AppColors.fg3),
-          const SizedBox(width: 5),
-        ]);
-      }
-      statusChildren.add(
-        Expanded(
-          child: Text(_statusText,
-              maxLines: 1, overflow: TextOverflow.ellipsis, style: statusStyle),
+      ],
+    ];
+
+    // Live state rides on the avatar: running is a green dot, unread a count.
+    Widget? mark;
+    if (kind == AgentRowStatusKind.running) {
+      mark = Container(
+        key: const ValueKey('agent-live-dot'),
+        width: 9,
+        height: 9,
+        decoration: BoxDecoration(
+          color: AppColors.ok,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.windowChrome, width: 2),
         ),
       );
-      if (kind == AgentRowStatusKind.running) {
-        statusChildren.addAll([
-          const SizedBox(width: 6),
-          Spinner(size: 11, color: AppColors.fg3),
-        ]);
-      }
-      if (widget.unread) {
-        statusChildren.addAll([
-          const SizedBox(width: 6),
-          Container(
-            key: const ValueKey('agent-unread'),
-            width: 6,
-            height: 6,
-            decoration:
-                BoxDecoration(color: AppColors.fg1, shape: BoxShape.circle),
-          ),
-        ]);
-      }
     }
-
     final row = AnimatedContainer(
       duration: still ? Duration.zero : const Duration(milliseconds: 150),
       curve: const Cubic(0.23, 1, 0.32, 1),
-      height: 40,
       clipBehavior: Clip.antiAlias,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
       decoration:
           BoxDecoration(color: fill, borderRadius: BorderRadius.circular(8)),
-      child: Stack(clipBehavior: Clip.none, children: [
+      child: Stack(children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          SizedBox.square(
+            dimension: 28,
+            child: Stack(clipBehavior: Clip.none, children: [
+              Positioned.fill(child: avatar),
+              if (mark != null) Positioned(right: -1, bottom: -1, child: mark),
+            ]),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              SizedBox(
+                height: 16,
+                child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Text(widget.name,
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(13,
+                                weight: widget.unread
+                                    ? FontWeight.w600
+                                    : FontWeight.w500,
+                                height: 16 / 13,
+                                color: nameColor)),
+                      ),
+                      if (widget.time.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Text(widget.time,
+                            maxLines: 1,
+                            style: sans(11.5,
+                                height: 16 / 11.5,
+                                color: AppColors.fg3,
+                                tabular: true)),
+                      ],
+                      if (widget.expandable) ...[
+                        const SizedBox(width: 2),
+                        GestureDetector(
+                          key: const ValueKey('agent-expansion-toggle'),
+                          behavior: HitTestBehavior.opaque,
+                          onTap: widget.onToggleExpansion,
+                          child: SizedBox(
+                            width: 20,
+                            height: 16,
+                            child: Center(
+                              child: AppIcon(
+                                widget.expanded
+                                    ? 'chevron-down'
+                                    : 'chevron-right',
+                                size: 12,
+                                color: AppColors.fg2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ]),
+              ),
+              const SizedBox(height: 3),
+              SizedBox(
+                height: 15,
+                child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: statusChildren),
+              ),
+            ]),
+          ),
+        ]),
         if (focused)
           Positioned(
             left: 0,
@@ -833,69 +869,6 @@ class _AgentRowShellState extends State<AgentRowShell> {
             width: 2,
             child: ColoredBox(color: AppColors.fg1),
           ),
-        Positioned(
-          left: 8,
-          top: 6,
-          width: 28,
-          height: 28,
-          child: avatar,
-        ),
-        Positioned(
-          left: 44,
-          right: 10,
-          top: 2,
-          height: 17,
-          child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-            Flexible(
-              child: Text(widget.name,
-                  maxLines: 1,
-                  softWrap: false,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(13,
-                      weight: strongName ? FontWeight.w500 : FontWeight.w400,
-                      height: 17 / 13,
-                      color: nameColor)),
-            ),
-            if (widget.time.isNotEmpty) ...[
-              const SizedBox(width: 8),
-              Text(widget.time,
-                  maxLines: 1,
-                  style: sans(11,
-                      weight: FontWeight.w400,
-                      height: 16 / 11,
-                      color: AppColors.fg3,
-                      tabular: true)),
-            ],
-            if (widget.expandable) ...[
-              const SizedBox(width: 4),
-              GestureDetector(
-                key: const ValueKey('agent-expansion-toggle'),
-                behavior: HitTestBehavior.opaque,
-                onTap: widget.onToggleExpansion,
-                child: SizedBox(
-                  width: 24,
-                  height: 17,
-                  child: Center(
-                    child: AppIcon(
-                      widget.expanded ? 'chevron-down' : 'chevron-right',
-                      size: 12,
-                      color: AppColors.fg2,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ]),
-        ),
-        Positioned(
-          left: 44,
-          right: 10,
-          top: 21,
-          height: 16,
-          child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: statusChildren),
-        ),
       ]),
     );
 
@@ -905,23 +878,26 @@ class _AgentRowShellState extends State<AgentRowShell> {
       child: Focus(
         focusNode: _focusNode,
         onKeyEvent: _keyEvent,
-        child: MouseRegion(
-          onEnter: (_) => setState(() => _hover = true),
-          onExit: (_) => setState(() => _hover = false),
-          cursor: SystemMouseCursors.click,
-          child: Listener(
-            onPointerDown: (e) {
-              if (e.kind == PointerDeviceKind.mouse &&
-                  e.buttons & kMiddleMouseButton != 0) {
-                _open(newTab: true);
-              }
-            },
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _open,
-              onLongPress: widget.onLongPress,
-              onSecondaryTapUp: widget.onSecondaryTapUp,
-              child: row,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+          child: MouseRegion(
+            onEnter: (_) => setState(() => _hover = true),
+            onExit: (_) => setState(() => _hover = false),
+            cursor: SystemMouseCursors.click,
+            child: Listener(
+              onPointerDown: (e) {
+                if (e.kind == PointerDeviceKind.mouse &&
+                    e.buttons & kMiddleMouseButton != 0) {
+                  _open(newTab: true);
+                }
+              },
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _open,
+                onLongPress: widget.onLongPress,
+                onSecondaryTapUp: widget.onSecondaryTapUp,
+                child: row,
+              ),
             ),
           ),
         ),

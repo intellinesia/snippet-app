@@ -436,6 +436,15 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
     return false;
   }
 
+  String _lastMessagePreview(AgentLastMessage? last,
+      {Map<String, String> groupTitles = const {}}) {
+    if (last == null || last.text.trim().startsWith('Snippet restarted')) {
+      return 'No messages yet';
+    }
+    final text = cleanAgentStatusText(last.text, groupTitles: groupTitles);
+    return last.fromUser && text.isNotEmpty ? 'You: $text' : text;
+  }
+
   /// Open the create agent modal/sheet.
   Future<void> openCreateAgent([BuildContext? btnCtx]) =>
       _openCreateAgent(btnCtx ?? context);
@@ -623,12 +632,6 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
       return id;
     }
 
-    String groupMemberLine(GroupSummary g) {
-      final names = [for (final id in g.agentIds) agentName(id)];
-      if (names.isEmpty) return 'Just you';
-      return '${names.join(', ')} and you';
-    }
-
     Widget groupTile(GroupSummary g,
         {bool expandable = false,
         bool expanded = false,
@@ -658,13 +661,16 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
             onLongPress: () => _groupActions(g),
             onSecondaryTapUp: (d) => _groupActions(g, point: d.globalPosition),
             avatar: g.agentIds.isEmpty
-                ? Center(
+                ? Container(
+                    decoration: BoxDecoration(
+                        color: AppColors.surface2, shape: BoxShape.circle),
+                    alignment: Alignment.center,
                     child: AppIcon('users', size: 14, color: AppColors.fg3))
                 : AgentCluster(ids: g.agentIds, size: 28, count: memberCount),
             name: g.title.trim().isEmpty ? 'Group' : g.title.trim(),
             pinned: pinned,
             time: agentRowAgo(DateTime.tryParse(g.lastEventAt ?? g.createdAt)),
-            preview: groupMemberLine(g),
+            preview: g.preview ?? 'No messages yet',
             needs: needsCount > 0,
             statusKind: kind,
             needsCount: needsCount,
@@ -852,24 +858,24 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                   : leadRunning
                       ? AgentRowStatusKind.running
                       : AgentRowStatusKind.idle;
-          final leadRow =
-              !kMobile && mc != null && onOpenMc != null && q.isEmpty
-                  ? AgentRowShell(
-                      key: const ValueKey('agents-lead-row'),
-                      avatar: const AgentMochi('lead', size: 28),
-                      name: 'Lead',
-                      preview: leadRunning ? 'Running' : 'Idle',
-                      time: mc.lastActive <= 0
-                          ? ''
-                          : agentRowAgo(DateTime.fromMillisecondsSinceEpoch(
-                              mc.lastActive * 1000)),
-                      onTap: onOpenMc,
-                      needs: leadNeeds,
-                      statusKind: leadKind,
-                      needsCount: leadNeeds ? 1 : 0,
-                      offlineHost: offlineHost,
-                    )
-                  : null;
+          final leadRow = !kMobile &&
+                  mc != null &&
+                  onOpenMc != null &&
+                  q.isEmpty
+              ? AgentRowShell(
+                  key: const ValueKey('agents-lead-row'),
+                  avatar: const AgentMochi('lead', size: 28),
+                  name: 'Lead',
+                  preview:
+                      _lastMessagePreview(_mcLast, groupTitles: groupTitles),
+                  time: _mcLast?.at == null ? '' : agentRowAgo(_mcLast!.at),
+                  onTap: onOpenMc,
+                  needs: leadNeeds,
+                  statusKind: leadKind,
+                  needsCount: leadNeeds ? 1 : 0,
+                  offlineHost: offlineHost,
+                )
+              : null;
           final agentRows = [
             if (leadRow != null) leadRow,
             for (final r in ranked) ...[
@@ -1122,7 +1128,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
             if (emptyState != null) children.add(emptyState);
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(6, 6, 6, 18),
+              padding: const EdgeInsets.fromLTRB(0, 6, 0, 18),
               children: children,
             );
           },

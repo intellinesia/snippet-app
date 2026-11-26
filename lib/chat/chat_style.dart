@@ -113,7 +113,10 @@ TextStyle chatText({required bool mine, BuildContext? context}) =>
             ? (context != null
                 ? ChatColors.sentTextIn(context)
                 : ChatColors.sentText)
-            : AppColors.fg1);
+            // Capy keeps agent prose a step below white on the dark desk.
+            : (kMobile
+                ? AppColors.fg1
+                : Color.lerp(AppColors.fg2, AppColors.fg1, 0.3)!));
 
 /// Markdown inside a bubble: the base sheet recoloured for the bubble fill.
 MarkdownStyleSheet chatMarkdownStyle(BuildContext context,

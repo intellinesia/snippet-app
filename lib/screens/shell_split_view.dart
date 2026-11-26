@@ -27,6 +27,7 @@ class ShellSplitView extends StatefulWidget {
     this.sidebarTop,
     this.mainHeader,
     this.sidebarFooter,
+    this.tabOwnsStrip,
     this.statusBar,
     this.leftTakeover,
     this.leftStripAfter,
@@ -72,6 +73,10 @@ class ShellSplitView extends StatefulWidget {
 
   /// Pinned below the sidebar body (the 30 pt footer band).
   final Widget? sidebarFooter;
+
+  /// A left-pane tab whose own header row lists the pane's tabs; with it
+  /// shown the separate strip stays hidden.
+  final bool Function(ShellTab tab)? tabOwnsStrip;
 
   /// Full-width band under the sidebar and centre columns (desktop only).
   final Widget? statusBar;
@@ -316,6 +321,9 @@ class _ShellSplitViewState extends State<ShellSplitView>
             // A lone chat has no inner strip (C3): its header carries + and
             // the session panel toggle.
             if (list.length + readouts.length > 1 &&
+                !(p == ShellPane.left &&
+                    shownTab != null &&
+                    (widget.tabOwnsStrip?.call(shownTab) ?? false)) &&
                 (p == ShellPane.right
                     ? list.isNotEmpty || readouts.any((r) => r != _filesTab)
                     : true))
@@ -381,8 +389,21 @@ class _ShellSplitViewState extends State<ShellSplitView>
                   children: [
                     if (widget.sidebarTop != null) widget.sidebarTop!,
                     if (widget.sidebarHeader != null) widget.sidebarHeader!,
-                    Expanded(child: widget.sidebar),
-                    if (widget.sidebarFooter != null) widget.sidebarFooter!,
+                    // Capy: the footer tools share the sidebar's icon row,
+                    // pinned to its right end.
+                    Expanded(
+                      child: widget.sidebarFooter == null
+                          ? widget.sidebar
+                          : Stack(children: [
+                              Positioned.fill(child: widget.sidebar),
+                              Positioned(
+                                right: 0,
+                                bottom: 0,
+                                height: 44,
+                                child: widget.sidebarFooter!,
+                              ),
+                            ]),
+                    ),
                   ],
                 ),
               ),
