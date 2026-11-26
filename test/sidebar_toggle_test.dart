@@ -85,7 +85,8 @@ void main() {
     expect(
         find.descendant(
             of: find.byKey(const ValueKey('shell-sidebar-footer')),
-            matching: find.byTooltip('Settings')),
+            matching: find.byWidgetPredicate((w) =>
+                w is Tooltip && (w.message ?? '').startsWith('Settings'))),
         findsWidgets);
     expect(tester.state(find.byType(ShellSplitView)), same(before));
 

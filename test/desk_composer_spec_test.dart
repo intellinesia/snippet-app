@@ -114,17 +114,20 @@ void main() {
     addTearDown(focus.dispose);
 
     await _pumpComposer(tester, input: input, voice: voice, focus: focus);
+    Color? cardBorder() {
+      final card = tester
+          .widgetList<Container>(find.ancestor(
+              of: find.byType(TextField), matching: find.byType(Container)))
+          .firstWhere((c) => c.decoration is BoxDecoration);
+      return (card.decoration as BoxDecoration).border?.top.color;
+    }
+
+    final resting = cardBorder();
     focus.requestFocus();
     await tester.pump();
-
-    final containers = tester
-        .widgetList<Container>(find.ancestor(
-            of: find.byType(TextField), matching: find.byType(Container)))
-        .toList();
-    final card = containers.firstWhere((c) => c.decoration is BoxDecoration);
-    final decoration = card.decoration as BoxDecoration;
-    expect(decoration.border?.top.color, isNot(AppColors.fg3));
-    expect(decoration.border?.top.color, Colors.transparent);
+    // Focus must not light a ring: the resting hairline stays as it is.
+    expect(cardBorder(), resting);
+    expect(cardBorder(), isNot(AppColors.accent));
     debugDefaultTargetPlatformOverride = null;
   });
 

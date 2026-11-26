@@ -984,11 +984,9 @@ extension _SessionScreenComposerExt on _SessionScreenState {
             ])
           : null,
       deskHint: !kMobile && running
-          ? () => Flexible(
-                child: DeskRunningLabel(
-                  name: agent.isEmpty ? 'Agent' : agent,
-                  startedAt: DateTime.tryParse(_state?.turnStartedAt ?? ''),
-                ),
+          ? () => DeskRunningLabel(
+                name: agent.isEmpty ? 'Agent' : agent,
+                startedAt: DateTime.tryParse(_state?.turnStartedAt ?? ''),
               )
           : null,
       deskCold: _showsCold(running)
