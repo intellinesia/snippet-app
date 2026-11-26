@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:snippet/api.dart';
 import 'package:snippet/chat/chat_style.dart';
+import 'package:snippet/chat/run_head.dart';
 import 'package:snippet/chat/message_focus_overlay.dart';
 import 'package:snippet/composer/composer_card.dart';
 import 'package:snippet/message_reactions.dart';
@@ -222,7 +223,8 @@ void main() {
       await _open(t, client);
 
       // Only the 2 real messages render as ChatBubble widgets; the 2 reactions fold.
-      expect(find.byType(ChatBubble), findsNWidgets(2));
+      // v19: agent prose is flat; only the human reply keeps a bubble.
+      expect(find.byType(ChatBubble), findsOneWidget);
 
       // The reply renders a QuotedReplyLine with the target message text.
       final quoted = find.byType(QuotedReplyLine);
@@ -456,7 +458,7 @@ void main() {
       expect(
         find.ancestor(
           of: find.text('Initial spec note at top of thread.'),
-          matching: find.byType(ChatBubble),
+          matching: find.byType(SoftLane),
         ),
         findsOneWidget,
       );

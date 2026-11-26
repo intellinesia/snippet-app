@@ -564,22 +564,9 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
       );
     }
     return ChatCard(
-        border: kMobile && !closed ? AppColors.run : null,
+        border: null,
         children: [
-          if (kMobile && !closed)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-              child: Row(children: [
-                Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                        color: AppColors.run, shape: BoxShape.circle)),
-                const SizedBox(width: 8),
-                Text('Needs you',
-                    style: sans(12, weight: W.label, color: AppColors.run)),
-              ]),
-            ),
+          if (kMobile && !closed) const NeedsYouRow(),
           ChatCardHeader(
             eyebrow: qs.length > 1
                 ? ChatCardSteps(index: step, total: qs.length)

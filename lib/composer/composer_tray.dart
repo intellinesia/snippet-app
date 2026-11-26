@@ -324,6 +324,47 @@ class ComposerTrayItem extends StatelessWidget {
 
 /// One tray action on its own surface: icon, label, an optional line under
 /// it, a value on the right and a chevron when it opens something further.
+
+/// One v19 plus-menu tile: a compact tonal square with icon over label.
+class ComposerTrayTile extends StatelessWidget {
+  const ComposerTrayTile({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final String icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final r = BorderRadius.circular(10);
+    return Material(
+      color: AppColors.surface3,
+      borderRadius: r,
+      child: InkWell(
+        borderRadius: r,
+        onTap: onTap,
+        child: SizedBox(
+          width: 82.8,
+          height: 72,
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            AppIcon(icon, size: 20, color: AppColors.fg1),
+            const SizedBox(height: 7),
+            Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(12.5,
+                    weight: FontWeight.w500, color: AppColors.fg1)),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
 class ComposerTrayRow extends StatelessWidget {
   const ComposerTrayRow(
       {super.key,

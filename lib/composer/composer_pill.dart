@@ -15,7 +15,7 @@ abstract final class C7 {
   static Color get rowHi =>
       Color.alphaBlend(AppColors.fg1.withValues(alpha: 0.07), AppColors.surface3);
   static double get pill => kMobile ? 56 : 52;
-  static double get pillRadius => kMobile ? 24 : 26;
+  static double get pillRadius => kMobile ? 28 : 26;
   static double get btn => kMobile ? 48 : 40;
   static const double ends = 20;
   static const double inner = 4;
@@ -217,10 +217,12 @@ class ComposerBareButton extends StatelessWidget {
 /// The flat Duet pill every composer state sits in.
 class ComposerPillSurface extends StatelessWidget {
   const ComposerPillSurface(
-      {super.key, required this.child, this.highlight = false});
+      {super.key, required this.child, this.highlight = false, this.fill, this.radius});
 
   final Widget child;
   final bool highlight;
+  final Color? fill;
+  final double? radius;
 
   @override
   Widget build(BuildContext context) {
@@ -228,8 +230,8 @@ class ComposerPillSurface extends StatelessWidget {
       constraints: BoxConstraints(minHeight: C7.pill),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: kMobile ? AppColors.surface1 : C7.row,
-        borderRadius: BorderRadius.circular(C7.pillRadius),
+        color: fill ?? (kMobile ? AppColors.surface2 : C7.row),
+        borderRadius: BorderRadius.circular(radius ?? C7.pillRadius),
         border: highlight
             ? Border.all(color: AppColors.accent, width: 1.5)
             : null,
@@ -270,7 +272,18 @@ class ComposerVoicePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bar = SizedBox(height: 28, child: wave);
+    final bar = SizedBox(
+      height: 28,
+      child: recording && kMobile
+          ? Stack(alignment: Alignment.center, children: [
+              Positioned.fill(child: wave),
+              IgnorePointer(
+                child: Text('Slide to cancel',
+                    style: sans(13, height: 18 / 13, color: AppColors.fg2)),
+              ),
+            ])
+          : wave,
+    );
     Widget track = bar;
     if (!recording && onSeek != null) {
       // Wraps [bar], not [track]: the builder runs later, when track is this
@@ -288,22 +301,25 @@ class ComposerVoicePill extends StatelessWidget {
     }
     final timer = Row(mainAxisSize: MainAxisSize.min, children: [
       // Phone spec CH-09: no red anywhere; the timer alone says it is live.
-      if (recording && !kMobile) ...[
+      if (recording) ...[
         Container(
           width: 8,
           height: 8,
-          decoration:
-              BoxDecoration(color: AppColors.danger, shape: BoxShape.circle),
+          decoration: BoxDecoration(
+              color: kMobile ? AppColors.fg1 : AppColors.danger,
+              shape: BoxShape.circle),
         ),
         const SizedBox(width: 6),
       ],
       Text(time,
-          style: sans(14,
-              weight: kMobile ? W.label : null,
+          style: sans(kMobile ? 15 : 14,
+              weight: kMobile ? FontWeight.w500 : null,
               tabular: true,
               color: recording ? AppColors.fg1 : AppColors.fg3)),
     ]);
     return ComposerPillSurface(
+      fill: kMobile ? AppColors.surface1 : null,
+      radius: kMobile ? 24 : null,
       child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
         ComposerBareButton('x', label: 'Discard', onTap: onDiscard),
         if (!recording)

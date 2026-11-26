@@ -8,9 +8,10 @@ import 'phosphor_icons.dart';
 
 import 'chat/message_focus_overlay.dart';
 import 'media_views.dart';
+import 'mochi.dart';
 import 'models.dart';
 import 'platform.dart';
-import 'tap_detector.dart' show HitArea;
+import 'tap_detector.dart' show HitArea, TapDetector;
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -195,15 +196,35 @@ class QuotedReplyLine extends StatelessWidget {
         ? _desk(maxW)
         : Container(
             constraints: BoxConstraints(maxWidth: maxW),
-            padding: EdgeInsets.only(left: S.s8, top: S.s2, bottom: S.s2),
+            padding: const EdgeInsets.only(left: 10, top: 4, bottom: 4),
             decoration: BoxDecoration(
-              border: Border(left: BorderSide(color: AppColors.fg4, width: 2)),
+              border: Border(left: BorderSide(color: AppColors.fg3, width: 2)),
             ),
-            child: Text(
-              text,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: sans(12, height: 1.35, color: AppColors.fg3),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (author != null || deleted)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Text(
+                      deleted ? 'Original message deleted' : 'Replying to $author',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12,
+                          height: 17 / 12,
+                          weight: FontWeight.w500,
+                          color: AppColors.fg2),
+                    ),
+                  ),
+                if (!deleted)
+                  Text(
+                    text,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(14, height: 19 / 14, color: AppColors.fg1),
+                  ),
+              ],
             ),
           );
     if (onTap == null || (deleted && !kMobile)) return row;
@@ -274,49 +295,48 @@ class PendingReplyBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!kMobile) return _desk();
     return Padding(
-      padding: EdgeInsets.fromLTRB(S.s4, S.s2, S.s2, S.s6),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(R.card),
-        child: Container(
-          padding: EdgeInsets.fromLTRB(S.s8, S.of(5), S.s4, S.of(5)),
-          decoration: BoxDecoration(
-            color: AppColors.surface2,
-            border: Border(left: BorderSide(color: AppColors.fg4, width: 2)),
-          ),
-          child: Row(
-            children: [
-              AppIcon('reply', size: 13, color: AppColors.fg3),
-              SizedBox(width: S.s6),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Replying to $author',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(11, weight: W.label, color: AppColors.fg2),
-                    ),
-                    Text(
-                      text,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(12, color: AppColors.fg3),
-                    ),
-                  ],
-                ),
-              ),
-              IconBtn(
-                'x',
-                size: 24,
-                iconSize: 13,
-                tooltip: 'Clear reply',
-                onTap: onClear,
-              ),
-            ],
-          ),
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.only(left: 12, right: 10),
+        decoration: BoxDecoration(
+          color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(8),
         ),
+        child: Row(children: [
+          Expanded(
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Flexible(
+                flex: 0,
+                child: Text('Replying to $author',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(12,
+                        height: 17 / 12,
+                        weight: FontWeight.w500,
+                        color: AppColors.fg2)),
+              ),
+              Flexible(
+                child: Text('  $text',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13, height: 18 / 13, color: AppColors.fg1)),
+              ),
+            ]),
+          ),
+          Tooltip(
+            message: 'Clear reply',
+            child: TapDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onClear,
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: Center(child: AppIcon('x', size: 14, color: AppColors.fg2)),
+              ),
+            ),
+          ),
+        ]),
       ),
     );
   }
@@ -349,55 +369,17 @@ class MessageReactionChips extends StatelessWidget {
         alignment: mine ? WrapAlignment.end : WrapAlignment.start,
       );
     }
-    final total = reactions.fold<int>(0, (n, r) => n + r.count);
-    final active = reactions.any((r) => r.mine);
-    final fill = active ? AppColors.accentBg : AppColors.surface2;
-    return Semantics(
-      container: true,
-      child: Stack(clipBehavior: Clip.none, children: [
-        Material(
-          color: fill,
-          shape: StadiumBorder(side: BorderSide(color: AppColors.bg, width: 2)),
-          clipBehavior: Clip.antiAlias,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: S.s6, vertical: S.of(3)),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              for (final r in reactions)
-                _ReactionChip(
-                  group: r,
-                  onTap: () => onReact(r.name),
-                  onLongPress: () => showReactionPeople(context, reactions),
-                ),
-              if (total > 1)
-                Padding(
-                  padding: EdgeInsets.only(left: S.s2, right: S.s2),
-                  child: Text('$total',
-                      style: sans(11,
-                          tabular: true,
-                          weight: W.label,
-                          color: active ? AppColors.accent : AppColors.fg3)),
-                ),
-            ]),
+    return Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      children: [
+        for (final r in reactions)
+          _ReactionChip(
+            group: r,
+            onTap: () => onReact(r.name),
+            onLongPress: () => showReactionPeople(context, reactions),
           ),
-        ),
-        // The small trailing bubble that points at the message, as in iMessage.
-        Positioned(
-          bottom: -3,
-          left: mine ? null : 2,
-          right: mine ? 2 : null,
-          child: IgnorePointer(
-            child: Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: fill,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.bg, width: 1.5),
-              ),
-            ),
-          ),
-        ),
-      ]),
+      ],
     );
   }
 }
@@ -414,20 +396,47 @@ class _ReactionChip extends StatelessWidget {
   final VoidCallback onLongPress;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-        label: '${group.name} ${group.count}',
-        button: true,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(R.card),
-          onTap: onTap,
-          onLongPress: onLongPress,
-          onSecondaryTap: onLongPress,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: S.s2),
-            child: Text(group.name, style: _emojiStyle(14)),
+  Widget build(BuildContext context) {
+    final agent = group.actors
+        .where((a) => !a.startsWith('human:'))
+        .map((a) => a.split(':').last)
+        .cast<String?>()
+        .firstWhere((_) => true, orElse: () => null);
+    return Semantics(
+      label: '${group.name} ${group.count}',
+      button: true,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        onLongPress: onLongPress,
+        onSecondaryTap: onLongPress,
+        child: Container(
+          height: 32,
+          constraints: const BoxConstraints(minWidth: 46),
+          padding: EdgeInsets.only(left: agent == null ? 10 : 4, right: 10),
+          decoration: BoxDecoration(
+            color: AppColors.surface3,
+            borderRadius: BorderRadius.circular(16),
           ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (agent != null) ...[
+              AgentMochi(agent, size: 24),
+              const SizedBox(width: 4),
+            ],
+            Text(messageReactionEmoji(group.name), style: _emojiStyle(16)),
+            if (group.count > 1) ...[
+              const SizedBox(width: 4),
+              Text('${group.count}',
+                  style: sans(12,
+                      weight: FontWeight.w500,
+                      color: AppColors.fg2,
+                      tabular: true)),
+            ],
+          ]),
         ),
-      );
+      ),
+    );
+  }
 }
 
 /// Compact row offering `Reply` and the quick emoji reactions.

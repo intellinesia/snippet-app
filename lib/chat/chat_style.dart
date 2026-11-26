@@ -207,7 +207,7 @@ class ChatBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Agent replies are plain prose on the canvas; yours sits on s2.
-    if (!mine && color == null && (!kMobile || reading)) {
+    if (!mine && color == null) {
       return ChatBubbleFill(
         fill: AppColors.bg,
         child: Builder(
@@ -219,10 +219,10 @@ class ChatBubble extends StatelessWidget {
         ),
       );
     }
-    // Phone spec: user surface3, agent surface1, padding 12 x 11, no tail.
+    // v19 phone: your bubble is surface2; agent prose has no bubble.
     final fill = color ??
         (kMobile
-            ? (mine ? AppColors.surface3 : AppColors.surface1)
+            ? (mine ? AppColors.surface2 : AppColors.surface1)
             : (mine ? AppColors.surface2 : ChatColors.received));
     final h = kMobile ? 12.0 : 11.0;
     final v = kMobile ? 11.0 : 6.0;
@@ -276,7 +276,7 @@ class ChatBubble extends StatelessWidget {
               color: fill,
               mine: mine,
               tail: false,
-              radius: ChatColors.radius,
+              radius: kMobile ? 12 : ChatColors.radius,
               tailW: tailPad),
           child: Padding(
             padding: EdgeInsets.fromLTRB(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app_icons.dart';
+import '../platform.dart';
 import '../theme.dart';
 
 /// Desktop Quiet asks share one locked treatment: tonal surfaces, one 6px
@@ -42,8 +43,8 @@ class NeedsYouHeader extends StatelessWidget {
           ),
           const SizedBox(width: 7),
           Text('Needs you',
-              style: sans(12,
-                  height: 16 / 12,
+              style: sans(kMobile ? 13 : 12,
+                  height: kMobile ? 18 / 13 : 16 / 12,
                   weight: FontWeight.w500,
                   color: AppColors.fg2)),
           const Spacer(),
@@ -105,7 +106,7 @@ class AskButton extends StatelessWidget {
             AskButtonVariant.secondary => AppColors.fg1,
             AskButtonVariant.ghost => AppColors.fg2,
           };
-    final radius = BorderRadius.circular(6);
+    final radius = BorderRadius.circular(kMobile ? 8 : 6);
     return Semantics(
       button: true,
       enabled: enabled,
@@ -120,8 +121,8 @@ class AskButton extends StatelessWidget {
             onTap: enabled ? onTap : null,
             borderRadius: radius,
             child: Container(
-              height: 28,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              height: kMobile ? 36 : 28,
+              padding: EdgeInsets.symmetric(horizontal: kMobile ? 10 : 12),
               alignment: Alignment.center,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 if (busy) ...[
@@ -176,8 +177,8 @@ class DesktopAskCard extends StatelessWidget {
   final EdgeInsetsGeometry margin;
 
   Widget _title() => Text(title,
-      style: sans(13,
-          height: 19 / 13, weight: FontWeight.w500, color: AppColors.fg1));
+      style: sans(kMobile ? 15 : 13,
+          height: kMobile ? 21 / 15 : 19 / 13, weight: FontWeight.w500, color: AppColors.fg1));
 
   Widget _actions() => Padding(
         padding: const EdgeInsets.only(top: 12),
@@ -229,7 +230,7 @@ class DesktopAskCard extends StatelessWidget {
               if (tail != null) tail,
             ],
           );
-          return Padding(padding: const EdgeInsets.all(12), child: column);
+          return Padding(padding: EdgeInsets.all(kMobile ? 14 : 12), child: column);
         }),
       );
 }

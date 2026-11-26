@@ -26,7 +26,7 @@ void main() {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 const FileChip(path: '/tmp/report.pdf'),
                 const SizedBox(height: 8),
-                ChatCard(fill: approvalTint, children: const [
+                ChatCard(fill: AppColors.surface2, children: const [
                   NeedsYouRow(trailing: 'Sashy - 12:41'),
                   SizedBox(height: 12),
                 ]),

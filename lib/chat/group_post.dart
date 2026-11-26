@@ -101,8 +101,8 @@ class GroupPostHeader extends StatelessWidget {
       );
 }
 
-const int _capLines = 3;
-const int _capChars = 170;
+const int _capLines = 8;
+const int _capChars = 520;
 
 /// The preview of a long post, or null when it fits.
 String? groupPostPreview(String body) {
@@ -186,14 +186,17 @@ class _CappedProseState extends State<CappedProse> {
         TapDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () => setState(() => _open = !_open),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 48, minWidth: 94),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              widthFactor: 1,
-              child: Text(_open ? 'Show less' : 'Show more',
-                  style: sans(13, weight: W.label, color: AppColors.fg2)),
+          child: Container(
+            height: 32,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: AppColors.surface3,
+              borderRadius: BorderRadius.circular(16),
             ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Text(_open ? 'Show less' : 'Show more',
+                  style: sans(13, weight: FontWeight.w500, color: AppColors.fg2)),
+            ]),
           ),
         ),
       ],

@@ -41,6 +41,7 @@ import '../chat/runs_dock.dart';
 import 'agent_messaging.dart' show openAgentThread;
 import '../chat/stage_header.dart';
 import '../chat/run_head.dart';
+import '../chat/unread_divider.dart';
 import '../chat/chat_empty_intro.dart';
 import 'agent_card.dart'
     show AgentRowShell, LitTile, TeamRow, agentRowAgo, agentRowTime;
@@ -1001,6 +1002,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   List<CoordinationEvent> _events = const [];
   bool _loading = true;
   bool _sending = false;
+  int? _unreadDividerSequence;
   String? _error;
 
   /// Sent but not yet in a fetched list; merged back so a refetch can't hide.
@@ -1063,7 +1065,10 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     );
     _events = _thread.data ?? const [];
     _loading = _thread.data == null;
-    if (_events.isNotEmpty) _jumpToBottom();
+    if (_events.isNotEmpty) {
+      _markUnreadBoundary();
+      _jumpToBottom();
+    }
     _input.addListener(_onInputChanged);
     _inputFocus.addListener(_onInputChanged);
   }
@@ -1159,6 +1164,25 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
 
   Future<void> _load({bool silent = false}) => _thread.refresh();
 
+  void _markUnreadBoundary() {
+    if (_unreadDividerSequence != null || _events.isEmpty) return;
+    final unread = widget.group.unread;
+    if (unread <= 0) {
+      _unreadDividerSequence = -1;
+      return;
+    }
+    var left = unread;
+    var at = _events.length - 1;
+    for (; at >= 0; at--) {
+      final e = _events[at];
+      if (e.actorKind == 'human' || isReactionEvent(e)) continue;
+      left--;
+      if (left <= 0) break;
+    }
+    if (at < 0) at = 0;
+    _unreadDividerSequence = _events[at].sequence;
+  }
+
   void _sync() {
     if (!mounted) return;
     final next = _thread.data;
@@ -1173,6 +1197,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     final first = _events.isEmpty;
     setState(() {
       if (merged != null) _events = merged;
+      _markUnreadBoundary();
       _loading = _thread.loading;
       _error =
           next == null && _thread.error != null ? '${_thread.error}' : null;
@@ -1655,7 +1680,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              AppIcon('hand', size: 24, color: AppColors.run, filled: true),
+              AppIcon('warning-circle', size: 24, color: AppColors.fg2),
               SizedBox(height: S.of(10)),
               Text(_error!,
                   textAlign: TextAlign.center,
@@ -1884,6 +1909,22 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
               (prevAt == null ||
                   at.difference(prevAt).abs() >= const Duration(minutes: 10));
           final readLine = i == lastHumanIndex ? _readByLine(e) : null;
+          final unreadHere = kMobile &&
+              _unreadDividerSequence != null &&
+              _unreadDividerSequence! > 0 &&
+              e.sequence == _unreadDividerSequence;
+          final item = _wideCap(
+            _item(
+              e,
+              card: cards[e],
+              index: i,
+              run: run,
+              stamp: stamp,
+              headerTime: headerTime,
+              readLine: readLine,
+              reactions: reactionsByTarget[e.eventId] ?? const [],
+            ),
+          );
           return KeyedSubtree(
             key: ValueKey(rowId),
             child: RowSizeWatch(
@@ -1892,18 +1933,19 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                 animate: fresh &&
                     _bottom.stickToBottom &&
                     !(kMobile && _sendInIds.contains(rowId)),
-                child: _wideCap(
-                  _item(
-                    e,
-                    card: cards[e],
-                    index: i,
-                    run: run,
-                    stamp: stamp,
-                    headerTime: headerTime,
-                    readLine: readLine,
-                    reactions: reactionsByTarget[e.eventId] ?? const [],
-                  ),
-                ),
+                child: unreadHere
+                    ? Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: 8),
+                            child: UnreadDivider(),
+                          ),
+                          item,
+                        ],
+                      )
+                    : item,
               ),
             ),
           );
@@ -2360,9 +2402,9 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     return Container(
       margin: EdgeInsets.only(bottom: S.s6),
       decoration: BoxDecoration(
-        color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(R.lg),
-        border: Border.all(color: AppColors.line),
+        color: AppColors.surface2,
+        borderRadius: BorderRadius.circular(kMobile ? 10 : R.lg),
+        border: kMobile ? null : Border.all(color: AppColors.line),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -2370,22 +2412,31 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
           for (final c in candidates)
             InkWell(
               onTap: () => _applyMention(c.id),
-              child: Padding(
+              child: Container(
+                height: kMobile ? 48 : null,
                 padding:
-                    EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s8),
+                    EdgeInsets.symmetric(horizontal: S.s12, vertical: kMobile ? 0 : S.s8),
                 child: Row(children: [
+                  if (kMobile)
+                    Container(width: 2, height: 36, color: Colors.transparent)
+                  else
+                    const SizedBox.shrink(),
+                  if (kMobile) const SizedBox(width: 8),
                   if (c.id == 'everyone')
-                    AppIcon('users', size: 16, color: AppColors.fg3)
+                    AppIcon('users', size: kMobile ? 20 : 16, color: AppColors.fg3)
                   else if (kMobile)
-                    AgentMochi(c.id, size: 16)
+                    AgentMochi(c.id, size: 28)
                   else
                     LitTile.agent(c.id, size: 18),
-                  SizedBox(width: S.s8),
+                  SizedBox(width: kMobile ? 10 : S.s8),
                   Expanded(
                     child: Text(c.label,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TS.body(AppColors.fg1)),
+                        style: kMobile
+                            ? sans(14,
+                                weight: FontWeight.w500, color: AppColors.fg1)
+                            : TS.body(AppColors.fg1)),
                   ),
                   if (c.name != null && c.name != c.label)
                     Text('@${c.id}', style: TS.meta(AppColors.fg3)),

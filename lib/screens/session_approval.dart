@@ -329,7 +329,7 @@ class ApprovalBarState extends State<ApprovalBar> {
 
     return Padding(
       padding: EdgeInsets.fromLTRB(0, S.s4, 0, S.s6),
-      child: ChatCard(fill: kMobile ? approvalTint : null, children: [
+      child: ChatCard(children: [
         Flexible(
           child: SingleChildScrollView(
             child: Column(
@@ -358,9 +358,8 @@ class ApprovalBarState extends State<ApprovalBar> {
                         padding:
                             EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.s6),
                         decoration: BoxDecoration(
-                          color: AppColors.bg,
-                          borderRadius: BorderRadius.circular(R.card),
-                          border: Border.all(color: AppColors.line),
+                          color: AppColors.surface3,
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: ApprovalCode(code: detail, shell: isShell),
                       ),

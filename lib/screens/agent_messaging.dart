@@ -49,6 +49,8 @@ import 'agent_questions_card.dart';
 import 'agent_records.dart';
 import 'agent_thread_cards.dart';
 import '../chat/run_head.dart';
+import '../chat/unread_divider.dart';
+import '../chat/group_post.dart';
 import '../chat/chat_empty_intro.dart';
 import 'agent_transcript_head.dart';
 import 'agent_view_switcher.dart';
@@ -349,6 +351,7 @@ class AgentThreadScreen extends StatefulWidget {
     this.deskTrailing,
     this.onDeskInfo,
     this.onAgentAction,
+    this.initialUnread,
   });
 
   final DaemonClient client;
@@ -376,6 +379,11 @@ class AgentThreadScreen extends StatefulWidget {
   /// Desktop: opens an agent panel page (model, reach, memory, wakes) from the
   /// Profile popover.
   final ValueChanged<String>? onAgentAction;
+
+  /// Unread count captured by the list before opening. The server clears the
+  /// cursor as soon as the thread is marked read, so the divider keeps this
+  /// entry-time value rather than refetching it.
+  final int? initialUnread;
 
   @override
   State<AgentThreadScreen> createState() => _AgentThreadScreenState();
@@ -675,6 +683,9 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     onConfirmTake: _attachVoiceBytes,
   );
 
+  int? _initialUnread;
+  int? _unreadDividerSequence;
+
   late final ThreadComposerKit _kit = ThreadComposerKit(
     input: _input,
     attachments: _attachments,
@@ -696,6 +707,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     _kit.start();
     _loadLine();
     _loadUnread();
+    _initialUnread = widget.initialUnread;
     _loadProviders();
     _thread = Swr<DirectThreadPage>(
       client: widget.client,
@@ -713,6 +725,28 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   }
 
   static const _page = 100;
+
+  /// The server clears the read cursor as soon as the thread opens, so keep
+  /// the count captured on entry and derive the boundary once, locally.
+  void _markUnreadBoundary() {
+    if (_unreadDividerSequence != null || _events.isEmpty) return;
+    final unread = _initialUnread;
+    if (unread == null || unread <= 0) {
+      _unreadDividerSequence = -1;
+      return;
+    }
+    var left = unread;
+    var at = _events.length - 1;
+    for (; at >= 0; at--) {
+      final e = _events[at];
+      if (e.actorKind == 'human' || isReactionEvent(e)) continue;
+      left--;
+      if (left <= 0) break;
+    }
+    if (at < 0) at = 0;
+    _unreadDividerSequence = _events[at].sequence;
+  }
+
 
   /// The newest page. Daemons before newest-first paging answer `latest` with
   /// the oldest page, so walk forward to the tail when that happens.
@@ -846,6 +880,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     final first = _events.isEmpty;
     setState(() {
       if (merged != null) _events = merged;
+      _markUnreadBoundary();
       if (next != null) _deliveries = {..._deliveries, ...next.deliveries};
       _loading = _thread.loading;
       _error =
@@ -1339,7 +1374,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                AppIcon('hand', size: 24, color: AppColors.run, filled: true),
+                AppIcon('warning-circle', size: 24, color: AppColors.fg2),
                 SizedBox(height: S.of(10)),
                 Text(_error!,
                     textAlign: TextAlign.center,
@@ -1483,9 +1518,13 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                 showStamp: stamps[at],
                 showOrigin: origins[at],
                 showDelivery: at == lastHumanIdx,
-                head: !kMobile && first,
+                head: first,
               ),
             );
+            final unreadHere = kMobile &&
+                _unreadDividerSequence != null &&
+                _unreadDividerSequence! > 0 &&
+                ev.sequence == _unreadDividerSequence;
             return KeyedSubtree(
               key: ValueKey(rowId),
               child: RowSizeWatch(
@@ -1496,7 +1535,19 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                       !(kMobile && _sendInIds.contains(rowId)),
                   child: Padding(
                     padding: EdgeInsets.only(top: topGap),
-                    child: row,
+                    child: unreadHere
+                        ? Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const Padding(
+                                padding: EdgeInsets.only(bottom: 8),
+                                child: UnreadDivider(),
+                              ),
+                              row,
+                            ],
+                          )
+                        : row,
                   ),
                 ),
               ),
@@ -1625,17 +1676,18 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   /// right of a received bubble and the left of a sent one.
   Widget _withTapback(Widget bubble, Widget? chips, {required bool mine}) {
     if (chips == null) return bubble;
-    return Padding(
-      padding: const EdgeInsets.only(top: MessageReactionChips.rise),
-      child: Stack(clipBehavior: Clip.none, children: [
+    if (!kMobile) return bubble;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment:
+          mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
         bubble,
-        Positioned(
-          top: -MessageReactionChips.rise,
-          left: mine ? -MessageReactionChips.overhang : null,
-          right: mine ? null : -MessageReactionChips.overhang,
+        Padding(
+          padding: EdgeInsets.only(top: 4, left: mine ? 0 : kSoftIndent),
           child: chips,
         ),
-      ]),
+      ],
     );
   }
 
@@ -1841,20 +1893,51 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                 ],
               ));
         }
-        final reading = kMobile && !mine && readingMode(e.body);
+        final reading = false;
+        if (!mine) {
+          final prose = CappedProse(
+            body: e.body,
+            builder: (text) => ChatMessageBody(
+              client: widget.client,
+              body: text,
+              mine: false,
+            ),
+          );
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (quotedLine != null)
+                Padding(
+                  padding: EdgeInsets.only(bottom: S.s2, left: kSoftIndent),
+                  child: quotedLine,
+                ),
+              _withTapback(
+                KeyedSubtree(
+                  key: bubbleKey,
+                  child: SoftLane(
+                    agentId: widget.agentId,
+                    name: widget.agentName,
+                    time: at == null ? null : _clockLabel(at),
+                    first: head,
+                    last: tail,
+                    child: prose,
+                  ),
+                ),
+                chips,
+                mine: false,
+              ),
+            ],
+          );
+        }
         return ChatBubbleRow(
           mine: mine,
           fill: reading,
           child: Column(
-            crossAxisAlignment:
-                mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               if (quotedLine != null)
                 Padding(
-                  padding: EdgeInsets.only(
-                      bottom: S.s2,
-                      left: mine ? 0 : S.s4,
-                      right: mine ? S.s4 : 0),
+                  padding: EdgeInsets.only(bottom: S.s2, right: S.s4),
                   child: quotedLine,
                 ),
               _withTapback(
@@ -1863,7 +1946,6 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                   child: ChatBubble(
                     mine: mine,
                     tail: tail,
-                    reading: reading,
                     child: _bubbleBody(e, mine: mine),
                   ),
                 ),
@@ -2191,12 +2273,14 @@ void openAgentThread(
   required DaemonClient client,
   required String agentId,
   required String agentName,
+  int? initialUnread,
 }) {
   if (kMobile) {
     Widget page(BuildContext _) => AgentThreadScreen(
           client: client,
           agentId: agentId,
           agentName: agentName,
+          initialUnread: initialUnread,
           onClose: () => Navigator.pop(context),
         );
     Navigator.of(context).push<void>(AppPageRoute<void>(builder: page));

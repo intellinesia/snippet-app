@@ -224,16 +224,26 @@ class ComposerSendButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fill = !enabled
-        ? (kMobile ? AppColors.surface2 : AppColors.fg1.withValues(alpha: 0.07))
+    final fill = !kMobile
+        ? (!enabled
+            ? AppColors.fg1.withValues(alpha: 0.07)
+            : stop
+                ? AppColors.fg1.withValues(alpha: 0.11)
+                : AppColors.accentFill)
         : stop
-            ? (kMobile ? AppColors.fg1 : AppColors.fg1.withValues(alpha: 0.11))
-            : AppColors.accentFill;
-    final ink = !enabled
-        ? (kMobile ? AppColors.fg3 : AppColors.fg4)
+            ? AppColors.fg1
+            : AppColors.surface3;
+    final ink = !kMobile
+        ? (!enabled
+            ? AppColors.fg4
+            : stop
+                ? AppColors.fg1
+                : AppColors.accentFg)
         : stop
-            ? (kMobile ? AppColors.bg : AppColors.fg1)
-            : AppColors.accentFg;
+            ? AppColors.bg
+            : enabled
+                ? AppColors.fg1
+                : AppColors.fg3;
     final ShapeBorder shape = kMobile
         ? const CircleBorder()
         : RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.of(6)));
@@ -249,7 +259,7 @@ class ComposerSendButton extends StatelessWidget {
               }
             : onTap,
         child: SizedBox.square(
-          dimension: kMobile ? 44 : 28,
+          dimension: 28,
           child: Center(
             child: sending
                 ? Spinner(size: 16, color: ink)
@@ -260,7 +270,7 @@ class ComposerSendButton extends StatelessWidget {
       ),
     );
     if (!kMobile) return button;
-    // A 44 circle inside a 48 target; always visible, announced when off.
+    // A 28 circle inside a 48 target; always visible, announced when off.
     return Semantics(
       button: true,
       enabled: enabled,

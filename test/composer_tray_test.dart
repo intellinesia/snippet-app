@@ -108,7 +108,7 @@ void main() {
 
     await tester.tap(_plus);
     await _settle(tester);
-    expect(find.text('Photo or file'), findsOneWidget);
+    expect(find.text('File'), findsOneWidget);
     expect(find.text('Hand off'), findsOneWidget);
     expect(find.text('To another agent, after this turn'), findsOneWidget);
     expect(find.text('Fork from here'), findsOneWidget);
@@ -121,7 +121,7 @@ void main() {
     await tester.tap(_plus);
     await _settle(tester);
     expect(find.text('Hand off'), findsNothing);
-    expect(find.text('Photo or file'), findsNothing);
+    expect(find.text('File'), findsNothing);
     await _done(tester);
   });
 
@@ -172,7 +172,7 @@ void main() {
     await _settle(tester);
     // Interrupt sits at the top of the list.
     expect(tester.getTopLeft(find.text('Interrupt')).dy,
-        lessThan(tester.getTopLeft(find.text('Photo or file')).dy));
+        lessThan(tester.getTopLeft(find.text('File')).dy));
     await _done(tester);
   });
 
@@ -184,7 +184,7 @@ void main() {
     await tester.tap(find.text('Hand off'));
     await _settle(tester);
     expect(find.text('Hand off to'), findsOneWidget);
-    expect(find.text('Photo or file'), findsNothing);
+    expect(find.text('File'), findsNothing);
     // No sheet: the picker lives in the tray, not a new route.
     expect(find.byType(BottomSheet), findsNothing);
     expect(find.text('Moss'), findsOneWidget);
@@ -198,7 +198,7 @@ void main() {
         matching: find.byType(InkWell)));
     await _settle(tester);
     expect(find.text('Hand off to'), findsNothing);
-    expect(find.text('Photo or file'), findsOneWidget);
+    expect(find.text('File'), findsOneWidget);
     await _done(tester);
   });
 
@@ -210,8 +210,8 @@ void main() {
     await tester.tap(find.text('Fork from here'));
     await _settle(tester);
     expect(find.text('Fork this conversation'), findsOneWidget);
-    expect(find.text('From this message'), findsOneWidget);
-    expect(find.text('Full history'), findsOneWidget);
+    expect(find.text('Fork'), findsWidgets);
+    expect(find.text('Fork from the start instead'), findsOneWidget);
 
     await tester.tapAt(const Offset(195, 300));
     await _settle(tester);

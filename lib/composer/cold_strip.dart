@@ -50,6 +50,62 @@ class ColdTab extends StatelessWidget {
           : 'Cache cold · resumes full, $tokens',
       _ => 'Cache cold · resume',
     };
+    if (kMobile) {
+      final action = mode == 'ask' ? 'Resume lean' : 'Change';
+      return Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(children: [
+              AppIcon('clock', size: 18, color: AppColors.fg2),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Session is cold',
+                        style: sans(15,
+                            height: 21 / 15,
+                            weight: FontWeight.w500,
+                            color: AppColors.fg1)),
+                    Text(
+                        tokens == null
+                            ? 'Choose how much context to restore'
+                            : 'Choose how much context to restore · $tokens',
+                        maxLines: 2,
+                        style: sans(13, height: 18 / 13, color: AppColors.fg2)),
+                  ],
+                ),
+              ),
+            ]),
+            const SizedBox(height: 12),
+            InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => mode == 'ask' ? onPick('lean') : _changeMode(context),
+              child: Container(
+                height: 36,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.fg1,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(action,
+                    style: sans(12.5,
+                        weight: FontWeight.w500, color: AppColors.bg)),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Container(
       height: kMobile ? 32 : 28,
       margin: EdgeInsets.symmetric(horizontal: S.s20),
