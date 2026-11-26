@@ -11,8 +11,9 @@ Future<bool> openNotificationConversation(
   if (threadId.startsWith('group:')) {
     final groups = await client.groups();
     if (!context.mounted) return false;
+    final id = threadId.substring('group:'.length);
     for (final g in groups) {
-      if (g.id == threadId) {
+      if (g.id == id || g.id == threadId) {
         openGroupThread(context, client: client, group: g);
         return true;
       }
@@ -39,8 +40,7 @@ Future<bool> openNotificationConversation(
 Future<bool> reopenConversation(BuildContext context, DaemonClient client,
     String panelId, String title) async {
   if (panelId.startsWith('group:')) {
-    return openNotificationConversation(
-        context, client, panelId.substring('group:'.length));
+    return openNotificationConversation(context, client, panelId);
   }
   openAgentThread(context, client: client, agentId: panelId, agentName: title);
   return true;

@@ -1719,7 +1719,7 @@ final class NotchHUDController {
       guard let self = self else { return }
       let payload = self.notifPayload ?? ""
       self.onBannerAction?(action, payload)
-      self.clearNotification()
+      self.clearNotification(markUnread: false)
     }
 
     NotificationCenter.default.addObserver(
@@ -1888,12 +1888,12 @@ final class NotchHUDController {
     refreshHUD(animated: true)
   }
 
-  private func clearNotification() {
+  private func clearNotification(markUnread: Bool = true) {
     notifTitle = nil
     notifSubtitle = nil
     notifKind = nil
     notifPayload = nil
-    hasUnreadNotification = true
+    hasUnreadNotification = markUnread
     refreshHUD(animated: true)
   }
 

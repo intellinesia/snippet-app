@@ -113,8 +113,26 @@ class _NotificationPopoversState extends State<NotificationPopovers>
     HapticFeedback.mediumImpact();
     setState(() {
       _pending.clear();
+      _expandedPayload = null;
+      _cardHold = false;
       _afterChange();
     });
+  }
+
+  void _forgetIfExpanded(Map<String, dynamic> payload) {
+    if (!identical(_expandedPayload, payload)) return;
+    _expandedPayload = null;
+    _cardHold = false;
+  }
+
+  void _forgetHiddenExpanded() {
+    final expanded = _expandedPayload;
+    if (expanded == null) return;
+    final visible = _ordered.take(NotificationStack.maxVisible);
+    if (!visible.any((p) => identical(p, expanded))) {
+      _expandedPayload = null;
+      _cardHold = false;
+    }
   }
 
   String _contextLabel(Map<String, dynamic> payload) {
@@ -147,8 +165,13 @@ class _NotificationPopoversState extends State<NotificationPopovers>
   }
 
   void _addPending(Map<String, dynamic> payload) {
-    _pending.removeWhere((old) => toastSuperseded(old, payload));
+    _pending.removeWhere((old) {
+      final drop = toastSuperseded(old, payload);
+      if (drop) _forgetIfExpanded(old);
+      return drop;
+    });
     _pending.add(payload);
+    _forgetHiddenExpanded();
   }
 
   @override
@@ -188,7 +211,11 @@ class _NotificationPopoversState extends State<NotificationPopovers>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         setState(() {
-          _pending.removeWhere(suppressVisibleNotification);
+          _pending.removeWhere((p) {
+            final drop = suppressVisibleNotification(p);
+            if (drop) _forgetIfExpanded(p);
+            return drop;
+          });
           _afterChange();
         });
       }
@@ -267,7 +294,11 @@ class _NotificationPopoversState extends State<NotificationPopovers>
   }
 
   Widget _buildContent(BuildContext context) {
-    _pending.removeWhere(suppressVisibleNotification);
+    _pending.removeWhere((p) {
+      final drop = suppressVisibleNotification(p);
+      if (drop) _forgetIfExpanded(p);
+      return drop;
+    });
     final items = _ordered;
     final call = callTracker.state.value;
     final reducedMotion = reduceMotion(context);

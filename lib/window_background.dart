@@ -18,6 +18,7 @@ class WindowBackgroundStore {
 
   final ValueNotifier<String?> path = ValueNotifier<String?>(null);
   bool _loaded = false;
+  int _setSerial = 0;
 
   Future<void> init() async {
     if (kMobile || _loaded) return;
@@ -32,24 +33,34 @@ class WindowBackgroundStore {
 
   /// Copies [source] into app support so the original can move or vanish.
   Future<void> setFromFile(String source) async {
+    final serial = ++_setSerial;
     final dir = await getApplicationSupportDirectory();
     final dot = source.lastIndexOf('.');
     final ext = dot > source.lastIndexOf(Platform.pathSeparator) && dot >= 0
         ? source.substring(dot)
         : '.img';
     final dest = File(
-        '${dir.path}${Platform.pathSeparator}window_bg_${DateTime.now().millisecondsSinceEpoch}$ext');
+        '${dir.path}${Platform.pathSeparator}window_bg_${DateTime.now().millisecondsSinceEpoch}_$serial$ext');
     await dest.parent.create(recursive: true);
     await File(source).copy(dest.path);
+    if (serial != _setSerial) {
+      _deleteQuietly(dest.path);
+      return;
+    }
     final old = path.value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(prefsKey, dest.path);
+    if (serial != _setSerial) {
+      _deleteQuietly(dest.path);
+      return;
+    }
     path.value = dest.path;
     if (old != null && old != dest.path) _deleteQuietly(old);
     await _syncNative();
   }
 
   Future<void> clear() async {
+    _setSerial++;
     final old = path.value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(prefsKey);

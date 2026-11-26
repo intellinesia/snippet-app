@@ -57,6 +57,7 @@ class MacosNotch {
   static StreamSubscription<dynamic>? _mcSub;
   static HarnessState? _mcState;
   static int _mcRevision = 0;
+  static Timer? _mcReconnectTimer;
   static String _mcLiveStreamText = '';
   static String _mcTurnText = '';
   static final _notchDedupe = NotificationDedupe();
@@ -71,6 +72,8 @@ class MacosNotch {
   static int _activeRevision = 0;
   static String _liveStreamText = '';
   static Timer? _pollTimer;
+  static int _conversationSerial = 0;
+  static Timer? _activeReconnectTimer;
   static int _nonceCounter = 1;
 
   static void ensureInitialized() {
@@ -296,13 +299,26 @@ class MacosNotch {
             }
           } catch (_) {}
         },
-        onError: (_) {},
-        onDone: () {},
+        onError: (_) => _mcSocketEnded(client, ch),
+        onDone: () => _mcSocketEnded(client, ch),
       );
     } catch (_) {}
   }
 
+  static void _mcSocketEnded(DaemonClient client, WebSocketChannel ch) {
+    if (!identical(ch, _mcSocket)) return;
+    _mcSub?.cancel();
+    _mcSub = null;
+    _mcSocket = null;
+    _mcReconnectTimer ??= Timer(const Duration(seconds: 2), () {
+      _mcReconnectTimer = null;
+      if (identical(_defaultClient, client)) _startMcWatch(client);
+    });
+  }
+
   static void _stopMcWatch() {
+    _mcReconnectTimer?.cancel();
+    _mcReconnectTimer = null;
     _mcSub?.cancel();
     _mcSub = null;
     _mcSocket?.sink.close();
@@ -337,6 +353,7 @@ class MacosNotch {
 
   static Future<void> _openConversation(String rawPayload) async {
     _closeActiveConversation();
+    final serial = ++_conversationSerial;
     Map<String, dynamic> payload;
     try {
       payload = jsonDecode(rawPayload) as Map<String, dynamic>;
@@ -348,7 +365,7 @@ class MacosNotch {
     }
 
     final client = await _resolveClient(payload);
-    if (client == null) return;
+    if (serial != _conversationSerial || client == null) return;
     _activeClient = client;
     final openType = payload['type'];
     if (openType == 'openArtifact' || openType == 'openImage') {
@@ -368,6 +385,7 @@ class MacosNotch {
       final threadId = '${destination['id'] ?? ''}';
       try {
         final threads = await client.directThreads();
+        if (serial != _conversationSerial) return;
         for (final t in threads) {
           if (t.threadId == threadId && t.peerKind == 'agent') {
             _activePeerAgentId = t.peerId;
@@ -421,10 +439,16 @@ class MacosNotch {
     final client = _activeClient;
     final peerId = _activePeerAgentId;
     if (client == null || peerId == null) return;
+    final serial = _conversationSerial;
     try {
       final events = (await client.agentThreadPage(
               peerId: peerId, latest: true, limit: 60))
           .events;
+      if (serial != _conversationSerial ||
+          !identical(client, _activeClient) ||
+          peerId != _activePeerAgentId) {
+        return;
+      }
       final messages = <Map<String, dynamic>>[];
       for (final e in events) {
         final text = e.body.trim();
@@ -497,9 +521,23 @@ class MacosNotch {
           }
         } catch (_) {}
       },
-      onError: (_) {},
-      onDone: () {},
+      onError: (_) => _activeSocketEnded(client, sessionId, ch),
+      onDone: () => _activeSocketEnded(client, sessionId, ch),
     );
+  }
+
+  static void _activeSocketEnded(
+      DaemonClient client, String sessionId, WebSocketChannel ch) {
+    if (!identical(ch, _activeSocket)) return;
+    _activeSub?.cancel();
+    _activeSub = null;
+    _activeSocket = null;
+    _activeReconnectTimer ??= Timer(const Duration(seconds: 2), () {
+      _activeReconnectTimer = null;
+      if (identical(_activeClient, client) && _activeSessionId == sessionId) {
+        _attachSession(client, sessionId);
+      }
+    });
   }
 
   static String _cleanUserText(String raw) {
@@ -770,8 +808,11 @@ class MacosNotch {
   }
 
   static void _closeActiveConversation() {
+    _conversationSerial++;
     _pollTimer?.cancel();
     _pollTimer = null;
+    _activeReconnectTimer?.cancel();
+    _activeReconnectTimer = null;
     _activeSub?.cancel();
     _activeSub = null;
     _activeSocket?.sink.close();

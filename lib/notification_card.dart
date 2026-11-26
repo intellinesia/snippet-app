@@ -509,16 +509,19 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
           style: sans(compact ? 11 : 12, color: AppColors.fg2)),
     ]);
 
-    final more = Builder(builder: (context) {
+    final more = LayoutBuilder(builder: (context, constraints) {
       final style = compact
           ? sans(13, height: 19 / 13, color: AppColors.fg1)
           : sans(15, height: 21 / 15, color: AppColors.fg1);
+      final width = constraints.hasBoundedWidth
+          ? constraints.maxWidth
+          : MediaQuery.sizeOf(context).width - 32 - 24;
       final painter = TextPainter(
         text: TextSpan(text: body, style: style),
         textDirection: TextDirection.ltr,
         textScaler: MediaQuery.textScalerOf(context),
         maxLines: maxLines,
-      )..layout(maxWidth: (MediaQuery.sizeOf(context).width - 32 - 24));
+      )..layout(maxWidth: width);
       final over = painter.didExceedMaxLines;
       painter.dispose();
       return Column(

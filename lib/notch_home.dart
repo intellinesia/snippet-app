@@ -26,6 +26,7 @@ class NotchHome {
   static final Map<String, NotchTarget> _targets = {};
   static final List<NotchNote> _recent = [];
   static bool _loaded = false;
+  static int _pushSerial = 0;
   static const _prefsKey = 'notch_recent_notifications';
 
   static Future<void> _loadRecent() async {
@@ -88,6 +89,7 @@ class NotchHome {
   static Future<void> _push() async {
     final client = _client;
     if (client == null) return;
+    final serial = ++_pushSerial;
     try {
       await _loadRecent();
       final results = await Future.wait([
@@ -114,10 +116,13 @@ class NotchHome {
         recent: _recent,
         presence: client.presence,
       );
+      if (serial != _pushSerial || !identical(client, _client)) return;
       final encoded = jsonEncode(json);
       if (encoded == _last) return;
-      _last = encoded;
       await _channel.invokeMethod('homeUpdate', encoded);
+      if (serial == _pushSerial && identical(client, _client)) {
+        _last = encoded;
+      }
     } catch (_) {}
   }
 
