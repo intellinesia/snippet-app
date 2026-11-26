@@ -1143,14 +1143,17 @@ extension _RailPages on _SessionRailState {
       );
 
   Future<void> _toggleWake(WakeSchedule w, bool on) async {
+    final sessionId = widget.sessionId;
     try {
       final saved = await widget.client.setWake(
           w.owner, {'enabled': on, if (w.name != null) 'name': w.name});
+      if (!mounted || widget.sessionId != sessionId) return;
       _set(() => _wakes = [
             for (final x in _wakes)
               x.owner == w.owner && x.name == w.name ? saved : x
           ]);
     } catch (e) {
+      if (!mounted || widget.sessionId != sessionId) return;
       _set(() => _wakeError = '$e');
     }
   }
@@ -1210,6 +1213,7 @@ extension _RailPages on _SessionRailState {
   }
 
   Future<void> _addWake() async {
+    final sessionId = widget.sessionId;
     _set(() {
       _wakeSaving = true;
       _wakeError = null;
@@ -1217,12 +1221,13 @@ extension _RailPages on _SessionRailState {
     // The owner's unnamed wake is its default; further ones need a name.
     final taken = _wakes.any((w) => w.name == null);
     try {
-      final saved = await widget.client.setWake(widget.sessionId, {
+      final saved = await widget.client.setWake(sessionId, {
         if (taken)
           'name': 'wake-${DateTime.now().millisecondsSinceEpoch % 1000000}',
         'schedule': _wakeSched.text.trim(),
         'brief': _wakeBrief.text.trim(),
       });
+      if (!mounted || widget.sessionId != sessionId) return;
       _wakeBrief.clear();
       _wakeSched.clear();
       _set(() {
@@ -1230,11 +1235,14 @@ extension _RailPages on _SessionRailState {
         if (saved.name == null) _wake = saved;
       });
     } catch (e) {
+      if (!mounted || widget.sessionId != sessionId) return;
       final msg = '$e';
       _set(() => _wakeError =
           msg.replaceFirst(RegExp(r'^(Exception|ApiException):\s*'), ''));
     } finally {
-      _set(() => _wakeSaving = false);
+      if (mounted && widget.sessionId == sessionId) {
+        _set(() => _wakeSaving = false);
+      }
     }
   }
 }

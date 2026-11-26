@@ -16,6 +16,8 @@ extension _SessionScreenSocketExt on _SessionScreenState {
     // Keep any reconnect status until a frame arrives; clearing it per attempt
     // made the indicator flicker through every backoff step.
     _freshConn = true;
+    // A history request belonging to the dead socket must not block retries forever.
+    _loadingOlderTranscript = false;
     _serverSupportsHeartbeat = false;
     _decodeQueue = null;
     _packed.reset();
@@ -304,6 +306,7 @@ extension _SessionScreenSocketExt on _SessionScreenState {
       // Only rebuild the transcript widget list when events actually
       // changed — status-only deltas waste a full transcript rebuild.
       final eventsChanged = cur == null ||
+          wire == 'snapshot' ||
           next.events.length != cur.events.length ||
           (next.events.isNotEmpty &&
               cur.events.isNotEmpty &&

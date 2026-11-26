@@ -123,6 +123,9 @@ class ApprovalBar extends StatefulWidget {
   final String? agentId;
   final String? agentName;
   final String? stepLabel;
+
+  /// Whether this transcript is the keyboard-active desktop surface.
+  final bool active;
   const ApprovalBar(
       {super.key,
       required this.events,
@@ -130,7 +133,8 @@ class ApprovalBar extends StatefulWidget {
       this.showApproveAll = false,
       this.agentId,
       this.agentName,
-      this.stepLabel});
+      this.stepLabel,
+      this.active = true});
   @override
   State<ApprovalBar> createState() => ApprovalBarState();
 }
@@ -154,7 +158,9 @@ class ApprovalBarState extends State<ApprovalBar> {
 
   // Enter approves unless a text field has focus (the composer below).
   bool _onEnter(KeyEvent e) {
-    if (!deskPlainEnter(e) || _sent || deskTypingFocused()) return false;
+    if (!widget.active || !deskPlainEnter(e) || _sent || deskTypingFocused()) {
+      return false;
+    }
     _decide({'kind': _always ? _alwaysKind : 'approve'});
     return true;
   }
@@ -399,11 +405,15 @@ class QuestionBar extends StatefulWidget {
 
   /// The asking agent, for the desktop card's "{Agent} asks" line.
   final String? agentName;
+
+  /// Whether this transcript is the keyboard-active desktop surface.
+  final bool active;
   const QuestionBar(
       {super.key,
       required this.question,
       required this.onSend,
-      this.agentName});
+      this.agentName,
+      this.active = true});
   @override
   State<QuestionBar> createState() => QuestionBarState();
 }
@@ -451,10 +461,23 @@ class QuestionBarState extends State<QuestionBar> {
         _choice[id] = rec.first;
       }
     }
-    if (!kMobile) {
+    if (!kMobile && widget.active) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _keys.requestFocus();
+        if (mounted && widget.active) _keys.requestFocus();
       });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant QuestionBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.active == widget.active) return;
+    if (widget.active) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && widget.active) _keys.requestFocus();
+      });
+    } else {
+      _keys.unfocus();
     }
   }
 
@@ -639,7 +662,9 @@ class QuestionBarState extends State<QuestionBar> {
 
   /// Desktop keys: 1-9 pick (toggle for multi-choice), Enter moves on.
   KeyEventResult _onKey(FocusNode _, KeyEvent e) {
-    if (e is! KeyDownEvent || _sent) return KeyEventResult.ignored;
+    if (!widget.active || e is! KeyDownEvent || _sent) {
+      return KeyEventResult.ignored;
+    }
     if (e.logicalKey == LogicalKeyboardKey.enter ||
         e.logicalKey == LogicalKeyboardKey.numpadEnter) {
       _submit();
@@ -650,7 +675,11 @@ class QuestionBarState extends State<QuestionBar> {
     if (q == null || _review || ch == null) return KeyEventResult.ignored;
     final n = int.tryParse(ch);
     final opts = _options(q);
-    if (n != null && n >= 1 && n <= opts.length && n <= 9) {
+    if (!deskTypingFocused() &&
+        n != null &&
+        n >= 1 &&
+        n <= opts.length &&
+        n <= 9) {
       _pick(q, opts[n - 1]);
       return KeyEventResult.handled;
     }

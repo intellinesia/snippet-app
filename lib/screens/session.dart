@@ -1260,6 +1260,13 @@ class _SessionScreenState extends State<SessionScreen>
       _optimisticQueued.clear();
       _queueHidden.clear();
       _clearPendingAll();
+      _agentEvents.clear();
+      _openToolRows.clear();
+      _toolRunOpen.clear();
+      _dockSeen.clear();
+      _shownRows.clear();
+      _rowsSeeded = false;
+      _loadingOlderTranscript = false;
       // The previous session's draft was saved above; pick up this one's.
       _switchingSession = true;
       _input.clear();
@@ -1658,6 +1665,10 @@ class _SessionScreenState extends State<SessionScreen>
                                                     agentId:
                                                         _me?.displayAgentId,
                                                     agentName: _meAgentName,
+                                                    active: widget
+                                                            .acceptDrops &&
+                                                        _live &&
+                                                        !_parked,
                                                     showApproveAll:
                                                         _pendingApprovalTotal(
                                                                 events) >
@@ -1697,6 +1708,10 @@ class _SessionScreenState extends State<SessionScreen>
                                                     question:
                                                         s.pendingQuestion!,
                                                     agentName: _meAgentName,
+                                                    active: widget
+                                                            .acceptDrops &&
+                                                        _live &&
+                                                        !_parked,
                                                     onSend: _sendDecision),
                                               ),
                                             ),

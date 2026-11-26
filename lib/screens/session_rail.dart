@@ -272,11 +272,12 @@ class _SessionRailState extends State<SessionRail> {
   Future<void> _countLines() async {
     final git = _git;
     if (git == null || !git.ok) return;
+    final sessionId = widget.sessionId;
     for (final f in git.files.take(5)) {
       final key = '${f.path}|${f.staged}|${f.unstaged}';
       if (_lineCounts.containsKey(key)) continue;
       try {
-        final patch = await widget.client.gitDiff(widget.sessionId,
+        final patch = await widget.client.gitDiff(sessionId,
             file: f.path,
             staged: f.staged && !f.unstaged,
             untracked: f.untracked);
@@ -285,7 +286,9 @@ class _SessionRailState extends State<SessionRail> {
           if (l.startsWith('+') && !l.startsWith('+++')) a++;
           if (l.startsWith('-') && !l.startsWith('---')) r++;
         }
-        if (!mounted) return;
+        if (!mounted || widget.sessionId != sessionId || !identical(_git, git)) {
+          return;
+        }
         setState(() => _lineCounts[key] = (a, r));
       } catch (_) {}
     }
@@ -365,6 +368,18 @@ class _SessionRailState extends State<SessionRail> {
   void didUpdateWidget(SessionRail old) {
     super.didUpdateWidget(old);
     if (old.sessionId != widget.sessionId) {
+      _lineCounts.clear();
+      _git = null;
+      _wake = null;
+      _wakeKnown = false;
+      _warm = null;
+      _procs = const [];
+      _wakes = const [];
+      _artifacts = const [];
+      _wakeBrief.clear();
+      _wakeSched.clear();
+      _wakeError = null;
+      _wakeSaving = false;
       _load();
     } else if (old.state?.status != widget.state?.status) {
       // A turn changes only the worktree and processes; the rest is per session.
@@ -390,6 +405,8 @@ class _SessionRailState extends State<SessionRail> {
     final procs = await _try(c.bgList(id)) as List<Map<String, dynamic>>?;
     if (!mounted || gen != _liveGen) return;
     setState(() {
+      // Counts derive from patch contents, not just the porcelain row identity.
+      if (git != null && !identical(git, _git)) _lineCounts.clear();
       _git = git ?? _git;
       _procs = procs ?? _procs;
     });
@@ -426,7 +443,9 @@ class _SessionRailState extends State<SessionRail> {
     setState(() {
       _loading = false;
       _loadFailed = allNull && widget.state == null;
-      _git = r[0] as GitStatus?;
+      final nextGit = r[0] as GitStatus?;
+      if (nextGit != null && !identical(nextGit, _git)) _lineCounts.clear();
+      _git = nextGit;
       _countLines();
       _wakeKnown = true;
       _wake = r[1] as WakeSchedule?;
@@ -448,12 +467,15 @@ class _SessionRailState extends State<SessionRail> {
   }
 
   Future<void> _setWarm(bool on) async {
+    final sessionId = widget.sessionId;
     final before = _warm;
     setState(() => _warm = on);
     try {
-      await widget.client.setKeepWarm(widget.sessionId, enabled: on);
+      await widget.client.setKeepWarm(sessionId, enabled: on);
     } catch (_) {
-      if (mounted) setState(() => _warm = before);
+      if (mounted && widget.sessionId == sessionId) {
+        setState(() => _warm = before);
+      }
     }
   }
 

@@ -208,7 +208,8 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   /// The shell owns the pane; the session owns the socket and the view's input
   /// wiring, so it must supply the widget rather than expose the `Terminal`.
   Widget _buildTermView(String id, {required bool mobileKeys}) {
-    final t = _terms.firstWhere((e) => e.id == id, orElse: () => _terms.first);
+    final t = _terms.where((e) => e.id == id).firstOrNull;
+    if (t == null) return const SizedBox.shrink();
     return SessionTermView(
       alive: t.alive,
       ended: t.ended,
