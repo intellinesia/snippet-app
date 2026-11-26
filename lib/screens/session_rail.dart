@@ -371,7 +371,7 @@ class _SessionRailState extends State<SessionRail> {
     final p = sessionRailPageRequest.value;
     if (p == null || kMobile || widget.isLead) return;
     sessionRailPageRequest.value = null;
-    _go(p);
+    _go(p == 'overview' ? null : p);
   }
 
   @override

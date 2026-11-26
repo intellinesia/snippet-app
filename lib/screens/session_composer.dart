@@ -1242,6 +1242,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       isImage: a.isImage,
       isAudio: a.isAudio,
       uploading: a.uploading,
+      onRetry: a.retry,
       localPath: a.localPath,
       body: body,
       pastedText: pasted,

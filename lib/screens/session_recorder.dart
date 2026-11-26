@@ -228,32 +228,47 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
         .toList();
     if (entries.isEmpty) return;
     _setState(() => _attachments.addAll(entries));
+    for (var i = 0; i < entries.length; i++) {
+      await _upload(entries[i], picked[i].readBytes);
+    }
+  }
+
+  /// Uploads one chip; a failure keeps the chip with a Retry instead of
+  /// dropping what the user picked.
+  Future<void> _upload(
+      _Attachment a, Future<Uint8List> Function() readBytes) async {
     final generation = _attachmentGeneration;
     final draftKey = _draftKey;
-    for (var i = 0; i < entries.length; i++) {
-      final p = picked[i];
-      final a = entries[i];
-      try {
-        final bytes = await p.readBytes();
-        // A voice take reuses the upload begun when recording stopped.
-        final path = await _voice.uploadTake(bytes, p.name);
-        if (!mounted || generation != _attachmentGeneration) {
-          // The composer moved on mid-upload: the file still belongs to the
-          // session it was attached in, as part of that session's draft.
-          a.remotePath = path;
-          a.uploading = false;
-          Drafts.instance.addAttachment(draftKey, a.toDraft());
-          continue;
-        }
-        _setState(() {
-          a.remotePath = path;
-          a.uploading = false;
-        });
-      } catch (e) {
-        if (!mounted) return;
-        _setState(() => _attachments.remove(a));
-        _toast('upload failed: ${p.name}');
+    try {
+      final bytes = await readBytes();
+      // A voice take reuses the upload begun when recording stopped.
+      final path = await _voice.uploadTake(bytes, a.name);
+      if (!mounted || generation != _attachmentGeneration) {
+        // The composer moved on mid-upload: the file still belongs to the
+        // session it was attached in, as part of that session's draft.
+        a.remotePath = path;
+        a.uploading = false;
+        Drafts.instance.addAttachment(draftKey, a.toDraft());
+        return;
       }
+      _setState(() {
+        a.remotePath = path;
+        a.uploading = false;
+        a.retry = null;
+      });
+    } catch (e) {
+      if (!mounted || !_attachments.contains(a)) return;
+      _setState(() {
+        a.uploading = false;
+        a.retry = () {
+          _setState(() {
+            a.uploading = true;
+            a.retry = null;
+          });
+          _upload(a, readBytes);
+        };
+      });
+      _toast('upload failed: ${a.name}');
     }
   }
 

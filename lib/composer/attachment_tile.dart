@@ -62,6 +62,7 @@ class ComposerAttachmentTile extends StatelessWidget {
     this.sizeBytes,
     this.pastedText,
     this.imageProvider,
+    this.onRetry,
   });
 
   final String name;
@@ -79,6 +80,13 @@ class ComposerAttachmentTile extends StatelessWidget {
   final int? sizeBytes;
   final String? pastedText;
   final ImageProvider? imageProvider;
+
+  /// Non-null once the upload failed; the tile shows the failure and Retry.
+  final VoidCallback? onRetry;
+  bool get _failed => onRetry != null;
+
+  Widget _retryBtn() => IconBtn('refresh',
+      size: 28, iconSize: 13, tooltip: 'Retry upload', onTap: onRetry);
 
   static const side = 56.0;
 
@@ -115,8 +123,7 @@ class ComposerAttachmentTile extends StatelessWidget {
                           color: AppColors.surface3,
                           shape: BoxShape.circle,
                         ),
-                        child:
-                            AppIcon('play', size: 14, color: AppColors.fg1),
+                        child: AppIcon('play', size: 14, color: AppColors.fg1),
                       ),
                       SizedBox(width: S.s12),
                       Expanded(child: NoteWaveStrip(seed: name.hashCode)),
@@ -156,11 +163,13 @@ class ComposerAttachmentTile extends StatelessWidget {
           : '${(b / 1048576).toStringAsFixed(1)} MB';
 
   Widget _phoneTile(BuildContext context) {
-    final meta = pastedText != null
-        ? '${pastedText!.length} chars'
-        : (_effectiveSizeBytes != null
-            ? _bytes(_effectiveSizeBytes!)
-            : (isImage ? 'Image' : 'File'));
+    final meta = _failed
+        ? 'Upload failed'
+        : pastedText != null
+            ? '${pastedText!.length} chars'
+            : (_effectiveSizeBytes != null
+                ? _bytes(_effectiveSizeBytes!)
+                : (isImage ? 'Image' : 'File'));
     final icon = pastedText != null
         ? 'file-text'
         : isImage
@@ -209,7 +218,9 @@ class ComposerAttachmentTile extends StatelessWidget {
                     Text(meta,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: sans(12, height: 16 / 12, color: AppColors.fg2)),
+                        style: sans(12,
+                            height: 16 / 12,
+                            color: _failed ? AppColors.danger : AppColors.fg2)),
                 ],
               ),
             ),
@@ -220,6 +231,7 @@ class ComposerAttachmentTile extends StatelessWidget {
             padding: const EdgeInsets.only(right: 4),
             child: Spinner(size: 14, color: AppColors.fg2),
           ),
+        if (_failed) _retryBtn(),
         Semantics(
           button: true,
           label: 'Remove $name',
@@ -229,7 +241,8 @@ class ComposerAttachmentTile extends StatelessWidget {
             child: SizedBox(
               width: 40,
               height: 40,
-              child: Center(child: AppIcon('x', size: 14, color: AppColors.fg2)),
+              child:
+                  Center(child: AppIcon('x', size: 14, color: AppColors.fg2)),
             ),
           ),
         ),
@@ -274,13 +287,15 @@ class ComposerAttachmentTile extends StatelessWidget {
     final bytes = _effectiveSizeBytes;
     final state = uploading
         ? 'Uploading'
-        : pastedText != null
-            ? '${pastedText!.length} chars'
-            : bytes != null
-                ? _bytes(bytes)
-                : isImage
-                    ? 'Image'
-                    : 'File';
+        : _failed
+            ? 'Upload failed'
+            : pastedText != null
+                ? '${pastedText!.length} chars'
+                : bytes != null
+                    ? _bytes(bytes)
+                    : isImage
+                        ? 'Image'
+                        : 'File';
     final row = Container(
       height: 44,
       padding: const EdgeInsets.only(left: 10, right: 0),
@@ -306,7 +321,9 @@ class ComposerAttachmentTile extends StatelessWidget {
               Text(state,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(11, height: 14 / 11, color: AppColors.fg2)),
+                  style: sans(11,
+                      height: 14 / 11,
+                      color: _failed ? AppColors.danger : AppColors.fg2)),
               if (uploading)
                 Padding(
                   padding: const EdgeInsets.only(top: 2, right: 8),
@@ -319,6 +336,7 @@ class ComposerAttachmentTile extends StatelessWidget {
             ],
           ),
         ),
+        if (_failed) _retryBtn(),
         Semantics(
           button: true,
           label: 'Remove $name',

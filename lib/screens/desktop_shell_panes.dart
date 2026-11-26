@@ -1063,36 +1063,44 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     final lanes = s?.lanes.where((l) => l.running).length ?? 0;
     String? count(int n) => n > 0 ? '$n' : null;
     void act(String a) => _dispatchSessionAction(a);
+    // Views open as tabs in the session panel, as in Capy, not as drawers.
+    void page(String p) {
+      sessionRailPageRequest.value = p;
+      if (sessionRailCollapsed.value) setSessionRailCollapsed(false);
+    }
     showPaneAddMenu(
       ctx,
       title: t.title,
       views: [
         PaneAddEntry(
-            icon: 'folder',
-            label: 'Files and changes',
-            meta: count(changed),
-            onTap: () => act('files')),
+            icon: 'list', label: 'Overview', onTap: () => page('overview')),
         PaneAddEntry(
-            icon: 'activity', label: 'Activity', onTap: () => act('processes')),
+            icon: 'file-diff',
+            label: 'Diffs',
+            meta: count(changed),
+            onTap: () => page('changes')),
+        PaneAddEntry(
+            icon: 'folder', label: 'Files', onTap: () => page('files')),
+        PaneAddEntry(
+            icon: 'activity', label: 'Activity', onTap: () => page('jobs')),
         PaneAddEntry(
             icon: 'history',
             label: 'Checkpoints',
             meta: count(cps),
-            onTap: () => act('checkpoints')),
+            onTap: () => page('checkpoints')),
         PaneAddEntry(
             icon: 'image',
             label: 'Shared files',
             onTap: () => act('artifacts')),
         PaneAddEntry(
-            icon: 'book-marked', label: 'Memory', onTap: () => act('memory')),
+            icon: 'book-marked', label: 'Memory', onTap: () => page('memory')),
       ],
       crew: [
         PaneAddEntry(
             icon: 'git-branch',
             label: 'Lanes',
             meta: lanes > 0 ? '$lanes running' : null,
-            chevron: true,
-            onTap: () => act('lanes')),
+            onTap: () => page('lanes')),
         PaneAddEntry(
             icon: 'pull-request',
             label: 'Pull requests',

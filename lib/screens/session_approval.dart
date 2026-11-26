@@ -1016,6 +1016,9 @@ class _Attachment {
   String? remotePath;
   bool uploading = true;
 
+  /// Set when the upload failed: tapping Retry uploads it again.
+  VoidCallback? retry;
+
   /// Text pasted into the composer, kept as a card and sent inline.
   String? pastedText;
   _Attachment(
