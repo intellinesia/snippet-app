@@ -199,8 +199,7 @@ class _ProcessesScreenState extends State<ProcessesScreen> {
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(R.lg),
-          border: kMobile ? Border.all(color: AppColors.line) : null,
+          borderRadius: BorderRadius.circular(kMobile ? 18 : R.lg),
         ),
         child: Column(children: [
           for (var i = 0; i < procs.length; i++) ...[

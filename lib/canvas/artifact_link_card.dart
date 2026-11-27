@@ -160,9 +160,10 @@ class _ArtifactLinkCardState extends State<ArtifactLinkCard> {
           child: Container(
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
-              color: AppColors.surface1,
-              borderRadius: BorderRadius.circular(kMobile ? R.of(14) : 9),
-              border: Border.all(color: AppColors.border),
+              // Phone board: a flat surface2 card, no outline.
+              color: kMobile ? AppColors.surface2 : AppColors.surface1,
+              borderRadius: BorderRadius.circular(kMobile ? 18 : 9),
+              border: kMobile ? null : Border.all(color: AppColors.border),
             ),
             child: Material(
               type: MaterialType.transparency,
@@ -217,18 +218,24 @@ class _ArtifactLinkCardState extends State<ArtifactLinkCard> {
                         if (card != null) ...[
                           SizedBox(width: S.s8),
                           if (kMobile)
+                            // A 40 s3 pill in a 48 target, as the board's pills.
                             Container(
                               constraints: const BoxConstraints(
-                                  minHeight: 48, minWidth: 84),
+                                  minHeight: 48, minWidth: 76),
                               alignment: Alignment.center,
-                              padding: EdgeInsets.symmetric(horizontal: S.s8),
-                              decoration: BoxDecoration(
-                                  color: AppColors.surface2,
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: AppColors.border)),
-                              child: Text('Open',
-                                  style: sans(14,
-                                      weight: W.label, color: AppColors.fg1)),
+                              child: Container(
+                                height: 40,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 20),
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                    color: AppColors.surface3,
+                                    borderRadius: BorderRadius.circular(20)),
+                                child: Text('Open',
+                                    style: sans(14.5,
+                                        weight: FontWeight.w500,
+                                        color: AppColors.fg1)),
+                              ),
                             )
                           else
                             DesktopRichButton('Open',

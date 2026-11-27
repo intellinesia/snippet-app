@@ -178,9 +178,9 @@ class DecidedCard extends StatelessWidget {
       padding: EdgeInsets.symmetric(
           horizontal: S.s12, vertical: kMobile ? S.of(10) : S.s8),
       decoration: BoxDecoration(
-        color: kMobile ? AppColors.surface1 : AppColors.surface2,
-        borderRadius: BorderRadius.circular(kMobile ? 12 : R.card),
-        border: kMobile ? Border.all(color: AppColors.border) : null,
+        // Phone board: surface2 on the surface1 thread, no outline.
+        color: AppColors.surface2,
+        borderRadius: BorderRadius.circular(kMobile ? 18 : R.card),
       ),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         SizedBox(

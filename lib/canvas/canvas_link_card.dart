@@ -331,9 +331,9 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
           child: Container(
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
-              color: AppColors.surface1,
-              borderRadius: BorderRadius.circular(kMobile ? R.of(14) : 8),
-              border: kMobile ? Border.all(color: AppColors.border) : null,
+              // Phone board: a flat surface2 card on the thread, no outline.
+              color: kMobile ? AppColors.surface2 : AppColors.surface1,
+              borderRadius: BorderRadius.circular(kMobile ? 18 : 8),
             ),
             child: Material(
               type: MaterialType.transparency,

@@ -36,6 +36,8 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
     // Index of the event being laid out, and where the open run began.
     var curIdx = 0;
     int? runFirst;
+    // Phone: the day the conversation is on, once per day ("Today 9:14").
+    DateTime? lastDay;
 
     void addToolRow(Widget child, String key) {
       runStartKey ??= key;
@@ -451,6 +453,11 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           }
           if (_skipNextUserEnter.remove(_normEchoText(text))) {
             _shownRows.add(ValueKey(key));
+          }
+          final when = kMobile ? _eventTime(e) : null;
+          if (when != null && (lastDay == null || !_sameDay(lastDay, when))) {
+            lastDay = when;
+            addEvent('$key-day', _PhoneDayLine(when));
           }
           final leadPhone = kMobile && isDedicatedLeadSession(widget.sessionId);
           final userBubble = leadPhone
@@ -1456,4 +1463,71 @@ String _nearestTime(List<Map<String, dynamic>> events, int idx) {
     if (t != null) return t.startsWith('0') ? t.substring(1) : t;
   }
   return '';
+}
+
+DateTime? _eventTime(Map<String, dynamic> e) {
+  final ms = _eventMs(e);
+  if (ms != null && ms > 0) return DateTime.fromMillisecondsSinceEpoch(ms);
+  final raw = e['at'] ?? e['created_at'];
+  if (raw is num && raw > 0) {
+    return DateTime.fromMillisecondsSinceEpoch(
+        raw > 100000000000 ? raw.toInt() : (raw * 1000).toInt());
+  }
+  if (raw is String && raw.isNotEmpty) return DateTime.tryParse(raw)?.toLocal();
+  return null;
+}
+
+bool _sameDay(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;
+
+/// Board: a quiet centred "Today 9:14" above the day's first message.
+class _PhoneDayLine extends StatelessWidget {
+  const _PhoneDayLine(this.at);
+  final DateTime at;
+
+  @override
+  Widget build(BuildContext context) {
+    final n = DateTime.now();
+    final days = DateTime(n.year, n.month, n.day)
+        .difference(DateTime(at.year, at.month, at.day))
+        .inDays;
+    const week = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
+    ];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    final day = days == 0
+        ? 'Today'
+        : days == 1
+            ? 'Yesterday'
+            : days < 7
+                ? week[at.weekday - 1]
+                : '${at.day} ${months[at.month - 1]}';
+    final time = '${at.hour}:${at.minute.toString().padLeft(2, '0')}';
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Center(
+        child: Text('$day $time',
+            style: sans(12, color: AppColors.fg4, tabular: true)),
+      ),
+    );
+  }
 }
