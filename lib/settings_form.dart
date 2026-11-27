@@ -190,8 +190,9 @@ class SettingsSectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.fromLTRB(
-            Grouped.padX, 0, Grouped.padX, Grouped.labelGap),
+        // Desktop captions sit on the card edge, in line with page text and tables.
+        padding: EdgeInsets.fromLTRB(kMobile ? Grouped.padX : 0, 0,
+            kMobile ? Grouped.padX : 0, Grouped.labelGap),
         child: Semantics(
           header: true,
           child: Text(text, style: Grouped.labelStyle()),
@@ -219,8 +220,8 @@ class SettingsFootnote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding:
-            EdgeInsets.fromLTRB(Grouped.padX, Grouped.footGap, Grouped.padX, 0),
+        padding: EdgeInsets.fromLTRB(kMobile ? Grouped.padX : 0,
+            Grouped.footGap, kMobile ? Grouped.padX : 0, 0),
         child: Text(text, style: Grouped.footStyle()),
       );
 }

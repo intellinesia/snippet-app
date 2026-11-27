@@ -133,20 +133,21 @@ class _UsageMeter extends StatelessWidget {
             : AppColors.accent;
     return Row(children: [
       SizedBox(
-          width: 56, child: Text(label, style: sans(13, color: AppColors.fg3))),
+          width: 56,
+          child: Text(label, style: sans(kMobile ? 13 : 12, color: AppColors.fg3))),
       Expanded(
           child: ClipRRect(
               borderRadius: BorderRadius.circular(3),
               child: LinearProgressIndicator(
                   value: p / 100,
-                  minHeight: 6,
+                  minHeight: kMobile ? 6 : 4,
                   backgroundColor: AppColors.surface3,
                   color: fill))),
       SizedBox(
           width: 48,
           child: Text('${p.round()}%',
               textAlign: TextAlign.right,
-              style: sans(13, color: AppColors.fg3).copyWith(
+              style: sans(kMobile ? 13 : 12, color: AppColors.fg3).copyWith(
                   fontFeatures: const [FontFeature.tabularFigures()]))),
     ]);
   }
@@ -162,11 +163,14 @@ Widget _accountTop(String name, Account account) {
           child: Text(name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: sans(17, color: AppColors.fg1))),
+              // Desktop rows title at 13.5 like every other settings row.
+              style: kMobile
+                  ? sans(17, color: AppColors.fg1)
+                  : sans(13.5, weight: W.label, color: AppColors.fg1))),
       if (limited != null || account.active) ...[
         const SizedBox(width: 12),
         Text(limited != null ? _backIn(limited) : 'In use',
-            style: sans(14,
+            style: sans(kMobile ? 14 : 12,
                 color: limited != null ? AppColors.danger : AppColors.accent)),
       ],
     ]),

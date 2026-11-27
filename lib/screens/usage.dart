@@ -91,7 +91,10 @@ class UsageRateRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = usageWindowTitle(rate);
     final reset = rateResetLabel(rate.resetsAt);
-    final label = Text(title, style: sans(12, color: AppColors.fg2));
+    final label = Text(title,
+        maxLines: kMobile ? null : 1,
+        overflow: kMobile ? null : TextOverflow.ellipsis,
+        style: sans(12, color: AppColors.fg2));
     if (rate.isExpired) {
       return Padding(
         padding: EdgeInsets.symmetric(vertical: S.s4),
@@ -111,7 +114,8 @@ class UsageRateRow extends StatelessWidget {
     final row = Padding(
       padding: EdgeInsets.symmetric(vertical: S.of(3)),
       child: Row(children: [
-          SizedBox(width: 110, child: label),
+          // Long plan names ("Pro plan · Daily window") need room on one line.
+          SizedBox(width: kMobile ? 110 : 168, child: label),
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(R.of(3)),

@@ -373,8 +373,14 @@ class _RoutingScreenState extends State<RoutingScreen> {
 
   List<Widget> _cards() => [
         Padding(
-          padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s12),
-          child: Text(_note, style: sans(13, height: 1.5, color: AppColors.fg3)),
+          // Desktop: a quiet second line under the page subtitle, on the same edge.
+          padding: kMobile
+              ? EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s12)
+              : EdgeInsets.only(bottom: S.s12),
+          child: Text(_note,
+              style: kMobile
+                  ? sans(13, height: 1.5, color: AppColors.fg3)
+                  : sans(12, height: 1.5, color: AppColors.fg4)),
         ),
         _routeCard('session', 'Session model', 'Active profile',
             chain: _sessionChain()),

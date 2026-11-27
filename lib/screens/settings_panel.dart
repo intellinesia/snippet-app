@@ -2872,10 +2872,15 @@ class _ThemeTile extends StatelessWidget {
           child: Container(
             padding: EdgeInsets.all(S.s8),
             decoration: BoxDecoration(
-              color: selected ? AppColors.surface2 : AppColors.surface1,
+              // Desktop tiles use the settings card plate; selection is the brighter edge.
+              color: kMobile
+                  ? (selected ? AppColors.surface2 : AppColors.surface1)
+                  : Grouped.card,
               borderRadius: BorderRadius.circular(R.of(8)),
               border: Border.all(
-                  color: selected ? AppColors.border2 : AppColors.border),
+                  color: selected
+                      ? (kMobile ? AppColors.border2 : AppColors.fg3)
+                      : (kMobile ? AppColors.border : Grouped.cardBorder)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,

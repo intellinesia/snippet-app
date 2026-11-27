@@ -535,51 +535,25 @@ class _WakesScreenState extends State<WakesScreen> {
       return _name(owner, agents);
     }
 
+    // One grouped card like every other settings list, not a card per row.
     return [
-      for (final o in owners)
-        Padding(
-          padding: EdgeInsets.only(bottom: S.s8),
-          child: Container(
-            key: ValueKey('warm-$o'),
-            constraints: const BoxConstraints(minHeight: 52),
-            padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s8),
-            decoration: BoxDecoration(
-              color: AppColors.surface1,
-              borderRadius: BorderRadius.circular(R.of(8)),
-            ),
-            child: Row(children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(label(o),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(13, color: AppColors.fg1)),
-                    SizedBox(height: S.s2),
-                    Text(sub(entries[o]),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(12, color: AppColors.fg3)),
-                  ],
-                ),
-              ),
-              SettingsSwitch(
+      SettingsGroup(
+        footer: warm != null && warm.calls7d > 0
+            ? 'Warm sessions use a little quota while idle. ${warm.calls7d} warm calls in the last 7 days, ${tokensLabel(warm.cacheReadTokens7d)} tokens read from cache.'
+            : 'Warm sessions use a little quota while idle.',
+        children: [
+          for (final o in owners)
+            SettingsRow(
+              key: ValueKey('warm-$o'),
+              label: label(o),
+              sub: sub(entries[o]),
+              subMaxLines: 1,
+              trailing: SettingsSwitch(
                 value: entries[o]?.enabled ?? false,
                 onChanged: (on) => unawaited(_setWarm(o, on)),
               ),
-            ]),
-          ),
-        ),
-      Padding(
-        padding: EdgeInsets.only(top: S.s4),
-        child: Text(
-          warm != null && warm.calls7d > 0
-              ? 'Warm sessions use a little quota while idle. ${warm.calls7d} warm calls in the last 7 days, ${tokensLabel(warm.cacheReadTokens7d)} tokens read from cache.'
-              : 'Warm sessions use a little quota while idle.',
-          style: sans(12, color: AppColors.fg3),
-        ),
+            ),
+        ],
       ),
     ];
   }

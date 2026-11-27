@@ -60,12 +60,13 @@ class SettingsTable extends StatelessWidget {
     final header = SizedBox(
       height: 28,
       child: Row(children: [
-        for (final c in columns)
+        for (var i = 0; i < columns.length; i++)
           Expanded(
-            flex: c.flex,
+            flex: columns[i].flex,
             child: Padding(
-              padding: EdgeInsets.only(left: S.s8),
-              child: Text(c.label,
+              // The first column starts on the page edge, in line with captions.
+              padding: EdgeInsets.only(left: i == 0 ? 0 : S.s8),
+              child: Text(columns[i].label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: sans(11, weight: FontWeight.w500, color: AppColors.fg3)),
@@ -83,7 +84,7 @@ class SettingsTable extends StatelessWidget {
           SizedBox(
             height: 32,
             child: Padding(
-              padding: EdgeInsets.only(left: S.s8),
+              padding: EdgeInsets.zero,
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(empty!, style: sans(12.5, color: AppColors.fg3)),
@@ -114,7 +115,7 @@ class SettingsTable extends StatelessWidget {
           Expanded(
             flex: columns[i].flex,
             child: Padding(
-              padding: EdgeInsets.only(left: S.s8, right: S.s8),
+              padding: EdgeInsets.only(left: i == 0 ? 0 : S.s8, right: S.s8),
               child: Row(children: [
                 Flexible(
                   child: Text(
