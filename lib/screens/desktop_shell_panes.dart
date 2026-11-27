@@ -725,23 +725,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     } catch (_) {}
   }
 
-  /// Full-width status band; the frame owns its height, fill and hairline.
-  _ShellTab? get _openRunningSessionTab {
-    for (final s in _sessions ?? const <SessionInfo>[]) {
-      if (!s.running) continue;
-      final tab = _tabs
-          .where((t) => !_isAuxiliary(t) && t.sessionId == s.id)
-          .firstOrNull;
-      if (tab != null) return tab;
-    }
-    return null;
-  }
-
-  void _locateRunningSession() {
-    final tab = _openRunningSessionTab;
-    if (tab != null) _activateTabAt(tab);
-  }
-
   _ShellTab? _innerTabHost(_ShellTab t) {
     if (!_isAuxiliary(t) || t.groupSessionKey == null) return null;
     final root = _tabs.where((x) => x.key == t.groupSessionKey).firstOrNull;
@@ -987,7 +970,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
               // Full strip height so the divider meets the panel's below.
               height: double.infinity,
               decoration: BoxDecoration(
-                  border: Border(left: BorderSide(color: AppColors.paneLine))),
+                  border: Border(left: BorderSide(color: AppColors.paneSeam))),
               padding: EdgeInsets.only(left: S.s6, right: S.s6),
               child: Row(children: [
                 Builder(
@@ -1435,80 +1418,15 @@ extension _DesktopShellPanesExt on _DesktopShellState {
               ),
             ),
           ),
-        // Keep six quiet icons; the host only shows when it needs action.
+        // The host only shows when it needs action; settings sits at the left.
         if (down)
           _FooterBtn(
               icon: 'server',
               dot: AppColors.danger,
               tooltip: 'Agent offline, retry',
               onTap: _loadSessions),
-        _FooterBtn(
-            icon: 'settings',
-            tooltip: kMacOS ? 'Settings  Cmd ,' : 'Settings  Ctrl ,',
-            onTap: _openShellSettings),
-        Builder(
-          builder: (ctx) => _FooterBtn(
-              icon: 'more-horizontal',
-              tooltip: 'More',
-              onTap: () => _footerMore(ctx)),
-        ),
       ]),
     );
-  }
-
-  Future<void> _footerMore(BuildContext anchor) async {
-    final hostsOnline =
-        _instances.where((i) => _health[i.url] ?? i.url == _active?.url).length;
-    final runningTab = _openRunningSessionTab;
-    final pick = await showAppMenu<String>(
-      context,
-      anchor: anchor,
-      items: [
-        if (_client != null)
-          appMenuItem(value: 'usagePop', icon: 'gauge', label: 'Usage'),
-        appMenuItem(
-            value: 'hosts',
-            icon: 'server',
-            label: '$hostsOnline of ${_instances.length} '
-                '${_instances.length == 1 ? 'host' : 'hosts'} online'),
-        if (_client != null)
-          appMenuItem(
-              value: 'terminal', icon: 'terminal', label: 'New terminal'),
-        if (runningTab != null)
-          appMenuItem(
-              value: 'locate', icon: 'scan', label: 'Locate running session'),
-        if (_chatTab != null)
-          appMenuItem(value: 'pane', icon: 'columns-3', label: 'Pane layout'),
-        if (_activeTab?.isHome != true)
-          appMenuItem(
-              value: 'panel', icon: 'sidebar', label: 'Toggle right panel'),
-        if (_client != null)
-          appMenuItem(value: 'usage', icon: 'refresh', label: 'Refresh usage'),
-        appMenuItem(
-            value: 'keys', icon: 'help-circle', label: 'Keyboard shortcuts'),
-      ],
-    );
-    if (!mounted || pick == null) return;
-    switch (pick) {
-      case 'usagePop':
-        if (anchor.mounted && _client != null) {
-          showUsagePopover(anchor, _client!);
-        }
-      case 'hosts':
-        _openShellSettings(SettingsPage.general);
-      case 'terminal':
-        _newGlobalShell();
-      case 'locate':
-        _locateRunningSession();
-      case 'pane':
-        if (anchor.mounted) _showPaneAddMenu(anchor);
-      case 'panel':
-        _togglePanel();
-      case 'usage':
-        _refreshUsage();
-      case 'keys':
-        _showDesktopShortcuts();
-    }
   }
 
   /// Desktop centre band: the tab strip, with the title-row cluster over its

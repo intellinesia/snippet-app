@@ -1211,29 +1211,12 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         onNewSession: widget.onOpenHome);
   }
 
-  Widget _accountFooterButton() {
-    final label = widget.active?.label.trim() ?? '';
-    final initial = label.isEmpty ? 'S' : label[0].toUpperCase();
-    return Tooltip(
-      message: label.isEmpty ? 'Account' : label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: widget.onOpenSettings,
-        child: Container(
-          width: 24,
-          height: 24,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: const Color(0xFF5E4237),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Text(initial,
-              style: sans(12.5,
-                  weight: FontWeight.w600, color: Colors.white)),
-        ),
-      ),
-    );
-  }
+  /// Settings anchors the footer's left end.
+  Widget _accountFooterButton() => IconBtn('settings',
+      size: 28,
+      iconSize: 15,
+      tooltip: kMacOS ? 'Settings  Cmd ,' : 'Settings  Ctrl ,',
+      onTap: widget.onOpenSettings);
 
   /// Home sits above the agents.
   Widget _desktopNav() => ValueListenableBuilder<String>(
@@ -1510,11 +1493,11 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           child: _withSidebarKeyboard(body),
         ),
       ),
-      // Footer: the account anchor, then places and tools in one row.
+      // Footer: settings, then places and tools in one row.
       SizedBox(
         height: 44,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 0, 0),
+          padding: const EdgeInsets.fromLTRB(8, 0, 0, 0),
           child: Row(children: [
             if (hasClient) _accountFooterButton(),
             if (hasClient)

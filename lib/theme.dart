@@ -1121,6 +1121,14 @@ class AppColors {
           ? const Color(0xFFEFEFEA)
           : currentTheme.border;
 
+  /// The seam between the chat and its side panel: clearly visible, unlike
+  /// the in-pane hairlines.
+  static Color get paneSeam => identical(currentTheme, _quietDesk)
+      ? const Color(0xFF222222)
+      : _quietDeskLight
+          ? const Color(0xFFE2E2DC)
+          : currentTheme.border;
+
   // Spec: dark rgba(0,0,0,0.58); light rgba(20,20,18,0.36) so paper stays warm.
   static Color get scrim => ThemeManager.instance.resolved.translucency.scrim ==
               0.6 &&

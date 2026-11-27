@@ -17,7 +17,7 @@ class EmptyArt extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bright = AppColors.fg4;
-    final dim = Color.lerp(AppColors.fg4, AppColors.panelBg, 0.55)!;
+    final dim = Color.lerp(AppColors.fg4, AppColors.panelBg, 0.38)!;
     // Eyes read darker than the body: the panel in dark themes, the line ink in light.
     final eyes =
         AppColors.panelBg.computeLuminance() > 0.5 ? bright : AppColors.panelBg;

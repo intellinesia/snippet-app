@@ -343,6 +343,78 @@ String? _inboxAgentId(String sessionId) {
 
 class _SessionScreenState extends State<SessionScreen>
     with WidgetsBindingObserver {
+  /// Jump-to-latest control over the transcript.
+  Widget _newMessagesPill() {
+    void jump() {
+      _stickToBottom = true;
+      setState(() {});
+      _scheduleBottom(settle: true, smooth: true);
+    }
+
+    if (kMobile) {
+      return Semantics(
+        button: true,
+        label: 'New messages',
+        excludeSemantics: true,
+        child: Material(
+          color: AppColors.surface3,
+          shape: const StadiumBorder(),
+          child: InkWell(
+            customBorder: const StadiumBorder(),
+            onTap: jump,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 36),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Text('New messages',
+                      style: sans(12, weight: W.label, color: AppColors.fg1)),
+                  const SizedBox(width: 6),
+                  AppIcon('chevron-down', size: 16, color: AppColors.fg2),
+                ]),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    // Desktop: a small centred chip, quiet until hovered.
+    return Center(
+      child: Semantics(
+        button: true,
+        label: 'New messages',
+        excludeSemantics: true,
+        child: Tooltip(
+          message: 'Jump to latest',
+          child: Material(
+            color: AppColors.surface2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(R.of(7)),
+              side: BorderSide(color: AppColors.paneSeam),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(R.of(7)),
+              hoverColor: AppColors.hoverPlate,
+              onTap: jump,
+              child: SizedBox(
+                height: 26,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 0, 8, 0),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Text('New messages',
+                        style: sans(11.5, height: 15 / 11.5, color: AppColors.fg2)),
+                    const SizedBox(width: 4),
+                    AppIcon('arrow-down', size: 12, color: AppColors.fg3),
+                  ]),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Map<String, String> _profileProviders = const {};
   bool _railProvidersAsked = false;
 
@@ -2015,78 +2087,13 @@ class _SessionScreenState extends State<SessionScreen>
                                                     if (!_stickToBottom &&
                                                         s != null)
                                                       Positioned(
-                                                        right: 16,
+                                                        left: kMobile ? null : 0,
+                                                        right: kMobile ? 16 : 0,
                                                         bottom: 12 +
                                                             (_glassHeader
                                                                 ? _composerH
                                                                 : 0),
-                                                        child: Semantics(
-                                                          button: true,
-                                                          label: 'New messages',
-                                                          excludeSemantics:
-                                                              true,
-                                                          child: Material(
-                                                            color: AppColors
-                                                                .surface3,
-                                                            shape: kMobile
-                                                                ? const StadiumBorder()
-                                                                : RoundedRectangleBorder(
-                                                                    borderRadius:
-                                                                        BorderRadius.circular(R.of(7))),
-                                                            child: InkWell(
-                                                              customBorder: kMobile
-                                                                  ? const StadiumBorder()
-                                                                  : RoundedRectangleBorder(
-                                                                      borderRadius:
-                                                                          BorderRadius.circular(R.of(7))),
-                                                              onTap: () {
-                                                                _stickToBottom =
-                                                                    true;
-                                                                setState(() {});
-                                                                _scheduleBottom(
-                                                                    settle:
-                                                                        true,
-                                                                    smooth:
-                                                                        true);
-                                                              },
-                                                              child:
-                                                                  ConstrainedBox(
-                                                                constraints:
-                                                                    const BoxConstraints(
-                                                                        minHeight:
-                                                                            36),
-                                                                child: Padding(
-                                                                  padding: const EdgeInsets
-                                                                      .symmetric(
-                                                                      horizontal:
-                                                                          14),
-                                                                  child: Row(
-                                                                    mainAxisSize:
-                                                                        MainAxisSize
-                                                                            .min,
-                                                                    children: [
-                                                                      Text(
-                                                                          'New messages',
-                                                                          style: sans(
-                                                                              12,
-                                                                              weight: W.label,
-                                                                              color: AppColors.fg1)),
-                                                                      const SizedBox(
-                                                                          width:
-                                                                              6),
-                                                                      AppIcon(
-                                                                          'chevron-down',
-                                                                          size:
-                                                                              16,
-                                                                          color:
-                                                                              AppColors.fg2),
-                                                                    ],
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ),
+                                                        child: _newMessagesPill(),
                                                       ),
                                                     if (_glassHeader &&
                                                         _dockRun != null &&

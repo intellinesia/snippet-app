@@ -399,7 +399,7 @@ class AgentSidePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final reading = _reading;
-    return Column(
+    final body = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (!kMobile) _tabRow(context, reading),
@@ -450,6 +450,12 @@ class AgentSidePanel extends StatelessWidget {
                     ),
         ),
       ],
+    );
+    if (kMobile) return body;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+          border: Border(left: BorderSide(color: AppColors.paneSeam))),
+      child: body,
     );
   }
 }

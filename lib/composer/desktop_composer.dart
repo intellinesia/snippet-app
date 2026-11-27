@@ -135,7 +135,8 @@ class _DeskButtonState extends State<DeskButton> {
           width: widget.size,
           height: widget.size ?? widget.height,
           padding: widget.padding,
-          alignment: Alignment.center,
+          // A bare alignment would stretch a sizeless button to the full row.
+          alignment: widget.size == null ? null : Alignment.center,
           decoration: BoxDecoration(
             color: bg,
             borderRadius: BorderRadius.circular(widget.radius ?? R.of(6)),
@@ -143,7 +144,9 @@ class _DeskButtonState extends State<DeskButton> {
                 ? null
                 : Border.fromBorderSide(widget.border!),
           ),
-          child: widget.child,
+          child: widget.size == null
+              ? Align(widthFactor: 1, child: widget.child)
+              : widget.child,
         ),
       ),
     );
@@ -650,67 +653,50 @@ class DeskQueueCard extends StatelessWidget {
   final VoidCallback onSendAll;
   final double maxHeight;
 
-  // The queued strip is a sibling s1 surface: one dense row per held message
-  // and the state spelled out in words below it.
+  // One compact s1 strip: a single summary line only when several are held,
+  // then one dense row per message.
   @override
   Widget build(BuildContext context) {
     if (entries.isEmpty) return const SizedBox.shrink();
     final n = entries.length;
+    Widget link(String label, VoidCallback onTap, Color ink) => DeskButton(
+          height: 22,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          onTap: onTap,
+          child: Text(label, style: sans(11.5, height: 15 / 11.5, color: ink)),
+        );
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.fromLTRB(12, 7, 6, 7),
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.fromLTRB(10, 3, 3, 3),
       decoration: BoxDecoration(
         color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(R.of(10)),
+        borderRadius: BorderRadius.circular(R.of(8)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(
-            height: 28,
-            child: Row(children: [
-              Text('Queued',
-                  style: sans(12,
-                      weight: FontWeight.w500,
-                      height: 16 / 12,
-                      color: AppColors.fg2)),
-              const Spacer(),
-              DeskButton(
-                height: 24,
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                onTap: onClear,
-                child: Text('Clear',
-                    style: sans(11.5, height: 15 / 11.5, color: AppColors.fg3)),
-              ),
-              const SizedBox(width: 2),
-              DeskButton(
-                height: 24,
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                onTap: onSendAll,
-                child: Text('Send all',
-                    style: sans(11.5, height: 15 / 11.5, color: AppColors.fg2)),
-              ),
-            ]),
-          ),
+          if (n > 1)
+            SizedBox(
+              height: 24,
+              child: Row(children: [
+                Expanded(
+                  child: Text('$n queued, sent in order when this turn ends',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(11.5, height: 15 / 11.5, color: AppColors.fg3)),
+                ),
+                link('Clear', onClear, AppColors.fg3),
+                link('Send all', onSendAll, AppColors.fg2),
+              ]),
+            ),
           ConstrainedBox(
             constraints: BoxConstraints(maxHeight: maxHeight),
             child: SingleChildScrollView(
               reverse: true,
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                for (var i = 0; i < n; i++) _row(entries[i]),
+                for (var i = 0; i < n; i++) _row(entries[i], single: n == 1),
               ]),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              n == 1
-                  ? '1 queued, sent when this turn ends'
-                  : '$n queued, sent in order when this turn ends',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: sans(11, height: 15 / 11, color: AppColors.fg3),
             ),
           ),
         ],
@@ -718,10 +704,10 @@ class DeskQueueCard extends StatelessWidget {
     );
   }
 
-  Widget _row(DeskQueueEntry e) => SizedBox(
-        height: 28,
+  Widget _row(DeskQueueEntry e, {required bool single}) => SizedBox(
+        height: 26,
         child: Row(children: [
-          AppIcon('clock', size: 12, color: AppColors.fg3),
+          AppIcon('clock', size: 12, color: AppColors.fg4),
           const SizedBox(width: 8),
           if (e.lead != null) ...[e.lead!, const SizedBox(width: 6)],
           Expanded(
@@ -732,12 +718,22 @@ class DeskQueueCard extends StatelessWidget {
                     height: 17 / 12,
                     color: e.muted ? AppColors.fg3 : AppColors.fg2)),
           ),
+          if (single) ...[
+            const SizedBox(width: 8),
+            Text('Queued',
+                style: sans(11, height: 15 / 11, color: AppColors.fg4)),
+            const SizedBox(width: 4),
+          ],
           if (e.extra != null) ...[const SizedBox(width: 6), e.extra!],
           DeskIconButton('arrow-up',
-              tooltip: 'Send now', onTap: e.onSendNow, iconSize: 12),
+              size: 24, tooltip: 'Send now', onTap: e.onSendNow, iconSize: 12),
           DeskIconButton('edit',
-              tooltip: 'Edit queued message', onTap: e.onEdit, iconSize: 12),
+              size: 24,
+              tooltip: 'Edit queued message',
+              onTap: e.onEdit,
+              iconSize: 12),
           DeskIconButton('x',
+              size: 24,
               tooltip: 'Remove queued message',
               onTap: e.onRemove,
               iconSize: 12),

@@ -641,31 +641,8 @@ class _SingleImageState extends State<SingleImage> {
     return AnimatedSize(
       duration: Motion.quick,
       alignment: Alignment.topLeft,
-      child: kMobile
-          ? thumb
-          : SizedBox(
-              width: w,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  thumb,
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      [
-                        baseName(widget.path),
-                        if (size != null)
-                          '${size.width.round()}x${size.height.round()}',
-                      ].join(' '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(11, height: 1.2, color: AppColors.fg3),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+      // The image speaks for itself; no filename caption under it.
+      child: thumb,
     );
   }
 }
