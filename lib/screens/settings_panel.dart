@@ -3838,13 +3838,43 @@ class _ConnectMachinePanelState extends State<_ConnectMachinePanel> {
     }
   }
 
+  bool _copied = false;
+
+  void _copy() {
+    Clipboard.setData(const ClipboardData(text: _command));
+    setState(() => _copied = true);
+    Future.delayed(const Duration(milliseconds: 1400), () {
+      if (mounted) setState(() => _copied = false);
+    });
+  }
+
+  Widget _step(int n, String text) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(children: [
+          Container(
+            width: 16,
+            height: 16,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+                color: AppColors.surface3, shape: BoxShape.circle),
+            child: Text('$n',
+                style: sans(10, weight: W.label, color: AppColors.fg2)),
+          ),
+          const SizedBox(width: 8),
+          Text(text, style: sans(12.5, color: AppColors.fg2)),
+        ]),
+      );
+
+  // Command and link share one plate so the two steps read as a pair.
+  BoxDecoration get _plate => BoxDecoration(
+        color: AppColors.bg,
+        borderRadius: BorderRadius.circular(R.of(7)),
+        border: Border.all(color: AppColors.paneLine),
+      );
+
   @override
   Widget build(BuildContext context) {
     final canConnect = !_busy && _link.text.trim().isNotEmpty;
-    Widget label(String text) => Padding(
-          padding: EdgeInsets.fromLTRB(0, S.s12, 0, S.s4),
-          child: Text(text, style: sans(12, color: AppColors.fg3)),
-        );
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.escape): widget.onCancel,
@@ -3854,7 +3884,13 @@ class _ConnectMachinePanelState extends State<_ConnectMachinePanel> {
         child: Material(
           type: MaterialType.transparency,
           child: Container(
-            padding: EdgeInsets.all(S.s16),
+            margin: const EdgeInsets.only(bottom: 20),
+            padding: const EdgeInsets.fromLTRB(16, 14, 12, 16),
+            decoration: BoxDecoration(
+              color: AppColors.surface1,
+              borderRadius: BorderRadius.circular(R.of(10)),
+              border: Border.all(color: AppColors.paneLine),
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -3865,66 +3901,91 @@ class _ConnectMachinePanelState extends State<_ConnectMachinePanel> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Connect a machine',
-                            style: sans(15,
+                            style: sans(13.5,
                                 weight: W.strong, color: AppColors.fg1)),
-                        SizedBox(height: S.s2),
-                        Text('Link this app to a computer running snippet',
+                        const SizedBox(height: 3),
+                        Text('Link this app to another computer running Snippet.',
                             style: sans(12, color: AppColors.fg3)),
                       ],
                     ),
                   ),
                   IconBtn('x',
-                      size: 28,
-                      iconSize: 15,
+                      size: 26,
+                      iconSize: 13,
                       tooltip: 'Close',
                       onTap: widget.onCancel),
                 ]),
-                label('Run this on that computer'),
-                Container(
-                  height: 40,
-                  padding: EdgeInsets.fromLTRB(S.s12, 0, S.s6, 0),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface2,
-                    borderRadius: BorderRadius.circular(R.md),
-                    border: Border.all(color: AppColors.border),
+                const SizedBox(height: 18),
+                Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _step(1, 'Run this on that computer'),
+                      Container(
+                        height: 36,
+                        padding: const EdgeInsets.fromLTRB(12, 0, 4, 0),
+                        decoration: _plate,
+                        child: Row(children: [
+                          Text('\$', style: mono(12.5, color: AppColors.fg4)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: SelectableText(_command,
+                                maxLines: 1,
+                                style: mono(12.5, color: AppColors.fg1)),
+                          ),
+                          IconBtn(_copied ? 'check' : 'copy',
+                              size: 28,
+                              iconSize: 13,
+                              tooltip: _copied ? 'Copied' : 'Copy command',
+                              onTap: _copy),
+                        ]),
+                      ),
+                      const SizedBox(height: 16),
+                      _step(2, 'Paste the link it prints'),
+                      Container(
+                        height: 36,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        alignment: Alignment.centerLeft,
+                        decoration: _plate,
+                        child: TextField(
+                          controller: _link,
+                          style: mono(12.5, color: AppColors.fg1),
+                          cursorColor: AppColors.fg1,
+                          textAlignVertical: TextAlignVertical.center,
+                          decoration: InputDecoration(
+                            isDense: true,
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                            hintText: 'https://…?token=…',
+                            hintStyle: mono(12.5, color: AppColors.fg4),
+                          ),
+                          onChanged: (_) => setState(() {}),
+                          onSubmitted: (_) => _connect(),
+                        ),
+                      ),
+                      if (_error != null) ...[
+                        const SizedBox(height: 8),
+                        Text(_error!,
+                            style: sans(12,
+                                height: 1.4, color: AppColors.danger)),
+                      ],
+                      const SizedBox(height: 16),
+                      Row(children: [
+                        AppIcon('lock', size: 12, color: AppColors.fg4),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text('The link and its token stay on this device',
+                              style: sans(12, color: AppColors.fg4)),
+                        ),
+                        Btn(_busy ? 'Connecting…' : 'Connect',
+                            small: true,
+                            disabled: !canConnect,
+                            onTap: canConnect ? _connect : null),
+                      ]),
+                    ],
                   ),
-                  child: Row(children: [
-                    Expanded(
-                      child: SelectableText(_command,
-                          maxLines: 1, style: mono(13, color: AppColors.fg1)),
-                    ),
-                    Btn('Copy command',
-                        small: true, variant: BtnVariant.secondary, onTap: () {
-                      Clipboard.setData(const ClipboardData(text: _command));
-                      toast(context, 'Copied');
-                    }),
-                  ]),
                 ),
-                label('Paste the link it prints'),
-                SettingsField(
-                  controller: _link,
-                  hint: 'https://…?token=…',
-                  mono: true,
-                  width: 560,
-                  onChanged: (_) => setState(() {}),
-                  onSubmitted: (_) => _connect(),
-                ),
-                if (_error != null) ...[
-                  SizedBox(height: S.s8),
-                  Text(_error!,
-                      style: sans(12, height: 1.4, color: AppColors.danger)),
-                ],
-                SizedBox(height: S.s16),
-                Row(children: [
-                  Expanded(
-                    child: Text('Connection stays on this device',
-                        style: sans(12, color: AppColors.fg3)),
-                  ),
-                  Btn(_busy ? 'Connecting…' : 'Connect',
-                      small: true,
-                      disabled: !canConnect,
-                      onTap: canConnect ? _connect : null),
-                ]),
               ],
             ),
           ),
