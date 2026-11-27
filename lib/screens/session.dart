@@ -2101,7 +2101,10 @@ class _SessionScreenState extends State<SessionScreen>
                                                                 : 0),
                                                         child: _newMessagesPill(),
                                                       ),
+                                                    // Sits at the transcript's end, so it leaves with it when
+                                                    // scrolled away and the New messages pill takes over.
                                                     if (_glassHeader &&
+                                                        _stickToBottom &&
                                                         _dockRun != null &&
                                                         _state?.status ==
                                                             'running')

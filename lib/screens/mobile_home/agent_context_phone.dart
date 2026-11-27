@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../../api.dart';
-import '../../tap_detector.dart';
+import '../../mobile_kit.dart';
 import '../../models.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
-import '../phone_agent_page.dart' show sessionStateWord, shortPath;
+import '../phone_agent_page.dart' show shortPath;
 import '../shell_nav.dart' show sessionBusy;
-import 'agents_home.dart';
+import '../tasks/task_phone_list.dart' show PhoneTaskCard;
+import 'sessions_list_phone.dart' show SessionRowPhone;
 
-// Cards and segments sit 16 in from the screen edge on the board.
-const double _inset = 16;
-
-/// Agent context (HM-06): Overview, Files, Tasks and Memory under a pinned
-/// tab row. Files are the folders the agent's sessions work in.
+/// Agent context (HM-06): Overview, Files, Tasks and Memory behind the kit's
+/// filter group. Files are the folders the agent's sessions work in.
 class AgentContextPage extends StatefulWidget {
   const AgentContextPage({
     super.key,
@@ -48,7 +46,10 @@ class _AgentContextPageState extends State<AgentContextPage> {
     }).catchError((_) {});
     c.memoryScopes().then((m) {
       if (mounted) {
-        setState(() => _memory = [for (final x in m) if (x.key.contains(id)) x]);
+        setState(() => _memory = [
+              for (final x in m)
+                if (x.key.contains(id)) x
+            ]);
       }
     }).catchError((_) {});
     c.wakes().then((l) {
@@ -66,127 +67,93 @@ class _AgentContextPageState extends State<AgentContextPage> {
           if (s.displayAgentId == widget.agent.id) s
       ]..sort((a, b) => b.lastActive.compareTo(a.lastActive));
 
-  Widget _card(String title, String sub, {VoidCallback? onTap}) => Padding(
-        padding: const EdgeInsets.fromLTRB(_inset, 0, _inset, 8),
-        child: Semantics(
-          button: onTap != null,
-          label: '$title, $sub',
-          excludeSemantics: true,
-          child: TapDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onTap,
-            child: Container(
-              key: const ValueKey('ctx-card'),
-              constraints: const BoxConstraints(minHeight: 56),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              alignment: Alignment.centerLeft,
-              decoration: BoxDecoration(
-                  color: AppColors.surface1,
-                  borderRadius: BorderRadius.circular(12)),
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(14, weight: FontWeight.w500, color: AppColors.fg1)),
-                    if (sub.isNotEmpty)
-                      Text(sub, style: sans(12, color: AppColors.fg3)),
-                  ]),
-            ),
-          ),
-        ),
-      );
+  Set<String> get _folders => {
+        for (final s in _mine)
+          if (s.projectFolder.trim().isNotEmpty) s.projectFolder.trim()
+      };
 
-  Widget _row(String icon, String name, String meta) => Container(
-        constraints: const BoxConstraints(minHeight: 48),
-        padding: const EdgeInsets.only(left: 26, right: _inset),
-        child: Row(children: [
-          AppIcon(icon, size: 20, color: AppColors.fg2),
-          const SizedBox(width: 16),
-          Expanded(
-              child: Text(name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(14, color: AppColors.fg1))),
-          if (meta.isNotEmpty) ...[
-            const SizedBox(width: 8),
-            Text(meta, style: sans(12, color: AppColors.fg3)),
-          ],
-        ]),
-      );
+  Widget _sessionRows(List<SessionInfo> l) => MkList(children: [
+        for (var i = 0; i < l.length; i++)
+          SessionRowPhone(
+              session: l[i],
+              last: i == l.length - 1,
+              onTap: () => widget.onOpenSession?.call(l[i])),
+      ]);
+
+  Widget _folderRows(Iterable<String> l) => MkList(children: [
+        for (final f in l)
+          MkRow(
+              title: shortPath(f),
+              leading: AppIcon('folder', size: 22, color: AppColors.fg2),
+              divider: f != l.last),
+      ]);
+
+  Widget _note(String text) => Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      child: Text(text, style: sans(14, color: AppColors.fg3)));
 
   List<Widget> _overview() {
-    final a = widget.agent;
-    final active = [for (final s in _mine) if (!s.settled && sessionBusy(s)) s];
-    final folders = {
+    final active = [
       for (final s in _mine)
-        if (s.projectFolder.trim().isNotEmpty) s.projectFolder.trim()
-    }.take(4).toList();
+        if (!s.settled && sessionBusy(s)) s
+    ];
+    final folders = _folders.take(4);
     return [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(_inset, 14, _inset, 8),
-        child: Row(children: [
-          agentFace(a.id, 48),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(a.shortName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(18, weight: FontWeight.w500, color: AppColors.fg1)),
-              if (a.role.isNotEmpty)
-                Text(a.role, style: sans(13, color: AppColors.fg3)),
-            ]),
-          ),
-        ]),
-      ),
       if (active.isNotEmpty) ...[
-        const HomeLabel('In progress'),
-        for (final s in active)
-          _card(s.title.isEmpty ? 'Untitled session' : s.title,
-              '${sessionStateWord(s)} · ${relativeTime(s.lastActive)}',
-              onTap: () => widget.onOpenSession?.call(s)),
+        const MkSection('In progress'),
+        _sessionRows(active),
       ],
       if (folders.isNotEmpty) ...[
-        const HomeLabel('Files'),
-        for (final f in folders) _row('folder', shortPath(f), ''),
+        const MkSection('Files'),
+        _folderRows(folders),
       ],
       if (_wakes.isNotEmpty) ...[
-        const HomeLabel('Wakes'),
-        for (final w in _wakes) _row('clock', w, ''),
+        const MkSection('Wakes'),
+        MkList(children: [
+          for (final w in _wakes)
+            MkRow(
+                title: w,
+                leading: AppIcon('clock', size: 22, color: AppColors.fg2),
+                divider: w != _wakes.last),
+        ]),
       ],
+      if (active.isEmpty && folders.isEmpty && _wakes.isEmpty)
+        _note('Nothing happening'),
     ];
   }
 
   List<Widget> _body() {
     switch (_tab) {
       case 1:
-        final folders = {
-          for (final s in _mine)
-            if (s.projectFolder.trim().isNotEmpty) s.projectFolder.trim()
-        };
-        return [
-          const SizedBox(height: 8),
-          if (folders.isEmpty) const _Note('No files yet'),
-          for (final f in folders) _row('folder', shortPath(f), ''),
-        ];
+        final f = _folders;
+        return [f.isEmpty ? _note('No files yet') : _folderRows(f)];
       case 2:
         final t = _tasks;
+        if (t == null || t.isEmpty) {
+          return [_note(t == null ? 'Loading' : 'No tasks yet')];
+        }
         return [
-          const SizedBox(height: 12),
-          if (t == null || t.isEmpty) _Note(t == null ? 'Loading' : 'No tasks'),
-          if (t != null)
-            for (final x in t) _card(x.title, x.status.label),
+          MkList(children: [
+            for (var i = 0; i < t.length; i++)
+              PhoneTaskCard(
+                  task: t[i],
+                  owner: null,
+                  last: i == t.length - 1,
+                  onTap: () {}),
+          ]),
         ];
       case 3:
+        if (_memory.isEmpty) return [_note('No memory yet')];
         return [
-          const SizedBox(height: 8),
-          if (_memory.isEmpty) const _Note('No memory yet'),
-          for (final m in _memory)
-            _row('book', m.label.isEmpty ? m.key : m.label,
-                '${m.entries} ${m.entries == 1 ? 'entry' : 'entries'}'),
+          MkList(children: [
+            for (final m in _memory)
+              MkRow(
+                  title: m.label.isEmpty ? m.key : m.label,
+                  leading: AppIcon('book', size: 22, color: AppColors.fg2),
+                  subtitle:
+                      '${m.entries} ${m.entries == 1 ? 'entry' : 'entries'}',
+                  divider: m != _memory.last),
+          ]),
         ];
       default:
         return _overview();
@@ -195,36 +162,33 @@ class _AgentContextPageState extends State<AgentContextPage> {
 
   @override
   Widget build(BuildContext context) {
-    final a = widget.agent;
-    final live = _mine.where((s) => !s.settled && sessionBusy(s)).firstOrNull;
+    final open = _tasks
+            ?.where((x) =>
+                x.status != TaskStatus.done && x.status != TaskStatus.cancelled)
+            .length ??
+        0;
     return Material(
       color: AppColors.bg,
-      child: SafeArea(
-        child: Column(children: [
-          PushedBar(
-            title: a.shortName,
-            subtitle: live == null
-                ? 'Idle'
-                : 'Working · ${live.title.isEmpty ? 'Untitled session' : live.title}',
-          ),
-          SpecTabs(
-              labels: const ['Overview', 'Files', 'Tasks', 'Memory'],
-              index: _tab,
-              onTap: (i) => setState(() => _tab = i)),
-          Expanded(
-              child: ListView(
-                  padding: const EdgeInsets.only(bottom: 24), children: _body())),
-        ]),
+      child: MkPage(
+        title: widget.agent.shortName,
+        onBack: () => Navigator.of(context).pop(),
+        bottomClearance: false,
+        filters: MkFilterGroup<int>(
+          selected: _tab,
+          onSelect: (i) => setState(() => _tab = i),
+          options: [
+            const MkFilter(0, 'Overview'),
+            const MkFilter(1, 'Files'),
+            MkFilter(2, 'Tasks', count: open > 0 ? open : null),
+            MkFilter(3, 'Memory',
+                count: _memory.isNotEmpty ? _memory.length : null),
+          ],
+        ),
+        slivers: [
+          SliverList(delegate: SliverChildListDelegate(_body())),
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+        ],
       ),
     );
   }
-}
-
-class _Note extends StatelessWidget {
-  const _Note(this.text);
-  final String text;
-  @override
-  Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.all(_inset * 2),
-      child: Center(child: Text(text, style: sans(14, color: AppColors.fg3))));
 }

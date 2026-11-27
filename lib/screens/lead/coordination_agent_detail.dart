@@ -42,9 +42,12 @@ class CoordinationAgentDetail extends StatelessWidget {
     return AgentThreadScreen(
       client: c,
       agentId: agent.id,
-      agentName: agent.displayName.trim().isEmpty
-          ? agent.id
-          : agent.displayName.trim(),
+      // Phone headers and hints use the short name; the role lives on the profile.
+      agentName: kMobile && agent.shortName.isNotEmpty
+          ? agent.shortName
+          : (agent.displayName.trim().isEmpty
+              ? agent.id
+              : agent.displayName.trim()),
       onClose: onClose,
       embedded: embedded,
       tabHeader: tabHeader,

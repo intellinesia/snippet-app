@@ -46,7 +46,10 @@ void main() {
         took: const Duration(seconds: 42),
         onOpen: (_) => opened = true)));
     expect(find.textContaining('failed'), findsNothing);
-    await t.tap(find.byType(ActivityPill));
+    // Two steps fold into one line; open it, then a step opens its detail.
+    await t.tap(find.byType(PhoneFoldLine));
+    await t.pumpAndSettle();
+    await t.tap(find.byType(QuietStepLine).first);
     expect(opened, isTrue);
     debugDefaultTargetPlatformOverride = null;
   });

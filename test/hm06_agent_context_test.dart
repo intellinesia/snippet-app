@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/mobile_home/agent_context_phone.dart';
+import 'package:snippet/screens/phone_agent_page.dart' show shortPath;
 
 import 'hm_pump.dart';
 
@@ -11,8 +11,12 @@ class _C extends DaemonClient {
 }
 
 void main() {
-  final agent = CoordinationAgent.fromJson(
-      {'id': 'sashy', 'display_name': 'Sashy', 'handle': 'sashy', 'status': 'active'});
+  final agent = CoordinationAgent.fromJson({
+    'id': 'sashy',
+    'display_name': 'Sashy',
+    'handle': 'sashy',
+    'status': 'active'
+  });
   final sessions = [
     SessionInfo.fromJson({
       'id': 's1',
@@ -24,34 +28,42 @@ void main() {
       'last_active': DateTime.now().millisecondsSinceEpoch ~/ 1000 - 60,
     })
   ];
+  final opened = <String>[];
   for (final w in hmWidths) {
     for (final s in hmScales) {
       hmSpec('HM-06 at $w x $s', (t) async {
-        await hmPump(t,
-            AgentContextPage(client: _C(), agent: agent, sessions: sessions), w, s,
+        opened.clear();
+        await hmPump(
+            t,
+            AgentContextPage(
+                client: _C(),
+                agent: agent,
+                sessions: sessions,
+                onOpenSession: (x) => opened.add(x.id)),
+            w,
+            s,
             h: 1200);
         await t.pump(const Duration(milliseconds: 200));
         hmExpectTargets(t);
-        final tabW = w / 4;
-        for (var i = 0; i < 4; i++) {
-          final z = t.getSize(find.byKey(ValueKey('tab-$i')));
-          expect(z.width, closeTo(tabW, 0.6));
-          expect(z.height, 48);
-        }
-        final u = t.getRect(find.byKey(const ValueKey('tab-underline')));
-        final tab0 = t.getRect(find.byKey(const ValueKey('tab-0')));
-        expect(u.left, closeTo(tab0.left + 14, 0.6));
-        expect(u.width, closeTo(tabW - 28, 0.6));
-        expect(u.height, 2);
-        final card = t.getSize(find.byKey(const ValueKey('ctx-card')).first);
-        expect(card.width, closeTo(w - 32, 0.6));
-        expect(card.height, greaterThanOrEqualTo(56));
-        await t.tap(find.text('Tasks').first);
+        expect(find.text('In progress'), findsOneWidget);
+        expect(find.text('Visual QA: Quiet Build 1'), findsOneWidget);
+        expect(opened, isEmpty);
+        await t.tap(find.text('Visual QA: Quiet Build 1'));
         await t.pump();
-        expect(t.getRect(find.byKey(const ValueKey('tab-underline'))).left,
-            closeTo(t.getRect(find.byKey(const ValueKey('tab-2'))).left + 14, 0.6));
-        // ignore: avoid_print
-        print('HM06 w=$w s=$s tab=${tabW} underline=${u.width} card=$card');
+        expect(opened, ['s1']);
+        await t.tap(find.text('Files').first);
+        await t.pump();
+        expect(find.text('In progress'), findsNothing);
+        expect(find.text(shortPath('/home/me/proj')), findsOneWidget);
+        await t.tap(find.text('Tasks'));
+        await t.pump();
+        expect(find.text('Loading'), findsOneWidget);
+        await t.ensureVisible(find.text('Memory'));
+        await t.pump();
+        await t.tap(find.text('Memory'));
+        await t.pump();
+        expect(find.text('No memory yet'), findsOneWidget);
+        hmExpectTargets(t);
       });
     }
   }

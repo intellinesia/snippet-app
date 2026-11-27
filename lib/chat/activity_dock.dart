@@ -9,7 +9,7 @@ import '../platform.dart';
 import '../theme.dart';
 import '../tool_activity.dart';
 import '../tool_sheet.dart' show ToolBatch;
-import '../transcript.dart' show QuietStepLine;
+import '../transcript.dart' show PhoneFoldLine, QuietStepLine;
 import '../mobile_kit.dart' show MkMorph;
 import '../widgets.dart';
 import '../tap_detector.dart';
@@ -233,33 +233,62 @@ class ActivityPill extends StatelessWidget {
         ),
       );
     }
-    // Board: each step in full as a quiet line; a tap opens that step.
-    return Semantics(
-      button: true,
-      label: describeWork(steps).text,
-      excludeSemantics: true,
-      onTap: () => onOpen(null),
-      child: TapDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => onOpen(null),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(2, 2, 0, 2),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (var i = 0; i < steps.length; i++)
-                TapDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => onOpen(i),
-                  child: Padding(
-                    padding: EdgeInsets.only(top: i == 0 ? 0 : 7),
-                    child: QuietStepLine(steps[i]),
-                  ),
+    return _PhoneActivity(steps: steps, took: t, onOpen: onOpen);
+  }
+}
+
+/// Phone: two or more steps fold into one summary line that opens into the
+/// quiet step lines; a tap on a step opens its detail.
+class _PhoneActivity extends StatefulWidget {
+  const _PhoneActivity({required this.steps, required this.onOpen, this.took});
+  final List<ToolStep> steps;
+  final Duration? took;
+  final void Function(int? index) onOpen;
+
+  @override
+  State<_PhoneActivity> createState() => _PhoneActivityState();
+}
+
+class _PhoneActivityState extends State<_PhoneActivity> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final steps = widget.steps;
+    final lines = Padding(
+      padding: EdgeInsets.fromLTRB(2, steps.length > 1 ? 0 : 2, 0, 2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < steps.length; i++)
+            Semantics(
+              button: true,
+              label: describeWork([steps[i]]).text,
+              excludeSemantics: true,
+              child: TapDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => widget.onOpen(i),
+                child: Padding(
+                  padding: EdgeInsets.only(top: i == 0 ? 0 : 7),
+                  child: QuietStepLine(steps[i]),
                 ),
-            ],
-          ),
-        ),
+              ),
+            ),
+        ],
       ),
+    );
+    if (steps.length < 2) return lines;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        PhoneFoldLine(
+            steps: steps,
+            running: false,
+            open: _open,
+            took: widget.took,
+            onTap: () => setState(() => _open = !_open)),
+        SpringExpand(open: _open, child: lines),
+      ],
     );
   }
 }

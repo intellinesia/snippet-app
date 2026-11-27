@@ -401,8 +401,8 @@ void main() {
     _usePhoneView();
     await _pumpRows(tester, CollapsedActivity(_activityRows()));
 
-    // Board: steps show in full as quiet lines; a tap opens the rows.
-    await tester.tap(find.byType(QuietStepLine).first);
+    // Phone: the run folds into one summary line; a tap opens the rows.
+    await tester.tap(find.byType(PhoneFoldLine));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -410,7 +410,7 @@ void main() {
     expect(find.text('Show'), findsNothing);
     expect(find.text('Hide'), findsNothing);
 
-    await tester.tap(find.byType(QuietStepLine).first);
+    await tester.tap(find.byType(PhoneFoldLine));
     await tester.pumpAndSettle();
 
     expect(find.byType(DenseToolRow), findsNothing);
@@ -454,9 +454,9 @@ void main() {
       ]),
     );
 
-    // Board: every step is listed; the first line opens the rows.
-    expect(find.byType(QuietStepLine), findsNWidgets(3));
-    final summary = find.byType(QuietStepLine).first;
+    // Phone: one summary line; it opens the rows.
+    expect(find.byType(PhoneFoldLine), findsOneWidget);
+    final summary = find.byType(PhoneFoldLine);
 
     await tester.tap(summary);
     await tester.pump();

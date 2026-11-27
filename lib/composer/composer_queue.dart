@@ -4,6 +4,7 @@ import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'composer_pill.dart';
+import '../mobile_kit.dart' show MK, MkGlass, kAndroidLook;
 import '../tap_detector.dart';
 
 /// One held message as the queue shows it.
@@ -49,6 +50,7 @@ class ComposerQueueList extends StatelessWidget {
   Widget build(BuildContext context) {
     final n = entries.length;
     if (n == 0) return const SizedBox.shrink();
+    if (kMobile) return _phone(n);
     Widget link(String label, VoidCallback onTap, Color color,
             {bool strong = false}) =>
         Semantics(
@@ -106,6 +108,117 @@ class ComposerQueueList extends StatelessWidget {
       ),
     );
   }
+
+  // Phone: one control surface beside the composer, rows split by hairlines.
+  Widget _phone(int n) {
+    Widget link(String label, VoidCallback onTap, {bool strong = false}) =>
+        Semantics(
+          button: true,
+          excludeSemantics: true,
+          label: label,
+          child: TapDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              tapHaptic();
+              onTap();
+            },
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Center(
+                  child: Text(label,
+                      style: sans(14,
+                          weight: strong ? W.label : null,
+                          color: strong ? AppColors.fg1 : AppColors.fg2)),
+                ),
+              ),
+            ),
+          ),
+        );
+    final rows = <Widget>[
+      for (var i = 0; i < n; i++) ...[
+        if (i > 0)
+          Padding(
+            padding: const EdgeInsets.only(left: 44),
+            child: ColoredBox(
+                color: MK.hairline, child: const SizedBox(height: 0.5)),
+          ),
+        _phoneRow(entries[i], single: n == 1),
+      ],
+    ];
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: MkGlass(
+        radius: kAndroidLook ? 16 : 22,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (n > 1)
+              Padding(
+                padding: const EdgeInsets.only(left: 16, right: 6),
+                child: Row(children: [
+                  Expanded(
+                    child: Text('$n queued',
+                        style: sans(13, color: AppColors.fg3, tabular: true)),
+                  ),
+                  link('Clear', onClear),
+                  link('Send all now', onSendAll, strong: true),
+                ]),
+              ),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxHeight),
+              child: SingleChildScrollView(
+                reverse: true,
+                child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: rows),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _phoneRow(ComposerQueueEntry e, {required bool single}) =>
+      ConstrainedBox(
+        constraints: BoxConstraints(minHeight: single ? 56 : 48),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
+          child: Row(children: [
+            AppIcon('clock', size: 18, color: AppColors.fg3),
+            const SizedBox(width: 10),
+            if (e.lead != null) ...[e.lead!, const SizedBox(width: 8)],
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(e.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(15,
+                          color: e.muted ? AppColors.fg3 : AppColors.fg1)),
+                  if (single)
+                    Text('Sends when this turn ends',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(13, color: AppColors.fg3)),
+                ],
+              ),
+            ),
+            if (e.extra != null) ...[const SizedBox(width: 6), e.extra!],
+            Builder(
+              builder: (ctx) => _action('more-horizontal', 'More',
+                  AppColors.fg3, () => e.onMore(ctx)),
+            ),
+            _action('arrow-up', 'Send now', AppColors.fg1, e.onSend),
+          ]),
+        ),
+      );
 
   Widget _row(int i, int n, ComposerQueueEntry e) {
     return Container(

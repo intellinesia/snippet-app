@@ -8,6 +8,8 @@ import '../settings_form.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'composer_pill.dart';
+import '../mobile_kit.dart' show MkGroupRow;
+import '../platform.dart';
 
 /// Open state and current page of the phone composer tray. Also the
 /// [TapRegion] group shared by the tray and the "+" that toggles it.
@@ -386,6 +388,18 @@ class ComposerTrayRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (kMobile) {
+      return MkGroupRow(
+        label: label,
+        value: value,
+        chevron: chevron,
+        destructive: color == AppColors.danger,
+        onTap: () {
+          tapHaptic();
+          onTap();
+        },
+      );
+    }
     return Semantics(
       button: true,
       label: label,

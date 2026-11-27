@@ -952,12 +952,6 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       banner: kMobile && rcpt != null ? rcpt : null,
       deskRecipient: rcpt,
       above: [
-        if (kMobile && _showsQuickActions)
-          ListenableBuilder(
-            listenable: Listenable.merge([_tray, _input]),
-            builder: (_, __) => ComposerTray(
-                controller: _tray, bleed: M.gutter, child: _trayPage(running)),
-          ),
         composerPinCardForSession(widget.sessionId),
         if (_heldQueue.isNotEmpty) _queuedCard(),
         if (_mentionQuery != null && !_isLead) _mentionList(),
@@ -1019,40 +1013,42 @@ extension _SessionScreenComposerExt on _SessionScreenState {
   bool get _showsQuickActions =>
       !_isLead && !widget.readOnly && _inboxAgentId(widget.sessionId) == null;
 
-  /// The composer's "+": on phone sessions with actions it toggles the tray
-  /// (turning 45 degrees to read as a close); elsewhere it attaches directly.
+  /// The composer's "+": on phone sessions with actions it opens the actions
+  /// sheet; elsewhere it attaches directly.
   Widget _composerPlus() {
     if (!(kMobile && _showsQuickActions)) {
       return ComposerIconButton('plus', tooltip: 'Attach', onTap: _onAttachTap);
     }
-    return TapRegion(
-      groupId: _tray,
-      child: ListenableBuilder(
-        listenable: Listenable.merge([_tray, _tray.progress]),
-        builder: (context, _) {
-          final k = _tray.progress.value;
-          final t = k.clamp(0.0, 1.0);
-          return Semantics(
-            label: _tray.open ? 'Close actions' : 'Actions',
-            expanded: _tray.open,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: C7.rowHi.withValues(alpha: t),
-              ),
-              child: AnimatedRotation(
-                turns: 0.125 * k,
-                duration: Duration.zero,
-                child: ComposerIconButton('plus',
-                    tooltip: 'Actions',
-                    onTap: _tray.toggle,
-                    color: Color.lerp(AppColors.fg2, AppColors.fg1, t)),
-              ),
-            ),
-          );
-        },
-      ),
-    );
+    return ComposerIconButton('plus',
+        tooltip: 'Actions', onTap: () => unawaited(_openPlusSheet()));
+  }
+
+  /// The "+" actions as a modal sheet over the composer; sub-pages swap in
+  /// place through [_tray], and closing the tray dismisses the sheet.
+  Future<void> _openPlusSheet() async {
+    if (_tray.open) return;
+    _tray.show(ComposerTrayController.menu);
+    BuildContext? sheet;
+    void onTray() {
+      final c = sheet;
+      if (!_tray.open && c != null && c.mounted) {
+        sheet = null;
+        Navigator.of(c).pop();
+      }
+    }
+
+    _tray.addListener(onTray);
+    await showMkSheet<void>(context, builder: (ctx) {
+      sheet = ctx;
+      return ListenableBuilder(
+        listenable: Listenable.merge([_tray, _input]),
+        builder: (_, __) => SingleChildScrollView(
+            child: _trayPage(_state?.status == 'running')),
+      );
+    });
+    sheet = null;
+    _tray.removeListener(onTray);
+    _tray.close();
   }
 
   /// The tray's current page: the action list, or the hand-off or fork

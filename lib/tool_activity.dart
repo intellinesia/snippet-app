@@ -495,8 +495,25 @@ List<String> _tokenizeCommandHead(String segment) {
   return tokens;
 }
 
+// A heredoc's body is data for the command, not more commands.
+final _heredocOpen = RegExp(r'''<<-?\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\1''');
+
+String _stripHeredocs(String cmd) {
+  final out = <String>[];
+  String? end;
+  for (final line in cmd.split('\n')) {
+    if (end != null) {
+      if (line.trim() == end) end = null;
+      continue;
+    }
+    out.add(line);
+    end = _heredocOpen.firstMatch(line)?.group(2);
+  }
+  return out.join('\n');
+}
+
 List<String> _extractCommandNames(String rawCommand) {
-  final segments = _splitShellSegments(rawCommand);
+  final segments = _splitShellSegments(_stripHeredocs(rawCommand));
   final nonSetup = <String>[];
   final setupOnly = <String>[];
   for (final raw in segments) {

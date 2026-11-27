@@ -13,6 +13,7 @@ import 'chat/tool_output_sheet.dart';
 import 'chat/signal_row.dart';
 import 'api.dart' show DaemonClient;
 import 'crew_widgets.dart' show AgentProviderMark;
+import 'mobile_kit/morph.dart' show MkMorph;
 import 'mochi.dart';
 import 'models.dart';
 import 'platform.dart';
@@ -847,8 +848,26 @@ class ActivityFold extends StatelessWidget {
                 took: took);
       }
     }
+    // Phone: a run of two or more steps folds into one summary line, as on
+    // desktop; while running, the latest step stays in view under it.
+    if (kMobile && steps.length >= 2) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          PhoneFoldLine(
+              steps: steps,
+              running: running,
+              open: open,
+              onTap: onTap,
+              took: took),
+          SpringExpand(
+              open: open, child: WorkSteps(rows: rows, header: false)),
+          if (running && !open) WorkSteps(rows: [rows.last], header: false),
+        ],
+      );
+    }
     if (running) return WorkSteps(rows: rows, header: false);
-    // Phone: every step shows in full as a quiet line; a tap opens the detail.
+    // Phone: a lone finished step stays a quiet line; a tap opens its detail.
     if (kMobile && steps.isNotEmpty) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -862,15 +881,7 @@ class ActivityFold extends StatelessWidget {
               onTap: onTap,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(2, 2, 0, 2),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (var i = 0; i < steps.length; i++) ...[
-                      if (i > 0) const SizedBox(height: 7),
-                      QuietStepLine(steps[i]),
-                    ],
-                  ],
-                ),
+                child: QuietStepLine(steps.first),
               ),
             ),
           ),
@@ -885,6 +896,74 @@ class ActivityFold extends StatelessWidget {
             steps: steps, running: false, open: open, onTap: onTap, took: took),
         SpringExpand(open: open, child: WorkSteps(rows: rows)),
       ],
+    );
+  }
+}
+
+/// The phone fold line: what the run did, how long, and a chevron.
+class PhoneFoldLine extends StatelessWidget {
+  const PhoneFoldLine({
+    super.key,
+    required this.steps,
+    required this.running,
+    required this.open,
+    required this.onTap,
+    this.took,
+  });
+  final List<ToolStep> steps;
+  final bool running;
+  final bool open;
+  final VoidCallback onTap;
+  final Duration? took;
+
+  @override
+  Widget build(BuildContext context) {
+    // The quiet sentence: no failure call-outs, as on the desktop pill.
+    final summary = describeWork(steps).text;
+    final time = running ? null : (took ?? stepsDuration(steps));
+    final meta = [
+      if (running) '${steps.length} steps',
+      if (time != null) formatWorkDuration(time),
+    ].join(' \u00b7 ');
+    return Semantics(
+      button: true,
+      expanded: open,
+      label: [summary, meta].where((e) => e.isNotEmpty).join(', '),
+      excludeSemantics: true,
+      child: TapDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox(
+          height: 44,
+          child: Row(children: [
+            SizedBox(
+              width: 16,
+              child: running
+                  ? const MkMorph(size: 13)
+                  : AppIcon('layers', size: 15, color: AppColors.fg4),
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(summary,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(13.5, color: AppColors.fg2)),
+            ),
+            if (meta.isNotEmpty)
+              Text('  $meta',
+                  maxLines: 1,
+                  style: sans(13, color: AppColors.fg4, tabular: true)),
+            const SizedBox(width: 6),
+            AnimatedRotation(
+              turns: open ? 0.5 : 0,
+              duration: reduceMotion(context)
+                  ? Duration.zero
+                  : const Duration(milliseconds: 180),
+              child: AppIcon('chevron-down', size: 14, color: AppColors.fg4),
+            ),
+          ]),
+        ),
+      ),
     );
   }
 }

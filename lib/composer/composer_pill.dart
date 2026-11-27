@@ -7,7 +7,7 @@ import '../gesture_physics.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import '../mobile_kit.dart' show MkGlass, kAndroidLook;
+import '../mobile_kit.dart' show MkGlass, MkGroup, kAndroidLook;
 import '../tap_detector.dart';
 
 /// Round 7 composer tokens, local so the theme file stays with its owner.
@@ -389,6 +389,8 @@ class ComposerGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Phone: the platform's grouped list, as in every other sheet.
+    if (kMobile) return MkGroup(flush: true, children: children);
     final n = children.length;
     return Column(
       mainAxisSize: MainAxisSize.min,

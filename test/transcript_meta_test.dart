@@ -289,19 +289,18 @@ void main() {
         onOpenChanged: (_) {},
       )));
       await t.pump(const Duration(milliseconds: 300));
-      // Board: each finished step shows in full as a quiet line.
-      expect(find.byType(QuietStepLine), findsNWidgets(2));
+      // Phone: the run folds into one summary line; open, the rows show.
+      expect(find.byType(PhoneFoldLine), findsOneWidget);
       expect(
           find.descendant(
               of: find.byType(DenseToolRow),
               matching:
                   find.textContaining('Edited a.dart', findRichText: true)),
           findsOneWidget);
-      // The quiet line and the open row both name the command.
       expect(
           find.textContaining('flutter test test/a_test.dart',
               findRichText: true),
-          findsNWidgets(2));
+          findsOneWidget);
       expect(find.text('3 passed'), findsOneWidget);
       debugDefaultTargetPlatformOverride = null;
     });
@@ -542,5 +541,19 @@ void main() {
       ]),
       'Read api.dart · 1 other step',
     );
+  });
+
+  test('workSummary ignores heredoc bodies', () {
+    final s = workSummary([
+      ToolStep(
+          tool: 'bash',
+          args: {
+            'command': "python3 - <<'E'\nassert old in s\nopen(p).read()\nE\ngrep -n foo bar"
+          },
+          result: 'ok'),
+    ]);
+    expect(s, contains('python3'));
+    expect(s, contains('grep'));
+    expect(s, isNot(contains('assert')));
   });
 }
