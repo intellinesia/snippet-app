@@ -10,7 +10,6 @@ import '../../widgets.dart';
 import '../../mobile_kit.dart';
 import '../session_list_row.dart' show projectLabel, sessionNeedsYou;
 import '../shell_nav.dart' show sessionBusy;
-import 'agents_home.dart' show SwitchRow;
 import 'collapsing_root.dart';
 
 /// SE-02 filters: All, Working, Needs you, Done.
@@ -110,53 +109,45 @@ class _QuietSessionsScreenState extends State<QuietSessionsScreen> {
   }
 
   void _openFilter() {
-    showAppSheet<void>(context, title: 'Sort and show',
-        child: StatefulBuilder(builder: (ctx, set) {
-      Widget opt(String label, bool on, VoidCallback tap) => Semantics(
-            button: true,
-            selected: on,
-            label: label,
-            child: TapDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () {
-                tap();
+    showMkSheet<void>(context,
+        title: 'Sort and show',
+        builder: (_) => StatefulBuilder(builder: (ctx, set) {
+              void apply(VoidCallback fn) {
+                fn();
                 set(() {});
                 setState(() {});
                 _save();
-              },
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 48),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(children: [
-                    Expanded(
-                        child: Text(label,
-                            style: sans(15,
-                                weight: on ? W.label : W.body,
-                                color: AppColors.fg1))),
-                    if (on) AppIcon('check', size: 18, color: AppColors.fg1),
-                  ]),
-                ),
-              ),
-            ),
-          );
-      Widget label(String t) => Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child:
-                Text(t, style: sans(12, weight: W.label, color: AppColors.fg3)),
-          );
-      return Column(mainAxisSize: MainAxisSize.min, children: [
-        label('Sort'),
-        opt('Recent activity', !_byName, () => _byName = false),
-        opt('Name', _byName, () => _byName = true),
-        label('Show'),
-        SwitchRow('Group by folder', _group, (v) {
-          set(() => _group = v);
-          setState(() {});
-          _save();
-        }),
-      ]);
-    }));
+              }
+
+              Widget opt(String label, bool on, VoidCallback tap) => Semantics(
+                    selected: on,
+                    child: MkGroupRow(
+                      label: label,
+                      chevron: false,
+                      trailing: on
+                          ? AppIcon('check', size: 20, color: AppColors.fg1)
+                          : null,
+                      onTap: () => apply(tap),
+                    ),
+                  );
+              return Column(mainAxisSize: MainAxisSize.min, children: [
+                MkGroup(flush: true, header: 'Sort', children: [
+                  opt('Recent activity', !_byName, () => _byName = false),
+                  opt('Name', _byName, () => _byName = true),
+                ]),
+                MkGroup(flush: true, header: 'Show', children: [
+                  MkGroupRow(
+                    label: 'Group by folder',
+                    chevron: false,
+                    trailing: MkToggle(
+                        value: _group,
+                        label: 'Group by folder',
+                        onChanged: (v) => apply(() => _group = v)),
+                    onTap: () => apply(() => _group = !_group),
+                  ),
+                ]),
+              ]);
+            }));
   }
 
   String _agentName(SessionInfo s, Map<String, String> names) {

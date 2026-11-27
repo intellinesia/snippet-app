@@ -204,13 +204,15 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
   @override
   Widget build(BuildContext context) {
     if (_chat) {
-      return CoordinationAgentDetail(
-        key: const ValueKey('agent-detail'),
-        agent: a,
-        client: widget.client,
-        embedded: false,
-        onClose: () => setState(() => _chat = false),
-      );
+      return StatusInset.reclaim(
+          context,
+          CoordinationAgentDetail(
+            key: const ValueKey('agent-detail'),
+            agent: a,
+            client: widget.client,
+            embedded: false,
+            onClose: () => setState(() => _chat = false),
+          ));
     }
     final an = kAndroidLook;
     final mq = MediaQuery.of(context);

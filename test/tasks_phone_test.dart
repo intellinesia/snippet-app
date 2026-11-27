@@ -256,16 +256,13 @@ void main() {
             MkState.open);
         expect(tester.getTopLeft(find.byKey(const ValueKey('t-t1'))).dy,
             greaterThan(tester.getTopLeft(find.byKey(const ValueKey('t-p1'))).dy));
-        // done folded to 5; done uses check, cancelled uses x
+        // every loaded done task shows, no fold; done uses check, cancelled x
         await tester.scrollUntilVisible(find.byKey(const ValueKey('t-d0')), 300,
             scrollable: find.byType(Scrollable).first);
         expect(iconOf('t-d0'), 'check');
-        await tester.scrollUntilVisible(find.byKey(const ValueKey('done-fold')), 300,
+        await tester.scrollUntilVisible(find.byKey(const ValueKey('t-d6')), 300,
             scrollable: find.byType(Scrollable).first);
-        expect(find.textContaining('Show 3 more'), findsOneWidget);
-        expect(find.byKey(const ValueKey('t-d6')), findsNothing);
-        await tester.tap(find.byKey(const ValueKey('done-fold')));
-        await tester.pump();
+        expect(find.textContaining('more'), findsNothing);
         await tester.scrollUntilVisible(find.byKey(const ValueKey('t-c1')), 300,
             scrollable: find.byType(Scrollable).first);
         expect(find.byKey(const ValueKey('t-c1')), findsOneWidget);

@@ -4,7 +4,6 @@ import 'package:snippet/mobile_kit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/mobile_home/quiet_home.dart';
-import 'package:snippet/screens/mobile_home/agents_home.dart' show SpecSwitch;
 import 'package:snippet/screens/mobile_home/sessions_list_phone.dart';
 import 'package:snippet/theme.dart';
 
@@ -124,7 +123,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Recent activity'), findsOneWidget);
     expect(find.text('Group by folder'), findsOneWidget);
-    tester.widget<SpecSwitch>(find.byType(SpecSwitch)).onChanged!(false);
+    tester.widget<MkToggle>(find.byType(MkToggle)).onChanged!(false);
     await tester.pump(const Duration(milliseconds: 400));
     await tester.tapAt(const Offset(5, 5));
     await tester.pump(const Duration(milliseconds: 400));

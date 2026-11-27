@@ -185,14 +185,23 @@ BorderRadius _segment(int i, int n) {
 /// Settings-style group. iPhone: inset group (surface1, 22 corners) with
 /// hairlines. Android: segmented tiles like [MkList].
 class MkGroup extends StatelessWidget {
-  const MkGroup({super.key, required this.children, this.header, this.footer});
+  const MkGroup(
+      {super.key,
+      required this.children,
+      this.header,
+      this.footer,
+      this.flush = false});
   final List<Widget> children;
   final String? header;
   final String? footer;
 
+  /// Inside a sheet that already pads its content: no side margin.
+  final bool flush;
+
   @override
   Widget build(BuildContext context) {
     final a = kAndroidLook;
+    final m = flush ? 0.0 : 16.0;
     final rows = <Widget>[
       for (var i = 0; i < children.length; i++)
         _GroupIndex(last: i == children.length - 1, child: children[i]),
@@ -203,8 +212,8 @@ class MkGroup extends StatelessWidget {
         if (header != null)
           Padding(
             padding: a
-                ? const EdgeInsets.fromLTRB(28, 20, 28, 8)
-                : const EdgeInsets.fromLTRB(32, 20, 32, 6),
+                ? EdgeInsets.fromLTRB(m + 12, 20, m + 12, 8)
+                : EdgeInsets.fromLTRB(m + 16, 20, m + 16, 6),
             child: Text(header!,
                 style: a
                     ? sans(14, weight: W.label, color: AppColors.fg2)
@@ -212,7 +221,7 @@ class MkGroup extends StatelessWidget {
           ),
         if (a)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: EdgeInsets.symmetric(horizontal: m),
             child: Column(children: [
               for (var i = 0; i < rows.length; i++) ...[
                 if (i > 0) const SizedBox(height: 2),
@@ -225,7 +234,7 @@ class MkGroup extends StatelessWidget {
           )
         else
           Container(
-            margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            margin: EdgeInsets.fromLTRB(m, 8, m, 0),
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
                 color: AppColors.surface1,
@@ -234,7 +243,8 @@ class MkGroup extends StatelessWidget {
           ),
         if (footer != null)
           Padding(
-            padding: EdgeInsets.fromLTRB(a ? 28 : 32, 8, a ? 28 : 32, 0),
+            padding: EdgeInsets.fromLTRB(
+                m + (a ? 12 : 16), 8, m + (a ? 12 : 16), 0),
             child: Text(footer!, style: sans(13, color: AppColors.fg4)),
           ),
       ],

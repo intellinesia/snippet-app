@@ -51,11 +51,9 @@ class PhoneTasksRoot extends StatefulWidget {
   State<PhoneTasksRoot> createState() => _PhoneTasksRootState();
 }
 
-const kDoneVisible = 5;
-
 class _PhoneTasksRootState extends State<PhoneTasksRoot> {
   TaskScope _scope = TaskScope.all;
-  bool _doneOpen = false;
+  bool _loadingAll = false;
   bool _searching = false;
   final _q = TextEditingController();
 
@@ -145,11 +143,7 @@ class _PhoneTasksRootState extends State<PhoneTasksRoot> {
       }
       if (done.isNotEmpty) {
         children.add(_label('Completed', done.length));
-        final cut = _doneOpen ? done.length : kDoneVisible;
-        children.add(_rows(done.take(cut).toList()));
-        if (done.length > kDoneVisible) {
-          children.add(_fold(done.length - kDoneVisible));
-        }
+        children.add(_rows(done));
       }
       final more = [
         for (final s in TaskStatus.values)
@@ -158,13 +152,9 @@ class _PhoneTasksRootState extends State<PhoneTasksRoot> {
       if (more.isNotEmpty) {
         children.add(_FoldRow(
             key: const ValueKey('load-more'),
-            label: 'Load more',
+            label: _loadingAll ? 'Loading\u2026' : 'Load all',
             open: false,
-            onTap: () {
-              for (final s in more) {
-                widget.onLoadMore?.call(s);
-              }
-            }));
+            onTap: _loadingAll ? () {} : () => _loadAll(more)));
       }
     }
 
@@ -193,12 +183,22 @@ class _PhoneTasksRootState extends State<PhoneTasksRoot> {
     );
   }
 
-  Widget _fold(int hidden) => _FoldRow(
-        key: const ValueKey('done-fold'),
-        label: _doneOpen ? 'Show fewer' : 'Show $hidden more',
-        open: _doneOpen,
-        onTap: () => setState(() => _doneOpen = !_doneOpen),
-      );
+  // Pages until the feed runs out; the cap guards a feed that never says done.
+  Future<void> _loadAll(List<TaskStatus> statuses) async {
+    final load = widget.onLoadMore;
+    if (load == null) return;
+    setState(() => _loadingAll = true);
+    try {
+      for (final s in statuses) {
+        for (var i = 0; i < 50 && (widget.hasMore?.call(s) ?? false); i++) {
+          await load(s);
+          if (!mounted) return;
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _loadingAll = false);
+    }
+  }
 
   // Title row: the large title with the New task split button beside it.
   Widget _head() => Padding(

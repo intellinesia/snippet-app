@@ -86,6 +86,27 @@ class StatusInset extends InheritedWidget {
   static double bottomOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<StatusInset>()?.bottom ?? 0;
 
+  /// Lays [child] out as if the host had not consumed the status bar: it
+  /// reaches up behind it and sees that height as its own top padding.
+  static Widget reclaim(BuildContext context, Widget child) {
+    final mq = MediaQuery.of(context);
+    final eaten = mq.padding.top > 0 ? 0.0 : of(context);
+    if (eaten == 0) return child;
+    return Stack(clipBehavior: Clip.none, children: [
+      Positioned(
+        top: -eaten,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        child: MediaQuery(
+          data: mq.copyWith(padding: mq.padding.copyWith(top: eaten)),
+          child: StatusInset(
+              top: 0, bottom: bottomOf(context), child: child),
+        ),
+      ),
+    ]);
+  }
+
   /// For a page: its own top padding, or the inset its host passes down
   /// when the page sits under the host's SafeArea.
   static double page(BuildContext context) {
