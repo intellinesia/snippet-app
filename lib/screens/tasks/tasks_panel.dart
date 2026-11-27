@@ -7,7 +7,7 @@ import '../../motion_routes.dart';
 import '../../platform.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
-import '../../desktop_layout.dart';
+import '../../settings_form.dart';
 import '../mobile_chrome.dart' show MobileBackBar;
 import '../shell_nav.dart';
 import 'create_task_form.dart';
@@ -430,15 +430,15 @@ class TasksPanelState extends State<TasksPanel> {
       );
 
   Widget _desktopSearch() => Container(
-        height: 32,
+        height: PaneRow.pill,
         padding: EdgeInsets.symmetric(horizontal: S.s8),
         decoration: BoxDecoration(
-          color: AppColors.tint1,
-          borderRadius: BorderRadius.circular(R.md),
-          border: Border.all(color: AppColors.line),
+          color: Grouped.card,
+          borderRadius: BorderRadius.circular(PaneRow.radius),
+          border: Border.all(color: Grouped.cardBorder),
         ),
         child: Row(children: [
-          AppIcon('search', size: 14, color: AppColors.fg4),
+          AppIcon('search', size: 13, color: AppColors.fg4),
           SizedBox(width: S.s8),
           Expanded(
             child: TextField(
@@ -539,35 +539,57 @@ class TasksPanelState extends State<TasksPanel> {
         pane: true,
       );
     } else {
-      detail = const DetailEmpty('Select a task');
+      detail = const TaskEmptyNote(title: 'Select a task');
     }
-    final master = MasterPane(
-          title: 'Tasks',
-          actions: [
+    final master = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          height: PaneRow.height,
+          padding: EdgeInsets.fromLTRB(S.s16, 0, S.s12, 0),
+          decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: AppColors.paneLine))),
+          child: Row(children: [
+            Expanded(
+              child: Text('Tasks',
+                  style: sans(13.5, weight: W.label, color: taskTitleInk)),
+            ),
             IconBtn('search',
                 size: 28,
-                iconSize: 15,
+                iconSize: 13,
                 active: _searchOpen,
                 tooltip: 'Search tasks',
                 onTap: _toggleSearch),
             SizedBox(width: S.s4),
             HeaderAction('New task', onTap: create),
             ...widget.trailing,
-          ],
-          search: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (_searchOpen) _desktopSearch(),
-              if (_tasks.isNotEmpty)
-                Padding(
-                  padding: EdgeInsets.only(top: S.s4),
-                  child: _statusStrip(),
-                ),
-            ],
+          ]),
+        ),
+        if (_searchOpen || _tasks.isNotEmpty)
+          Padding(
+            padding: EdgeInsets.fromLTRB(S.s8, 0, S.s8, S.s8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_searchOpen) _desktopSearch(),
+                if (_tasks.isNotEmpty)
+                  Padding(
+                    padding: EdgeInsets.only(top: S.s4),
+                    child: _statusStrip(),
+                  ),
+              ],
+            ),
           ),
-          empty: empty,
-          children: rows,
-        );
+        Expanded(
+          child: rows.isEmpty
+              ? Padding(padding: EdgeInsets.all(S.s16), child: empty)
+              : ListView(
+                  padding: EdgeInsets.fromLTRB(S.s8, 0, S.s8, S.s16),
+                  children: rows,
+                ),
+        ),
+      ],
+    );
     // Tasks open in their own tab, so a detail pane would stay empty: give
     // the list the room instead.
     if (widget.onOpenTask != null) {
@@ -586,7 +608,14 @@ class TasksPanelState extends State<TasksPanel> {
       onKeyEvent: _onKey,
       child: ColoredBox(
         color: kMobile ? AppColors.pageBg : Colors.transparent,
-        child: MasterDetail(masterWidth: 380, master: master, detail: detail),
+        child: LayoutBuilder(builder: (context, box) {
+          final width = (box.maxWidth * 0.38).clamp(300.0, 380.0).toDouble();
+          return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            SizedBox(width: width, child: master),
+            Container(width: 1, color: AppColors.paneLine),
+            Expanded(child: detail),
+          ]);
+        }),
       ),
     );
   }
@@ -634,6 +663,7 @@ class TasksPanelState extends State<TasksPanel> {
           client: widget.client,
           taskId: _selectedTaskId!,
           embedded: true,
+          pane: true,
           onClose: () {
             setState(() => _selectedTaskId = null);
             _feed.refresh();
@@ -678,49 +708,14 @@ class TasksPanelState extends State<TasksPanel> {
                     child: _phoneSearch(),
                   )
                 : Padding(
-                    padding: EdgeInsets.fromLTRB(S.of(10), S.s4, S.of(10), S.s6),
-                    child: Container(
-                      height: 32,
-                      padding: EdgeInsets.symmetric(horizontal: S.s8),
-                      decoration: BoxDecoration(
-                        color: AppColors.tint1,
-                        borderRadius: BorderRadius.circular(R.md),
-                        border: Border.all(color: AppColors.line),
-                      ),
-                      child: Row(children: [
-                        AppIcon('search', size: 14, color: AppColors.fg4),
-                        SizedBox(width: S.s8),
-                        Expanded(
-                          child: TextField(
-                            controller: _search,
-                            autofocus: true,
-                            onChanged: (v) => setState(() => _query = v),
-                            style: sans(13, color: AppColors.fg1),
-                            decoration: InputDecoration(
-                              isCollapsed: true,
-                              border: InputBorder.none,
-                              hintText: 'Search tasks',
-                              hintStyle: sans(13, color: AppColors.fg4),
-                            ),
-                          ),
-                        ),
-                        if (_query.isNotEmpty)
-                          IconBtn('x',
-                              size: 20,
-                              iconSize: 10,
-                              tooltip: 'Clear',
-                              onTap: () {
-                                _search.clear();
-                                setState(() => _query = '');
-                              }),
-                      ]),
-                    ),
+                    padding: EdgeInsets.fromLTRB(S.s8, S.s4, S.s8, S.s6),
+                    child: _desktopSearch(),
                   ),
           if (_tasks.isNotEmpty && !kMobile)
             Padding(
               padding: kMobile
                   ? EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, 0)
-                  : EdgeInsets.fromLTRB(S.of(10), S.s2, S.of(10), S.s4),
+                  : EdgeInsets.fromLTRB(S.s8, S.s2, S.s8, S.s4),
               child: _statusStrip(),
             ),
           Expanded(
@@ -858,7 +853,7 @@ class TasksPanelState extends State<TasksPanel> {
       onComplete: _complete,
       padding: kMobile
           ? EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s16)
-          : EdgeInsets.fromLTRB(S.of(10), S.s2, S.of(10), S.s16),
+          : EdgeInsets.fromLTRB(S.s8, S.s2, S.s8, S.s16),
     );
   }
 }
@@ -891,18 +886,24 @@ class _FilterChip extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: kMobile ? S.s12 : S.s8),
         decoration: BoxDecoration(
           color: on
-              ? (kMobile ? AppColors.surface3 : AppColors.fg1.withValues(alpha: 0.09))
+              ? (kMobile ? AppColors.surface3 : PaneRow.plate)
               : (kMobile ? AppColors.surface2 : Colors.transparent),
-          borderRadius: BorderRadius.circular(h / 2),
+          borderRadius: BorderRadius.circular(kMobile ? h / 2 : PaneRow.radius),
           border: Border.all(
-              color: on ? AppColors.fg1.withValues(alpha: 0.14) : taskHairline),
+              color: on
+                  ? (kMobile
+                      ? AppColors.fg1.withValues(alpha: 0.14)
+                      : AppColors.lineStrong)
+                  : (kMobile ? taskHairline : AppColors.paneLine)),
         ),
         alignment: Alignment.center,
         child: Text.rich(TextSpan(children: [
           TextSpan(
               text: '$label ',
               style: sans(kMobile ? 13 : 12,
-                  color: on ? AppColors.fg1 : AppColors.fg2)),
+                  color: kMobile
+                      ? (on ? AppColors.fg1 : AppColors.fg2)
+                      : (on ? PaneRow.labelOn : PaneRow.labelOff))),
           if (count >= 0)
             TextSpan(
                 text: '$count',

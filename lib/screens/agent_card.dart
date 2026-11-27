@@ -755,7 +755,7 @@ class _AgentRowShellState extends State<AgentRowShell> {
     if (offline) {
       avatar = ColorFiltered(
         colorFilter: ColorFilter.mode(
-            Colors.black.withValues(alpha: 0.6), BlendMode.srcATop),
+            AppColors.panelBg.withValues(alpha: 0.6), BlendMode.srcATop),
         child: avatar,
       );
     }

@@ -1117,7 +1117,9 @@ class AppColors {
   /// above the pane fill, fainter than card outlines.
   static Color get paneLine => identical(currentTheme, _quietCapy)
       ? const Color(0xFF121212)
-      : currentTheme.border;
+      : _quietDeskLight
+          ? const Color(0xFFEFEFEA)
+          : currentTheme.border;
 
   // Spec: dark rgba(0,0,0,0.58); light rgba(20,20,18,0.36) so paper stays warm.
   static Color get scrim => ThemeManager.instance.resolved.translucency.scrim ==
@@ -1162,7 +1164,7 @@ class AppColors {
                   : Color.lerp(currentTheme.bg, currentTheme.surface1, 0.45)!)
           .withValues(alpha: chromeAlpha ?? 1);
 
-  /// Sidebar selected plate, one tonal step above [windowBg] (s2 dark,
+  /// Sidebar selected plate, one tonal step from [windowBg] (s2 dark,
   /// E6E6E1 light).
   static Color get sidebarPlate =>
       _quietDeskLight ? currentTheme.surface3 : currentTheme.surface2;
@@ -1172,9 +1174,11 @@ class AppColors {
       ? const Color(0xFFDCDCD5)
       : currentTheme.surface3;
 
-  /// Pointer hover plate, between s1 and s2 (1F1F1D dark, F4F4F0 light).
+  /// Pointer hover plate, between chrome and the selected plate.
   static Color get hoverPlate => _quietDesk
-      ? (_quietDeskLight ? const Color(0xFFF4F4F0) : const Color(0xFF121212))
+      ? (_quietDeskLight
+          ? Color.lerp(currentTheme.surface2, currentTheme.surface3, 0.25)!
+          : const Color(0xFF121212))
       : Color.lerp(currentTheme.surface1, currentTheme.surface2, 0.5)!;
 
   /// Desktop window chrome; see-through while a scene plays behind the window.
@@ -1262,25 +1266,35 @@ Color get readingBg => AppColors.canvas;
 /// Desktop pane rows and their tab pills (Capy metrics), shared by the
 /// window tabs, the pane rows and the right panel.
 abstract final class PaneRow {
+  static bool get _quietLight => !kMobile && currentTheme.name == 'quiet-light';
+
   /// Active pane-pill plate: Capy's #1A, a step above the window tab.
   static Color get plate => identical(currentTheme, _quietCapy)
       ? const Color(0xFF1A1A1A)
-      : currentTheme.surface2;
+      : _quietLight
+          ? currentTheme.surface3
+          : currentTheme.surface2;
 
   /// Active window-tab plate: Capy's #15.
   static Color get tabPlate => identical(currentTheme, _quietCapy)
       ? const Color(0xFF151515)
-      : currentTheme.surface2;
+      : _quietLight
+          ? Color.lerp(currentTheme.surface2, currentTheme.surface3, 0.7)!
+          : currentTheme.surface2;
 
   /// Active labels sit well below white, as Capy's do.
-  static Color get labelOn => Color.lerp(AppColors.fg1, AppColors.fg2, 0.6)!;
+  static Color get labelOn => _quietLight
+      ? Color.lerp(AppColors.fg1, AppColors.fg2, 0.72)!
+      : Color.lerp(AppColors.fg1, AppColors.fg2, 0.6)!;
 
   static const double height = 44;
   static const double pill = 28;
   static const double radius = 7;
   static const double label = 12.5;
   static const double icon = 14;
-  static Color get labelOff => Color.lerp(AppColors.fg2, AppColors.fg3, 0.45)!;
+  static Color get labelOff => _quietLight
+      ? AppColors.fg3
+      : Color.lerp(AppColors.fg2, AppColors.fg3, 0.45)!;
 }
 
 class R {
@@ -1346,8 +1360,12 @@ class S {
 }
 
 /// Overlays lift with a surface step plus this shadow; nothing else casts one.
-List<BoxShadow> get overlayShadow => const [
-      BoxShadow(color: Color(0x73000000), blurRadius: 24, offset: Offset(0, 8)),
+List<BoxShadow> get overlayShadow => [
+      BoxShadow(
+          color: Colors.black.withValues(
+              alpha: currentTheme.bg.computeLuminance() > 0.18 ? 0.18 : 0.45),
+          blurRadius: 24,
+          offset: const Offset(0, 8)),
     ];
 
 // ---------------------------------------------------------------------------

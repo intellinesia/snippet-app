@@ -6,7 +6,6 @@ import '../../models.dart';
 import '../../platform.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
-import '../shell_nav.dart' show kNavPadH;
 import 'task_common.dart';
 import 'task_rows.dart';
 import 'task_view.dart';
@@ -244,6 +243,26 @@ class TaskList extends StatelessWidget {
   // Three different empties: nothing filed, nothing matching the search, and
   // nothing in the chosen columns.
   Widget _empty() {
+    if (!kMobile) {
+      if (tasks.isEmpty) {
+        return const TaskEmptyNote(
+          title: 'No tasks yet',
+          body: 'File a task and Lead routes it to a session.',
+        );
+      }
+      if (query.trim().isNotEmpty) {
+        return TaskEmptyNote(
+          title: 'No matching tasks',
+          body: 'Nothing matches “${query.trim()}”.',
+        );
+      }
+      return TaskEmptyNote(
+        title: filter.length == 1
+            ? 'Nothing in ${filter.first.label}'
+            : 'Nothing in ${filter.length} columns',
+        body: 'Try another column, or clear the filter.',
+      );
+    }
     if (tasks.isEmpty) {
       return const EmptyState(
         icon: 'layers',
@@ -485,20 +504,36 @@ class _TaskLoadMoreState extends State<TaskLoadMore> {
   }
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.symmetric(
-            horizontal: kMobile ? M.gutter : kNavPadH, vertical: S.s4),
-        child: Align(
+  Widget build(BuildContext context) {
+    if (!kMobile) {
+      return TapDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _run,
+        child: Container(
+          height: 28,
           alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.only(
+              left: kTaskRowInset + 22 + 4 + kTaskIdWidth),
           child: _busy
-              ? const SizedBox(
-                  height: 32, child: Center(child: Spinner(size: 14)))
-              : TextButton(
-                  onPressed: _run,
-                  child: Text('Load more', style: TS.ui(AppColors.accent)),
-                ),
+              ? Spinner(size: 13, color: AppColors.fg3)
+              : Text('Load more', style: sans(12, color: AppColors.fg3)),
         ),
       );
+    }
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: M.gutter, vertical: S.s4),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: _busy
+            ? const SizedBox(
+                height: 32, child: Center(child: Spinner(size: 14)))
+            : TextButton(
+                onPressed: _run,
+                child: Text('Load more', style: TS.ui(AppColors.accent)),
+              ),
+      ),
+    );
+  }
 }
 
 enum TaskTab { active, upNext }

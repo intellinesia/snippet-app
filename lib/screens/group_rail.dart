@@ -50,8 +50,8 @@ class _GroupRailState extends State<GroupRail> {
     final human = widget.group.members.any((m) => m.kind == 'human');
     return Container(
       decoration: BoxDecoration(
-          border: Border(
-              left: BorderSide(color: AppColors.fg1.withValues(alpha: 0.06)))),
+          border:
+              Border(left: BorderSide(color: AppColors.paneLine))),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
         children: [
@@ -61,13 +61,28 @@ class _GroupRailState extends State<GroupRail> {
           for (final id in ids) _member(id, byId[id]),
           if (human)
             Container(
-              constraints: const BoxConstraints(minHeight: 40),
+              constraints: const BoxConstraints(minHeight: 44),
+              padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(children: [
                 SizedBox(
                     width: 24,
                     child: AppIcon('user', size: 16, color: AppColors.fg3)),
                 const SizedBox(width: 10),
-                Text('You', style: sans(13, color: AppColors.fg1)),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('You',
+                          style: sans(13,
+                              weight: W.label,
+                              color: Color.lerp(
+                                  AppColors.fg1, AppColors.fg2, 0.3))),
+                      Text('Owner · online',
+                          style: sans(12, color: AppColors.fg3)),
+                    ],
+                  ),
+                ),
               ]),
             ),
           const SizedBox(height: 20),
@@ -115,7 +130,10 @@ class _GroupRailState extends State<GroupRail> {
               Text(name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(13, weight: W.label, color: AppColors.fg1)),
+                  style: sans(13,
+                      weight: W.label,
+                      color: Color.lerp(
+                          AppColors.fg1, AppColors.fg2, 0.3))),
               Row(children: [
                 if (providerLogoAsset(meta.provider) != null) ...[
                   ProviderLogo(meta.provider, size: 12, color: AppColors.fg3),

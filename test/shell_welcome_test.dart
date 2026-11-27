@@ -124,6 +124,7 @@ void main() {
     Instance? got;
     await _pump(t, TargetPlatform.macOS, onReady: (i) => got = i);
     await t.enterText(find.byType(TextField), 'https://box.example?token=abc');
+    await t.pump();
     await t.tap(find.text('Connect').last);
     await t.pump();
     await t.pump();
@@ -136,6 +137,7 @@ void main() {
     await _pump(t, TargetPlatform.macOS,
         onReady: (i) => got = i, remote: (_) async => throw 'refused');
     await t.enterText(find.byType(TextField), 'nonsense');
+    await t.pump();
     await t.tap(find.text('Connect').last);
     await t.pump();
     await t.pump();

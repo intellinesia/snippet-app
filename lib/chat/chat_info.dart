@@ -21,6 +21,7 @@ import '../group_mute.dart';
 import '../screens/agent_profile_panel.dart' show showAgentProfileSettings;
 import '../desktop_layout.dart' show SettingsHeader;
 import '../screens/memory_screen.dart' show MemoryScreen;
+import '../screens/pane_add_menu.dart' show PanePill;
 import '../screens/agent_panel.dart'
     show
         PanelBar,
@@ -29,8 +30,7 @@ import '../screens/agent_panel.dart'
         PanelFootnote,
         PanelGroup,
         PanelRadio,
-        PanelRow,
-        pr;
+        PanelRow;
 import '../crew_widgets.dart' show showCrewAgentMenu;
 import '../shell_panel.dart' show ShellRequestScope;
 import '../screens/tasks/tasks_panel.dart' show TasksPanel, openTaskCountFor;
@@ -1310,7 +1310,7 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
   Widget _label(String t, {String? meta}) => Padding(
         padding: const EdgeInsets.fromLTRB(8, 14, 8, 6),
         child: Row(children: [
-          Expanded(child: Text(t, style: sans(12, color: AppColors.fg3))),
+          Expanded(child: Text(t, style: sans(11.5, color: AppColors.fg4))),
           if (meta != null) Text(meta, style: mono(11.5, color: AppColors.fg4)),
         ]),
       );
@@ -1673,16 +1673,38 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
     return _DesktopPanelShell(flat: widget.docked, child: nav);
   }
 
+  Widget _groupPanelBar(VoidCallback? onHide) => Container(
+        height: PaneRow.height,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppColors.paneLine))),
+        child: Row(children: [
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: PanePill(icon: 'list', label: 'Overview', active: true),
+            ),
+          ),
+          if (onHide != null)
+            IconBtn('sidebar',
+                size: 28,
+                iconSize: 14,
+                tooltip: 'Hide panel',
+                onTap: onHide),
+        ]),
+      );
+
   Widget _frame() {
     final title = _group.title.trim().isEmpty ? 'Group' : _group.title.trim();
     if (kMobile && !widget.docked) return _phoneGroupPage(title);
     final hide =
         widget.docked ? ShellRequestScope.maybeOf(context)?.toggleSide : _close;
-    return _AgentPageFrame(
+    final body = _AgentPageFrame(
       title: 'Group',
       onClose: hide,
       closeIcon: 'panel-right',
       closeTooltip: 'Hide panel',
+      bare: widget.docked,
       children: [
         GroupPanelHero(
           group: _group,
@@ -1692,6 +1714,23 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
         _desktopInfo(),
       ],
     );
+    if (!kMobile && widget.docked) {
+      final room = (_PanelMax.of(context) - PaneRow.height)
+          .clamp(120.0, 4000.0)
+          .toDouble();
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _groupPanelBar(hide),
+          ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: room),
+            child: body,
+          ),
+        ],
+      );
+    }
+    return body;
   }
 }
 
@@ -1706,16 +1745,12 @@ class _RenameButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(pr(8)),
+        borderRadius: BorderRadius.circular(R.of(7)),
         child: Container(
           height: 26,
-          padding: EdgeInsets.symmetric(horizontal: S.of(10)),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
           alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: AppColors.surface3,
-            borderRadius: BorderRadius.circular(pr(8)),
-          ),
-          child: Text('Rename', style: sans(12, color: AppColors.fg1)),
+          child: Text('Rename', style: sans(12, color: AppColors.fg3)),
         ),
       );
 }

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../api.dart';
-import '../../desktop_layout.dart';
 import '../../models.dart';
 import '../../phosphor_icons.dart';
 import '../../theme.dart';
@@ -309,7 +308,7 @@ class _TaskListViewState extends State<TaskListView> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         _top(),
         if (!_filter.isEmpty || _searching) _appliedBar(),
-        Container(height: 1, color: taskHairline),
+        Container(height: 1, color: AppColors.paneLine),
         Expanded(
           child: _feed.loading
               ? Center(child: Spinner(size: 20, color: AppColors.fg3))
@@ -328,7 +327,7 @@ class _TaskListViewState extends State<TaskListView> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Expanded(child: _list(groups)),
-                            Container(width: 1, color: taskHairline),
+                            Container(width: 1, color: AppColors.paneLine),
                             SizedBox(width: pane, child: _pane()),
                           ]);
                     }),
@@ -338,11 +337,12 @@ class _TaskListViewState extends State<TaskListView> {
   }
 
   Widget _top() => Container(
-        height: 48,
-        padding: EdgeInsets.symmetric(horizontal: S.s20),
+        height: PaneRow.height,
+        padding: const EdgeInsets.fromLTRB(20, 0, 12, 0),
         child: Row(children: [
-          Text('Tasks', style: sans(15, weight: W.label, color: AppColors.fg1)),
-          const SizedBox(width: 10),
+          Text('Tasks',
+              style: sans(13, weight: W.label, color: taskTitleInk)),
+          const SizedBox(width: 8),
           Text('${openTaskCount(_feed.tasks)} open',
               style: sans(12, color: AppColors.fg4)),
           const Spacer(),
@@ -435,9 +435,11 @@ class _TaskListViewState extends State<TaskListView> {
 
   Widget _list(List<(TaskStatus, List<TaskItem>)> groups) {
     if (groups.isEmpty) {
-      return Center(
-        child: Text(_feed.tasks.isEmpty ? 'No tasks yet' : 'No tasks match',
-            style: sans(13, color: AppColors.fg3)),
+      return TaskEmptyNote(
+        title: _feed.tasks.isEmpty ? 'No tasks yet' : 'No tasks match',
+        body: _feed.tasks.isEmpty
+            ? 'File a task and Lead routes it to a session.'
+            : 'Try another search or clear the filter.',
       );
     }
     final out = <Widget>[];
@@ -479,9 +481,9 @@ class _TaskListViewState extends State<TaskListView> {
   Widget _bulkBar() => Container(
         key: _bulkKey,
         height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         decoration:
-            BoxDecoration(border: Border(top: BorderSide(color: taskHairline))),
+            BoxDecoration(border: Border(top: BorderSide(color: AppColors.paneLine))),
         child: Row(children: [
           Text('${_checked.length} selected',
               style: sans(12.5, weight: W.label, color: AppColors.fg1)),
@@ -504,9 +506,9 @@ class _TaskListViewState extends State<TaskListView> {
   Widget _hints() => Container(
         height: 32,
         alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         decoration:
-            BoxDecoration(border: Border(top: BorderSide(color: taskHairline))),
+            BoxDecoration(border: Border(top: BorderSide(color: AppColors.paneLine))),
         child: Text(
             'J / K move   Enter open   X select   S status   A assign   C new   / search',
             style: sans(11.5, color: AppColors.fg4)),
@@ -514,14 +516,16 @@ class _TaskListViewState extends State<TaskListView> {
 
   Widget _pane() {
     if (_creating) {
-      return Padding(
-        padding: EdgeInsets.fromLTRB(S.s20, S.s20, S.s20, 0),
-        child:
-            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text('New task',
-              style: sans(16, weight: W.label, color: AppColors.fg1)),
-          SizedBox(height: S.s12),
-          Expanded(
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(S.s20, S.s20, S.s20, 0),
+          child: Text('New task',
+              style: sans(13.5, weight: W.label, color: taskTitleInk)),
+        ),
+        SizedBox(height: S.s12),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             child: CreateTaskForm(
               client: widget.client,
               onCreated: () {
@@ -530,11 +534,11 @@ class _TaskListViewState extends State<TaskListView> {
               },
             ),
           ),
-        ]),
-      );
+        ),
+      ]);
     }
     final id = _selected;
-    if (id == null) return const DetailEmpty('Select a task');
+    if (id == null) return const TaskEmptyNote(title: 'Select a task');
     return TaskDetailScreen(
       key: ValueKey('pane-task-$id'),
       client: widget.client,
@@ -560,13 +564,14 @@ class _BarBtn extends StatelessWidget {
         height: 28,
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
-          color: AppColors.surface2,
-          borderRadius: BorderRadius.circular(R.sm),
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(PaneRow.radius),
+          border: Border.all(color: AppColors.paneLine),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 13, color: fg),
+          Icon(icon, size: 12.5, color: fg),
           const SizedBox(width: 6),
-          Text(label, style: sans(12, weight: W.label, color: fg)),
+          Text(label, style: sans(12.5, weight: W.label, color: fg)),
         ]),
       ),
     );

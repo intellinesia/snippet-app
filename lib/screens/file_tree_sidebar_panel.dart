@@ -473,6 +473,51 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
     if (choice == 'folder') await _newFolder();
   }
 
+  Widget _desktopHeader() => Container(
+        height: PaneRow.height,
+        padding: EdgeInsets.fromLTRB(S.of(18), 0, S.s8, 0),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: AppColors.paneLine)),
+        ),
+        child: Row(children: [
+          if (widget.header != null)
+            Expanded(child: widget.header!)
+          else
+            Expanded(
+              child: Text('File Tree',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(PaneRow.label, color: AppColors.fg3)),
+            ),
+          Builder(
+            builder: (ctx) => IconBtn('search',
+                size: 26,
+                iconSize: 13,
+                tooltip: 'Search files',
+                onTap: () => _openFileSearch(ctx)),
+          ),
+          IconBtn('upload',
+              size: 26,
+              iconSize: 13,
+              tooltip: 'Upload files',
+              active: _uploading,
+              onTap: _uploading ? null : _uploadFiles),
+          Builder(
+            builder: (ctx) => IconBtn('plus',
+                size: 26,
+                iconSize: 13,
+                tooltip: 'New file or folder',
+                onTap: _listing == null ? null : () => _openAddMenu(ctx)),
+          ),
+          if (widget.onHide != null)
+            IconBtn('chevron-right',
+                size: 26,
+                iconSize: 13,
+                tooltip: 'Hide files',
+                onTap: widget.onHide),
+        ]),
+      );
+
   @override
   Widget build(BuildContext context) {
     Theme.of(context);
@@ -492,7 +537,7 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
           padding: EdgeInsets.only(top: kMobile ? S.s8 : 0, bottom: S.s16),
           children: [
             if (widget.showHeader)
-              ShellSectionHeader(
+              kMobile ? ShellSectionHeader(
                 label: 'File Tree',
                 leading: widget.header,
                 actions: [
@@ -537,7 +582,7 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
                     onTap: widget.onHide,
                   ),
               ],
-            ),
+            ) : _desktopHeader(),
             if (kMobile) _workspaceRow(wsName) else SizedBox(height: S.s2),
             if (_loading && _listing == null)
               Padding(
@@ -549,10 +594,29 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
             else if (_error != null)
               _rootError()
             else if (entries.isEmpty)
-              Padding(
-                padding: EdgeInsets.fromLTRB(S.s20, S.of(18), S.s20, S.of(18)),
-                child: Text('Empty directory', style: TS.meta()),
-              )
+              kMobile
+                  ? Padding(
+                      padding: EdgeInsets.fromLTRB(
+                          S.s20, S.of(18), S.s20, S.of(18)),
+                      child: Text('Empty directory', style: TS.meta()),
+                    )
+                  : Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 32),
+                        child: Column(mainAxisSize: MainAxisSize.min, children: [
+                          Text('Empty directory',
+                              style: sans(12.5,
+                                  weight: W.label, color: AppColors.fg3)),
+                          const SizedBox(height: 4),
+                          Text('This folder has no files yet',
+                              textAlign: TextAlign.center,
+                              style: sans(12,
+                                  color: Color.lerp(AppColors.fg4,
+                                      AppColors.panelBg, 0.4))),
+                        ]),
+                      ),
+                    )
             else
               ..._buildRows(entries, depth: 0),
           ],
@@ -881,7 +945,7 @@ Widget _fileSearchFrame(Widget child) => Material(
           borderRadius: BorderRadius.circular(R.lg),
           side: BorderSide(color: AppColors.line)),
       elevation: 4,
-      shadowColor: Colors.black.withValues(alpha: 0.4),
+      shadowColor: overlayShadow.first.color,
       clipBehavior: Clip.antiAlias,
       child: child,
     );

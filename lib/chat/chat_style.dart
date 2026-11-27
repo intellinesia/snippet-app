@@ -789,7 +789,7 @@ class AgentDisc extends StatelessWidget {
         width: size,
         height: size,
         decoration: avatarDecoration(size,
-            color: ChatColors.cardButton,
+            color: kMobile ? ChatColors.cardButton : AppColors.surface3,
             side: ring
                 ? BorderSide(color: readingBg, width: 2)
                 : BorderSide.none),

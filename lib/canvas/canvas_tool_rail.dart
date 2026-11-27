@@ -31,8 +31,8 @@ class CanvasToolRail extends StatelessWidget {
         padding: EdgeInsets.all(S.s4),
         decoration: BoxDecoration(
           color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(R.md),
-          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(R.of(10)),
+          border: Border.all(color: AppColors.paneLine),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -49,10 +49,10 @@ class _RailButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = tool.onTap != null;
     final fg = !enabled
-        ? AppColors.fg3
+        ? AppColors.fg4
         : tool.active
-            ? AppColors.fg1
-            : AppColors.fg2;
+            ? PaneRow.labelOn
+            : AppColors.fg3;
     return Semantics(
       button: true,
       enabled: enabled,
@@ -64,17 +64,17 @@ class _RailButton extends StatelessWidget {
         message:
             enabled ? tool.label : '${tool.label}. ${tool.disabledHint ?? ''}',
         child: Material(
-          color: tool.active ? AppColors.surface3 : Colors.transparent,
-          borderRadius: BorderRadius.circular(R.sm),
+          color: tool.active ? PaneRow.plate : Colors.transparent,
+          borderRadius: BorderRadius.circular(PaneRow.radius),
           child: InkWell(
             onTap: tool.onTap,
-            borderRadius: BorderRadius.circular(R.sm),
+            borderRadius: BorderRadius.circular(PaneRow.radius),
             child: SizedBox(
-              width: 44,
-              height: 44,
+              width: 28,
+              height: 28,
               child: Center(
                 child: AppIcon(tool.icon,
-                    size: 18, color: fg, filled: tool.active),
+                    size: 13, color: fg, filled: tool.active),
               ),
             ),
           ),

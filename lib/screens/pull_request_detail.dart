@@ -6,9 +6,11 @@ import '../api.dart';
 import '../github_models.dart';
 import '../highlight.dart';
 import '../platform.dart';
+import '../settings_form.dart' show Grouped;
 import '../theme.dart';
 import '../widgets.dart';
 import 'mobile_chrome.dart';
+import 'pane_add_menu.dart';
 import '../tap_detector.dart';
 
 part 'pull_request_desktop.dart';
@@ -74,12 +76,14 @@ Widget prSize(int add, int del, {double size = 12}) => Text.rich(TextSpan(childr
 
 /// A small tinted status label, as on the pull request list and detail.
 Widget prPill(String text, Color tone) => Container(
-      padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s4),
+      padding: EdgeInsets.symmetric(
+          horizontal: kMobile ? S.s8 : S.s6, vertical: kMobile ? S.s4 : S.s2),
       decoration: BoxDecoration(
-        color: tone.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(R.sm),
+        color: tone.withValues(alpha: kMobile ? 0.14 : 0.10),
+        borderRadius: BorderRadius.circular(kMobile ? R.sm : R.of(5)),
       ),
-      child: Text(text, maxLines: 1, style: sans(12, color: tone)),
+      child: Text(text,
+          maxLines: 1, style: sans(kMobile ? 12 : 11.5, color: tone)),
     );
 
 Widget prAvatar(String login, {double size = 22}) {
@@ -419,11 +423,18 @@ class _PrMarkdownComposerState extends State<PrMarkdownComposer> {
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.of(5)),
           decoration: BoxDecoration(
-            color: selected ? AppColors.tint2 : Colors.transparent,
-            borderRadius: BorderRadius.circular(R.sm),
+            color: selected
+                ? (kMobile ? AppColors.tint2 : PaneRow.plate)
+                : Colors.transparent,
+            borderRadius:
+                BorderRadius.circular(kMobile ? R.sm : PaneRow.radius),
           ),
           child: Text(label,
-              style: sans(13, weight: W.label, color: selected ? AppColors.fg1 : AppColors.fg3)),
+              style: sans(kMobile ? 13 : 12.5,
+                  weight: W.label,
+                  color: selected
+                      ? (kMobile ? AppColors.fg1 : PaneRow.labelOn)
+                      : (kMobile ? AppColors.fg3 : PaneRow.labelOff))),
         ),
       );
 
@@ -438,8 +449,8 @@ class _PrMarkdownComposerState extends State<PrMarkdownComposer> {
             height: 28,
             child: Center(
               child: icon != null
-                  ? AppIcon(icon, size: 14, color: _preview ? AppColors.fg4 : AppColors.fg2)
-                  : Text(glyph!, style: (style ?? sans(14)).copyWith(color: _preview ? AppColors.fg4 : AppColors.fg2)),
+                  ? AppIcon(icon, size: 14, color: _preview ? AppColors.fg4 : (kMobile ? AppColors.fg2 : AppColors.fg3))
+                  : Text(glyph!, style: (style ?? sans(14)).copyWith(color: _preview ? AppColors.fg4 : (kMobile ? AppColors.fg2 : AppColors.fg3))),
             ),
           ),
         ),
@@ -452,9 +463,13 @@ class _PrMarkdownComposerState extends State<PrMarkdownComposer> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 140),
       decoration: BoxDecoration(
-        color: AppColors.tint2,
-        borderRadius: BorderRadius.circular(R.lg),
-        border: Border.all(color: focused ? AppColors.accent : Colors.transparent, width: 1.4),
+        color: kMobile ? AppColors.tint2 : Grouped.card,
+        borderRadius: BorderRadius.circular(kMobile ? R.lg : R.of(9)),
+        border: Border.all(
+            color: focused
+                ? (kMobile ? AppColors.accent : AppColors.accentLine)
+                : (kMobile ? Colors.transparent : Grouped.cardBorder),
+            width: kMobile ? 1.4 : 1),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Padding(
@@ -463,24 +478,25 @@ class _PrMarkdownComposerState extends State<PrMarkdownComposer> {
             _tab('Write', !_preview, () => setState(() => _preview = false)),
             SizedBox(width: S.s2),
             _tab('Preview', _preview, () => setState(() => _preview = true)),
-            const Spacer(),
-            Flexible(
-              flex: 0,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  ...widget.extraTools,
-                  _tool(glyph: 'B', style: sans(14, weight: W.strong), tip: 'Bold', onTap: () => _wrap('**')),
-                  _tool(glyph: 'I', style: sans(14).copyWith(fontStyle: FontStyle.italic), tip: 'Italic', onTap: () => _wrap('_')),
-                  _tool(icon: 'code', tip: 'Code', onTap: _code),
-                  _tool(glyph: '\u2022', style: sans(18, weight: W.strong), tip: 'List', onTap: () => _prefixLines('- ')),
-                  _tool(glyph: '>', style: mono(15, weight: W.strong), tip: 'Quote', onTap: () => _prefixLines('> ')),
-                ]),
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    ...widget.extraTools,
+                    _tool(glyph: 'B', style: sans(14, weight: W.strong), tip: 'Bold', onTap: () => _wrap('**')),
+                    _tool(glyph: 'I', style: sans(14).copyWith(fontStyle: FontStyle.italic), tip: 'Italic', onTap: () => _wrap('_')),
+                    _tool(icon: 'code', tip: 'Code', onTap: _code),
+                    _tool(glyph: '\u2022', style: sans(18, weight: W.strong), tip: 'List', onTap: () => _prefixLines('- ')),
+                    _tool(glyph: '>', style: mono(15, weight: W.strong), tip: 'Quote', onTap: () => _prefixLines('> ')),
+                  ]),
+                ),
               ),
             ),
           ]),
         ),
-        Container(height: 1, color: AppColors.border),
+        Container(height: 1, color: kMobile ? AppColors.border : AppColors.paneLine),
         if (_preview)
           Container(
             constraints: BoxConstraints(minHeight: widget.minLines * 22.0 + 20),
@@ -508,7 +524,7 @@ class _PrMarkdownComposerState extends State<PrMarkdownComposer> {
             ),
           ),
         if (widget.footer != null) ...[
-          Container(height: 1, color: AppColors.border),
+          Container(height: 1, color: kMobile ? AppColors.border : AppColors.paneLine),
           Padding(padding: EdgeInsets.fromLTRB(S.s8, S.s6, S.s8, S.s6), child: widget.footer),
         ] else
           Padding(
@@ -2864,10 +2880,10 @@ class _PrThreadBoxState extends State<PrThreadBox>
           ),
         ),
         if (_open) ...[
-          Container(height: 1, color: AppColors.border),
+          Container(height: 1, color: kMobile ? AppColors.border : AppColors.paneLine),
           for (var i = 0; i < t.comments.length; i++) _comment(t.comments[i], first: i == 0),
           SizedBox(height: S.of(10)),
-          Container(height: 1, color: AppColors.border),
+          Container(height: 1, color: kMobile ? AppColors.border : AppColors.paneLine),
           if (_replying)
             Padding(
               padding: EdgeInsets.all(S.of(10)),

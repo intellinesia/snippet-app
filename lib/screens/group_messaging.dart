@@ -2406,7 +2406,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                 child: AgentCluster(ids: _group.agentIds, size: 16)),
             const SizedBox(width: 4),
             Text('Everyone',
-                style: sans(11, weight: FontWeight.w500, color: AppColors.fg2)),
+                style: sans(12, weight: W.label, color: AppColors.fg2)),
           ]),
         ),
         sending: _sending,
@@ -2421,9 +2421,9 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     return Container(
       margin: EdgeInsets.only(bottom: S.s6),
       decoration: BoxDecoration(
-        color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(kMobile ? 10 : R.lg),
-        border: kMobile ? null : Border.all(color: AppColors.line),
+        color: kMobile ? AppColors.surface2 : AppColors.surface1,
+        borderRadius: BorderRadius.circular(kMobile ? 10 : R.of(8)),
+        border: kMobile ? null : Border.all(color: AppColors.paneLine),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -2432,9 +2432,9 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
             InkWell(
               onTap: () => _applyMention(c.id),
               child: Container(
-                height: kMobile ? 48 : null,
+                height: kMobile ? 48 : 32,
                 padding:
-                    EdgeInsets.symmetric(horizontal: S.s12, vertical: kMobile ? 0 : S.s8),
+                    EdgeInsets.symmetric(horizontal: S.s12, vertical: kMobile ? 0 : 0),
                 child: Row(children: [
                   if (kMobile)
                     Container(width: 2, height: 36, color: Colors.transparent)
@@ -2455,10 +2455,12 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                         style: kMobile
                             ? sans(14,
                                 weight: FontWeight.w500, color: AppColors.fg1)
-                            : TS.body(AppColors.fg1)),
+                            : sans(12.5,
+                                color: Color.lerp(
+                                    AppColors.fg1, AppColors.fg2, 0.3))),
                   ),
                   if (c.name != null && c.name != c.label)
-                    Text('@${c.id}', style: TS.meta(AppColors.fg3)),
+                    Text('@${c.id}', style: sans(12, color: AppColors.fg4)),
                 ]),
               ),
             ),

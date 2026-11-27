@@ -271,14 +271,17 @@ class _GitScreenState extends State<GitScreen> {
     final content = Column(children: [
       if (widget.embedded)
         Container(
-          height: 38,
+          height: PaneRow.height,
           padding: EdgeInsets.fromLTRB(S.of(18), 0, S.s8, 0),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppColors.paneLine)),
+          ),
           child: Row(children: [
             Expanded(
               child: Text('Source control',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(13, color: AppColors.fg3)),
+                  style: sans(PaneRow.label, color: AppColors.fg3)),
             ),
             if (widget.onClose != null) ...[
               SizedBox(width: S.s2),
@@ -1110,6 +1113,62 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
     return (lines: result, additions: adds, deletions: dels);
   }
 
+  Widget _diffHeader(String name, String? parentDir,
+      {required bool showBack}) {
+    return Container(
+      height: PaneRow.height,
+      padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.paneLine)),
+      ),
+      child: Row(children: [
+        if (showBack) ...[
+          IconBtn('chevron-left',
+              size: 26,
+              iconSize: 14,
+              tooltip: 'Back',
+              onTap: () => Navigator.pop(context)),
+          SizedBox(width: S.s4),
+        ] else
+          SizedBox(width: S.s4),
+        Expanded(
+          child: Text.rich(
+            TextSpan(children: [
+              TextSpan(text: name),
+              if ((parentDir ?? '').isNotEmpty)
+                TextSpan(
+                    text: '  $parentDir',
+                    style: sans(12, color: AppColors.fg4)),
+            ]),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: sans(PaneRow.label,
+                weight: W.label,
+                color: Color.lerp(AppColors.fg1, AppColors.fg2, 0.3)),
+          ),
+        ),
+        if (_additions > 0) ...[
+          Text('+$_additions',
+              style: mono(12, color: AppColors.diffAddFg)),
+          SizedBox(width: S.s4),
+        ],
+        if (_deletions > 0) ...[
+          Text('-$_deletions',
+              style: mono(12, color: AppColors.diffDelFg)),
+          SizedBox(width: S.s4),
+        ],
+        if (_patch != null && _patch!.isNotEmpty)
+          IconBtn('clipboard',
+              size: 26,
+              iconSize: 13,
+              tooltip: 'Copy diff', onTap: () {
+            Clipboard.setData(ClipboardData(text: _patch!));
+            toast(context, 'Diff copied');
+          }),
+      ]),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     Theme.of(context); // Rebuild on theme change
@@ -1142,7 +1201,9 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
     );
 
     final body = Column(children: [
-      if (!widget.embedded) bar,
+      if (!widget.embedded && kMobile) bar,
+      if (!kMobile)
+        _diffHeader(name, parentDir, showBack: !widget.embedded),
       if (_loading)
         Expanded(
           child: Center(child: DelayedSpinner(size: 22)),
@@ -1219,7 +1280,10 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
     )..layout();
     final width = painter.width;
     painter.dispose();
-    return width + (kMobile ? _gutterWidth + 40 : 116);
+    return width +
+        (kMobile
+            ? _gutterWidth + 40
+            : (_gutterWidth + 14) * 2 + 32);
   }
 
   double _measureGutter() {
@@ -1228,7 +1292,8 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
       final v = l.newLine ?? l.oldLine ?? 0;
       if (v > max) max = v;
     }
-    return 7.0 * max.toString().length;
+    final width = 7.0 * max.toString().length;
+    return width < 18 ? 18 : width;
   }
 
   Widget _renderDiffLine(_DiffLineData line) {
@@ -1239,12 +1304,12 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
         margin: const EdgeInsets.symmetric(vertical: 6),
         padding: const EdgeInsets.only(left: 12),
         alignment: Alignment.centerLeft,
-        color: AppColors.accentBg,
+        color: AppColors.tint1,
         child: Text(line.text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: codeMono(11.5,
-                weight: FontWeight.w400, color: AppColors.accent)),
+                weight: FontWeight.w400, color: AppColors.fg4)),
       );
     }
     if (line.type == _DiffLineType.hunk) {
@@ -1272,18 +1337,22 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
 
     Color? bg;
     Color fg = AppColors.fg2;
-    Color gutterFg = AppColors.fg4;
+    Color gutterFg = kMobile ? AppColors.fg4 : AppColors.diffGutter;
     String sign = ' ';
 
     if (isAdd) {
       bg = AppColors.diffAddBg;
       fg = AppColors.diffAddFg;
-      gutterFg = AppColors.diffAddFg.withValues(alpha: 0.6);
+      gutterFg = kMobile
+          ? AppColors.diffAddFg.withValues(alpha: 0.6)
+          : AppColors.diffGutter;
       sign = '+';
     } else if (isDel) {
       bg = AppColors.diffDelBg;
       fg = AppColors.diffDelFg;
-      gutterFg = AppColors.diffDelFg.withValues(alpha: 0.6);
+      gutterFg = kMobile
+          ? AppColors.diffDelFg.withValues(alpha: 0.6)
+          : AppColors.diffGutter;
       sign = '-';
     }
 
@@ -1328,7 +1397,7 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 44,
+            width: _gutterWidth + 14,
             child: Padding(
               padding: const EdgeInsets.only(right: 14),
               child: Text(oldStr,
@@ -1337,7 +1406,7 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
             ),
           ),
           SizedBox(
-            width: 40,
+            width: _gutterWidth + 14,
             child: Padding(
               padding: const EdgeInsets.only(right: 14),
               child: Text(newStr,

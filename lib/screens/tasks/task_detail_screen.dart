@@ -10,6 +10,7 @@ import '../../coordination/coordination_thread_state.dart';
 import '../../glass.dart';
 import '../../models.dart';
 import '../../platform.dart';
+import '../../settings_form.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
 import '../../mochi.dart';
@@ -18,7 +19,8 @@ import '../../shell_panel.dart' show openSessionInTab;
 import '../mobile_chrome.dart';
 import '../agent_records.dart' show BoardLog;
 import '../session.dart' show SessionScreen;
-import 'task_common.dart' show statusColor, TaskNoteLines, taskAge;
+import 'task_common.dart'
+    show statusColor, TaskEmptyNote, TaskNoteLines, taskAge, taskTitleInk;
 import 'task_view.dart' show showWorktreeFacts;
 import 'task_rows.dart' show taskHairline, TaskStatusIcon;
 import '../../tap_detector.dart';
@@ -790,18 +792,30 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 7),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.13),
+          color: kMobile ? color.withValues(alpha: 0.13) : Grouped.card,
+          border:
+              kMobile ? null : Border.all(color: AppColors.paneLine),
           borderRadius: BorderRadius.circular(R.of(5)),
         ),
-        child: Text(label, style: sans(11.5, color: color, height: 1.2)),
+        child: Text(label,
+            style: sans(11.5,
+                color: kMobile ? color : AppColors.fg2, height: 1.2)),
       );
 
   Widget _paneHeader(TaskItem? t) {
     final id = t == null ? '' : (t.id.length > 8 ? t.id.substring(0, 8) : t.id);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(28, 16, 28, 0),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
+          if (widget.embedded && widget.onClose != null) ...[
+            IconBtn('chevron-left',
+                size: 26,
+                iconSize: 13,
+                tooltip: 'Back',
+                onTap: widget.onClose),
+            const SizedBox(width: 4),
+          ],
           Text('Tasks', style: sans(12, color: AppColors.fg4)),
           Text('  /  ', style: sans(12, color: AppColors.fg4)),
           Text(id, style: mono(12, color: AppColors.fg4)),
@@ -823,7 +837,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             style: sans(kMobile ? 20 : 16,
                 weight: _deskStrong,
                 spacing: -0.2,
-                color: AppColors.fg1)),
+                color: taskTitleInk)),
       ]),
     );
   }
@@ -841,8 +855,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: code
-          ? mono(12, color: AppColors.fg1)
-          : sans(12.5, color: AppColors.fg1));
+          ? mono(12, color: taskTitleInk)
+          : sans(12.5, color: taskTitleInk));
 
   Widget _factNames(List<TaskAgent> list) => list.isEmpty
       ? _factText('—')
@@ -851,7 +865,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             if (i > 0) const SizedBox(width: 8),
             AgentMochi(list[i].agentId, size: 14),
             const SizedBox(width: 6),
-            Text(list[i].agentId, style: sans(12.5, color: AppColors.fg1)),
+            Text(list[i].agentId, style: sans(12.5, color: taskTitleInk)),
           ],
         ]);
 
@@ -935,7 +949,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         padding: const EdgeInsets.only(bottom: 6),
         child: Row(children: [
           Text(label,
-              style: sans(13, weight: _deskStrong, color: AppColors.fg1)),
+              style: sans(13, weight: _deskStrong, color: taskTitleInk)),
           if (count != null) ...[
             const SizedBox(width: 8),
             Text(count, style: mono(11, color: AppColors.fg4)),
@@ -1059,7 +1073,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     Text(_memberLabel(a),
                         style: sans(11.5,
                             color: _holdsTurn(a)
-                                ? AppColors.accent
+                                ? AppColors.fg2
                                 : AppColors.fg4)),
                   ]),
                 ),
@@ -1097,16 +1111,17 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   Widget _paneVerdict() => Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(R.of(12)),
-          border: Border.all(color: AppColors.lineStrong),
+          color: kMobile ? AppColors.surface1 : Grouped.card,
+          borderRadius: BorderRadius.circular(kMobile ? R.of(12) : R.of(9)),
+          border: Border.all(
+              color: kMobile ? AppColors.lineStrong : Grouped.cardBorder),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             AppIcon('eye', size: 14, color: AppColors.accent),
             const SizedBox(width: 8),
             Text('Your verdict',
-                style: sans(13, weight: _deskStrong, color: AppColors.fg1)),
+                style: sans(13, weight: _deskStrong, color: taskTitleInk)),
           ]),
           const SizedBox(height: 6),
           Text(
@@ -1138,7 +1153,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             child: Row(children: [
               Text('The room',
                   style: sans(12.5,
-                      weight: _deskStrong, color: AppColors.fg1)),
+                      weight: _deskStrong, color: taskTitleInk)),
               const SizedBox(width: 8),
               Text('${room?.events.length ?? 0}',
                   style: mono(11, color: AppColors.fg4)),
@@ -1226,7 +1241,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   Widget _widePaneBody(TaskItem t, BoardEntry? report, Widget? stands) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 28),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(children: [
         _paneFacts(t),
         Expanded(
@@ -1775,9 +1790,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           else
             Container(
               decoration: BoxDecoration(
-                color: AppColors.tint1,
+                color: Grouped.card,
                 borderRadius: BorderRadius.circular(R.card),
-                border: Border.all(color: taskHairline),
+                border: Border.all(color: Grouped.cardBorder),
               ),
               child: Column(children: [
                 for (var i = 0; i < roster.length; i++) ...[
@@ -1903,8 +1918,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   BoxDecoration get _sheetCardDecoration => !kMobile && widget.pane
       ? BoxDecoration(
-          color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(R.of(8)),
+          color: Grouped.card,
+          borderRadius: BorderRadius.circular(R.of(9)),
+          border: Border.all(color: Grouped.cardBorder),
         )
       : BoxDecoration(
           color: AppColors.tint1,
@@ -2354,11 +2370,16 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         SliverToBoxAdapter(
           child: Padding(
             padding: EdgeInsets.only(top: S.s16),
-            child: EmptyState(
-              icon: 'message-text',
-              title: 'No messages yet',
-              body: 'Agents on this task talk here. You can add a note too.',
-            ),
+            child: kMobile
+                ? const EmptyState(
+                    icon: 'message-text',
+                    title: 'No messages yet',
+                    body: 'Agents on this task talk here. You can add a note too.',
+                  )
+                : const TaskEmptyNote(
+                    title: 'No messages yet',
+                    body: 'Agents on this task talk here. You can add a note too.',
+                  ),
           ),
         ),
       ];
@@ -2546,9 +2567,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               constraints: const BoxConstraints(minHeight: 36),
               padding: EdgeInsets.fromLTRB(S.s12, S.s4, S.s6, S.s4),
               decoration: BoxDecoration(
-                color: AppColors.tint1,
+                color: Grouped.card,
                 borderRadius: BorderRadius.circular(R.card),
-                border: Border.all(color: taskHairline),
+                border: Border.all(color: Grouped.cardBorder),
               ),
               child: Row(children: [
                 Expanded(

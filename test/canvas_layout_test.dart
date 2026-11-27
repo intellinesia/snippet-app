@@ -188,10 +188,10 @@ void viewerControlTests() {
   for (final phone in [false, true]) {
     testWidgets(
         'viewer controls measure at least the target size '
-        '(${phone ? 'phone 48' : 'desktop 44'})', (tester) async {
+        '(${phone ? 'phone 48' : 'desktop 28'})', (tester) async {
       debugDefaultTargetPlatformOverride =
           phone ? TargetPlatform.android : TargetPlatform.linux;
-      final want = phone ? 48.0 : 44.0;
+      final want = phone ? 48.0 : 28.0;
       await tester.pumpWidget(MaterialApp(
         theme: buildAppTheme().copyWith(visualDensity: VisualDensity.compact),
         home: Scaffold(

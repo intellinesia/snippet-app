@@ -922,7 +922,8 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
         border: Border.all(color: AppColors.border2),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.6),
+              color: Colors.black.withValues(
+                  alpha: AppColors.bg.computeLuminance() > 0.18 ? 0.18 : 0.6),
               blurRadius: 50,
               offset: const Offset(0, 18)),
         ],
@@ -1352,7 +1353,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
           const SingleActivator(LogicalKeyboardKey.escape): widget.onCancel!,
       },
       child: Container(
-        color: Colors.black.withValues(alpha: 0.45),
+        color: AppColors.modalScrim,
         alignment: Alignment.topCenter,
         child: SingleChildScrollView(
           padding: const EdgeInsets.only(top: 110, bottom: 24),
@@ -1517,7 +1518,8 @@ class _FolderQuickState extends State<_FolderQuick> {
         border: Border.all(color: AppColors.border2),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.6),
+              color: Colors.black.withValues(
+                  alpha: AppColors.bg.computeLuminance() > 0.18 ? 0.18 : 0.6),
               blurRadius: 50,
               offset: const Offset(0, 18)),
         ],
@@ -1820,7 +1822,8 @@ class _FolderPopoverState extends State<_FolderPopover> {
         border: Border.all(color: AppColors.glassBorder),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.42),
+            color: Colors.black.withValues(
+                alpha: AppColors.bg.computeLuminance() > 0.18 ? 0.14 : 0.42),
             blurRadius: 24,
             offset: const Offset(0, 10),
           ),
@@ -2086,7 +2089,8 @@ class _DotField extends CustomPainter {
       final v = (b + 1) / _bands;
       paint
         ..strokeWidth = 1.0 + 2.6 * v
-        ..color = const Color(0xFF26345F).withValues(alpha: 0.25 + 0.5 * v);
+        ..color = Color.lerp(AppColors.accent, AppColors.panelBg, 0.55)!
+            .withValues(alpha: 0.25 + 0.5 * v);
       canvas.drawPoints(PointMode.points, points[b], paint);
     }
   }

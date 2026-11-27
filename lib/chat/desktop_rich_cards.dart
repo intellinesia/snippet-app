@@ -1736,8 +1736,9 @@ class DesktopImageGalleryGrid extends StatelessWidget {
               onTap: onOverflowTap,
               child: Center(
                 child: Text('+$overflowCount',
+                    // The overlay is always dark, so the count is always white.
                     style: sans(15,
-                        weight: FontWeight.w500, color: AppColors.fg1)),
+                        weight: FontWeight.w500, color: Colors.white)),
               ),
             ),
           ),

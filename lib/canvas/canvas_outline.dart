@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'canvas_models.dart';
@@ -20,6 +21,7 @@ class OutlineRow {
 
 const int kOutlineMaxRows = 400;
 const int kOutlineMaxDepth = 4;
+const double kCanvasOutlineWidth = 248;
 
 /// Builds the layer tree from layout rects in document order. Depth counts the
 /// rects that strictly contain an element (bigger area, or equal and earlier).
@@ -131,73 +133,71 @@ class _CanvasOutlineRailState extends State<CanvasOutlineRail> {
         widget.frames.where((f) => f.id == widget.selectedFrameId).firstOrNull;
     final rows = filterOutline(_allRows, _query);
     return Container(
-      width: 248,
+      width: kCanvasOutlineWidth,
       decoration: BoxDecoration(
         color: AppColors.surface1,
-        border: Border(right: BorderSide(color: AppColors.border)),
+        border: Border(right: BorderSide(color: AppColors.paneLine)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(S.s12, S.s12, S.s4, S.s8),
+          Container(
+            height: PaneRow.height,
+            padding: EdgeInsets.fromLTRB(S.s12, 0, S.s4, 0),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: AppColors.paneLine)),
+            ),
             child: Row(
               children: [
                 Expanded(
-                  child: Container(
-                    height: 44,
-                    padding: EdgeInsets.symmetric(horizontal: S.s12),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface2,
-                      borderRadius: BorderRadius.circular(R.md),
-                    ),
-                    child: Row(
-                      children: [
-                        AppIcon('search', size: 16, color: AppColors.fg3),
-                        SizedBox(width: S.s8),
-                        Expanded(
-                          child: Semantics(
-                            textField: true,
-                            label: 'Find a frame or element',
-                            child: TextField(
-                              controller: _controller,
-                              onChanged: (v) => setState(() => _query = v),
-                              style: sans(13, color: AppColors.fg1),
-                              cursorColor: AppColors.fg1,
-                              decoration: InputDecoration(
-                                isDense: true,
-                                border: InputBorder.none,
-                                hintText: 'Find a frame or element',
-                                hintStyle: sans(13, color: AppColors.fg3),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  child: Text('Outline',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(PaneRow.label,
+                          weight: W.label, color: PaneRow.labelOn)),
                 ),
                 if (widget.onCollapse != null)
                   Semantics(
                     button: true,
                     label: 'Hide outline',
                     excludeSemantics: true,
-                    child: Tooltip(
-                      message: 'Hide outline',
-                      child: InkWell(
-                        onTap: widget.onCollapse,
-                        borderRadius: BorderRadius.circular(R.sm),
-                        child: SizedBox(
-                          width: 44,
-                          height: 44,
-                          child: Center(
-                            child: AppIcon('panel-left',
-                                size: 18, color: AppColors.fg2),
-                          ),
-                        ),
+                    child: IconBtn('panel-left',
+                        size: 28,
+                        iconSize: 13,
+                        tooltip: 'Hide outline',
+                        onTap: widget.onCollapse),
+                  ),
+              ],
+            ),
+          ),
+          Container(
+            height: 32,
+            padding: EdgeInsets.symmetric(horizontal: S.s12),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: AppColors.paneLine)),
+            ),
+            child: Row(
+              children: [
+                AppIcon('search', size: 13, color: AppColors.fg4),
+                SizedBox(width: S.s8),
+                Expanded(
+                  child: Semantics(
+                    textField: true,
+                    label: 'Find a frame or element',
+                    child: TextField(
+                      controller: _controller,
+                      onChanged: (v) => setState(() => _query = v),
+                      style: sans(PaneRow.label, color: PaneRow.labelOn),
+                      cursorColor: PaneRow.labelOn,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        border: InputBorder.none,
+                        hintText: 'Find a frame or element',
+                        hintStyle: sans(PaneRow.label, color: AppColors.fg4),
                       ),
                     ),
                   ),
+                ),
               ],
             ),
           ),
@@ -217,7 +217,7 @@ class _CanvasOutlineRailState extends State<CanvasOutlineRail> {
                   ),
                 if (selected != null) ...[
                   SizedBox(height: S.s8),
-                  Divider(height: 1, thickness: 1, color: AppColors.border),
+                  Divider(height: 1, thickness: 1, color: AppColors.paneLine),
                   _header(
                       '${selected.title.isNotEmpty ? selected.title : selected.id} · layers',
                       null),
@@ -246,7 +246,7 @@ class _CanvasOutlineRailState extends State<CanvasOutlineRail> {
   }
 
   Widget _header(String title, String? trailing) => Padding(
-        padding: EdgeInsets.fromLTRB(S.s16, S.s12, S.s16, S.s4),
+        padding: EdgeInsets.fromLTRB(S.s12, S.s12, S.s12, S.s4),
         child: Row(
           children: [
             Expanded(
@@ -256,14 +256,18 @@ class _CanvasOutlineRailState extends State<CanvasOutlineRail> {
                   style: sans(12, weight: W.label, color: AppColors.fg3)),
             ),
             if (trailing != null)
-              Text(trailing, style: sans(12, color: AppColors.fg3)),
+              Text(trailing, style: sans(12, color: AppColors.fg4)),
           ],
         ),
       );
 
   Widget _empty(String text) => Padding(
-        padding: EdgeInsets.symmetric(horizontal: S.s16, vertical: S.s8),
-        child: Text(text, style: sans(12, color: AppColors.fg3)),
+        padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s16),
+        child: Center(
+          child: Text(text,
+              textAlign: TextAlign.center,
+              style: sans(12, color: AppColors.fg4)),
+        ),
       );
 
   Widget _row({
@@ -276,26 +280,31 @@ class _CanvasOutlineRailState extends State<CanvasOutlineRail> {
     double indent = 0,
   }) =>
       Padding(
-        padding: EdgeInsets.symmetric(horizontal: S.s8),
+        padding: EdgeInsets.symmetric(horizontal: S.s4),
         child: Semantics(
           button: true,
           selected: selected,
           label: semantic,
           excludeSemantics: true,
           child: Material(
-            color: selected ? AppColors.surface3 : Colors.transparent,
-            borderRadius: BorderRadius.circular(R.sm),
+            color: selected
+                ? (kMobile ? AppColors.surface3 : PaneRow.plate)
+                : Colors.transparent,
+            borderRadius:
+                BorderRadius.circular(kMobile ? R.sm : PaneRow.radius),
             child: InkWell(
               onTap: onTap,
-              borderRadius: BorderRadius.circular(R.sm),
+              borderRadius:
+                  BorderRadius.circular(kMobile ? R.sm : PaneRow.radius),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 44),
+                constraints: BoxConstraints(minHeight: kMobile ? 44 : 28),
                 child: Padding(
                   padding: EdgeInsets.only(left: S.s8 + indent, right: S.s8),
                   child: Row(
                     children: [
                       if (icon != null) ...[
-                        AppIcon(icon, size: 15, color: AppColors.fg3),
+                        AppIcon(icon,
+                            size: kMobile ? 15 : 13, color: AppColors.fg4),
                         SizedBox(width: S.s8),
                       ],
                       Expanded(
@@ -304,14 +313,20 @@ class _CanvasOutlineRailState extends State<CanvasOutlineRail> {
                             overflow: TextOverflow.ellipsis,
                             style: sans(13,
                                 weight: selected ? W.label : W.body,
-                                color:
-                                    selected ? AppColors.fg1 : AppColors.fg2)),
+                                color: selected
+                                    ? (kMobile
+                                        ? AppColors.fg1
+                                        : PaneRow.labelOn)
+                                    : (kMobile
+                                        ? AppColors.fg2
+                                        : PaneRow.labelOff))),
                       ),
                       if (trailing != null) ...[
                         SizedBox(width: S.s8),
                         Text(trailing,
-            style: mono(11,
-                color: selected ? AppColors.fg2 : AppColors.fg3)),
+                            style: mono(kMobile ? 11 : 12,
+                                color:
+                                    selected ? AppColors.fg3 : AppColors.fg4)),
                       ],
                     ],
                   ),

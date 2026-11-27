@@ -4,6 +4,7 @@ import '../../api.dart';
 import '../../mochi.dart';
 import '../../models.dart';
 import '../../platform.dart';
+import '../../settings_form.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
 import '../../tap_detector.dart';
@@ -108,8 +109,39 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
     required String label,
     required bool selected,
     required VoidCallback onTap,
-  }) =>
-      Semantics(
+  }) {
+    if (!kMobile) {
+      return Semantics(
+        button: true,
+        selected: selected,
+        label: label,
+        child: TapDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _busy ? null : onTap,
+          child: AnimatedContainer(
+            duration: Motion.fast,
+            height: PaneRow.pill,
+            padding: const EdgeInsets.symmetric(horizontal: 9),
+            decoration: BoxDecoration(
+              color: selected ? PaneRow.plate : Grouped.card,
+              border: Border.all(
+                  color: selected ? AppColors.lineStrong : Grouped.cardBorder),
+              borderRadius: BorderRadius.circular(PaneRow.radius),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              AgentMochi(id, size: 15),
+              const SizedBox(width: 6),
+              Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(12,
+                      color: selected ? PaneRow.labelOn : PaneRow.labelOff)),
+            ]),
+          ),
+        ),
+      );
+    }
+    return Semantics(
         button: true,
         selected: selected,
         label: label,
@@ -144,6 +176,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
           ),
         ),
       );
+  }
 
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
@@ -161,27 +194,44 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             SizedBox(height: S.s16),
             Text('Who', style: sans(12, weight: W.label, color: AppColors.fg3)),
             SizedBox(height: S.s8),
-            SizedBox(
-              height: 66,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _agentChip(
-                    id: 'lead',
-                    label: 'Lead picks',
-                    selected: _agentId == null,
-                    onTap: () => setState(() => _agentId = null),
-                  ),
-                  for (final a in _agents)
+            if (kMobile)
+              SizedBox(
+                height: 66,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
                     _agentChip(
-                      id: a.id,
-                      label: _name(a),
-                      selected: _agentId == a.id,
-                      onTap: () => setState(() => _agentId = a.id),
+                      id: 'lead',
+                      label: 'Lead picks',
+                      selected: _agentId == null,
+                      onTap: () => setState(() => _agentId = null),
                     ),
-                ],
-              ),
-            ),
+                    for (final a in _agents)
+                      _agentChip(
+                        id: a.id,
+                        label: _name(a),
+                        selected: _agentId == a.id,
+                        onTap: () => setState(() => _agentId = a.id),
+                      ),
+                  ],
+                ),
+              )
+            else
+              Wrap(spacing: 6, runSpacing: 6, children: [
+                _agentChip(
+                  id: 'lead',
+                  label: 'Lead picks',
+                  selected: _agentId == null,
+                  onTap: () => setState(() => _agentId = null),
+                ),
+                for (final a in _agents)
+                  _agentChip(
+                    id: a.id,
+                    label: _name(a),
+                    selected: _agentId == a.id,
+                    onTap: () => setState(() => _agentId = a.id),
+                  ),
+              ]),
             SizedBox(height: S.s16),
             AppField(
               controller: _description,

@@ -1279,13 +1279,13 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
   Widget _header() {
     if (kMobile) return _mobileHeader();
     final a = _artifact;
+    final titleInk = Color.lerp(AppColors.fg1, AppColors.fg2, 0.3)!;
     return Container(
-      height: 52,
-      padding: const EdgeInsets.fromLTRB(22, 0, 14, 0),
+      height: PaneRow.height,
+      padding: const EdgeInsets.fromLTRB(10, 0, 8, 0),
       decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.border))),
+          border: Border(bottom: BorderSide(color: AppColors.paneLine))),
       child: Row(children: [
-        // Expanded, not Flexible + Spacer: that pair splits the row and strands the controls mid-way.
         Expanded(
           // A canvas pane is narrow: below this only the title stays.
           child: LayoutBuilder(
@@ -1294,8 +1294,7 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
                       child: Text(a?.title ?? 'Artifact',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style:
-                              sans(14, weight: W.strong, color: AppColors.fg1)),
+                          style: sans(13, weight: W.label, color: titleInk)),
                     ),
                     if (a != null && box.maxWidth >= 260) ...[
                       const SizedBox(width: 8),
@@ -1304,61 +1303,39 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
                         padding: const EdgeInsets.symmetric(horizontal: 7),
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                            color: AppColors.surface3,
+                            color: AppColors.tint1,
                             borderRadius: BorderRadius.circular(R.of(5))),
                         child: Text(_artifactKindLabel(a.kind),
-                            style: sans(11.5, color: AppColors.fg2)),
+                            style: sans(11.5, color: AppColors.fg3)),
                       ),
                     ],
                     if (box.maxWidth >= 260) ...[
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
                       _versionButton(),
                     ],
                   ])),
         ),
-        if (_hasSource) ...[_sourceSeg(), const SizedBox(width: 6)],
-        _hit(
-            IconBtn('external-link',
-                size: 28,
-                iconSize: 15,
-                tooltip: 'Open in browser',
-                onTap: _openInBrowser),
-            _openInBrowser),
-        _hit(
-            IconBtn('download',
-                size: 28, iconSize: 15, tooltip: 'Download', onTap: _download),
-            _download),
+        if (_hasSource) ...[_sourceSeg(), const SizedBox(width: 2)],
+        IconBtn('external-link',
+            size: 28,
+            iconSize: 13,
+            tooltip: 'Open in browser',
+            onTap: _openInBrowser),
+        IconBtn('download',
+            size: 28, iconSize: 13, tooltip: 'Download', onTap: _download),
         Builder(
-          builder: (anchor) => _hit(
-              IconBtn('more-horizontal',
-                  size: 28,
-                  iconSize: 15,
-                  tooltip: 'More',
-                  onTap: () => _more(anchor)),
-              () => _more(anchor)),
+          builder: (anchor) => IconBtn('more-horizontal',
+              size: 28,
+              iconSize: 13,
+              tooltip: 'More',
+              onTap: () => _more(anchor)),
         ),
         if (widget.onClose != null)
-          _hit(
-              IconBtn('x',
-                  size: 28,
-                  iconSize: 15,
-                  tooltip: 'Close',
-                  onTap: widget.onClose),
-              widget.onClose),
+          IconBtn('x',
+              size: 28, iconSize: 13, tooltip: 'Close', onTap: widget.onClose),
       ]),
     );
   }
-
-  /// Gives a small visual control a [kTapTarget] hit area without growing it.
-  Widget _hit(Widget child, VoidCallback? onTap) => SizedBox(
-        width: kTapTarget,
-        height: kTapTarget,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: Center(child: child),
-        ),
-      );
 
   Widget _versionButton() {
     final v = _version;
@@ -1369,32 +1346,27 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
     return Builder(
       builder: (anchor) => Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(R.of(6)),
+        borderRadius: BorderRadius.circular(PaneRow.radius),
         child: InkWell(
-          borderRadius: BorderRadius.circular(R.of(6)),
+          borderRadius: BorderRadius.circular(PaneRow.radius),
           onTap: multi ? () => _pickVersion(anchor) : null,
-          child: SizedBox(
-            height: kTapTarget,
-            child: Center(
-              child: Container(
-                height: 28,
-                padding: const EdgeInsets.symmetric(horizontal: 9),
-                decoration: BoxDecoration(
-                  border: Border.all(color: AppColors.border2),
-                  borderRadius: BorderRadius.circular(R.of(6)),
-                ),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  AppIcon('history', size: 13, color: AppColors.fg2),
-                  const SizedBox(width: 6),
-                  Text('v${v.n}${latest ? ' \u00b7 Latest version' : ''}',
-                      style: sans(12, color: AppColors.fg2)),
-                  if (multi) ...[
-                    const SizedBox(width: 6),
-                    AppIcon('chevron-down', size: 12, color: AppColors.fg2),
-                  ],
-                ]),
-              ),
+          child: Container(
+            height: PaneRow.pill,
+            padding: const EdgeInsets.symmetric(horizontal: 9),
+            decoration: BoxDecoration(
+              color: PaneRow.plate,
+              borderRadius: BorderRadius.circular(PaneRow.radius),
             ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              AppIcon('history', size: 12, color: AppColors.fg4),
+              const SizedBox(width: 6),
+              Text('v${v.n}${latest ? ' · Latest' : ''}',
+                  style: sans(12, color: AppColors.fg3)),
+              if (multi) ...[
+                const SizedBox(width: 5),
+                AppIcon('chevron-down', size: 11, color: AppColors.fg4),
+              ],
+            ]),
           ),
         ),
       ),
@@ -1694,8 +1666,9 @@ class _WebPreviewState extends State<_WebPreview> {
       Positioned.fill(
           child: Listener(
               onPointerSignal: (e) {
-                if (e is PointerScrollEvent)
+                if (e is PointerScrollEvent) {
                   _scrollPage(e.localPosition, e.scrollDelta);
+                }
               },
               onPointerPanZoomUpdate: (e) =>
                   _scrollPage(e.localPosition, -e.panDelta),
@@ -1822,17 +1795,18 @@ class _SessionDeliverablesState extends State<SessionDeliverables> {
   /// Desktop list beside the open artifact; narrow hosts keep the list alone
   /// and open artifacts in a drawer.
   Widget _split(List<ArtifactInfo> artifacts,
-      List<({String path, String caption})> files) {
+      List<({String path, String caption})> files, double hostWidth) {
     final newest = [...artifacts]..sort((x, y) =>
         (y.latest?.createdAt ?? 0).compareTo(x.latest?.createdAt ?? 0));
     final sel =
         _selected ?? (_dismissed || newest.isEmpty ? null : newest.first.id);
     final open = artifacts.any((a) => a.id == sel) ? sel : null;
+    final listWidth = math.min(320.0, math.max(260.0, hostWidth * 0.32));
     return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Container(
-        width: 300,
+        width: listWidth,
         decoration: BoxDecoration(
-            border: Border(right: BorderSide(color: AppColors.border))),
+            border: Border(right: BorderSide(color: AppColors.paneLine))),
         child: ArtifactGrid(
           client: widget.client,
           session: widget.session,
@@ -1894,6 +1868,22 @@ class _SessionDeliverablesState extends State<SessionDeliverables> {
     }
   }
 
+  Widget _quietEmpty() => Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            AppIcon('layers', size: 18, color: AppColors.fg4),
+            const SizedBox(height: 10),
+            Text('Nothing shared yet',
+                style: sans(12.5, weight: W.label, color: AppColors.fg3)),
+            const SizedBox(height: 4),
+            Text('Artifacts and files handed over in this chat collect here.',
+                textAlign: TextAlign.center,
+                style: sans(12, color: AppColors.fg4)),
+          ]),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     final artifacts = _artifacts;
@@ -1910,7 +1900,7 @@ class _SessionDeliverablesState extends State<SessionDeliverables> {
         color: Colors.transparent,
         child: LayoutBuilder(
           builder: (context, box) => box.maxWidth >= 640
-              ? _split(artifacts, files)
+              ? _split(artifacts, files, box.maxWidth)
               : _wrap(context, artifacts, files),
         ),
       );
@@ -1942,17 +1932,23 @@ class _SessionDeliverablesState extends State<SessionDeliverables> {
             _SheetHeader(onDone: widget.onClose)
           else if (!ShellPanelRoot.inPanel(context))
             Container(
-              padding: EdgeInsets.fromLTRB(
-                  S.s16, kMobile ? S.s8 : S.s12, S.s8, S.of(10)),
+              height: PaneRow.height,
+              padding: const EdgeInsets.fromLTRB(10, 0, 8, 0),
+              decoration: BoxDecoration(
+                  border:
+                      Border(bottom: BorderSide(color: AppColors.paneLine))),
               child: Row(children: [
                 Expanded(
                   child: Text('Artifacts & files',
-                      style: sans(15, weight: W.label, color: AppColors.fg1)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(PaneRow.label,
+                          weight: W.label, color: PaneRow.labelOn)),
                 ),
                 if (widget.onClose != null)
                   IconBtn('x',
-                      size: 32,
-                      iconSize: 15,
+                      size: 28,
+                      iconSize: 13,
                       tooltip: 'Close',
                       onTap: widget.onClose),
               ]),
@@ -1966,12 +1962,14 @@ class _SessionDeliverablesState extends State<SessionDeliverables> {
                 : artifacts == null
                     ? Center(child: Spinner(size: 16, color: AppColors.fg3))
                     : artifacts.isEmpty && files.isEmpty
-                        ? const EmptyState(
-                            icon: 'layers',
-                            title: 'Nothing shared yet',
-                            body:
-                                'Artifacts and files the agent hands over in this chat collect here.',
-                          )
+                        ? (kMobile
+                            ? const EmptyState(
+                                icon: 'layers',
+                                title: 'Nothing shared yet',
+                                body:
+                                    'Artifacts and files the agent hands over in this chat collect here.',
+                              )
+                            : _quietEmpty())
                         : !kMobile
                             ? ArtifactGrid(
                                 client: widget.client,
@@ -1979,6 +1977,7 @@ class _SessionDeliverablesState extends State<SessionDeliverables> {
                                 artifacts: artifacts,
                                 files: files,
                                 onOpenFileTab: widget.onOpenFileTab,
+                                showHeader: ShellPanelRoot.inPanel(context),
                               )
                             : ArtifactCollection(
                                 client: widget.client,

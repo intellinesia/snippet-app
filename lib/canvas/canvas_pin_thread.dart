@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../platform.dart';
+import '../settings_form.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'canvas_client.dart';
@@ -43,30 +45,34 @@ class PinThreadView extends StatelessWidget {
         ? ' · ${formatCanvasRelativeTime(pin.createdAt!)}'
         : '';
     return ListView(
-      padding: EdgeInsets.all(S.s16),
+      padding: EdgeInsets.all(kMobile ? S.s16 : S.s12),
       children: [
         Container(
           padding: EdgeInsets.all(S.s12),
           decoration: BoxDecoration(
-            color: AppColors.surface2,
-            borderRadius: BorderRadius.circular(R.md),
+            color: kMobile ? AppColors.surface2 : Grouped.card,
+            borderRadius:
+                BorderRadius.circular(kMobile ? R.md : Grouped.radiusEnd),
+            border: kMobile ? null : Border.all(color: Grouped.cardBorder),
           ),
-          child: Text(pin.text, style: sans(13, color: AppColors.fg1)),
+          child: Text(pin.text,
+              style: sans(13,
+                  color: Color.lerp(AppColors.fg1, AppColors.fg2, 0.3))),
         ),
         Padding(
           padding: EdgeInsets.only(top: S.s4, bottom: S.s12),
-          child: Text('$who$when', style: sans(11, color: AppColors.fg3)),
+          child: Text('$who$when', style: sans(12, color: AppColors.fg4)),
         ),
         if (reply.isNotEmpty) ...[
           Row(
             children: [
               Text('Agent',
-                  style: sans(13, weight: W.label, color: AppColors.fg1)),
+                  style: sans(13, weight: W.label, color: PaneRow.labelOn)),
               const Spacer(),
               AppIcon('check', size: 13, color: AppColors.fg3),
               SizedBox(width: S.s4),
               Text(pin.isResolved ? 'Approved' : 'Acknowledged',
-                  style: sans(12, color: AppColors.fg3)),
+                  style: sans(12, color: AppColors.fg4)),
             ],
           ),
           SizedBox(height: S.s4),
@@ -106,21 +112,23 @@ class PinThreadView extends StatelessWidget {
         Container(
           padding: EdgeInsets.all(S.s12),
           decoration: BoxDecoration(
-            color: AppColors.surface2,
-            borderRadius: BorderRadius.circular(R.md),
-            border: Border.all(color: AppColors.border),
+            color: kMobile ? AppColors.surface2 : Grouped.card,
+            borderRadius:
+                BorderRadius.circular(kMobile ? R.md : Grouped.radiusEnd),
+            border: Border.all(
+                color: kMobile ? AppColors.border : Grouped.cardBorder),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('The agent receives',
-                  style: sans(11, weight: W.label, color: AppColors.fg3)),
+                  style: sans(12, weight: W.label, color: AppColors.fg4)),
               SizedBox(height: S.s4),
               Text(
                 'frame $frameTitle\n'
                 '${pin.elId != null ? 'element ${pin.elId}\n' : ''}'
                 'text "${_clip(pin.text)}"',
-                style: mono(11, height: 1.5, color: AppColors.fg2),
+                style: mono(12, height: 1.5, color: AppColors.fg3),
               ),
             ],
           ),
@@ -130,19 +138,20 @@ class PinThreadView extends StatelessWidget {
           children: [
             Expanded(
               child: SizedBox(
-                height: 44,
+                height: kMobile ? 44 : 32,
                 child: FilledButton(
                   onPressed: () => onApprove(),
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.accent,
                     foregroundColor: AppColors.accentFg,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(R.sm),
+                      borderRadius:
+                          BorderRadius.circular(kMobile ? R.sm : R.of(7)),
                     ),
                   ),
                   child: Text(pin.isResolved ? 'Reopen' : 'Approve',
-                      style: sans(13,
-                          weight: W.label, color: AppColors.accentFg)),
+                      style:
+                          sans(13, weight: W.label, color: AppColors.accentFg)),
                 ),
               ),
             ),
@@ -150,17 +159,21 @@ class PinThreadView extends StatelessWidget {
               SizedBox(width: S.s8),
               Expanded(
                 child: SizedBox(
-                  height: 44,
+                  height: kMobile ? 44 : 32,
                   child: OutlinedButton(
                     onPressed: revertBusy ? null : onRevert,
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: AppColors.border),
+                      side: BorderSide(
+                          color:
+                              kMobile ? AppColors.border : Grouped.cardBorder),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(R.sm),
+                        borderRadius:
+                            BorderRadius.circular(kMobile ? R.sm : R.of(7)),
                       ),
                     ),
                     child: Text(revertBusy ? 'Reverting...' : 'Revert',
-                        style: sans(13, weight: W.label, color: AppColors.fg1)),
+                        style:
+                            sans(13, weight: W.label, color: PaneRow.labelOn)),
                   ),
                 ),
               ),
@@ -171,7 +184,8 @@ class PinThreadView extends StatelessWidget {
     );
   }
 
-  static String _clip(String t) => t.length > 40 ? '${t.substring(0, 40)}...' : t;
+  static String _clip(String t) =>
+      t.length > 40 ? '${t.substring(0, 40)}...' : t;
 }
 
 class _Compare extends StatelessWidget {
@@ -191,7 +205,7 @@ class _Compare extends StatelessWidget {
   Widget build(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: sans(11, color: AppColors.fg3)),
+          Text(label, style: sans(12, color: AppColors.fg4)),
           SizedBox(height: S.s4),
           CanvasRevThumb(client: client, frameId: frameId, rev: rev),
         ],
@@ -243,9 +257,11 @@ class _CanvasRevThumbState extends State<CanvasRevThumb> {
         height: 96,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: AppColors.surface2,
-          borderRadius: BorderRadius.circular(R.sm),
-          border: Border.all(color: AppColors.border),
+          color: kMobile ? AppColors.surface2 : Grouped.card,
+          borderRadius:
+              BorderRadius.circular(kMobile ? R.sm : Grouped.radiusEnd),
+          border: Border.all(
+              color: kMobile ? AppColors.border : Grouped.cardBorder),
         ),
         child: FutureBuilder<Uint8List>(
           future: _bytes,
@@ -260,8 +276,7 @@ class _CanvasRevThumbState extends State<CanvasRevThumb> {
             }
             return Center(
               child: snap.hasError
-                  ? Text('Not available',
-                      style: sans(11, color: AppColors.fg3))
+                  ? Text('Not available', style: sans(12, color: AppColors.fg4))
                   : const DelayedSpinner(size: 16),
             );
           },

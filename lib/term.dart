@@ -489,27 +489,38 @@ class _SessionTermViewState extends State<SessionTermView> {
 
   Widget _chrome() {
     final cwd = widget.cwd?.trim() ?? '';
-    return SizedBox(
-      height: 40,
-      child: Padding(
-      padding: EdgeInsets.fromLTRB(S.s16, 0, S.s8, 0),
+    final desk = !_phone;
+    return Container(
+      height: desk ? PaneRow.height : 40,
+      padding: EdgeInsets.fromLTRB(desk ? S.s12 : S.s16, 0, S.s8, 0),
+      decoration: desk
+          ? BoxDecoration(
+              border: Border(bottom: BorderSide(color: AppColors.paneLine)))
+          : null,
       child: Row(children: [
         Tooltip(
           message: cwd,
           child: Text(widget.alive ? 'Shell' : 'Shell · starting',
-              style: sans(13, weight: FontWeight.w500, color: AppColors.fg1)),
+              style: sans(desk ? PaneRow.label : 13,
+                  weight: W.label,
+                  color: desk
+                      ? Color.lerp(AppColors.fg1, AppColors.fg2, 0.3)
+                      : AppColors.fg1)),
         ),
         const Spacer(),
         if (widget.onNew != null)
           IconBtn('plus',
-              size: 28,
-              iconSize: 14,
+              size: desk ? 26 : 28,
+              iconSize: desk ? 13 : 14,
               tooltip: 'New shell',
               onTap: widget.onNew),
         IconBtn('x',
-            size: 28, iconSize: 14, tooltip: 'Close', onTap: widget.onClose),
+            size: desk ? 26 : 28,
+            iconSize: desk ? 13 : 14,
+            tooltip: 'Close',
+            onTap: widget.onClose),
       ]),
-    ));
+    );
   }
 
   @override
@@ -537,10 +548,13 @@ class _SessionTermViewState extends State<SessionTermView> {
         if (keys) _keyBar(context),
       ]);
     }
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      if (widget.showChrome) _chrome(),
-      Expanded(child: _body(const EdgeInsets.fromLTRB(16, 4, 16, 12))),
-    ]);
+    return ColoredBox(
+      color: AppColors.panelBg,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (widget.showChrome) _chrome(),
+        Expanded(child: _body(const EdgeInsets.fromLTRB(12, 4, 12, 12))),
+      ]),
+    );
   }
 }
 

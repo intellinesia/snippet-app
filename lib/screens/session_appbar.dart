@@ -590,7 +590,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.canvas,
-        border: Border(top: BorderSide(color: AppColors.border)),
+        border: Border(top: BorderSide(color: AppColors.paneLine)),
       ),
       child: Stack(children: [
         Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -1636,7 +1636,7 @@ class TermDockBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 40,
+      height: PaneRow.height,
       child: Row(children: [
         // A Flexible beside a Spacer only gets half the row; Expanded pins actions to the edge.
         Expanded(
@@ -1645,7 +1645,7 @@ class TermDockBar extends StatelessWidget {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 shrinkWrap: true,
-                padding: const EdgeInsets.only(left: 12, right: 4),
+                padding: const EdgeInsets.only(left: 6, right: 4),
                 itemCount: tabs.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 4),
                 itemBuilder: (_, n) => _DockTab(
@@ -1759,7 +1759,7 @@ class _DockTabState extends State<_DockTab> {
   @override
   Widget build(BuildContext context) {
     final on = widget.selected;
-    final fg = on || _hover ? AppColors.fg1 : AppColors.fg3;
+    final fg = on || _hover ? PaneRow.labelOn : PaneRow.labelOff;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hover = true),
@@ -1774,15 +1774,15 @@ class _DockTabState extends State<_DockTab> {
           waitDuration: const Duration(milliseconds: 700),
           child: Center(
             child: Container(
-              height: 28,
-              padding: const EdgeInsets.only(left: 10, right: 6),
+              height: PaneRow.pill,
+              padding: const EdgeInsets.only(left: 8, right: 4),
               decoration: BoxDecoration(
                 color: on
-                    ? AppColors.surface2
+                    ? PaneRow.plate
                     : _hover
-                        ? AppColors.surface1
+                        ? AppColors.hoverPlate
                         : null,
-                borderRadius: BorderRadius.circular(R.of(8)),
+                borderRadius: BorderRadius.circular(PaneRow.radius),
               ),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Container(
@@ -1792,7 +1792,7 @@ class _DockTabState extends State<_DockTab> {
                       BoxDecoration(color: widget.dot, shape: BoxShape.circle),
                 ),
                 const SizedBox(width: 6),
-                Text(widget.title, style: sans(12, color: fg)),
+                Text(widget.title, style: sans(PaneRow.label, color: fg)),
                 const SizedBox(width: 6),
                 TapDetector(
                   onTap: widget.onClose,
@@ -1801,7 +1801,7 @@ class _DockTabState extends State<_DockTab> {
                     width: 16,
                     height: 16,
                     child: Center(
-                      child: AppIcon('x', size: 12, color: AppColors.fg4),
+                      child: AppIcon('x', size: 11, color: AppColors.fg4),
                     ),
                   ),
                 ),

@@ -95,8 +95,8 @@ class CanvasMinimap extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(R.md),
-          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(R.of(10)),
+          border: Border.all(color: AppColors.paneLine),
         ),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -139,8 +139,8 @@ class _MinimapPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final g = geometry();
     if (g == null) return;
-    final block = Paint()..color = AppColors.surface3;
-    final selected = Paint()..color = AppColors.fg3;
+    final block = Paint()..color = AppColors.surface2;
+    final selected = Paint()..color = AppColors.surface3;
     for (final f in frames) {
       final r = g.mapRect(f.bounds);
       canvas.drawRect(r.width < 1.5 || r.height < 1.5 ? r.inflate(0.75) : r,
@@ -150,9 +150,9 @@ class _MinimapPainter extends CustomPainter {
     canvas.drawRect(
       vp,
       Paint()
-        ..color = AppColors.fg1
+        ..color = PaneRow.labelOff
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5,
+        ..strokeWidth = 1.2,
     );
   }
 

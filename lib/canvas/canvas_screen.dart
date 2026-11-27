@@ -447,7 +447,7 @@ class _CanvasScreenState extends State<CanvasScreen>
     final isPhone = _isPhoneLayout(context);
     return isPhone
         ? const EdgeInsets.fromLTRB(24, 72, 24, 96)
-        : const EdgeInsets.fromLTRB(64, 88, 64, 48);
+        : const EdgeInsets.fromLTRB(64, 32, 64, 48);
   }
 
   void _fitToContent({bool animate = true}) {
@@ -1032,25 +1032,28 @@ class _CanvasScreenState extends State<CanvasScreen>
       builder: (dlgCtx) => AlertDialog(
         backgroundColor: AppColors.surface1,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(R.md),
-          side: BorderSide(color: AppColors.border),
+          borderRadius: BorderRadius.circular(kMobile ? R.md : R.of(10)),
+          side: BorderSide(
+              color: kMobile ? AppColors.border : AppColors.paneLine),
         ),
         title: Text('Revert step?',
-            style: sans(16, weight: W.title, color: AppColors.fg1)),
+            style: sans(16,
+                weight: W.title,
+                color: Color.lerp(AppColors.fg1, AppColors.fg2, 0.3))),
         content: Text(
           'Revert "${batch.label.isNotEmpty ? batch.label : batch.batchId}" (r${batch.rev})?',
           style: sans(13, color: AppColors.fg2),
         ),
         actions: [
           SizedBox(
-            height: kTapTarget,
+            height: kMobile ? kTapTarget : 32,
             child: TextButton(
               onPressed: () => Navigator.of(dlgCtx).pop(false),
               child: Text('Cancel', style: sans(13, color: AppColors.fg2)),
             ),
           ),
           SizedBox(
-            height: kTapTarget,
+            height: kMobile ? kTapTarget : 32,
             child: TextButton(
               onPressed: () => Navigator.of(dlgCtx).pop(true),
               child: Text('Revert',
@@ -1123,25 +1126,28 @@ class _CanvasScreenState extends State<CanvasScreen>
       builder: (dlgCtx) => AlertDialog(
         backgroundColor: AppColors.surface1,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(R.md),
-          side: BorderSide(color: AppColors.border),
+          borderRadius: BorderRadius.circular(kMobile ? R.md : R.of(10)),
+          side: BorderSide(
+              color: kMobile ? AppColors.border : AppColors.paneLine),
         ),
         title: Text('Restore r$target?',
-            style: sans(16, weight: W.title, color: AppColors.fg1)),
+            style: sans(16,
+                weight: W.title,
+                color: Color.lerp(AppColors.fg1, AppColors.fg2, 0.3))),
         content: Text(
           'This undoes ${newer.length} ${newer.length == 1 ? 'step' : 'steps'} as new steps. Nothing is lost.',
           style: sans(13, color: AppColors.fg2),
         ),
         actions: [
           SizedBox(
-            height: kTapTarget,
+            height: kMobile ? kTapTarget : 32,
             child: TextButton(
               onPressed: () => Navigator.of(dlgCtx).pop(false),
               child: Text('Cancel', style: sans(13, color: AppColors.fg2)),
             ),
           ),
           SizedBox(
-            height: kTapTarget,
+            height: kMobile ? kTapTarget : 32,
             child: TextButton(
               onPressed: () => Navigator.of(dlgCtx).pop(true),
               child: Text('Restore',
@@ -1181,8 +1187,9 @@ class _CanvasScreenState extends State<CanvasScreen>
       padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s8, S.s8),
       decoration: BoxDecoration(
         color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(R.md),
-        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(kMobile ? R.md : R.of(10)),
+        border:
+            Border.all(color: kMobile ? AppColors.border : AppColors.paneLine),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1191,18 +1198,19 @@ class _CanvasScreenState extends State<CanvasScreen>
             child: Text(label,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: sans(13, color: AppColors.fg1)),
+                style: sans(13,
+                    color: Color.lerp(AppColors.fg1, AppColors.fg2, 0.3))),
           ),
           SizedBox(width: S.s12),
           SizedBox(
-            height: kTapTarget,
+            height: kMobile ? kTapTarget : 32,
             child: FilledButton(
               onPressed: _restorePreview,
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.accent,
                 foregroundColor: AppColors.accentFg,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(R.sm),
+                  borderRadius: BorderRadius.circular(kMobile ? R.sm : R.of(7)),
                 ),
               ),
               child: Text('Restore this version',
@@ -1452,7 +1460,7 @@ class _CanvasScreenState extends State<CanvasScreen>
     final dpr = MediaQuery.devicePixelRatioOf(context);
     final openPins = _pins.where((p) => !p.isResolved).length;
 
-    final canvasArea = LayoutBuilder(
+    final canvasViewport = LayoutBuilder(
       builder: (context, constraints) {
         final size = constraints.biggest;
         if (size != _viewportSize) {
@@ -1532,7 +1540,7 @@ class _CanvasScreenState extends State<CanvasScreen>
               Center(
                 child: Text(
                   'No frames on this canvas yet.',
-                  style: sans(13, color: AppColors.fg3),
+                  style: sans(12, color: AppColors.fg4),
                 ),
               ),
             if (isPhone)
@@ -1541,32 +1549,6 @@ class _CanvasScreenState extends State<CanvasScreen>
                 left: S.s12,
                 right: S.s12,
                 child: _topStatusBar(openPins),
-              )
-            else
-              Positioned(
-                top: S.s16,
-                left: S.s16,
-                right: S.s16,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Flexible(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: _buildToolbar(isPhone: false),
-                      ),
-                    ),
-                    SizedBox(width: S.s8),
-                    Flexible(
-                      flex: 0,
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerRight,
-                        child: _desktopStatusPill(openPins),
-                      ),
-                    ),
-                  ],
-                ),
               ),
             if (_previewRev != null)
               Positioned(
@@ -1584,7 +1566,7 @@ class _CanvasScreenState extends State<CanvasScreen>
               )
             else ...[
               Positioned(
-                top: 88,
+                top: S.s16,
                 left: S.s16,
                 child: CanvasToolRail(tools: _railTools()),
               ),
@@ -1604,6 +1586,16 @@ class _CanvasScreenState extends State<CanvasScreen>
         );
       },
     );
+
+    final canvasArea = isPhone
+        ? canvasViewport
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _desktopHeader(openPins),
+              Expanded(child: canvasViewport),
+            ],
+          );
 
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
@@ -1638,7 +1630,9 @@ class _CanvasScreenState extends State<CanvasScreen>
           children: [Expanded(child: canvasArea), if (panel != null) panel]);
     }
     final open = _outlineOpen ?? (_contentWidth >= 900);
-    final room = _contentWidth - 248 - (panel != null ? 340 : 0);
+    final room = _contentWidth -
+        kCanvasOutlineWidth -
+        (panel != null ? kCanvasSidePanelWidth : 0);
     final inline = open && room >= _kOutlineMinCanvas;
     final overlay = open && !inline;
     return Stack(
@@ -1657,31 +1651,22 @@ class _CanvasScreenState extends State<CanvasScreen>
   }
 
   Widget _outlineStrip() => Container(
-        width: 48,
+        width: 40,
         decoration: BoxDecoration(
           color: AppColors.surface1,
-          border: Border(right: BorderSide(color: AppColors.border)),
+          border: Border(right: BorderSide(color: AppColors.paneLine)),
         ),
         alignment: Alignment.topCenter,
-        padding: EdgeInsets.only(top: S.s4),
+        padding: EdgeInsets.only(top: S.s8),
         child: Semantics(
           button: true,
           label: 'Show outline',
           excludeSemantics: true,
-          child: Tooltip(
-            message: 'Show outline',
-            child: InkWell(
-              onTap: () => setState(() => _outlineOpen = true),
-              borderRadius: BorderRadius.circular(R.sm),
-              child: SizedBox(
-                width: kTapTarget,
-                height: kTapTarget,
-                child: Center(
-                  child: AppIcon('panel-left', size: 18, color: AppColors.fg2),
-                ),
-              ),
-            ),
-          ),
+          child: IconBtn('panel-left',
+              size: 28,
+              iconSize: 13,
+              tooltip: 'Show outline',
+              onTap: () => setState(() => _outlineOpen = true)),
         ),
       );
 
@@ -1822,24 +1807,27 @@ class _CanvasScreenState extends State<CanvasScreen>
           padding: EdgeInsets.all(S.s16),
           decoration: BoxDecoration(
             color: AppColors.surface1,
-            borderRadius: BorderRadius.circular(R.md),
-            border: Border.all(color: AppColors.border),
+            borderRadius: BorderRadius.circular(kMobile ? R.md : R.of(10)),
+            border: Border.all(
+                color: kMobile ? AppColors.border : AppColors.paneLine),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text('Canvas unavailable',
-                  style: sans(14, weight: W.label, color: AppColors.fg1)),
+                  style: sans(14,
+                      weight: W.label,
+                      color: Color.lerp(AppColors.fg1, AppColors.fg2, 0.3))),
               SizedBox(height: S.s6),
               Text(_error!,
-                  style: sans(12, color: AppColors.fg3),
+                  style: sans(12, color: AppColors.fg4),
                   textAlign: TextAlign.center),
               SizedBox(height: S.s12),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   SizedBox(
-                    height: kTapTarget,
+                    height: kMobile ? kTapTarget : 32,
                     child: TextButton(
                       onPressed: () {
                         _failedThumbs.clear();
@@ -1862,6 +1850,29 @@ class _CanvasScreenState extends State<CanvasScreen>
     );
   }
 
+  Widget _desktopHeader(int openPins) {
+    return Container(
+      height: PaneRow.height,
+      padding: EdgeInsets.symmetric(horizontal: S.of(10)),
+      decoration: BoxDecoration(
+        color: AppColors.bg,
+        border: Border(bottom: BorderSide(color: AppColors.paneLine)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: _buildToolbar(isPhone: false),
+            ),
+          ),
+          SizedBox(width: S.s8),
+          _desktopStatusPill(openPins),
+        ],
+      ),
+    );
+  }
+
   Widget _desktopStatusPill(int openPins) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -1869,43 +1880,49 @@ class _CanvasScreenState extends State<CanvasScreen>
         if (_selectedElement != null) ...[
           _ChromePill(
             onTap: _copyShareLink,
-            minSize: kTapTarget,
+            minSize: PaneRow.pill,
             semanticLabel: 'Copy share link for ${_selectedElement!.id}',
-            child: Text(
-              _selectedElement!.id,
-              style: mono(11, weight: W.label, color: AppColors.fg1),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 140),
+              child: Text(
+                _selectedElement!.id,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: mono(12, weight: W.label, color: PaneRow.labelOn),
+              ),
             ),
           ),
-          SizedBox(width: S.s8),
+          SizedBox(width: S.s4),
         ],
         _ChromePill(
           active: _panelMode == _SidePanelMode.pins,
-          minSize: kTapTarget,
+          minSize: PaneRow.pill,
           semanticLabel: 'Pins, ${_pins.length} total, $openPins open',
           onTap: _openPinsPanel,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               AppIcon('pin',
-                  size: 14,
-                  color: openPins > 0 ? AppColors.fg1 : AppColors.fg3),
+                  size: 13,
+                  color: openPins > 0 ? PaneRow.labelOn : AppColors.fg4),
               SizedBox(width: S.s6),
               Text(
                 '${_pins.length}',
-                style: mono(12, weight: W.label, color: AppColors.fg1),
+                style: mono(12, weight: W.label, color: PaneRow.labelOn),
               ),
             ],
           ),
         ),
         if (_snapshot != null) ...[
-          SizedBox(width: S.s8),
+          SizedBox(width: S.s4),
           _ChromePill(
+            active: _panelMode == _SidePanelMode.steps,
             onTap: _openStepsPanel,
-            minSize: kTapTarget,
+            minSize: PaneRow.pill,
             semanticLabel: 'Steps history, revision ${_snapshot!.rev}',
             child: Text(
               'r${_snapshot!.rev}',
-              style: mono(11, color: AppColors.fg3),
+              style: mono(12, color: AppColors.fg4),
             ),
           ),
         ],
@@ -2001,17 +2018,20 @@ class _CanvasScreenState extends State<CanvasScreen>
           active: _panelMode == _SidePanelMode.steps, showLabel: !isPhone),
       _ToolbarItem('share', 'Share', _copyShareLink, showLabel: !isPhone),
     ];
+    final bar = _OverflowToolbar(
+      items: items,
+      spread: isPhone,
+      target: isPhone ? kTapTarget : PaneRow.pill,
+    );
+    if (!isPhone) return bar;
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: isPhone ? S.s8 : S.s6,
-        vertical: S.s4,
-      ),
+      padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s4),
       decoration: BoxDecoration(
         color: AppColors.surface1,
         borderRadius: BorderRadius.circular(R.md),
         border: Border.all(color: AppColors.border),
       ),
-      child: _OverflowToolbar(items: items, spread: isPhone),
+      child: bar,
     );
   }
 }
@@ -2025,33 +2045,37 @@ class _ToolbarItem {
   final bool active;
   final bool showLabel;
 
-  double get width => showLabel ? kTapTarget + label.length * 7.0 : kTapTarget;
+  double width(double target) {
+    if (!showLabel) return target;
+    final compact = target < kTapTarget;
+    return (compact ? 34 : kTapTarget) + label.length * (compact ? 6.5 : 7.0);
+  }
 }
 
-/// Toolbar buttons that fit; the rest move into a "..." menu instead of
-/// being clipped.
+/// Toolbar buttons that fit; the rest move into a menu instead of being clipped.
 class _OverflowToolbar extends StatelessWidget {
-  const _OverflowToolbar({required this.items, required this.spread});
+  const _OverflowToolbar(
+      {required this.items, required this.spread, required this.target});
 
   final List<_ToolbarItem> items;
   final bool spread;
+  final double target;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
         builder: (context, c) {
-          // Container padding is outside this box, so maxWidth is the room.
           final avail = c.maxWidth.isFinite ? c.maxWidth : double.infinity;
           var total = 0.0;
           for (final i in items) {
-            total += i.width;
+            total += i.width(target);
           }
           var shown = items.length;
           if (total > avail) {
-            var used = kTapTarget;
+            var used = target;
             shown = 0;
             for (final i in items) {
-              if (used + i.width > avail) break;
-              used += i.width;
+              if (used + i.width(target) > avail) break;
+              used += i.width(target);
               shown++;
             }
             if (shown == 0) shown = 1;
@@ -2070,43 +2094,37 @@ class _OverflowToolbar extends StatelessWidget {
                   label: i.label,
                   active: i.active,
                   showLabel: i.showLabel,
-                  minSize: kTapTarget,
+                  minSize: target,
                   onTap: i.onTap,
                 ),
               if (hidden.isNotEmpty)
-                Semantics(
-                  button: true,
-                  label: 'More canvas actions',
-                  excludeSemantics: true,
-                  child: PopupMenuButton<int>(
-                    tooltip: 'More',
-                    color: AppColors.surface2,
-                    constraints: const BoxConstraints(minWidth: 160),
-                    onSelected: (n) => hidden[n].onTap(),
-                    itemBuilder: (_) => [
-                      for (var n = 0; n < hidden.length; n++)
-                        PopupMenuItem<int>(
-                          value: n,
-                          height: kTapTarget,
-                          child: Row(
-                            children: [
-                              AppIcon(hidden[n].icon,
-                                  size: 16, color: AppColors.fg2),
-                              SizedBox(width: S.s12),
-                              Text(hidden[n].label,
-                                  style: sans(13, color: AppColors.fg1)),
-                            ],
-                          ),
-                        ),
-                    ],
-                    child: SizedBox(
-                      width: kTapTarget,
-                      height: kTapTarget,
-                      child: Center(
-                        child:
-                            AppIcon('ellipsis', size: 18, color: AppColors.fg2),
-                      ),
-                    ),
+                Builder(
+                  builder: (menuContext) => Semantics(
+                    button: true,
+                    label: 'More canvas actions',
+                    excludeSemantics: true,
+                    child: IconBtn('ellipsis',
+                        size: target,
+                        iconSize: target < kTapTarget ? 13 : 18,
+                        tooltip: 'More', onTap: () async {
+                      final picked = await showAppMenu<int>(
+                        menuContext,
+                        anchor: menuContext,
+                        below: true,
+                        minWidth: 180,
+                        maxWidth: 220,
+                        items: [
+                          for (var n = 0; n < hidden.length; n++)
+                            appMenuItem(
+                              value: n,
+                              icon: hidden[n].icon,
+                              label: hidden[n].label,
+                              height: target < kTapTarget ? 28 : 30,
+                            ),
+                        ],
+                      );
+                      if (picked != null) hidden[picked].onTap();
+                    }),
                   ),
                 ),
             ],
@@ -2138,6 +2156,8 @@ class _ChromePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = !kMobile;
+    final radius = compact ? PaneRow.radius : R.md;
     return Semantics(
       button: true,
       selected: active,
@@ -2146,21 +2166,25 @@ class _ChromePill extends StatelessWidget {
       child: Tooltip(
         message: semanticLabel,
         child: Material(
-          color: active ? AppColors.surface3 : AppColors.surface1,
-          borderRadius: BorderRadius.circular(R.md),
+          color: active
+              ? (compact ? PaneRow.plate : AppColors.surface3)
+              : (compact ? Colors.transparent : AppColors.surface1),
+          borderRadius: BorderRadius.circular(radius),
           child: InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(R.md),
+            borderRadius: BorderRadius.circular(radius),
             child: Container(
               constraints:
                   BoxConstraints(minHeight: minSize, minWidth: minSize),
-              padding: EdgeInsets.symmetric(horizontal: S.s12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(R.md),
-                border: Border.all(
-                  color: active ? AppColors.accentLine : AppColors.border,
-                ),
-              ),
+              padding: EdgeInsets.symmetric(horizontal: compact ? S.s8 : S.s12),
+              decoration: compact
+                  ? null
+                  : BoxDecoration(
+                      borderRadius: BorderRadius.circular(radius),
+                      border: Border.all(
+                        color: active ? AppColors.accentLine : AppColors.border,
+                      ),
+                    ),
               alignment: Alignment.center,
               child: child,
             ),
@@ -2190,7 +2214,11 @@ class _ToolbarButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = active ? AppColors.fg1 : AppColors.fg2;
+    final compact = !kMobile;
+    final fg = active
+        ? (compact ? PaneRow.labelOn : AppColors.fg1)
+        : (compact ? PaneRow.labelOff : AppColors.fg2);
+    final radius = compact ? PaneRow.radius : R.sm;
     return Semantics(
       button: true,
       selected: active,
@@ -2199,28 +2227,31 @@ class _ToolbarButton extends StatelessWidget {
       child: Tooltip(
         message: label,
         child: Material(
-          color: active ? AppColors.surface3 : Colors.transparent,
-          borderRadius: BorderRadius.circular(R.sm),
+          color: active
+              ? (compact ? PaneRow.plate : AppColors.surface3)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(radius),
           child: InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(R.sm),
+            borderRadius: BorderRadius.circular(radius),
             child: ConstrainedBox(
               constraints:
                   BoxConstraints(minWidth: minSize, minHeight: minSize),
               child: Padding(
-                padding:
-                    EdgeInsets.symmetric(horizontal: showLabel ? S.s8 : S.s6),
+                padding: EdgeInsets.symmetric(
+                    horizontal: showLabel ? (compact ? 7 : S.s8) : S.s6),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    AppIcon(icon, size: 16, color: fg, filled: active),
+                    AppIcon(icon,
+                        size: compact ? 13 : 16, color: fg, filled: active),
                     if (showLabel) ...[
                       SizedBox(width: S.s6),
                       Text(
                         label,
                         style: sans(
-                          12,
+                          compact ? PaneRow.label : 12,
                           weight: active ? W.label : W.body,
                           color: fg,
                         ),

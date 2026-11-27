@@ -206,8 +206,10 @@ class DeskActionButton extends StatelessWidget {
     final Color ink;
     if (icon == 'arrow-up' || icon == 'mic' || icon == 'stop') {
       fill = AppColors.accent;
-      // Capy inks its blue action black.
-      ink = const Color(0xFF000000);
+      // Capy inks its blue action black; a dark accent (quiet-light) needs its own ink.
+      ink = AppColors.accent.computeLuminance() > 0.18
+          ? const Color(0xFF000000)
+          : AppColors.accentFg;
     } else if (on || soft || danger) {
       fill = AppColors.surface3;
       ink = AppColors.fg1;

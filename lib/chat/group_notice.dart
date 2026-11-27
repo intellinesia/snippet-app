@@ -50,7 +50,7 @@ class GroupNotice extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 5.5, horizontal: 8),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             if (icon != null) ...[
-              AppIcon(icon, size: 14, color: AppColors.fg3),
+              AppIcon(icon, size: 12, color: AppColors.fg4),
               const SizedBox(width: 8),
             ],
             Flexible(
@@ -58,11 +58,12 @@ class GroupNotice extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
-                  style: sans(12, height: 17 / 12, color: AppColors.fg2)),
+                  // Quiet like the transcript's other system labels.
+                  style: sans(11.5, height: 16 / 11.5, color: AppColors.fg3)),
             ),
             if (time != null) ...[
               const SizedBox(width: 8),
-              Text(time!, style: sans(11, color: AppColors.fg3, tabular: true)),
+              Text(time!, style: sans(11, color: AppColors.fg4, tabular: true)),
             ],
           ]),
         ),

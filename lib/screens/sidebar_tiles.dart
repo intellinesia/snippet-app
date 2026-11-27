@@ -9,6 +9,7 @@ Color sidebarTitleInk() {
   if (!kMobile && currentTheme.name == 'quiet') {
     return const Color(0xFFB6B6B6);
   }
+  if (!kMobile && currentTheme.name == 'quiet-light') return PaneRow.labelOn;
   return AppColors.fg2;
 }
 

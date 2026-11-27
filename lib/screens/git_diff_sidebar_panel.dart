@@ -14,6 +14,7 @@ import 'git.dart';
 import 'pull_request_detail.dart' show PrSidebarList;
 import 'shell_nav.dart';
 import '../pull_refresh.dart';
+import '../settings_form.dart';
 
 /// Capy's quiet empty-panel mascot, redrawn as vector shapes so it can scale.
 class PanelEmptyArt extends StatelessWidget {
@@ -32,9 +33,9 @@ class PanelEmptyArt extends StatelessWidget {
 class _PanelEmptyArtPainter extends CustomPainter {
   const _PanelEmptyArtPainter();
 
-  static const _bright = Color(0xFF4D4D4D);
-  static const _dark = Color(0xFF262626);
-  static const _void = Color(0xFF070707);
+  static Color get _bright => AppColors.fg4;
+  static Color get _dark => Color.lerp(AppColors.fg4, AppColors.panelBg, 0.55)!;
+  static Color get _void => AppColors.panelBg;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -111,7 +112,7 @@ class _PanelEmptyArtPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_PanelEmptyArtPainter old) => false;
+  bool shouldRepaint(_PanelEmptyArtPainter old) => true;
 }
 
 /// Git Diff sidebar panel.
@@ -351,8 +352,14 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
     if (!tabbed) return changes;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Container(
-        height: 38,
-        padding: EdgeInsets.fromLTRB(S.of(10), S.s2, S.s8, S.s2),
+        height: kMobile ? 38 : PaneRow.height,
+        padding: kMobile
+            ? EdgeInsets.fromLTRB(S.of(10), S.s2, S.s8, S.s2)
+            : EdgeInsets.fromLTRB(S.s6, 0, S.s8, 0),
+        decoration: kMobile
+            ? null
+            : BoxDecoration(
+                border: Border(bottom: BorderSide(color: AppColors.paneLine))),
         child: Row(children: [
           _tabChip('changes', files.isEmpty ? 'Changes' : 'Changes  ${files.length}'),
           _tabChip('prs', 'Pull requests'),
@@ -552,9 +559,10 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Container(
             decoration: BoxDecoration(
-              color: AppColors.tint1,
-              borderRadius: BorderRadius.circular(R.lg),
-              border: Border.all(color: AppColors.line),
+              color: kMobile ? AppColors.tint1 : Grouped.card,
+              borderRadius: BorderRadius.circular(kMobile ? R.lg : R.of(9)),
+              border: Border.all(
+                  color: kMobile ? AppColors.line : Grouped.cardBorder),
             ),
             padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.s8),
             child: Column(
@@ -635,6 +643,28 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
 
   Widget _tabChip(String key, String label) {
     final on = widget.tab == key;
+    if (!kMobile) {
+      return Padding(
+        padding: EdgeInsets.only(right: S.s2),
+        child: Material(
+          color: on ? PaneRow.plate : Colors.transparent,
+          borderRadius: BorderRadius.circular(PaneRow.radius),
+          child: InkWell(
+            onTap: () => widget.onTab?.call(key),
+            borderRadius: BorderRadius.circular(PaneRow.radius),
+            hoverColor: AppColors.hoverPlate,
+            child: Container(
+              height: PaneRow.pill,
+              alignment: Alignment.center,
+              padding: EdgeInsets.symmetric(horizontal: S.s8),
+              child: Text(label,
+                  style: sans(PaneRow.label,
+                      color: on ? PaneRow.labelOn : PaneRow.labelOff)),
+            ),
+          ),
+        ),
+      );
+    }
     return Padding(
       padding: EdgeInsets.only(right: S.s2),
       child: Material(
@@ -671,7 +701,8 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
           onTap: _branchBusy ? null : () => _branchSheet(anchor),
           child: Container(
             height: 28,
-            padding: EdgeInsets.symmetric(horizontal: S.s6),
+            // Lines the branch text up with the file rows below.
+            padding: EdgeInsets.symmetric(horizontal: S.of(10)),
             child: Row(children: [
               AppIcon('git-branch', size: 13, color: AppColors.fg3),
               SizedBox(width: S.s8),
@@ -791,16 +822,15 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
           label: f.path,
           child: Material(
             color: Colors.transparent,
-            borderRadius: BorderRadius.circular(R.card),
+            borderRadius: BorderRadius.circular(PaneRow.radius),
             child: InkWell(
-              borderRadius: BorderRadius.circular(R.md),
+              borderRadius: BorderRadius.circular(PaneRow.radius),
               onTap: widget.onOpenDiff == null
                   ? null
                   : () => widget.onOpenDiff!(f),
-              child: Padding(
-                padding: kMobile
-                    ? EdgeInsets.fromLTRB(S.of(10), S.of(7), S.of(10), S.of(7))
-                    : EdgeInsets.fromLTRB(S.of(10), S.of(5), S.of(10), S.of(5)),
+              child: Container(
+                height: 26,
+                padding: EdgeInsets.symmetric(horizontal: S.of(10)),
                 child: Row(children: [
                   if (kMobile) ...[
                     _statusLetter(f),

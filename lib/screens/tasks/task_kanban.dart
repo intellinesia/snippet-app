@@ -8,6 +8,7 @@ import '../../api.dart';
 import '../../mochi.dart';
 import '../../models.dart';
 import '../../platform.dart';
+import '../../settings_form.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
 import '../list_search_field.dart';
@@ -255,41 +256,48 @@ class _TaskKanbanState extends State<TaskKanban> {
     final today = _feed.tasks
         .where((t) => t.status == TaskStatus.done && _isToday(t.updatedAt))
         .length;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(S.s24, S.s20, S.s24, S.of(14)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
+    return Container(
+      height: PaneRow.height,
+      padding: const EdgeInsets.fromLTRB(20, 0, 12, 0),
+      decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: AppColors.paneLine))),
+      child: LayoutBuilder(builder: (context, box) {
+        final searchWidth = (box.maxWidth * 0.28).clamp(140.0, 240.0);
+        return Row(children: [
+          Expanded(
+            child: Row(children: [
               Text('Tasks',
-                  style: sans(kMobile ? 20 : 16,
-                      weight: FontWeight.w600, color: AppColors.fg1)),
-              SizedBox(width: S.of(10)),
+                  style: sans(13, weight: W.label, color: taskTitleInk)),
+              const SizedBox(width: 8),
               if (showCounts)
-                Text(today > 0 ? '$sub · $today done today' : sub,
-                    style: sans(12.5, color: AppColors.fg4, tabular: true)),
-              const Spacer(),
-              if (widget.viewToggle != null) widget.viewToggle!,
+                Flexible(
+                  child: Text(today > 0 ? '$sub · $today done today' : sub,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12, color: AppColors.fg4, tabular: true)),
+                ),
             ]),
-        SizedBox(height: S.of(14)),
-        Row(children: [
+          ),
+          if (widget.viewToggle != null) ...[
+            widget.viewToggle!,
+            const SizedBox(width: 8),
+          ],
           SizedBox(
-            width: 320,
+            width: searchWidth.toDouble(),
             child: ListSearchField(
               controller: _search,
               hint: 'Search tasks',
               onChanged: (v) => setState(() => _query = v),
             ),
           ),
-          const Spacer(),
+          const SizedBox(width: 8),
           Btn('New task',
               small: true,
               icon: 'plus',
               variant: BtnVariant.secondary,
               onTap: _create),
-        ]),
-      ]),
+        ]);
+      }),
     );
   }
 
@@ -317,7 +325,7 @@ class _TaskKanbanState extends State<TaskKanban> {
     }
     final visible = _filteredTasks();
     return LayoutBuilder(builder: (context, constraints) {
-      final hPad = S.s24;
+      final hPad = S.s20;
       final gap = S.s12;
       final available = constraints.maxWidth - hPad * 2 - gap * 3;
       final colWidth = math.max(200.0, available / 4);
@@ -371,7 +379,7 @@ class _TaskKanbanState extends State<TaskKanban> {
             color: hovering
                 ? (kMobile
                     ? AppColors.surface2.withValues(alpha: 0.45)
-                    : AppColors.surface2)
+                    : Grouped.card)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(kMobile ? R.lg : R.of(12)),
           ),
@@ -455,8 +463,10 @@ class _TaskKanbanState extends State<TaskKanban> {
           height: 64,
           alignment: Alignment.center,
           decoration: BoxDecoration(
+            color: kMobile ? null : Grouped.card,
             borderRadius: BorderRadius.circular(R.md),
-            border: Border.all(color: AppColors.line),
+            border: Border.all(
+                color: kMobile ? AppColors.line : Grouped.cardBorder),
           ),
           child: Text(
               column == _KanbanColumn.working
@@ -464,7 +474,7 @@ class _TaskKanbanState extends State<TaskKanban> {
                       ? 'Only a dispatch starts work'
                       : 'Nothing running')
                   : 'No tasks',
-              style: TS.meta(AppColors.fg4)),
+              style: sans(12, color: AppColors.fg4)),
         ),
       );
 
@@ -566,14 +576,17 @@ class _TaskCardState extends State<_TaskCard> {
         padding: const EdgeInsets.symmetric(horizontal: 7),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: outline ? Colors.transparent : AppColors.surface3,
-          border: outline ? Border.all(color: AppColors.lineStrong) : null,
+          color: outline ? Colors.transparent : Grouped.plate,
+          border: Border.all(
+              color: outline ? AppColors.paneLine : Colors.transparent),
           borderRadius: BorderRadius.circular(R.of(5)),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           TaskStatusIcon(status, size: 11),
           const SizedBox(width: 5),
-          Text(label, style: sans(12, color: color, height: 1.2)),
+          Text(label,
+              style: sans(12,
+                  color: kMobile ? color : AppColors.fg2, height: 1.2)),
         ]),
       );
 
@@ -603,10 +616,10 @@ class _TaskCardState extends State<_TaskCard> {
           duration: Motion.fast,
           padding: const EdgeInsets.fromLTRB(12, 11, 12, 10),
           decoration: BoxDecoration(
-            color: hot ? AppColors.surface2 : AppColors.surface1,
-            borderRadius: BorderRadius.circular(R.of(8)),
+            color: hot ? Grouped.row : Grouped.card,
+            borderRadius: BorderRadius.circular(R.of(9)),
             border: Border.all(
-                color: hot ? AppColors.lineStrong : Colors.transparent),
+                color: hot ? AppColors.lineStrong : Grouped.cardBorder),
             boxShadow: widget.lifted ? overlayShadow : null,
           ),
           child: Column(
@@ -615,7 +628,7 @@ class _TaskCardState extends State<_TaskCard> {
               Text(t.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(13, height: 1.4, color: AppColors.fg1)),
+                  style: sans(13, height: 1.4, color: taskTitleInk)),
               if (status != null || folder.isNotEmpty) ...[
                 const SizedBox(height: 7),
                 Row(children: [
@@ -636,7 +649,7 @@ class _TaskCardState extends State<_TaskCard> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.surface1,
+                    color: Grouped.plate,
                     borderRadius: BorderRadius.circular(R.of(6)),
                   ),
                   child: Text(widget.step,

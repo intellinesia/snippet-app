@@ -3394,7 +3394,7 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                                           color: c,
                                           shape: BoxShape.circle,
                                           border: Border.all(
-                                            color: Colors.white
+                                            color: AppColors.fg1
                                                 .withValues(alpha: 0.14),
                                             width: 0.75,
                                           ),

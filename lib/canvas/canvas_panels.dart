@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../platform.dart';
+import '../settings_form.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'canvas_models.dart';
@@ -19,6 +20,8 @@ class PendingPinAnchor {
   final double dx;
   final double dy;
 }
+
+const double kCanvasSidePanelWidth = 340;
 
 /// Desktop docked side panel (width >= 900) wrapping Pins or Steps content.
 class CanvasSidePanel extends StatelessWidget {
@@ -40,47 +43,54 @@ class CanvasSidePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 340,
+      width: kCanvasSidePanelWidth,
       decoration: BoxDecoration(
         color: AppColors.surface1,
-        border: Border(left: BorderSide(color: AppColors.border)),
+        border: Border(left: BorderSide(color: AppColors.paneLine)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(S.s16, S.s12, S.s8, S.s12),
+          Container(
+            height: PaneRow.height,
+            padding: EdgeInsets.symmetric(horizontal: S.s4),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: AppColors.paneLine)),
+            ),
             child: Row(
               children: [
                 if (onBack != null)
-                  IconButton(
-                    onPressed: onBack,
-                    tooltip: 'Back to pins',
-                    padding: EdgeInsets.zero,
-                    constraints:
-                        const BoxConstraints.tightFor(width: 44, height: 44),
-                    icon: AppIcon('arrow-left', size: 16, color: AppColors.fg2),
-                  ),
+                  IconBtn('arrow-left',
+                      size: 28,
+                      iconSize: 13,
+                      tooltip: 'Back to pins',
+                      onTap: onBack)
+                else
+                  SizedBox(width: S.s8),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title,
-                          style: sans(14,
-                              weight: W.label, color: AppColors.fg1)),
-                      if (subtitle != null && subtitle!.isNotEmpty)
-                        Text(subtitle!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: mono(11, color: AppColors.fg3)),
-                    ],
+                  child: RichText(
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: title,
+                          style: sans(PaneRow.label,
+                              weight: W.label, color: PaneRow.labelOn),
+                        ),
+                        if (subtitle != null && subtitle!.isNotEmpty)
+                          TextSpan(
+                            text: ' · $subtitle',
+                            style: sans(12, color: AppColors.fg4),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
                 CanvasCloseButton(onPressed: onClose),
               ],
             ),
           ),
-          Divider(height: 1, thickness: 1, color: AppColors.border),
           Expanded(child: child),
         ],
       ),
@@ -130,7 +140,7 @@ class _PinComposerViewState extends State<PinComposerView> {
   Widget build(BuildContext context) {
     final el = widget.anchor.element;
     return Padding(
-      padding: EdgeInsets.all(S.s16),
+      padding: EdgeInsets.all(kMobile ? S.s16 : S.s12),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -138,9 +148,11 @@ class _PinComposerViewState extends State<PinComposerView> {
           Container(
             padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s8),
             decoration: BoxDecoration(
-              color: AppColors.surface2,
-              borderRadius: BorderRadius.circular(R.sm),
-              border: Border.all(color: AppColors.border),
+              color: kMobile ? AppColors.surface2 : Grouped.card,
+              borderRadius:
+                  BorderRadius.circular(kMobile ? R.sm : Grouped.radiusEnd),
+              border: Border.all(
+                  color: kMobile ? AppColors.border : Grouped.cardBorder),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -149,14 +161,16 @@ class _PinComposerViewState extends State<PinComposerView> {
                   widget.anchor.frame.title.isNotEmpty
                       ? widget.anchor.frame.title
                       : widget.anchor.frame.id,
-                  style: sans(12, weight: W.label, color: AppColors.fg1),
+                  style: sans(12,
+                      weight: W.label,
+                      color: Color.lerp(AppColors.fg1, AppColors.fg2, 0.3)),
                 ),
                 SizedBox(height: S.s2),
                 Text(
                   el != null
                       ? '${el.id}  (${(widget.anchor.dx * 100).round()}%, ${(widget.anchor.dy * 100).round()}%)'
                       : 'Frame anchor (${(widget.anchor.dx * 100).round()}%, ${(widget.anchor.dy * 100).round()}%)',
-                  style: mono(11, color: AppColors.fg3),
+                  style: mono(12, color: AppColors.fg4),
                 ),
               ],
             ),
@@ -172,19 +186,24 @@ class _PinComposerViewState extends State<PinComposerView> {
               hintText: 'Leave a note for this element...',
               hintStyle: sans(13, color: AppColors.fg3),
               filled: true,
-              fillColor: AppColors.surface2,
+              fillColor: kMobile ? AppColors.surface2 : Grouped.plate,
               contentPadding: EdgeInsets.all(S.s12),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(R.sm),
-                borderSide: BorderSide(color: AppColors.border),
+                borderRadius: BorderRadius.circular(
+                    kMobile ? R.sm : Grouped.radiusEnd),
+                borderSide: BorderSide(
+                    color: kMobile ? AppColors.border : Grouped.cardBorder),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(R.sm),
-                borderSide: BorderSide(color: AppColors.border),
+                borderRadius: BorderRadius.circular(
+                    kMobile ? R.sm : Grouped.radiusEnd),
+                borderSide: BorderSide(
+                    color: kMobile ? AppColors.border : Grouped.cardBorder),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(R.sm),
-                borderSide: BorderSide(color: AppColors.accent),
+                borderRadius: BorderRadius.circular(
+                    kMobile ? R.sm : Grouped.radiusEnd),
+                borderSide: BorderSide(color: AppColors.accentLine),
               ),
             ),
             onSubmitted: (_) => _submit(),
@@ -194,16 +213,15 @@ class _PinComposerViewState extends State<PinComposerView> {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               SizedBox(
-                height: 44,
+                height: kMobile ? 44 : 32,
                 child: TextButton(
                   onPressed: _saving ? null : widget.onCancel,
-                  child: Text('Cancel',
-                      style: sans(13, color: AppColors.fg2)),
+                  child: Text('Cancel', style: sans(13, color: AppColors.fg2)),
                 ),
               ),
               SizedBox(width: S.s8),
               SizedBox(
-                height: 44,
+                height: kMobile ? 44 : 32,
                 child: FilledButton(
                   onPressed: _saving ? null : _submit,
                   style: FilledButton.styleFrom(
@@ -214,8 +232,8 @@ class _PinComposerViewState extends State<PinComposerView> {
                     ),
                   ),
                   child: Text(_saving ? 'Saving...' : 'Place pin',
-                      style: sans(13,
-                          weight: W.label, color: AppColors.accentFg)),
+                      style:
+                          sans(13, weight: W.label, color: AppColors.accentFg)),
                 ),
               ),
             ],
@@ -252,7 +270,7 @@ class PinsListView extends StatelessWidget {
           child: Text(
             'No pins yet. Long-press a frame or pick Pin to leave a note.',
             textAlign: TextAlign.center,
-            style: sans(13, color: AppColors.fg3),
+            style: sans(12, color: AppColors.fg4),
           ),
         ),
       );
@@ -261,7 +279,7 @@ class PinsListView extends StatelessWidget {
     return ListView.separated(
       padding: EdgeInsets.all(S.s12),
       itemCount: pins.length,
-      separatorBuilder: (_, __) => SizedBox(height: S.s8),
+      separatorBuilder: (_, __) => SizedBox(height: S.of(10)),
       itemBuilder: (context, index) {
         final pin = pins[index];
         final isSelected = pin.id == selectedPinId;
@@ -276,133 +294,146 @@ class PinsListView extends StatelessWidget {
           selected: isSelected,
           label: 'Pin ${index + 1}, $statusLabel, $target: ${pin.text}',
           child: Material(
-          color: isSelected ? AppColors.surface3 : AppColors.surface2,
-          borderRadius: BorderRadius.circular(R.sm),
-          child: InkWell(
-            onTap: () => onSelectPin(pin),
-            borderRadius: BorderRadius.circular(R.sm),
-            child: Container(
-              padding: EdgeInsets.all(S.s12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(R.sm),
-                border: Border.all(
-                  color: isSelected ? AppColors.accentLine : AppColors.border,
+            color: isSelected
+                ? (kMobile ? AppColors.surface3 : PaneRow.plate)
+                : (kMobile ? AppColors.surface2 : Grouped.card),
+            borderRadius:
+                BorderRadius.circular(kMobile ? R.sm : Grouped.radiusEnd),
+            child: InkWell(
+              onTap: () => onSelectPin(pin),
+              borderRadius: BorderRadius.circular(
+                  kMobile ? R.sm : Grouped.radiusEnd),
+              child: Container(
+                padding: EdgeInsets.all(S.s12),
+                decoration: BoxDecoration(
+                  borderRadius:
+                      BorderRadius.circular(kMobile ? R.sm : Grouped.radiusEnd),
+                  border: Border.all(
+                    color: isSelected
+                        ? AppColors.accentLine
+                        : (kMobile ? AppColors.border : Grouped.cardBorder),
+                  ),
                 ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 22,
-                        height: 22,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: pin.isResolved ? AppColors.fg3 : AppColors.fg1,
-                          shape: BoxShape.circle,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 22,
+                          height: 22,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: pin.isResolved
+                                ? (kMobile ? AppColors.surface2 : Grouped.plate)
+                                : AppColors.surface3,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            '${index + 1}',
+                            style: mono(11,
+                                weight: W.strong,
+                                color: pin.isResolved
+                                    ? AppColors.fg4
+                                    : PaneRow.labelOn),
+                          ),
                         ),
-                        child: Text(
-                          '${index + 1}',
-                          style: mono(11, weight: W.strong, color: AppColors.bg),
+                        SizedBox(width: S.s8),
+                        Expanded(
+                          child: Text(
+                            target,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: mono(12,
+                                color:
+                                    isSelected ? AppColors.fg3 : AppColors.fg4),
+                          ),
                         ),
-                      ),
-                      SizedBox(width: S.s8),
-                      Expanded(
-                        child: Text(
-                          target,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: mono(11,
-                              color: isSelected ? AppColors.fg2 : AppColors.fg3),
-                        ),
-                      ),
-                      if (pin.isResolved)
-                        Text('Resolved',
-                            style: sans(12,
-                                color: isSelected
-                                    ? AppColors.fg2
-                                    : AppColors.fg3)),
-                    ],
-                  ),
-                  SizedBox(height: S.s8),
-                  Text(
-                    pin.text,
-                    style: sans(
-                      13,
-                      color: pin.isResolved
-                          ? (isSelected ? AppColors.fg2 : AppColors.fg3)
-                          : AppColors.fg1,
+                        if (pin.isResolved)
+                          Text('Resolved',
+                              style: sans(12,
+                                  color: isSelected
+                                      ? AppColors.fg3
+                                      : AppColors.fg4)),
+                      ],
                     ),
-                  ),
-                  if (pin.reply != null && pin.reply!.trim().isNotEmpty) ...[
                     SizedBox(height: S.s8),
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(S.s8),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface1,
-                        borderRadius: BorderRadius.circular(R.xs),
-                        border: Border.all(color: AppColors.border),
+                    Text(
+                      pin.text,
+                      style: sans(
+                        13,
+                        color: pin.isResolved
+                            ? (isSelected ? AppColors.fg3 : AppColors.fg4)
+                            : Color.lerp(AppColors.fg1, AppColors.fg2, 0.3),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Agent reply',
-                              style: sans(11,
-                                  weight: W.label, color: AppColors.fg3)),
-                          SizedBox(height: S.s2),
-                          Text(pin.reply!,
-                              style: sans(12, color: AppColors.fg2)),
-                        ],
+                    ),
+                    if (pin.reply != null && pin.reply!.trim().isNotEmpty) ...[
+                      SizedBox(height: S.s8),
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(S.s8),
+                        decoration: BoxDecoration(
+                          color: kMobile ? AppColors.surface1 : Grouped.plate,
+                          borderRadius: BorderRadius.circular(R.of(7)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Agent reply',
+                                style: sans(12,
+                                    weight: W.label, color: AppColors.fg4)),
+                            SizedBox(height: S.s2),
+                            Text(pin.reply!,
+                                style: sans(13, color: AppColors.fg2)),
+                          ],
+                        ),
+                      ),
+                    ],
+                    SizedBox(height: S.s8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Semantics(
+                        button: true,
+                        label:
+                            '${pin.isResolved ? 'Reopen' : 'Resolve'} pin ${index + 1}',
+                        excludeSemantics: true,
+                        child: InkWell(
+                          onTap: () => onToggleResolve(pin),
+                          borderRadius: BorderRadius.circular(R.xs),
+                          child: Container(
+                            constraints: BoxConstraints(
+                              minHeight: kMobile ? 44 : 28,
+                              minWidth: kMobile ? 44 : 28,
+                            ),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: S.s8,
+                              vertical: S.s4,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                AppIcon(
+                                  pin.isResolved ? 'undo' : 'check',
+                                  size: 13,
+                                  color: AppColors.fg3,
+                                ),
+                                SizedBox(width: S.s6),
+                                Text(
+                                  pin.isResolved ? 'Reopen' : 'Resolve',
+                                  style: sans(12,
+                                      weight: W.label, color: AppColors.fg3),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ],
-                  SizedBox(height: S.s8),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Semantics(
-                      button: true,
-                      label:
-                          '${pin.isResolved ? 'Reopen' : 'Resolve'} pin ${index + 1}',
-                      excludeSemantics: true,
-                      child: InkWell(
-                        onTap: () => onToggleResolve(pin),
-                        borderRadius: BorderRadius.circular(R.xs),
-                        child: Container(
-                          constraints: BoxConstraints(
-                            minHeight: 44,
-                            minWidth: 44,
-                          ),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: S.s8,
-                            vertical: S.s4,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              AppIcon(
-                                pin.isResolved ? 'undo' : 'check',
-                                size: 14,
-                                color: AppColors.fg2,
-                              ),
-                              SizedBox(width: S.s6),
-                              Text(
-                                pin.isResolved ? 'Reopen' : 'Resolve',
-                                style: sans(12,
-                                    weight: W.label, color: AppColors.fg2),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
         );
       },
     );
@@ -440,7 +471,7 @@ class StepsHistoryView extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.all(S.s24),
           child: Text('No recorded steps yet.',
-              style: sans(13, color: AppColors.fg3)),
+              style: sans(12, color: AppColors.fg4)),
         ),
       );
     }
@@ -448,14 +479,17 @@ class StepsHistoryView extends StatelessWidget {
     final sorted = [...ops]..sort((a, b) => b.rev.compareTo(a.rev));
     final anyBusy = revertingBatchId != null;
     return ListView.builder(
-      padding: EdgeInsets.fromLTRB(S.s8, S.s4, S.s8, S.s16),
+      padding: EdgeInsets.fromLTRB(
+          kMobile ? S.s8 : S.s4, S.s4, kMobile ? S.s8 : S.s4, S.s16),
       itemCount: sorted.length + 1,
       itemBuilder: (context, index) {
         if (index == sorted.length) {
           return Padding(
-            padding: EdgeInsets.fromLTRB(S.s8, S.s12, S.s8, 0),
+            padding:
+                EdgeInsets.fromLTRB(
+                    kMobile ? S.s8 : S.s12, S.s12, kMobile ? S.s8 : S.s12, 0),
             child: Text('Reverting adds a step; nothing is lost.',
-                style: sans(12, color: AppColors.fg3)),
+                style: sans(12, color: AppColors.fg4)),
           );
         }
         final batch = sorted[index];
@@ -469,15 +503,19 @@ class StepsHistoryView extends StatelessWidget {
           selected: isPreview,
           label: 'Preview revision ${batch.rev}: $title',
           child: Material(
-            color: isPreview ? AppColors.surface3 : Colors.transparent,
-            borderRadius: BorderRadius.circular(R.sm),
+            color: isPreview
+                ? (kMobile ? AppColors.surface3 : PaneRow.plate)
+                : Colors.transparent,
+            borderRadius:
+                BorderRadius.circular(kMobile ? R.sm : PaneRow.radius),
             child: InkWell(
               onTap: onPreview == null
                   ? null
                   : () => onPreview!(isCurrent && !isPreview ? null : batch),
-              borderRadius: BorderRadius.circular(R.sm),
+              borderRadius:
+                  BorderRadius.circular(kMobile ? R.sm : PaneRow.radius),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 56),
+                constraints: BoxConstraints(minHeight: kMobile ? 56 : 48),
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(S.s8, S.s8, S.s4, S.s8),
                   child: Row(
@@ -494,8 +532,8 @@ class StepsHistoryView extends StatelessWidget {
                           batch.author.isNotEmpty
                               ? batch.author[0].toUpperCase()
                               : '?',
-                          style: sans(12,
-                              weight: W.label, color: AppColors.fg1),
+                          style:
+                              sans(12, weight: W.label, color: PaneRow.labelOn),
                         ),
                       ),
                       SizedBox(width: S.s12),
@@ -507,17 +545,20 @@ class StepsHistoryView extends StatelessWidget {
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: sans(13,
-                                    weight: W.label, color: AppColors.fg1)),
+                                    weight: W.label,
+                                    color: Color.lerp(
+                                        AppColors.fg1, AppColors.fg2, 0.3))),
                             if (detail.isNotEmpty)
                               Text(detail,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: sans(12, color: AppColors.fg2)),
+                                  style: sans(12, color: AppColors.fg3)),
                             Text(
                               '${batch.author} · ${formatCanvasRelativeTime(batch.ts)} · r${batch.rev}${isCurrent ? ' · current' : ''}',
-                              style: sans(11,
-                                  color:
-                                      isPreview ? AppColors.fg2 : AppColors.fg3),
+                              style: sans(12,
+                                  color: isPreview
+                                      ? AppColors.fg3
+                                      : AppColors.fg4),
                             ),
                           ],
                         ),
@@ -531,14 +572,15 @@ class StepsHistoryView extends StatelessWidget {
                           onTap: anyBusy ? null : () => onRevert(batch),
                           borderRadius: BorderRadius.circular(R.xs),
                           child: Container(
-                            constraints: const BoxConstraints(
-                                minHeight: 44, minWidth: 44),
+                            constraints: BoxConstraints(
+                                minHeight: kMobile ? 44 : 28,
+                                minWidth: kMobile ? 44 : 28),
                             padding: EdgeInsets.symmetric(horizontal: S.s8),
                             alignment: Alignment.center,
                             child: Text(
                               isBusy ? 'Reverting...' : 'Revert',
                               style: sans(12,
-                                  weight: W.label, color: AppColors.fg2),
+                                  weight: W.label, color: AppColors.fg3),
                             ),
                           ),
                         ),
@@ -555,7 +597,7 @@ class StepsHistoryView extends StatelessWidget {
   }
 }
 
-/// Close affordance: 48 on phone, 44 on desktop.
+/// Close affordance: 48 on phone, a compact pointer target on desktop.
 class CanvasCloseButton extends StatelessWidget {
   const CanvasCloseButton({super.key, required this.onPressed});
 
@@ -563,12 +605,15 @@ class CanvasCloseButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = kMobile ? 48.0 : 44.0;
+    if (!kMobile) {
+      return IconBtn('x',
+          size: 28, iconSize: 13, tooltip: 'Close', onTap: onPressed);
+    }
     return IconButton(
       onPressed: onPressed,
       tooltip: 'Close',
       padding: EdgeInsets.zero,
-      constraints: BoxConstraints.tightFor(width: size, height: size),
+      constraints: const BoxConstraints.tightFor(width: 48, height: 48),
       icon: AppIcon('x', size: 16, color: AppColors.fg2),
     );
   }

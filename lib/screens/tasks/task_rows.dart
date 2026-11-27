@@ -175,9 +175,9 @@ class _DenseTaskRowState extends State<DenseTaskRow> {
     final agent = t.createdByKind == 'agent' ? t.createdById : '';
     final age = taskAge(t);
     final fill = widget.selected || widget.checked
-        ? AppColors.fg1.withValues(alpha: 0.08)
+        ? PaneRow.plate
         : _hover
-            ? AppColors.fg1.withValues(alpha: 0.04)
+            ? AppColors.hoverPlate
             : Colors.transparent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
@@ -190,7 +190,9 @@ class _DenseTaskRowState extends State<DenseTaskRow> {
           margin: const EdgeInsets.symmetric(horizontal: 6),
           padding: const EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
-              color: fill, borderRadius: BorderRadius.circular(R.md)),
+              color: fill,
+              borderRadius:
+                  BorderRadius.circular(kMobile ? R.md : PaneRow.radius)),
           child: Row(children: [
             Builder(
               builder: (anchor) => GestureDetector(
@@ -218,7 +220,7 @@ class _DenseTaskRowState extends State<DenseTaskRow> {
                   overflow: TextOverflow.ellipsis,
                   style: sans(13,
                       weight: widget.selected ? W.label : W.body,
-                      color: finished ? AppColors.fg3 : AppColors.fg1)),
+                      color: finished ? AppColors.fg3 : taskTitleInk)),
             ),
             if (agent.isNotEmpty) ...[
               const SizedBox(width: 10),

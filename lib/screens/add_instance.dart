@@ -115,151 +115,146 @@ class _AddMachineDialogState extends State<_AddMachineDialog> {
     }
   }
 
+  static const _command = 'snippet serve --enable';
+  bool _copied = false;
+
+  void _copyCommand() {
+    Clipboard.setData(const ClipboardData(text: _command));
+    setState(() => _copied = true);
+    Future.delayed(const Duration(milliseconds: 1400), () {
+      if (mounted) setState(() => _copied = false);
+    });
+  }
+
+  BoxDecoration get _plate => BoxDecoration(
+        color: AppColors.bg,
+        borderRadius: BorderRadius.circular(R.of(7)),
+        border: Border.all(color: AppColors.paneLine),
+      );
+
   @override
   Widget build(BuildContext context) {
     Theme.of(context); // Rebuild on theme change
     final canConnect = _paste.text.trim().isNotEmpty && !_busy;
-    return Material(
-      color: AppColors.surface1,
-      borderRadius: BorderRadius.circular(R.card),
-      clipBehavior: Clip.antiAlias,
-      child: Container(
-        width: 420,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(R.card),
-          border: Border.all(color: AppColors.border2),
-        ),
-        child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header: badge, title, dismiss. The close is here rather than
-              // relying on Esc alone, so the dialog has a visible exit.
-              Padding(
-                padding: EdgeInsets.fromLTRB(S.of(18), S.s16, S.of(10), 0),
-                child: Row(children: [
-                  Container(
-                    width: 30,
-                    height: 30,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: AppColors.accent.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(R.sm),
-                    ),
-                    child: AppIcon('plus', size: 15, color: AppColors.accent),
-                  ),
-                  SizedBox(width: S.of(11)),
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.escape): () =>
+            Navigator.pop(context),
+      },
+      child: Focus(
+        autofocus: true,
+        child: Material(
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(R.of(10)),
+          clipBehavior: Clip.antiAlias,
+          child: Container(
+            width: 420,
+            padding: const EdgeInsets.fromLTRB(16, 14, 12, 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(R.of(10)),
+              border: Border.all(color: AppColors.paneLine),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Expanded(
                     child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('Connect a machine', style: display(kMobile ? 16 : 14)),
-                          SizedBox(height: S.s2),
-                          Text('Link this app to a computer running snippet',
-                              style: TS.caption()),
-                        ]),
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Connect a machine',
+                            style: sans(13.5,
+                                weight: W.strong, color: AppColors.fg1)),
+                        const SizedBox(height: 3),
+                        Text('Link this app to another computer running Snippet.',
+                            style: sans(12, color: AppColors.fg3)),
+                      ],
+                    ),
                   ),
                   IconBtn('x',
-                      size: 32,
-                      iconSize: 16,
+                      size: 26,
+                      iconSize: 13,
                       tooltip: 'Close',
                       onTap: () => Navigator.pop(context)),
                 ]),
-              ),
-              SizedBox(height: S.s16),
-              // Step one: the command, on its own line with a copy affordance.
-              // It is something to run elsewhere, not to read in passing.
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: S.of(18)),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+                const SizedBox(height: 18),
+                Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const _StepLabel('1', 'Run this on that computer'),
-                      SizedBox(height: S.s8),
+                      const SizedBox(height: 8),
                       Container(
-                        padding: EdgeInsets.fromLTRB(S.of(11), S.of(9), S.s6, S.of(9)),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface2,
-                          borderRadius: BorderRadius.circular(R.sm),
-                          border: Border.all(color: AppColors.border),
-                        ),
+                        height: 36,
+                        padding: const EdgeInsets.fromLTRB(12, 0, 4, 0),
+                        decoration: _plate,
                         child: Row(children: [
-                          AppIcon('terminal', size: 13, color: AppColors.fg3),
-                          SizedBox(width: S.of(9)),
+                          Text(r'$', style: mono(12.5, color: AppColors.fg4)),
+                          const SizedBox(width: 8),
                           Expanded(
-                            child: Text('snippet serve --enable',
-                                style: mono(12, color: AppColors.fg1)),
+                            child: SelectableText(_command,
+                                maxLines: 1,
+                                style: mono(12.5, color: AppColors.fg1)),
                           ),
-                          IconBtn('copy',
+                          IconBtn(_copied ? 'check' : 'copy',
                               size: 28,
                               iconSize: 13,
-                              tooltip: 'Copy command', onTap: () {
-                            Clipboard.setData(
-                                const ClipboardData(text: 'snippet serve --enable'));
-                            toast(context, 'Command copied');
-                          }),
+                              tooltip: _copied ? 'Copied' : 'Copy command',
+                              onTap: _copyCommand),
                         ]),
                       ),
-                    ]),
-              ),
-              SizedBox(height: S.s16),
-              // Step two: paste what it prints.
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: S.of(18)),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
+                      const SizedBox(height: 16),
                       const _StepLabel('2', 'Paste the link it prints'),
-                      SizedBox(height: S.s8),
-                      AppField(
+                      const SizedBox(height: 8),
+                      Container(
+                        height: 36,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        alignment: Alignment.centerLeft,
+                        decoration: _plate,
+                        child: TextField(
                           controller: _paste,
-                          mono: true,
                           autofocus: true,
-                          hint: 'https://…?token=…',
-                          onSubmitted: _connect),
-                    ]),
-              ),
-              if (_error != null) ...[
-                SizedBox(height: S.s12),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: S.of(18)),
-                  child: Row(children: [
-                    AppIcon('alert-triangle',
-                        size: 13, color: AppColors.danger),
-                    SizedBox(width: S.of(7)),
-                    Expanded(
-                      child: Text(_error!,
-                          style:
-                              sans(11, height: 1.4, color: AppColors.danger)),
-                    ),
-                  ]),
+                          style: mono(12.5, color: AppColors.fg1),
+                          cursorColor: AppColors.fg1,
+                          textAlignVertical: TextAlignVertical.center,
+                          decoration: InputDecoration(
+                            isDense: true,
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                            hintText: 'https://…?token=…',
+                            hintStyle: mono(12.5, color: AppColors.fg4),
+                          ),
+                          onSubmitted: (v) => _connect(v),
+                        ),
+                      ),
+                      if (_error != null) ...[
+                        const SizedBox(height: 8),
+                        Text(_error!,
+                            style: sans(12,
+                                height: 1.4, color: AppColors.danger)),
+                      ],
+                      const SizedBox(height: 16),
+                      Row(children: [
+                        AppIcon('lock', size: 12, color: AppColors.fg4),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text('The link and its token stay on this device',
+                              style: sans(12, color: AppColors.fg4)),
+                        ),
+                        Btn(_busy ? 'Connecting…' : 'Connect',
+                            small: true,
+                            disabled: !canConnect,
+                            onTap: canConnect ? () => _connect(_paste.text) : null),
+                      ]),
+                    ],
+                  ),
                 ),
               ],
-              SizedBox(height: S.of(18)),
-              // Footer: status on the left, the action on the right.
-              Container(
-                padding: EdgeInsets.fromLTRB(S.of(18), S.s12, S.of(18), S.of(14)),
-                decoration: BoxDecoration(
-                  border: Border(top: BorderSide(color: AppColors.border)),
-                ),
-                child: Row(children: [
-                  if (_busy) ...[
-                    Spinner(size: 13, color: AppColors.fg3),
-                    SizedBox(width: S.of(9)),
-                    Text('Connecting…', style: TS.meta()),
-                  ] else
-                    Text('Connection stays on this device',
-                        style: TS.caption()),
-                  const Spacer(),
-                  Btn('Connect',
-                      small: true,
-                      onTap: canConnect ? () => _connect(_paste.text) : null),
-                ]),
-              ),
-            ]),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -285,10 +280,10 @@ class _StepLabel extends StatelessWidget {
           borderRadius: BorderRadius.circular(R.pill),
         ),
         child:
-            Text(step, style: sans(11, weight: W.label, color: AppColors.fg3)),
+            Text(step, style: sans(10, weight: W.label, color: AppColors.fg2)),
       ),
       SizedBox(width: S.s8),
-      Text(text, style: sans(11, weight: W.label, color: AppColors.fg2)),
+      Text(text, style: sans(12.5, color: AppColors.fg2)),
     ]);
   }
 }

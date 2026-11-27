@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../platform.dart';
 
 import '../api.dart';
-import '../mochi.dart';
+import '../settings_form.dart';
 import '../models.dart';
 import '../task_reason.dart';
 import '../theme.dart';
@@ -12,6 +12,7 @@ import '../widgets.dart';
 import '../swr.dart';
 
 import 'shell_models.dart' show RightTab;
+import 'tasks/task_common.dart' show TaskEmptyNote, taskTitleInk;
 import '../tap_detector.dart';
 
 class MissionBoardPanel extends StatefulWidget {
@@ -114,8 +115,8 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
   }
 
   Widget _label(String text) => Padding(
-        padding: EdgeInsets.fromLTRB(S.s16, S.s16, S.s16, S.s8),
-        child: Text(text, style: sans(13, color: AppColors.fg3)),
+        padding: EdgeInsets.fromLTRB(S.s12, S.s16, S.s12, S.s8),
+        child: Text(text, style: sans(12.5, color: AppColors.fg3)),
       );
 
   TaskNote _note(LeadTask t) {
@@ -130,12 +131,23 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
     );
   }
 
-  (String, Color, Color) _pill(LeadTask t) => switch (t.status) {
-        'in_review' => ('In review', AppColors.accent, AppColors.accentBg),
-        'blocked' => ('Blocked', AppColors.danger, AppColors.dangerBg),
-        'done' => ('Done', AppColors.ok, AppColors.okBg),
-        _ => ('Working', AppColors.run, AppColors.runBg),
+  (String, Color, Color) _pill(LeadTask t) {
+    if (!kMobile) {
+      final label = switch (t.status) {
+        'in_review' => 'In review',
+        'blocked' => 'Blocked',
+        'done' => 'Done',
+        _ => 'Working',
       };
+      return (label, AppColors.fg2, Grouped.plate);
+    }
+    return switch (t.status) {
+      'in_review' => ('In review', AppColors.accent, AppColors.accentBg),
+      'blocked' => ('Blocked', AppColors.danger, AppColors.dangerBg),
+      'done' => ('Done', AppColors.ok, AppColors.okBg),
+      _ => ('Working', AppColors.run, AppColors.runBg),
+    };
+  }
 
   String _when(LeadTask t) {
     if (t.status == 'done' || t.status == 'in_review') return _at(t.updatedAt);
@@ -152,17 +164,17 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
     final review = t.status == 'in_review';
     final (label, fg, bg) = _pill(t);
     final note = _note(t).line;
-    final radius = BorderRadius.circular(R.of(kMobile ? 20 : 8));
+    final radius = BorderRadius.circular(R.of(kMobile ? 20 : 9));
     return Padding(
       key: ValueKey('board-card-${t.id}'),
-      padding: EdgeInsets.fromLTRB(S.s16, 0, S.s16, S.s8),
+      padding: EdgeInsets.fromLTRB(S.s12, 0, S.s12, S.s8),
       child: Material(
-        color: AppColors.surface2,
+        color: kMobile ? AppColors.surface2 : Grouped.card,
         shape: RoundedRectangleBorder(
           borderRadius: radius,
           side: kMobile
               ? BorderSide(color: review ? AppColors.border2 : AppColors.border)
-              : BorderSide.none,
+              : BorderSide(color: Grouped.cardBorder),
         ),
         child: InkWell(
           borderRadius: radius,
@@ -178,10 +190,10 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                     padding:
                         EdgeInsets.symmetric(horizontal: S.s6, vertical: S.s2),
                     decoration: BoxDecoration(
-                      color: AppColors.surface3,
+                      color: kMobile ? AppColors.surface3 : Grouped.plate,
                       borderRadius: BorderRadius.circular(R.of(6)),
                     ),
-                    child: Text(t.id, style: mono(12, color: AppColors.fg2)),
+                    child: Text(t.id, style: mono(11, color: AppColors.fg3)),
                   ),
                   SizedBox(width: S.s8),
                   Container(
@@ -196,16 +208,16 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                   ),
                   const Spacer(),
                   Text(_when(t),
-                      style: sans(12, color: AppColors.fg3, tabular: true)),
+                      style: sans(12, color: AppColors.fg4, tabular: true)),
                 ]),
                 SizedBox(height: S.s6),
                 Text(t.title.isEmpty ? '(untitled)' : t.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(15,
+                    style: sans(kMobile ? 15 : 13,
                         weight: W.label,
-                        height: 20 / 15,
-                        color: AppColors.fg1)),
+                        height: kMobile ? 20 / 15 : 18 / 13,
+                        color: kMobile ? AppColors.fg1 : taskTitleInk)),
                 SizedBox(height: S.s6),
                 Row(children: [
                   Expanded(
@@ -213,8 +225,8 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                         key: ValueKey('note-${t.id}'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: sans(12,
-                            color: t.status == 'blocked'
+                                                  style: sans(12,
+                            color: kMobile && t.status == 'blocked'
                                 ? AppColors.danger
                                 : AppColors.fg3)),
                   ),
@@ -241,31 +253,37 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
   Widget _cardButton(String text,
           {required bool primary, required VoidCallback onTap}) =>
       Material(
-        color: primary ? AppColors.accentFill : AppColors.surface3,
-        borderRadius: BorderRadius.circular(R.of(10)),
+        color: kMobile
+            ? (primary ? AppColors.accentFill : AppColors.surface3)
+            : (primary ? PaneRow.plate : Grouped.card),
+        borderRadius: BorderRadius.circular(kMobile ? R.of(10) : PaneRow.radius),
         child: InkWell(
-          borderRadius: BorderRadius.circular(R.of(10)),
+          borderRadius: BorderRadius.circular(kMobile ? R.of(10) : PaneRow.radius),
           onTap: onTap,
           child: Container(
-            height: 30,
+            height: kMobile ? 30 : PaneRow.pill,
             padding: EdgeInsets.symmetric(horizontal: S.of(11)),
             alignment: Alignment.center,
             child: Text(text,
                 style: sans(12,
                     weight: W.label,
-                    color: primary ? AppColors.accentFg : AppColors.fg1)),
+                    color: kMobile
+                        ? (primary ? AppColors.accentFg : AppColors.fg1)
+                        : PaneRow.labelOn)),
           ),
         ),
       );
 
   Widget _filterBar() => Padding(
-        padding: EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s4),
+        padding: EdgeInsets.fromLTRB(S.s12, S.s4, S.s12, S.s4),
         child: Container(
           padding: EdgeInsets.all(S.s4),
           decoration: BoxDecoration(
-            color: kMobile ? AppColors.surface1 : AppColors.surface2,
+            color: kMobile ? AppColors.surface1 : Grouped.card,
             borderRadius: BorderRadius.circular(R.of(kMobile ? 16 : 8)),
-            border: kMobile ? Border.all(color: AppColors.border) : null,
+            border: kMobile
+                ? Border.all(color: AppColors.border)
+                : Border.all(color: Grouped.cardBorder),
           ),
           child: Row(children: [
             for (final f in _BoardFilter.values)
@@ -276,20 +294,23 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                   onTap: () => setState(() => _filter = f),
                   child: AnimatedContainer(
                     duration: Motion.quick,
-                    height: 32,
+                    height: kMobile ? 32 : PaneRow.pill,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: _filter == f
-                          ? AppColors.surface3
+                          ? (kMobile ? AppColors.surface3 : PaneRow.plate)
                           : Colors.transparent,
                       borderRadius:
                           BorderRadius.circular(R.of(kMobile ? 12 : 6)),
                     ),
                     child: Text(f.label,
-                        style: sans(13,
+                        style: sans(kMobile ? 13 : 12.5,
                             weight: _filter == f ? W.label : W.body,
-                            color:
-                                _filter == f ? AppColors.fg1 : AppColors.fg3)),
+                            color: kMobile
+                                ? (_filter == f ? AppColors.fg1 : AppColors.fg3)
+                                : (_filter == f
+                                    ? PaneRow.labelOn
+                                    : PaneRow.labelOff))),
                   ),
                 ),
               ),
@@ -312,17 +333,20 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
     return Padding(
       padding: EdgeInsets.only(right: S.s2),
       child: Material(
-        color: on ? AppColors.surface2 : Colors.transparent,
-        borderRadius: BorderRadius.circular(R.md),
+        color: on ? PaneRow.plate : Colors.transparent,
+        borderRadius: BorderRadius.circular(PaneRow.radius),
         child: InkWell(
-          borderRadius: BorderRadius.circular(R.md),
+          borderRadius: BorderRadius.circular(PaneRow.radius),
           onTap: onTap,
-          child: Padding(
+          child: Container(
+            height: PaneRow.pill,
+            alignment: Alignment.center,
             padding: EdgeInsets.fromLTRB(
-                S.of(10), S.s6, onClose != null ? S.s6 : S.of(10), S.s6),
+                S.of(10), 0, onClose != null ? S.s6 : S.of(10), 0),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Text(text,
-                  style: sans(13, color: on ? AppColors.fg1 : AppColors.fg3)),
+                  style: sans(PaneRow.label,
+                      color: on ? PaneRow.labelOn : PaneRow.labelOff)),
               if (onClose != null) ...[
                 SizedBox(width: S.of(5)),
                 TapDetector(
@@ -344,22 +368,22 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
   Widget _headerBar() {
     if (widget.readouts.isEmpty) {
       return Container(
-        height: 46,
-        padding: EdgeInsets.symmetric(horizontal: S.of(18)),
+        height: PaneRow.height,
+        padding: EdgeInsets.symmetric(horizontal: S.s12),
         alignment: Alignment.centerLeft,
         child: Row(children: [
           Text('Task board',
-              style: sans(13, weight: W.label, color: AppColors.fg2)),
+              style: sans(12.5, weight: W.label, color: PaneRow.labelOn)),
           const Spacer(),
           if (_activeCount > 0)
             Text('$_activeCount active',
-                style: sans(12, color: AppColors.accent)),
+                style: sans(12, color: AppColors.fg4)),
         ]),
       );
     }
     final reading = _readout;
     return Container(
-      height: 46,
+      height: PaneRow.height,
       padding: EdgeInsets.fromLTRB(S.of(10), S.s2, S.s8, S.s2),
       child: Row(children: [
         Expanded(
@@ -427,19 +451,12 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
               children: [
                 _headerBar(),
                 if (doing.isEmpty && _jobs.isEmpty && done.isEmpty)
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(S.s24, 120, S.s24, 0),
-                    child: Column(children: [
-                      const AgentMochi('lead', size: 72),
-                      SizedBox(height: S.of(18)),
-                      Text('All quiet', style: sans(15, color: AppColors.fg1)),
-                      SizedBox(height: S.s6),
-                      Text(
-                          'Work your agents pick up, scheduled runs and '
-                          'what finished today land here.',
-                          textAlign: TextAlign.center,
-                          style: sans(13, height: 1.5, color: AppColors.fg4)),
-                    ]),
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(24, 72, 24, 0),
+                    child: TaskEmptyNote(
+                      title: 'All quiet',
+                      body: 'Work your agents pick up, scheduled runs and what finished today land here.',
+                    ),
                   ),
                 if (_tasks.isNotEmpty) _filterBar(),
                 if (showReview && review.isNotEmpty) ...[
@@ -453,7 +470,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                 if (_filter != _BoardFilter.active &&
                     (showReview ? review.isEmpty : done.isEmpty))
                   Padding(
-                    padding: EdgeInsets.fromLTRB(S.s16, S.s24, S.s16, 0),
+                    padding: EdgeInsets.fromLTRB(S.s12, S.s24, S.s12, 0),
                     child: Text(
                         showReview
                             ? 'Nothing waiting for review.'
@@ -465,12 +482,12 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                   _label('Up next'),
                   for (final j in _jobs.take(6))
                     Padding(
-                      padding: EdgeInsets.fromLTRB(S.s16, S.s6, S.s16, S.s6),
+                      padding: EdgeInsets.fromLTRB(S.s12, S.s6, S.s12, S.s6),
                       child: Row(children: [
                         SizedBox(
                           width: 48,
                           child: Text(_at(j.nextRunAt),
-                              style: mono(12, color: AppColors.fg3)),
+                              style: mono(11, color: AppColors.fg4)),
                         ),
                         Expanded(
                           child: Text(j.title,

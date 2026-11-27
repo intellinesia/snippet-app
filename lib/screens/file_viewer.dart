@@ -139,16 +139,20 @@ class _FileToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        height: 40,
+        height: kMobile ? 40 : PaneRow.height,
         padding: EdgeInsets.only(left: S.s12, right: S.s8),
         decoration: kMobile
             ? null
             : BoxDecoration(
-                border: Border(bottom: BorderSide(color: AppColors.border))),
+                border: Border(bottom: BorderSide(color: AppColors.paneLine))),
         child: Row(children: [
           ...leading,
           const Spacer(),
-          if (meta != null) Text(meta!, style: mono(10, color: AppColors.fg3)),
+          if (meta != null)
+            Text(meta!,
+                style: kMobile
+                    ? mono(10, color: AppColors.fg3)
+                    : sans(12, color: AppColors.fg4)),
           if (meta != null && actions.isNotEmpty) SizedBox(width: S.s8),
           ...actions,
         ]),
@@ -274,16 +278,25 @@ class _FileViewerState extends State<FileViewer> {
 
   Widget _modeTab(String label, bool on, VoidCallback onTap) => InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(R.md),
+        borderRadius: BorderRadius.circular(kMobile ? R.md : PaneRow.radius),
         child: AnimatedContainer(
           duration: Motion.quick,
-          padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.s4),
+          height: kMobile ? null : PaneRow.pill,
+          alignment: kMobile ? null : Alignment.center,
+          padding: EdgeInsets.symmetric(
+              horizontal: S.of(10), vertical: kMobile ? S.s4 : 0),
           decoration: BoxDecoration(
-            color: on ? AppColors.surface2 : Colors.transparent,
-            borderRadius: BorderRadius.circular(R.md),
+            color: on
+                ? (kMobile ? AppColors.surface2 : PaneRow.plate)
+                : Colors.transparent,
+            borderRadius:
+                BorderRadius.circular(kMobile ? R.md : PaneRow.radius),
           ),
           child: Text(label,
-              style: sans(13, color: on ? AppColors.fg1 : AppColors.fg3)),
+              style: sans(kMobile ? 13 : PaneRow.label,
+                  color: on
+                      ? (kMobile ? AppColors.fg1 : PaneRow.labelOn)
+                      : (kMobile ? AppColors.fg3 : PaneRow.labelOff))),
         ),
       );
 
@@ -671,7 +684,17 @@ class _FileViewerState extends State<FileViewer> {
                         chunkController, notifier) {
                       return Row(children: [
                         DefaultCodeLineNumber(
-                            controller: editingController, notifier: notifier),
+                          controller: editingController,
+                          notifier: notifier,
+                          textStyle: kMobile
+                              ? null
+                              : codeMono(11.5,
+                                  height: 1.5, color: AppColors.fg4),
+                          focusedTextStyle: kMobile
+                              ? null
+                              : codeMono(11.5,
+                                  height: 1.5, color: AppColors.fg3),
+                        ),
                         if (!kMobile && _marks != null && !_marks!.isEmpty) ...[
                           SizedBox(width: S.s4),
                           _GutterMarks(notifier: notifier, marks: _marks!),
@@ -1288,11 +1311,12 @@ class _HeaderButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(R.of(6)),
           onTap: onTap,
           child: Container(
-            height: 26,
+            height: PaneRow.pill,
             padding: const EdgeInsets.symmetric(horizontal: 10),
             decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border2),
-              borderRadius: BorderRadius.circular(R.of(6)),
+              color: AppColors.tint1,
+              border: Border.all(color: AppColors.paneLine),
+              borderRadius: BorderRadius.circular(PaneRow.radius),
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               if (icon != null) ...[
@@ -1361,9 +1385,13 @@ class _FileHeaderBarState extends State<_FileHeaderBar> {
     // Header line: the file name only; the full path sits in the tooltip.
     final name = path.split('/').where((p) => p.isNotEmpty).lastOrNull ?? path;
     return Container(
-      height: 40,
-      padding: const EdgeInsets.fromLTRB(20, 0, 12, 0),
+      height: PaneRow.height,
+      padding: const EdgeInsets.fromLTRB(12, 0, 8, 0),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.paneLine)),
+      ),
       child: Row(children: [
+        ...leading,
         Expanded(
           child: Row(children: [
             Flexible(
@@ -1373,7 +1401,9 @@ class _FileHeaderBarState extends State<_FileHeaderBar> {
                 child: Text(name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(13, weight: FontWeight.w500, color: AppColors.fg1)),
+                    style: sans(PaneRow.label,
+                        weight: W.label,
+                        color: Color.lerp(AppColors.fg1, AppColors.fg2, 0.3))),
               ),
             ),
             if (modified) ...[
@@ -1383,14 +1413,13 @@ class _FileHeaderBarState extends State<_FileHeaderBar> {
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                    color: AppColors.surface3,
-                    borderRadius: BorderRadius.circular(10)),
-                child: Text('Modified', style: sans(11, color: AppColors.fg2)),
+                    color: PaneRow.plate,
+                    borderRadius: BorderRadius.circular(PaneRow.radius)),
+                child: Text('Modified', style: sans(11, color: AppColors.fg3)),
               ),
             ],
           ]),
         ),
-        ...leading,
         for (final a in actions) ...[const SizedBox(width: 6), a],
       ]),
     );
@@ -1411,7 +1440,7 @@ class _FileStatusBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = sans(11.5, color: AppColors.fg4);
+    final t = sans(12, color: AppColors.fg4);
     return ListenableBuilder(
       listenable: controller,
       builder: (_, __) {
@@ -1419,9 +1448,9 @@ class _FileStatusBar extends StatelessWidget {
         final m = marks;
         return Container(
           height: 28,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: AppColors.border))),
+              border: Border(top: BorderSide(color: AppColors.paneLine))),
           child: Row(children: [
             Text(language, style: t),
             const SizedBox(width: 16),

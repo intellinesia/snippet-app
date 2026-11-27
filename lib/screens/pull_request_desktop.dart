@@ -14,6 +14,8 @@ const _prFilters = [
         pr.draft ? ('git-branch', AppColors.fg4) : ('git-branch', AppColors.ok),
     };
 
+Color get _prTitleInk => Color.lerp(AppColors.fg1, AppColors.fg2, 0.3)!;
+
 Widget _prDot(Color c, {double size = 7}) => Container(
       width: size,
       height: size,
@@ -149,73 +151,81 @@ class _PrListPanelState extends State<PrListPanel> {
   }
 
   Widget _filterBar() => Padding(
-        padding: EdgeInsets.fromLTRB(S.s12, 0, S.s12, S.s8),
-        child: Container(
-          padding: EdgeInsets.all(S.of(3)),
-          decoration: BoxDecoration(
-            color: AppColors.surface2,
-            borderRadius: BorderRadius.circular(R.of(6)),
-          ),
-          child: Row(children: [
-            for (final (key, label) in _prFilters)
-              Expanded(
-                flex: label.length,
-                child: InkWell(
-                  onTap: () => _pick(key),
-                  borderRadius: BorderRadius.circular(R.of(5)),
-                  child: Container(
-                    height: 24,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: _filter == key
-                          ? AppColors.surface3
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(R.of(5)),
-                    ),
-                    child: Text(label,
-                        maxLines: 1,
-                        style: sans(12,
-                            weight: _filter == key ? W.label : W.body,
-                            color: _filter == key
-                                ? AppColors.fg1
-                                : AppColors.fg3)),
+        padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+        child: SizedBox(
+          height: PaneRow.pill,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: _prFilters.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 2),
+            itemBuilder: (_, i) {
+              final (key, label) = _prFilters[i];
+              final on = _filter == key;
+              return TapDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _pick(key),
+                child: Container(
+                  height: PaneRow.pill,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: on ? PaneRow.plate : null,
+                    borderRadius: BorderRadius.circular(PaneRow.radius),
                   ),
+                  child: Text(label,
+                      maxLines: 1,
+                      style: sans(PaneRow.label,
+                          color: on ? PaneRow.labelOn : PaneRow.labelOff)),
                 ),
-              ),
-          ]),
+              );
+            },
+          ),
         ),
       );
 
   Widget _row(PrSummary pr) {
     final selected = pr.number == widget.selected;
     final (icon, ink) = _prStateIcon(pr);
-    final pills = [
-      switch (rollup(pr.checks)) {
-        ChecksState.passing => prPill('Checks passed', AppColors.ok),
-        ChecksState.failing => prPill('Checks failing', AppColors.danger),
-        ChecksState.pending => prPill('Checks running', AppColors.run),
-        ChecksState.none => null,
-      },
-      switch (pr.reviewDecision) {
-        'APPROVED' => prPill('Approved', AppColors.ok),
-        'CHANGES_REQUESTED' => prPill('Changes requested', AppColors.danger),
-        _ => null,
-      },
-    ].whereType<Widget>().toList();
+    final meta = <InlineSpan>[
+      TextSpan(text: '#${pr.number} · ${pr.author} · ${prAgo(pr.updatedAt)}'),
+    ];
+    void state(String label, Color tone) {
+      meta.add(TextSpan(
+          text: ' · $label',
+          style: sans(12, color: tone.withValues(alpha: 0.9))));
+    }
+
+    switch (rollup(pr.checks)) {
+      case ChecksState.passing:
+        state('checks passed', AppColors.ok);
+      case ChecksState.failing:
+        state('checks failing', AppColors.danger);
+      case ChecksState.pending:
+        state('checks running', AppColors.run);
+      case ChecksState.none:
+    }
+    switch (pr.reviewDecision) {
+      case 'APPROVED':
+        state('approved', AppColors.ok);
+      case 'CHANGES_REQUESTED':
+        state('changes requested', AppColors.danger);
+    }
+    final titleInk = Color.lerp(AppColors.fg1, AppColors.fg2, 0.3)!;
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 0, 8, 2),
       child: Material(
-        color: selected ? AppColors.surface2 : Colors.transparent,
-        borderRadius: BorderRadius.circular(R.of(8)),
+        color: selected ? PaneRow.plate : Colors.transparent,
+        borderRadius: BorderRadius.circular(PaneRow.radius),
         child: InkWell(
-          borderRadius: BorderRadius.circular(R.of(8)),
+          borderRadius: BorderRadius.circular(PaneRow.radius),
+          hoverColor: AppColors.hoverPlate,
           onTap: () => widget.onSelect(pr.number),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
+            padding: const EdgeInsets.fromLTRB(10, 7, 10, 7),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Padding(
                 padding: const EdgeInsets.only(top: 1),
-                child: AppIcon(icon, size: 15, color: ink),
+                child: AppIcon(icon, size: 14, color: ink),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -225,21 +235,15 @@ class _PrListPanelState extends State<PrListPanel> {
                       Text(pr.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: sans(13, color: AppColors.fg1)),
+                          style: sans(13, color: titleInk)),
                       const SizedBox(height: 3),
-                      Row(children: [
-                        Flexible(
-                          child: Text(
-                              '#${pr.number} · ${pr.author} · ${prAgo(pr.updatedAt)}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: sans(11.5, color: AppColors.fg4)),
-                        ),
-                        for (final w in pills) ...[
-                          const SizedBox(width: 6),
-                          w,
-                        ],
-                      ]),
+                      Text.rich(
+                        TextSpan(
+                            style: sans(12, color: AppColors.fg4),
+                            children: meta),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ]),
               ),
             ]),
@@ -285,24 +289,32 @@ class _PrListPanelState extends State<PrListPanel> {
     final visible = _visible;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       if (widget.showTitle)
-        Padding(
-          padding: EdgeInsets.fromLTRB(S.of(18), S.s16, S.s12, S.of(10)),
+        Container(
+          height: PaneRow.height,
+          padding: const EdgeInsets.fromLTRB(10, 0, 8, 0),
+          decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: AppColors.paneLine))),
           child: Row(children: [
+            AppIcon('pull-request', size: PaneRow.icon, color: AppColors.fg3),
+            const SizedBox(width: 8),
             Expanded(
               child: Text('Pull requests',
-                  style: sans(15, weight: W.strong, color: AppColors.fg1)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(PaneRow.label,
+                      weight: W.label, color: PaneRow.labelOn)),
             ),
             IconBtn('refresh',
-                size: 28, iconSize: 14, tooltip: 'Refresh', onTap: _load),
+                size: 28, iconSize: 13, tooltip: 'Refresh', onTap: _load),
           ]),
         ),
       Padding(
-        padding: EdgeInsets.fromLTRB(S.s12, 0, S.s12, S.s8),
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
         child: Container(
           height: 32,
-          padding: EdgeInsets.symmetric(horizontal: S.of(10)),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
-            color: AppColors.surface2,
+            color: AppColors.surface1,
             borderRadius: BorderRadius.circular(R.of(8)),
           ),
           child: Row(children: [
@@ -497,7 +509,7 @@ class _DesktopPullRequestsState extends State<DesktopPullRequests> {
     final list = Container(
       decoration: BoxDecoration(
         color: AppColors.paneBg,
-        border: Border(right: BorderSide(color: AppColors.line)),
+        border: Border(right: BorderSide(color: AppColors.paneLine)),
       ),
       child: PrListPanel(
         client: widget.client,
@@ -727,154 +739,139 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
         _scrollTo = path;
       });
 
-  Widget _stateBadge(PrSummary s) {
-    final (label, icon, ink) = switch (s.state) {
-      'MERGED' => ('Merged', 'git-commit', AppColors.accent),
-      'CLOSED' => ('Closed', 'x-circle', AppColors.danger),
-      _ => s.draft
-          ? ('Draft', 'git-branch', AppColors.fg3)
-          : ('Open', 'git-branch', AppColors.ok),
-    };
-    return Container(
-      padding: EdgeInsets.fromLTRB(S.s8, S.of(3), S.of(10), S.of(3)),
-      decoration: BoxDecoration(
-        color: ink.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(R.pill),
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        AppIcon(icon, size: 12, color: ink),
-        SizedBox(width: S.of(5)),
-        Text(label, style: sans(12, weight: W.label, color: ink)),
-      ]),
-    );
-  }
-
   Widget _header(PrDetail pr) {
     final s = pr.summary;
     final pending = _pending.length;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(S.s20, S.s16, S.of(14), 0),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    final titleInk = Color.lerp(AppColors.fg1, AppColors.fg2, 0.3)!;
+    final (stateLabel, stateInk) = switch (s.state) {
+      'MERGED' => ('Merged', AppColors.accent),
+      'CLOSED' => ('Closed', AppColors.danger),
+      _ => s.draft ? ('Draft', AppColors.fg3) : ('Open', AppColors.ok),
+    };
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Container(
+        height: PaneRow.height,
+        padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
+        decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppColors.paneLine))),
+        child: Row(children: [
           if (widget.listHidden && widget.onToggleList != null) ...[
             IconBtn('sidebar',
-                size: 30,
-                iconSize: 15,
+                size: 28,
+                iconSize: 13,
                 tooltip: 'Show list',
                 onTap: widget.onToggleList),
-            SizedBox(width: S.s6),
+            const SizedBox(width: 4),
           ],
           Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(top: S.s2),
-              child: Text.rich(
-                TextSpan(children: [
-                  TextSpan(
-                      text: s.title,
-                      style: sans(16,
-                          weight: FontWeight.w600,
-                          height: 1.3,
-                          color: AppColors.fg1)),
-                  TextSpan(
-                      text: '  #${s.number}',
-                      style: sans(16, height: 1.3, color: AppColors.fg4)),
-                ]),
-              ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text.rich(
+                  TextSpan(children: [
+                    TextSpan(
+                        text: s.title,
+                        style: sans(13, weight: W.label, color: titleInk)),
+                    TextSpan(
+                        text: '  #${s.number}',
+                        style: sans(12, color: AppColors.fg4)),
+                  ]),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text.rich(
+                  TextSpan(children: [
+                    TextSpan(
+                        text: stateLabel,
+                        style: sans(12, weight: W.label, color: stateInk)),
+                    TextSpan(
+                        text:
+                            ' · ${s.author} · ${s.head} → ${s.base} · opened ${prAgo(pr.createdAt)}',
+                        style: sans(12, color: AppColors.fg4)),
+                  ]),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
-          SizedBox(width: S.s12),
-          if (_open)
-            FilledButton(
-              onPressed: _busy ? null : _review,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.accentFill,
-                foregroundColor: AppColors.accentFg,
-                minimumSize: const Size(0, 32),
-                padding: EdgeInsets.symmetric(horizontal: S.of(14)),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(R.sm)),
-              ),
-              child: Text(pending == 0 ? 'Review' : 'Finish review ($pending)',
-                  style: sans(13, weight: W.label, color: AppColors.accentFg)),
-            ),
-          SizedBox(width: S.s4),
+          if (_open) ...[
+            Btn(pending == 0 ? 'Review' : 'Finish review ($pending)',
+                small: true,
+                variant: BtnVariant.surface,
+                disabled: _busy,
+                onTap: _review),
+            const SizedBox(width: 4),
+          ],
           Builder(
             builder: (anchor) => IconBtn('more-horizontal',
-                size: 32,
-                iconSize: 16,
+                size: 28,
+                iconSize: 13,
                 tooltip: 'More',
                 onTap: _busy ? null : () => _menu(anchor)),
           ),
           if (!widget.listHidden && widget.onToggleList != null)
             IconBtn('sidebar',
-                size: 32,
-                iconSize: 15,
+                size: 28,
+                iconSize: 13,
                 tooltip: 'Hide list',
                 onTap: widget.onToggleList),
         ]),
-        SizedBox(height: S.of(10)),
-        Wrap(
-          spacing: 8,
-          runSpacing: 6,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            _stateBadge(s),
-            Text(s.author,
-                style: sans(13, weight: W.label, color: AppColors.fg2)),
-            Text(s.state == 'MERGED' ? 'merged' : 'wants to merge',
-                style: TS.meta(AppColors.fg3)),
-            Text('${s.head} → ${s.base}',
-                style: mono(12, color: AppColors.fg2)),
-            Text('· opened ${prAgo(pr.createdAt)}',
-                style: TS.meta(AppColors.fg4)),
-          ],
-        ),
-        SizedBox(height: S.of(14)),
-        Row(children: [
-          _tabButton(0, 'Conversation',
-              count: pr.timeline
-                  .where((e) => e.kind != PrEventKind.commit)
-                  .length),
-          _tabButton(1, 'Commits', count: pr.commits.length),
-          _tabButton(2, 'Files changed', count: pr.files.length),
-          const Spacer(),
-          prSize(s.additions, s.deletions, size: 12.5),
-          SizedBox(width: S.s6),
-        ]),
-      ]),
-    );
-  }
-
-  Widget _tabButton(int index, String label, {int? count}) {
-    final on = _tab == index;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => setState(() {
-          _tab = index;
-          _scrollTo = null;
-        }),
-        child: Container(
-          padding: EdgeInsets.fromLTRB(S.s2, S.s6, S.s2, S.s8),
-          margin: EdgeInsets.only(right: S.of(18)),
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                  color: on ? AppColors.fg1 : Colors.transparent, width: 2),
-            ),
-          ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Text(label,
-                style: sans(12.5, color: on ? AppColors.fg1 : AppColors.fg3)),
-            if (count != null && count > 0) ...[
-              SizedBox(width: S.s6),
-              Text('$count', style: mono(10.5, color: AppColors.fg4)),
-            ],
-          ]),
-        ),
       ),
-    );
+      Container(
+        height: PaneRow.height,
+        padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
+        decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppColors.paneLine))),
+        child: LayoutBuilder(builder: (context, box) {
+          final conversation = pr.timeline
+              .where((e) => e.kind != PrEventKind.commit)
+              .length;
+          String tabLabel(String label, int count) =>
+              count > 0 ? '$label $count' : label;
+          return Row(children: [
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  PanePill(
+                      icon: 'message',
+                      label: tabLabel('Conversation', conversation),
+                      active: _tab == 0,
+                      onTap: () => setState(() {
+                            _tab = 0;
+                            _scrollTo = null;
+                          })),
+                  const SizedBox(width: 2),
+                  PanePill(
+                      icon: 'git-commit',
+                      label: tabLabel('Commits', pr.commits.length),
+                      active: _tab == 1,
+                      onTap: () => setState(() {
+                            _tab = 1;
+                            _scrollTo = null;
+                          })),
+                  const SizedBox(width: 2),
+                  PanePill(
+                      icon: 'file-diff',
+                      label: tabLabel('Files changed', pr.files.length),
+                      active: _tab == 2,
+                      onTap: () => setState(() {
+                            _tab = 2;
+                            _scrollTo = null;
+                          })),
+                ]),
+              ),
+            ),
+            if (box.maxWidth >= 520) ...[
+              const SizedBox(width: 8),
+              prSize(s.additions, s.deletions, size: 12),
+            ],
+          ]);
+        }),
+      ),
+    ]);
   }
 
   @override
@@ -934,7 +931,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
           header: Text.rich(TextSpan(children: [
             TextSpan(
                 text: pr.summary.author,
-                style: sans(13, weight: W.label, color: AppColors.fg1)),
+                style: sans(13, weight: W.label, color: _prTitleInk)),
             TextSpan(
                 text: '  opened ${prAgo(pr.createdAt)}',
                 style: TS.meta(AppColors.fg4)),
@@ -957,21 +954,11 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
               footer: Row(children: [
                 Text('Markdown supported', style: TS.meta(AppColors.fg4)),
                 const Spacer(),
-                FilledButton(
-                  onPressed: _busy || _comment.text.trim().isEmpty
-                      ? null
-                      : _postComment,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.accentFill,
-                    foregroundColor: AppColors.accentFg,
-                    minimumSize: const Size(0, 30),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(R.sm)),
-                  ),
-                  child: Text('Comment',
-                      style:
-                          sans(13, weight: W.label, color: AppColors.accentFg)),
-                ),
+                Btn('Comment',
+                    small: true,
+                    variant: BtnVariant.surface,
+                    disabled: _busy || _comment.text.trim().isEmpty,
+                    onTap: _postComment),
               ]),
             ),
           ),
@@ -1010,7 +997,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
             if (line)
               Positioned.fill(
                 child: Center(
-                    child: Container(width: 1.5, color: AppColors.surface2)),
+                    child: Container(width: 1, color: AppColors.paneLine)),
               ),
             Padding(
               padding: EdgeInsets.only(top: S.s2),
@@ -1043,8 +1030,9 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
                         padding: EdgeInsets.fromLTRB(
                             S.of(14), S.s12, S.of(14), S.s12),
                         decoration: BoxDecoration(
-                          color: AppColors.tint1,
-                          borderRadius: BorderRadius.circular(R.md),
+                          color: Grouped.card,
+                          borderRadius: BorderRadius.circular(R.of(9)),
+                          border: Border.all(color: Grouped.cardBorder),
                         ),
                         child: body,
                       )
@@ -1107,7 +1095,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
             header: Text.rich(TextSpan(children: [
               TextSpan(
                   text: e.author,
-                  style: sans(13, weight: W.label, color: AppColors.fg1)),
+                  style: sans(13, weight: W.label, color: _prTitleInk)),
               TextSpan(text: ' $verb', style: sans(13, color: AppColors.fg2)),
               TextSpan(text: '  ${prAgo(e.at)}', style: TS.meta(AppColors.fg4)),
             ])),
@@ -1124,8 +1112,9 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
                             margin: EdgeInsets.only(
                                 bottom: threads.isEmpty ? 0 : S.s8),
                             decoration: BoxDecoration(
-                              color: AppColors.tint1,
-                              borderRadius: BorderRadius.circular(R.md),
+                              color: Grouped.card,
+                              borderRadius: BorderRadius.circular(R.of(9)),
+                              border: Border.all(color: Grouped.cardBorder),
                             ),
                             child: PrCommentBody(e.body),
                           ),
@@ -1136,7 +1125,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
                               padding:
                                   EdgeInsets.symmetric(horizontal: S.of(10)),
                               minimumSize: const Size(0, 30),
-                              backgroundColor: AppColors.tint1,
+                              backgroundColor: Grouped.card,
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(R.sm)),
                             ),
@@ -1144,8 +1133,8 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
                                 size: 13, color: AppColors.accent),
                             label: Text(
                                 '${threads.length} comment${threads.length == 1 ? '' : 's'} on ${threads.map((t) => t.path.split('/').last).toSet().join(', ')}',
-                                style: sans(13,
-                                    weight: W.label, color: AppColors.accent)),
+                                style: sans(12,
+                                    weight: W.label, color: AppColors.fg2)),
                           ),
                       ]),
           ));
@@ -1155,7 +1144,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
             header: Text.rich(TextSpan(children: [
               TextSpan(
                   text: e.author,
-                  style: sans(13, weight: W.label, color: AppColors.fg1)),
+                  style: sans(13, weight: W.label, color: _prTitleInk)),
               TextSpan(
                   text: '  commented ${prAgo(e.at)}',
                   style: TS.meta(AppColors.fg4)),
@@ -1177,13 +1166,13 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
   Widget _sideCard(List<Widget> rows) => Container(
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(R.of(12)),
-          border: Border.all(color: AppColors.line),
+          color: Grouped.card,
+          borderRadius: BorderRadius.circular(R.of(10)),
+          border: Border.all(color: Grouped.cardBorder),
         ),
         child: Column(children: [
           for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0) Divider(height: 1, thickness: 1, color: AppColors.line),
+            if (i > 0) Container(height: 1, color: AppColors.paneLine),
             rows[i],
           ],
         ]),
@@ -1211,7 +1200,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
             Expanded(
               child: Text.rich(
                 TextSpan(children: [
-                  TextSpan(text: label, style: sans(13, color: AppColors.fg1)),
+                  TextSpan(text: label, style: sans(13, color: _prTitleInk)),
                   if (detail.isNotEmpty)
                     TextSpan(text: '  $detail', style: TS.meta(AppColors.fg4)),
                 ]),
@@ -1347,7 +1336,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
               child: Row(children: [
                 prAvatar(r, size: 20),
                 SizedBox(width: S.s8),
-                Expanded(child: Text(r, style: sans(13, color: AppColors.fg1))),
+                Expanded(child: Text(r, style: sans(13, color: _prTitleInk))),
                 switch (reviews[r]) {
                   'APPROVED' => Tooltip(
                       message: 'Approved',

@@ -6,6 +6,7 @@ import '../../models.dart';
 import '../../panel.dart';
 import '../../platform.dart';
 import '../../swr.dart';
+import '../git_diff_sidebar_panel.dart' show PanelEmptyArt;
 import '../../theme.dart';
 import '../../widgets.dart';
 import 'create_task_form.dart';
@@ -133,6 +134,38 @@ bool taskMatches(TaskItem task, String query) {
 String taskAge(TaskItem task) {
   final at = DateTime.tryParse(task.updatedAt);
   return at == null ? '' : relativeTime(at.millisecondsSinceEpoch ~/ 1000);
+}
+
+/// Desktop titles sit below white; weight and size carry the hierarchy.
+Color get taskTitleInk => Color.lerp(AppColors.fg1, AppColors.fg2, 0.3)!;
+
+/// Capy's quiet centred empty note, reused across the task surfaces.
+class TaskEmptyNote extends StatelessWidget {
+  const TaskEmptyNote({super.key, required this.title, this.body});
+
+  final String title;
+  final String? body;
+
+  @override
+  Widget build(BuildContext context) => Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const PanelEmptyArt(width: 72, height: 56),
+            const SizedBox(height: 12),
+            Text(title,
+                textAlign: TextAlign.center,
+                style: sans(12.5, weight: W.label, color: AppColors.fg3)),
+            if ((body ?? '').isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(body!,
+                  textAlign: TextAlign.center,
+                  style: sans(12,
+                      color: Color.lerp(AppColors.fg4, AppColors.panelBg, 0.4))),
+            ],
+          ]),
+        ),
+      );
 }
 
 /// Set by the desktop shell so a task opened from anywhere lands in its own

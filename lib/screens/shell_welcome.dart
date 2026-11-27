@@ -97,7 +97,6 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
   String? _error;
   Instance? _pending;
   Timer? _timer;
-  int? _hover;
   late final AnimationController _clock;
   final _paste = TextEditingController();
   bool _remoteBusy = false;
@@ -109,6 +108,10 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
     _clock =
         AnimationController(vsync: this, duration: const Duration(seconds: 9));
     _clock.repeat();
+    // Both the desktop and phone layouts gate Connect on the field's text.
+    _paste.addListener(() {
+      if (mounted) setState(() {});
+    });
     if (!kMobile) {
       _installed = widget.binaryInstalled();
       _probe();
@@ -213,17 +216,17 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
   Widget _label(String text) => Padding(
         padding: EdgeInsets.only(bottom: S.s8),
         child: Text(text,
-            textAlign: TextAlign.center,
-            style: sans(13, weight: W.label, color: AppColors.fg1)),
+            textAlign: TextAlign.left,
+            style: sans(12.5, weight: W.label, color: AppColors.fg2)),
       );
 
   Text _body(String text) => Text(text,
-      textAlign: TextAlign.center,
-      style: sans(12, height: 1.5, color: AppColors.fg3));
+      textAlign: TextAlign.left,
+      style: sans(12, height: 1.45, color: AppColors.fg3));
 
   Widget _localControls() {
     if (_found != null) {
-      return Column(mainAxisSize: MainAxisSize.min, children: [
+      return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(mainAxisSize: MainAxisSize.min, children: [
           Container(
             width: 7,
@@ -248,7 +251,7 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
       ]);
     }
     if (_pending != null) {
-      return Column(mainAxisSize: MainAxisSize.min, children: [
+      return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         _label('Not set to start automatically'),
         _body('It works now, but stops when this computer restarts. '
             'To fix that, run:'),
@@ -260,17 +263,17 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
       ]);
     }
     if (_installing) {
-      return Column(mainAxisSize: MainAxisSize.min, children: [
+      return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         _label('Setting up'),
-        Align(alignment: Alignment.center, child: _progress()),
+        Align(alignment: Alignment.centerLeft, child: _progress()),
       ]);
     }
     if (_runningUnreadable) {
       return _body('Snippet is running here, but this app cannot read its '
-          'link. Run snippet serve --status and paste the link on the right.');
+          'link. Run snippet serve --status and paste the link below.');
     }
     if (!canInstallLocalService) {
-      return Column(mainAxisSize: MainAxisSize.min, children: [
+      return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         _body('Run these in a terminal. This screen picks the service up '
             'as soon as it is running.'),
         SizedBox(height: S.of(10)),
@@ -281,14 +284,14 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
         const _CommandBox(enableCommand),
       ]);
     }
-    return Column(mainAxisSize: MainAxisSize.min, children: [
+    return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
       if (_installed) ...[
         _body('Snippet is installed but not running.'),
         SizedBox(height: S.s12),
       ],
       if (_error != null) ...[
         Text(_error!,
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.left,
             style: sans(12, height: 1.45, color: AppColors.danger)),
         SizedBox(height: S.s8),
         const _CommandBox(installCommand),
@@ -306,187 +309,148 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
     ]);
   }
 
-  Widget _remoteControls() => Column(mainAxisSize: MainAxisSize.min, children: [
-        Row(children: [
-          Expanded(
-              child: AppField(
-                  controller: _paste,
-                  mono: true,
-                  hint: 'https://\u2026?token=\u2026',
-                  onSubmitted: _connectRemote)),
-          SizedBox(width: S.s8),
-          Btn('Connect',
-              small: true,
-              disabled: _remoteBusy,
-              onTap: () => _connectRemote(_paste.text)),
-        ]),
+  Widget _remoteControls() {
+    final canConnect = !_remoteBusy && _paste.text.trim().isNotEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          alignment: Alignment.centerLeft,
+          decoration: BoxDecoration(
+            color: AppColors.bg,
+            borderRadius: BorderRadius.circular(R.of(7)),
+            border: Border.all(color: AppColors.paneLine),
+          ),
+          child: TextField(
+            controller: _paste,
+            style: mono(12.5, color: AppColors.fg1),
+            cursorColor: AppColors.fg1,
+            textAlignVertical: TextAlignVertical.center,
+            decoration: InputDecoration(
+              isDense: true,
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+              hintText: 'https://…?token=…',
+              hintStyle: mono(12.5, color: AppColors.fg4),
+            ),
+            onSubmitted: _connectRemote,
+          ),
+        ),
         SizedBox(height: S.s8),
         if (_remoteError != null)
           Text(_remoteError!,
-              textAlign: TextAlign.center,
               style: sans(12, height: 1.4, color: AppColors.danger))
         else
           SelectableText.rich(
             TextSpan(
-                style: sans(12, height: 1.5, color: AppColors.fg4),
+                style: sans(12, height: 1.45, color: AppColors.fg4),
                 children: [
                   const TextSpan(text: 'On that computer: '),
                   TextSpan(
                       text: enableCommand,
-                      style: mono(11, color: AppColors.fg3)),
+                      style: mono(11.5, color: AppColors.fg3)),
                   const TextSpan(text: ', then '),
                   TextSpan(
                       text: 'snippet serve --status',
-                      style: mono(11, color: AppColors.fg3)),
+                      style: mono(11.5, color: AppColors.fg3)),
                 ]),
-            textAlign: TextAlign.center,
           ),
-      ]);
-
-  int? get _active {
-    if (_hover != null) return _hover;
-    if (_installing || _pending != null || _error != null) return 0;
-    if (_remoteBusy || _remoteError != null || _paste.text.isNotEmpty) {
-      return 1;
-    }
-    return null;
+        SizedBox(height: S.s12),
+        Row(children: [
+          Expanded(
+            child: Text('The link and its token stay on this device',
+                style: sans(12, color: AppColors.fg4)),
+          ),
+          Btn(_remoteBusy ? 'Connecting…' : 'Connect',
+              small: true,
+              disabled: !canConnect,
+              onTap: canConnect ? () => _connectRemote(_paste.text) : null),
+        ]),
+      ],
+    );
   }
 
-  Widget _side(int index,
-      {required String title,
-      required String body,
-      required double artHeight,
-      required Widget controls}) {
-    final active = _active;
-    final on = active == index;
-    final dim = active != null && !on;
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hover = index),
-      onExit: (_) => setState(() {
-        if (_hover == index) _hover = null;
-      }),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 380),
-        curve: Curves.easeOutCubic,
-        color: on ? AppColors.surface1 : AppColors.bg,
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 380),
-          opacity: dim ? 0.55 : 1,
-          child: Center(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(vertical: S.s24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    height: artHeight,
-                    width: double.infinity,
-                    child: TweenAnimationBuilder<double>(
-                      tween: Tween(end: on ? 1.0 : 0.0),
-                      duration: const Duration(milliseconds: 500),
-                      curve: Curves.easeOutCubic,
-                      builder: (_, h, __) => _artFor(index, h),
-                    ),
+
+  Widget _sectionTitle(String text) => Text(text,
+      style: sans(12.5, weight: W.label, color: AppColors.fg2));
+
+  Widget _sectionBody(String text) => Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Text(text, style: sans(12, height: 1.45, color: AppColors.fg3)),
+      );
+
+  Widget _desktop() => LayoutBuilder(
+        builder: (_, box) => SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+                minHeight: (box.maxHeight - 64)
+                    .clamp(0.0, double.infinity)
+                    .toDouble()),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  const AgentMochi('snippet', size: 18),
+                  SizedBox(width: S.s8),
+                  Text('Snippet needs a service',
+                      style: sans(13.5,
+                          weight: W.strong,
+                          color: Color.lerp(
+                              AppColors.fg1, AppColors.fg2, 0.3))),
+                ]),
+                SizedBox(height: S.s8),
+                Text(
+                  'Snippet does its work in a small service that runs on a '
+                  'computer or server. This app is your window onto it.',
+                  textAlign: TextAlign.center,
+                  style: sans(12, height: 1.45, color: AppColors.fg3),
+                ),
+                SizedBox(height: S.s24),
+                Container(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface1,
+                    borderRadius: BorderRadius.circular(R.of(10)),
+                    border: Border.all(color: AppColors.paneLine),
                   ),
-                  SizedBox(height: S.of(10)),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: S.of(36)),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 380),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(title,
-                              textAlign: TextAlign.center,
-                              style: sans(22,
-                                  weight: W.label,
-                                  spacing: -0.2,
-                                  color: AppColors.fg1)),
-                          SizedBox(height: S.s8),
-                          Text(body,
-                              textAlign: TextAlign.center,
-                              style:
-                                  sans(13, height: 1.55, color: AppColors.fg3)),
-                          SizedBox(height: S.of(22)),
-                          controls,
-                        ],
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _sectionTitle('On this computer'),
+                      _sectionBody('Install the service here. It runs in the '
+                          'background, starts with your computer, and your work '
+                          'stays on this machine.'),
+                      SizedBox(height: S.s12),
+                      _localControls(),
+                      Padding(
+                        padding: EdgeInsets.symmetric(vertical: S.s16),
+                        child: Container(height: 1, color: AppColors.paneLine),
                       ),
-                    ),
+                      _sectionTitle('On another computer'),
+                      _sectionBody('Already running Snippet on a server or '
+                          'another machine? Paste its link and work with it '
+                          'from here.'),
+                      SizedBox(height: S.s12),
+                      _remoteControls(),
+                    ],
                   ),
-                ],
+                ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _artFor(int index, double h) => index == 0
-      ? UnboxArt(time: _clock, hover: h)
-      : PlugArt(time: _clock, hover: h);
-
-  Widget _desktop() => LayoutBuilder(builder: (context, box) {
-        final stacked = box.maxWidth < 760;
-        final artHeight =
-            stacked ? 170.0 : (box.maxHeight * 0.5).clamp(190.0, 400.0);
-        return _split(box, stacked, artHeight);
-      });
-
-  Widget _split(BoxConstraints box, bool stacked, double artHeight) {
-    final left = _side(0,
-        title: 'On this computer',
-        body: 'Install the service here. It runs in the background, starts '
-            'with your computer, and your work stays on this machine.',
-        artHeight: artHeight,
-        controls: _localControls());
-    final right = _side(1,
-        title: 'On another computer',
-        body: 'Already running snippet on a server or another machine? '
-            'Paste its link and work with it from here.',
-        artHeight: artHeight,
-        controls: _remoteControls());
-    {
-      final active = _active;
-      final lf = active == null ? 0.5 : (active == 0 ? 0.56 : 0.44);
-      const d = Duration(milliseconds: 420);
-      final line = Container(
-          width: stacked ? null : 1,
-          height: stacked ? 1 : null,
-          color: AppColors.border2);
-      return Stack(children: [
-        Positioned.fill(
-          child: stacked
-              ? SingleChildScrollView(
-                  padding: EdgeInsets.only(top: S.s40),
-                  child: Column(children: [left, line, right]))
-              : Row(children: [
-                  AnimatedContainer(
-                      key: const ValueKey('welcome-left'),
-                      duration: d,
-                      curve: Curves.easeOutCubic,
-                      width: box.maxWidth * lf,
-                      child: left),
-                  line,
-                  Expanded(child: right),
-                ]),
-        ),
-        Positioned(
-          top: 14,
-          left: 0,
-          right: 0,
-          child: IgnorePointer(
-            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              const AgentMochi('snippet', size: 16),
-              SizedBox(width: S.s8),
-              Text('Snippet needs a service',
-                  style: sans(13, color: AppColors.fg3)),
-            ]),
-          ),
-        ),
-      ]);
-    }
-  }
+      );
 
   Widget _wideButton(String label, String icon, VoidCallback? onTap) =>
       Pressable(
@@ -680,9 +644,9 @@ class _CommandBox extends StatelessWidget {
         padding: EdgeInsets.fromLTRB(S.s12, S.s6, S.s4, S.s6),
         decoration: BoxDecoration(
           color: AppColors.bg,
-          borderRadius: BorderRadius.circular(kMobile ? R.sm : R.of(8)),
+          borderRadius: BorderRadius.circular(kMobile ? R.sm : R.of(7)),
           border:
-              Border.all(color: kMobile ? AppColors.border : AppColors.border2),
+              Border.all(color: kMobile ? AppColors.border : AppColors.paneLine),
         ),
         child: Row(children: [
           Expanded(
@@ -691,7 +655,7 @@ class _CommandBox extends StatelessWidget {
                     ? mono(12, color: AppColors.fg1)
                     : mono(12.5, color: AppColors.fg2)),
           ),
-          IconBtn('copy', size: 30, iconSize: 13, tooltip: 'Copy', onTap: () {
+          IconBtn('copy', size: 28, iconSize: 13, tooltip: 'Copy', onTap: () {
             Clipboard.setData(ClipboardData(text: command));
             toast(context, 'Copied');
           }),

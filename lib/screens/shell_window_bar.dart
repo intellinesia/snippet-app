@@ -729,7 +729,7 @@ class _TabOverflowMenuState extends State<_TabOverflowMenu> {
         side: BorderSide(color: AppColors.lineStrong),
       ),
       elevation: 6,
-      shadowColor: Colors.black.withValues(alpha: .4),
+      shadowColor: overlayShadow.first.color,
       child: Padding(
         padding: const EdgeInsets.all(6),
         child: Column(mainAxisSize: MainAxisSize.min, children: [

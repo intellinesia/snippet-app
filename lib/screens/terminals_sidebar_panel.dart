@@ -65,20 +65,23 @@ class TerminalsSidebarPanel extends StatelessWidget {
             )
           else
             Container(
-              height: 38,
-              padding: EdgeInsets.fromLTRB(S.of(14), 0, S.s8, 0),
+              height: PaneRow.height,
+              padding: EdgeInsets.fromLTRB(S.of(18), 0, S.s8, 0),
               decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: AppColors.line)),
+                border: Border(bottom: BorderSide(color: AppColors.paneLine)),
               ),
               child: Row(children: [
-                Text('Terminals',
-                    style: sans(13, weight: W.label, color: AppColors.fg1)),
-                SizedBox(width: S.s4),
-                ShellSectionAction(
-                  icon: 'plus',
-                  tooltip: 'New terminal',
-                  onTap: onNewTerminal,
+                Expanded(
+                  child: Text('Terminals',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(PaneRow.label, color: AppColors.fg3)),
                 ),
+                IconBtn('plus',
+                    size: 26,
+                    iconSize: 13,
+                    tooltip: 'New terminal',
+                    onTap: onNewTerminal),
               ]),
             ),
           if (!kMobile) SizedBox(height: S.s6),
@@ -97,7 +100,7 @@ class TerminalsSidebarPanel extends StatelessWidget {
                   child: Text(displayPath,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: mono(11, color: AppColors.fg3)),
+                      style: mono(12, color: AppColors.fg4)),
                 ),
               ]),
             ),
@@ -110,14 +113,16 @@ class TerminalsSidebarPanel extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           ...head,
           Expanded(
-            child: EmptyState(
-              icon: 'terminal',
-              title: 'No terminals open',
-              body:
-                  'Shells start in $folder and keep running until you close them here.',
-              action: Btn('New terminal',
-                  small: true, icon: 'plus', onTap: onNewTerminal),
-            ),
+            child: kMobile
+                ? EmptyState(
+                    icon: 'terminal',
+                    title: 'No terminals open',
+                    body:
+                        'Shells start in $folder and keep running until you close them here.',
+                    action: Btn('New terminal',
+                        small: true, icon: 'plus', onTap: onNewTerminal),
+                  )
+                : _emptyState(folder),
           ),
         ]),
       );
@@ -138,6 +143,23 @@ class TerminalsSidebarPanel extends StatelessWidget {
       ),
     );
   }
+
+  Widget _emptyState(String folder) => Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text('No terminals open',
+                style: sans(12.5, weight: W.label, color: AppColors.fg3)),
+            const SizedBox(height: 4),
+            Text('Shells start in $folder and keep running here',
+                textAlign: TextAlign.center,
+                style: sans(12,
+                    color: Color.lerp(AppColors.fg4, AppColors.panelBg, 0.4))),
+            const SizedBox(height: 12),
+            Btn('New terminal', small: true, icon: 'plus', onTap: onNewTerminal),
+          ]),
+        ),
+      );
 
   /// SH-04 phone row: 15/400 title, 14/400 fg3 sub with the state word, a 6
   /// dot (fg1 live, fg4 stopped), pitch 64.
