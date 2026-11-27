@@ -126,9 +126,9 @@ void main() {
     'artifacts': (
       () => ArtifactsScreen(client: _Daemon()),
       () => {
-            'NewCanvas': find.bySemanticsLabel('New canvas'),
-            'SearchField': find.byType(TextField),
-            'AllChip': find.text('All'),
+            'Search': find.bySemanticsLabel('Search'),
+            'Show': find.bySemanticsLabel('Show'),
+            'AllChip': find.bySemanticsLabel(RegExp('^All, ')),
             'Back': find.byTooltip('Back'),
             'Row1': find.text('Pricing board'),
             'Row2': find.text('QA doc'),
@@ -258,12 +258,11 @@ void main() {
       expect(title.maxLines, 1);
       expect(title.overflow, TextOverflow.ellipsis);
       sizes['title ${scale}x'] = tester.getSize(find.text('Artifacts').first);
-      sizes['newCanvas ${scale}x'] =
-          tester.getSize(find.bySemanticsLabel('New canvas'));
-      if (scale >= 1.5) {
-        expect(sizes['newCanvas ${scale}x'], const Size(48, 48));
-        expect(find.text('New canvas'), findsNothing);
-      }
+      // Header actions are 48 icon buttons on Android at any text size.
+      sizes['search ${scale}x'] =
+          tester.getSize(find.bySemanticsLabel('Search'));
+      expect(sizes['search ${scale}x'], const Size(48, 48));
+      expect(find.text('New canvas'), findsNothing);
     }
     // ignore: avoid_print
     print('ARTIFACTS $sizes');

@@ -32,7 +32,7 @@ class MkSection extends StatelessWidget {
             TapDetector(
               behavior: HitTestBehavior.opaque,
               onTap: onTrailing,
-              child: Text(trailing!, style: sans(13, color: AppColors.fg3)),
+              child: Text(trailing!, style: sans(13, color: AppColors.fg4)),
             ),
         ]),
       ),

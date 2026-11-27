@@ -491,7 +491,12 @@ void main() {
       await tester.tap(find.text('4 managed'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
-      expect(find.text('4 managed sessions'), findsOneWidget);
+      // The header's meta line now rides its semantics hint.
+      expect(
+          find.byWidgetPredicate((w) =>
+              w is Semantics &&
+              (w.properties.hint ?? '').contains('4 managed sessions')),
+          findsOneWidget);
       expect(find.text('Running'), findsOneWidget);
       expect(find.text('Idle'), findsOneWidget);
       expect(find.text('Session m0'), findsOneWidget);

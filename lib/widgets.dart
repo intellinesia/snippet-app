@@ -2049,18 +2049,12 @@ class Bubble extends StatelessWidget {
               else if (shown.isNotEmpty)
                 Container(
                   padding: kMobile
-                      ? EdgeInsets.fromLTRB(
-                          S.of(15), S.of(10), S.of(15), S.of(11))
+                      ? const EdgeInsets.fromLTRB(15, 10, 15, 10)
                       : const EdgeInsets.fromLTRB(12, 8, 12, 8),
                   decoration: BoxDecoration(
-                    color: AppColors.surface2,
+                    color: kMobile ? AppColors.surface3 : AppColors.surface2,
                     borderRadius: kMobile
-                        ? BorderRadius.only(
-                            topLeft: Radius.circular(R.of(20)),
-                            topRight: Radius.circular(R.of(20)),
-                            bottomLeft: Radius.circular(R.of(20)),
-                            bottomRight: Radius.circular(R.sm),
-                          )
+                        ? BorderRadius.circular(22)
                         : BorderRadius.circular(R.of(8)),
                   ),
                   child: DefaultTextStyle.merge(

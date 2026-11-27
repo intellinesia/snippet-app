@@ -34,27 +34,31 @@ void main() {
           for (var i = 0; i < 6; i++) {
             await tester.pump(const Duration(milliseconds: 100));
           }
-          final toggle = find.bySemanticsLabel('Board view');
+          // Board view lives in the New task split button's menu.
+          await tester.tap(find.bySemanticsLabel('Task options'));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 400));
+          await tester.tap(find.bySemanticsLabel('Board view'));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 400));
           final plus = tester.getRect(find.bySemanticsLabel('New task'));
-          final tg = tester.getRect(toggle);
+          final tg = tester.getRect(find.bySemanticsLabel('List view'));
           expect(plus.right, w - 4);
           expect(tg.right, plus.left);
           expect(tg.width, 48);
-          await tester.tap(toggle);
-          await tester.pump();
-          await tester.pump(const Duration(milliseconds: 300));
           expect(tester.takeException(), isNull);
           expect(find.text('7 cards'), findsOneWidget);
+          Finder chip(BoardColumn c) =>
+              find.bySemanticsLabel(RegExp('^${c.label}, '));
           final chips = [
-            for (final c in BoardColumn.values)
-              tester.getRect(find.byKey(ValueKey('board-chip-${c.name}')))
+            for (final c in BoardColumn.values) tester.getRect(chip(c))
           ];
           for (final c in chips) {
             expect(c.height, 44);
           }
           expect(chips[0].left, 16);
           for (var i = 1; i < chips.length; i++) {
-            expect(chips[i].left - chips[i - 1].right, 8);
+            expect(chips[i].left - chips[i - 1].right, 4);
           }
           // Todo column first
           final card = tester.getRect(find.byKey(const ValueKey('board-card-t1')));
@@ -66,7 +70,7 @@ void main() {
           expect(find.byType(Draggable<Object>), findsNothing);
           expect(find.textContaining('Long-press'), findsNothing);
           // Review column holds needs-you cards with the amber hand
-          await tester.tap(find.byKey(const ValueKey('board-chip-review')));
+          await tester.tap(chip(BoardColumn.review));
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 300));
           expect(find.text('Needs you'), findsNWidgets(2));
@@ -84,7 +88,7 @@ void main() {
           // back to the list
           await tester.tap(find.bySemanticsLabel('List view'));
           await tester.pump();
-          expect(find.byKey(const ValueKey('chip-all')), findsOneWidget);
+          expect(find.bySemanticsLabel(RegExp('^All, ')), findsOneWidget);
         } finally {
           debugDefaultTargetPlatformOverride = null;
         }

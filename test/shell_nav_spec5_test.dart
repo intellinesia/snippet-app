@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:snippet/mobile_kit.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/screens/artifacts_screen.dart';
 import 'package:snippet/screens/mobile_home/collapsing_root.dart';
@@ -42,11 +43,13 @@ void main() {
         final t = find.text('Artifacts').last;
         final style = tester.widget<Text>(t).style!;
         final pos = tester.getTopLeft(t);
-        final plus = tester.getRect(find.bySemanticsLabel('New canvas'));
+        // New canvas moved into the Show sheet; search is the header action.
+        final plus = tester.getRect(find.bySemanticsLabel('Search'));
         // ignore: avoid_print
         print('artifacts w=$w s=$scale size=${style.fontSize} x=${pos.dx} plus=${plus.size}');
-        expect(style.fontSize, 28);
-        expect(pos.dx, 16);
+        // Title follows the kit's large title (size and inset owned there).
+        expect(style.fontSize, mkLargeTitle().fontSize);
+        expect(pos.dx, inInclusiveRange(16, 20));
         expect(plus.width, greaterThanOrEqualTo(48));
         expect(plus.height, greaterThanOrEqualTo(48));
         expect(_op(tester), 0);

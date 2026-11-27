@@ -50,8 +50,7 @@ List<InlineSpan> workSpans(WorkSummary w, TextStyle base) {
   final outcome = w.outcome;
   if (outcome != null) {
     spans.add(TextSpan(
-        text: ' $outcome',
-        style: base.copyWith(color: AppColors.fg2)));
+        text: ' $outcome', style: base.copyWith(color: AppColors.fg2)));
   }
   return spans;
 }
@@ -570,13 +569,13 @@ class _TerminalBlockState extends State<TerminalBlock> {
             // Exit 0 is the default; only another code is worth a word.
             ? (exit == 0 ? null : ('exit $exit', true))
             : (step.failed ? ('failed', true) : null);
-    final fill = widget.fill ?? (kMobile ? AppColors.surface1 : AppColors.surface2);
+    final fill =
+        widget.fill ?? (kMobile ? AppColors.surface1 : AppColors.surface2);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-          color: fill,
-          borderRadius: BorderRadius.circular(kMobile ? 6 : 10)),
+          color: fill, borderRadius: BorderRadius.circular(kMobile ? 6 : 10)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -688,9 +687,7 @@ class _TerminalBlockState extends State<TerminalBlock> {
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(badge.$1,
-                        style: sans(11,
-                            color: AppColors.fg3,
-                            tabular: true)),
+                        style: sans(11, color: AppColors.fg3, tabular: true)),
                   ),
                 if (kMobile) ...[
                   if (badge != null)
@@ -851,6 +848,36 @@ class ActivityFold extends StatelessWidget {
       }
     }
     if (running) return WorkSteps(rows: rows, header: false);
+    // Phone: every step shows in full as a quiet line; a tap opens the detail.
+    if (kMobile && steps.isNotEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Semantics(
+            button: true,
+            label: workSummary(steps),
+            excludeSemantics: true,
+            child: TapDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onTap,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(2, 2, 0, 2),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var i = 0; i < steps.length; i++) ...[
+                      if (i > 0) const SizedBox(height: 7),
+                      QuietStepLine(steps[i]),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+          SpringExpand(open: open, child: WorkSteps(rows: rows)),
+        ],
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -859,6 +886,38 @@ class ActivityFold extends StatelessWidget {
         SpringExpand(open: open, child: WorkSteps(rows: rows)),
       ],
     );
+  }
+}
+
+/// One finished step on phone: icon, verb, then the target in mono.
+class QuietStepLine extends StatelessWidget {
+  const QuietStepLine(this.step);
+  final ToolStep step;
+
+  @override
+  Widget build(BuildContext context) {
+    final target = stepTarget(step);
+    return Row(children: [
+      SizedBox(
+        width: 16,
+        child: AppIcon(toolIcon(step.tool), size: 15, color: AppColors.fg4),
+      ),
+      const SizedBox(width: 10),
+      Expanded(
+        child: Text.rich(
+          TextSpan(children: [
+            TextSpan(text: toolVerb(step.tool, running: false)),
+            if (target.isNotEmpty) ...[
+              const TextSpan(text: '  '),
+              TextSpan(text: target, style: mono(12.5, color: AppColors.fg2)),
+            ],
+          ]),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: sans(13.5, color: step.failed ? AppColors.fg2 : AppColors.fg3),
+        ),
+      ),
+    ]);
   }
 }
 

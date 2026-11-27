@@ -11,6 +11,8 @@ import '../../tap_detector.dart';
 import '../../theme.dart';
 import '../../toast_avoid.dart';
 import '../../widgets.dart';
+import '../../mobile_kit.dart';
+import '../../mochi.dart';
 import '../agent_messaging.dart' show openAgentThread;
 import '../artifact_viewer.dart' show openArtifact;
 import '../session.dart' show SessionScreen;
@@ -26,7 +28,8 @@ Future<void> openTaskPhoneDetail(
 /// Bar A, title, state and priority tags, fact rows, brief, activity, results,
 /// session row and a pinned Mark done.
 class TaskPhoneDetail extends StatefulWidget {
-  const TaskPhoneDetail({super.key, required this.client, required this.taskId});
+  const TaskPhoneDetail(
+      {super.key, required this.client, required this.taskId});
   final DaemonClient client;
   final String taskId;
 
@@ -87,7 +90,9 @@ class _TaskPhoneDetailState extends State<TaskPhoneDetail> {
             if (a.displayName.trim().isNotEmpty) a.id: a.displayName.trim(),
         };
         sessions = {for (final s in ss) s.id: s};
-        results = r.length > 5 ? ((r[5] as List<ArtifactInfo>?) ?? const []) : const [];
+        results = r.length > 5
+            ? ((r[5] as List<ArtifactInfo>?) ?? const [])
+            : const [];
         error = null;
       });
     } catch (e) {
@@ -149,17 +154,25 @@ class _TaskPhoneDetailState extends State<TaskPhoneDetail> {
   Future<void> _more(BuildContext anchor) async {
     final t = task;
     if (t == null) return;
-    final closed = t.status == TaskStatus.done || t.status == TaskStatus.cancelled;
-    final picked = await showAppMenu<String>(context, anchor: anchor, below: true,
-        alignEnd: true, items: [
-      appMenuItem(value: 'copy', icon: 'link', label: 'Copy link'),
-      if (t.sessionId.isNotEmpty)
-        appMenuItem(value: 'session', icon: 'terminal', label: 'Open session'),
-      if (!closed)
-        appMenuItem(value: 'cancel', icon: 'x', label: 'Cancel task'),
-      if (closed)
-        appMenuItem(value: 'reopen', icon: 'arrow-counter-clockwise', label: 'Reopen'),
-    ]);
+    final closed =
+        t.status == TaskStatus.done || t.status == TaskStatus.cancelled;
+    final picked = await showAppMenu<String>(context,
+        anchor: anchor,
+        below: true,
+        alignEnd: true,
+        items: [
+          appMenuItem(value: 'copy', icon: 'link', label: 'Copy link'),
+          if (t.sessionId.isNotEmpty)
+            appMenuItem(
+                value: 'session', icon: 'terminal', label: 'Open session'),
+          if (!closed)
+            appMenuItem(value: 'cancel', icon: 'x', label: 'Cancel task'),
+          if (closed)
+            appMenuItem(
+                value: 'reopen',
+                icon: 'arrow-counter-clockwise',
+                label: 'Reopen'),
+        ]);
     if (picked == null || !mounted) return;
     switch (picked) {
       case 'copy':
@@ -180,7 +193,8 @@ class _TaskPhoneDetailState extends State<TaskPhoneDetail> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           _bar(),
           Expanded(child: t == null ? _stub() : _body(t)),
           if (t != null && _canComplete) _pinned(t),
@@ -191,23 +205,39 @@ class _TaskPhoneDetailState extends State<TaskPhoneDetail> {
 
   Widget _bar() => ToastAvoid(
         child: SizedBox(
-          height: 52,
-          child: Row(children: [
-            BarIcon('chevron-left', 'Back', () => Navigator.of(context).maybePop()),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Semantics(
-                header: true,
-                child: Text('Task',
-                    style: sans(16, weight: W.label, color: AppColors.fg1)),
+          height: kAndroidLook ? 64 : 52,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: kAndroidLook ? 4 : 12),
+            child: Row(children: [
+              MkIconButton(
+                  icon: kAndroidLook ? 'arrow-left' : 'chevron-left',
+                  label: 'Back',
+                  onTap: () => Navigator.of(context).maybePop()),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Semantics(
+                  header: true,
+                  child: Text('Task',
+                      textAlign:
+                          kAndroidLook ? TextAlign.start : TextAlign.center,
+                      style: kAndroidLook
+                          ? sans(22, weight: W.label, color: AppColors.fg1)
+                          : sans(16.5,
+                              weight: FontWeight.w600, color: AppColors.fg1)),
+                ),
               ),
-            ),
-            if (task != null)
-              Builder(
-                builder: (a) => BarIcon('more-horizontal', 'More', () => _more(a)),
-              ),
-            const SizedBox(width: 4),
-          ]),
+              const SizedBox(width: 8),
+              if (task != null)
+                Builder(
+                  builder: (a) => MkIconButton(
+                      icon: 'more-horizontal',
+                      label: 'More',
+                      onTap: () => _more(a)),
+                )
+              else
+                SizedBox(width: kAndroidLook ? 48 : 44),
+            ]),
+          ),
         ),
       );
 
@@ -230,87 +260,37 @@ class _TaskPhoneDetailState extends State<TaskPhoneDetail> {
         decoration: BoxDecoration(
             color: AppColors.surface2, borderRadius: BorderRadius.circular(16)),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          if (glyph != null) ...[glyph, const SizedBox(width: 6)],
+          if (glyph != null) ...[glyph, const SizedBox(width: 8)],
           Flexible(
-            child: Text(word, style: sans(13, color: AppColors.fg2)),
+            child: Text(word,
+                style: sans(13.5, weight: W.label, color: AppColors.fg2)),
           ),
         ]),
       );
 
-  Widget _label(String t) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-        child: Semantics(
-          header: true,
-          child: Text(t, style: sans(12, weight: W.label, color: AppColors.fg3)),
-        ),
+  Widget _label(String t) => MkSection(t);
+
+  double get _gutter => kAndroidLook ? 16 : MK.gutter;
+
+  Widget _fact(String label, String name,
+          {String? agentId, VoidCallback? onTap}) =>
+      MkGroupRow(
+        label: label,
+        value: name,
+        onTap: onTap,
+        trailing: agentId != null && agentId.isNotEmpty
+            ? ExcludeSemantics(child: AgentMochi(agentId, size: 26))
+            : OwnerAvatar(name, size: 26),
       );
 
-  Widget _fact(String label, Widget value, {VoidCallback? onTap}) {
-    final row = ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 48),
-      child: Row(children: [
-        const SizedBox(width: 16),
-        SizedBox(
-          width: 108,
-          child: Text(label, style: sans(13, color: AppColors.fg3)),
-        ),
-        Expanded(child: value),
-        const SizedBox(width: 16),
-      ]),
-    );
-    final hair = Container(
-        height: 1,
-        margin: const EdgeInsets.symmetric(horizontal: 16),
-        color: AppColors.border);
-    final inner = Column(children: [row, hair]);
-    if (onTap == null) return inner;
-    return Semantics(
-      button: true,
-      label: label,
-      child: TapDetector(behavior: HitTestBehavior.opaque, onTap: onTap, child: inner),
-    );
-  }
-
-  Widget _person(String name) => Row(children: [
-        OwnerAvatar(name, size: 24),
-        const SizedBox(width: 8),
-        Flexible(
-          child: Text(name,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: sans(15, color: AppColors.fg1)),
-        ),
-      ]);
-
-  Widget _navRow(String text, VoidCallback onTap,
-          {Key? key, double minHeight = 56, String? icon}) =>
+  Widget _navRow(String text, VoidCallback onTap, {Key? key, String? icon}) =>
       Semantics(
         button: true,
         label: text,
         excludeSemantics: true,
-        child: TapDetector(
+        child: KeyedSubtree(
           key: key,
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: minHeight),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(children: [
-                if (icon != null) ...[
-                  AppIcon(icon, size: 16, color: AppColors.fg1),
-                  const SizedBox(width: 12),
-                ],
-                Expanded(
-                  child: Text(text,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(15, color: AppColors.fg1)),
-                ),
-                AppIcon('chevron-right', size: 16, color: AppColors.fg3),
-              ]),
-            ),
-          ),
+          child: MkGroupRow(label: text, icon: icon, onTap: onTap),
         ),
       );
 
@@ -337,49 +317,79 @@ class _TaskPhoneDetailState extends State<TaskPhoneDetail> {
       padding: const EdgeInsets.only(bottom: 24),
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 5, 16, 12),
+          padding: EdgeInsets.fromLTRB(_gutter, 4, _gutter, 14),
           child: Semantics(
             header: true,
             child: Text(t.title,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: sans(20,
-                    weight: W.label, height: 26 / 20, color: AppColors.fg1)),
+                style: kAndroidLook
+                    ? display(24,
+                        weight: FontWeight.w500,
+                        height: 1.25,
+                        color: AppColors.fg1)
+                    : display(24,
+                        weight: FontWeight.w600,
+                        height: 1.25,
+                        color: AppColors.fg1)),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: EdgeInsets.symmetric(horizontal: _gutter),
           child: Wrap(spacing: 8, runSpacing: 8, children: [
             _tag(TaskGlyph(t.status, size: 14), taskStateWord(t.status)),
             _tag(null, '${priorityWord(t.priority)} priority'),
           ]),
         ),
-        const SizedBox(height: 16),
-        Container(
-            height: 1,
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            color: AppColors.border),
-        if (owner != null)
-          _fact('Owner', _person(owner.name),
-              onTap: owner.id == null || owner.id == 'lead'
-                  ? null
-                  : () => openAgentThread(context,
-                      client: widget.client,
-                      agentId: owner.id!,
-                      agentName: owner.name)),
-        if (creator != null) _fact('Created by', _person(creator)),
+        if (owner != null || creator != null) ...[
+          const SizedBox(height: 4),
+          MkGroup(children: [
+            if (owner != null)
+              Semantics(
+                button: owner.id != null && owner.id != 'lead',
+                label: 'Owner',
+                child: _fact('Owner', owner.name,
+                    agentId: owner.id,
+                    onTap: owner.id == null || owner.id == 'lead'
+                        ? null
+                        : () => openAgentThread(context,
+                            client: widget.client,
+                            agentId: owner.id!,
+                            agentName: owner.name)),
+              ),
+            if (creator != null)
+              _fact('Created by', creator,
+                  agentId: t.createdByKind == 'agent' ? t.createdById : null),
+          ]),
+        ],
         if (brief.isNotEmpty) ...[
           _label('Brief'),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: EdgeInsets.symmetric(horizontal: _gutter),
             child: Text(brief,
                 maxLines: briefOpen ? null : 8,
-                overflow: briefOpen ? TextOverflow.visible : TextOverflow.ellipsis,
-                style: sans(15, height: 21 / 15, color: AppColors.fg1)),
+                overflow:
+                    briefOpen ? TextOverflow.visible : TextOverflow.ellipsis,
+                style: sans(15.5, height: 1.45, color: AppColors.fg1)),
           ),
           if (briefLong && !briefOpen)
-            _navRow('More', () => setState(() => briefOpen = true),
-                minHeight: 48, key: const ValueKey('brief-more')),
+            Semantics(
+              button: true,
+              label: 'More',
+              excludeSemantics: true,
+              child: TapDetector(
+                key: const ValueKey('brief-more'),
+                behavior: HitTestBehavior.opaque,
+                onTap: () => setState(() => briefOpen = true),
+                child: Container(
+                  height: 48,
+                  padding: EdgeInsets.symmetric(horizontal: _gutter),
+                  alignment: Alignment.centerLeft,
+                  child: Text('More',
+                      style: sans(14.5, weight: W.label, color: AppColors.fg2)),
+                ),
+              ),
+            ),
         ],
         if (entries.isNotEmpty) ...[
           _label('Activity'),
@@ -388,103 +398,97 @@ class _TaskPhoneDetailState extends State<TaskPhoneDetail> {
               constraints: const BoxConstraints(minHeight: 28),
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 4),
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const SizedBox(width: 17.5),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 7),
-                    child: Container(
-                        width: 5,
-                        height: 5,
-                        decoration: BoxDecoration(
-                            color: AppColors.fg3, shape: BoxShape.circle)),
-                  ),
-                  const SizedBox(width: 11.5),
-                  SizedBox(
-                    width: 58,
-                    child: Text(_hhmm(e.createdAt),
-                        style: sans(12, color: AppColors.fg3)),
-                  ),
-                  Expanded(
-                    child: Text(e.summary,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(13, color: AppColors.fg2)),
-                  ),
-                  const SizedBox(width: 16),
-                ]),
+                child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(width: _gutter + 1.5),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 7),
+                        child: Container(
+                            width: 5,
+                            height: 5,
+                            decoration: BoxDecoration(
+                                color: AppColors.fg3, shape: BoxShape.circle)),
+                      ),
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        width: 52,
+                        child: Text(_hhmm(e.createdAt),
+                            style: mono(12, color: AppColors.fg4)),
+                      ),
+                      Expanded(
+                        child: Text(e.summary,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(14, height: 1.4, color: AppColors.fg2)),
+                      ),
+                      SizedBox(width: _gutter),
+                    ]),
               ),
             ),
         ],
         if (results.isNotEmpty) ...[
           _label('Results'),
-          for (final a in results) _result(t, a, owner?.name),
+          MkList(children: [
+            for (var i = 0; i < results.length; i++)
+              _result(t, results[i], owner?.name,
+                  last: i == results.length - 1),
+          ]),
         ],
         if (t.sessionId.isNotEmpty || links.blockedBy.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          for (final b in links.blockedBy)
-            _navRow('Blocked by ${titles[b] ?? b}',
-                () => openTaskPhoneDetail(context, widget.client, b),
-                icon: 'x', key: ValueKey('blocked-$b')),
-          if (t.sessionId.isNotEmpty)
-            _navRow('Session: ${_sessionTitle()}', _openSession,
-                key: const ValueKey('session-row')),
+          const SizedBox(height: 12),
+          MkGroup(children: [
+            for (final b in links.blockedBy)
+              _navRow('Blocked by ${titles[b] ?? b}',
+                  () => openTaskPhoneDetail(context, widget.client, b),
+                  icon: 'x', key: ValueKey('blocked-$b')),
+            if (t.sessionId.isNotEmpty)
+              _navRow('Session: ${_sessionTitle()}', _openSession,
+                  icon: 'terminal', key: const ValueKey('session-row')),
+          ]),
         ],
       ],
     );
   }
 
-  Widget _result(TaskItem t, ArtifactInfo a, String? owner) {
+  Widget _result(TaskItem t, ArtifactInfo a, String? owner,
+      {bool last = false}) {
     final at = a.latest == null
         ? ''
-        : shortAgo(DateTime.fromMillisecondsSinceEpoch(a.latest!.createdAt * 1000)
-            .toUtc()
-            .toIso8601String());
-    final kind = a.kind == 'canvas' ? 'Canvas' : (a.kind == 'document' ? 'Document' : 'File');
-    final sub = [kind, if (owner != null) owner, if (at.isNotEmpty) at].join(' - ');
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: Semantics(
-        button: true,
-        label: '${a.title}, $sub',
-        excludeSemantics: true,
-        child: TapDetector(
-          key: ValueKey('result-${a.id}'),
-          behavior: HitTestBehavior.opaque,
+        : shortAgo(
+            DateTime.fromMillisecondsSinceEpoch(a.latest!.createdAt * 1000)
+                .toUtc()
+                .toIso8601String());
+    final kind = a.kind == 'canvas'
+        ? 'Canvas'
+        : (a.kind == 'document' ? 'Document' : 'File');
+    final sub = [kind, if (owner != null) owner].join(' · ');
+    return Semantics(
+      button: true,
+      label: '${a.title}, $sub${at.isEmpty ? '' : ', $at'}',
+      excludeSemantics: true,
+      child: KeyedSubtree(
+        key: ValueKey('result-${a.id}'),
+        child: MkRow(
+          title: a.title,
+          subtitle: sub,
+          time: at.isEmpty ? null : at,
+          divider: !last,
+          leading: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+                color: AppColors.surface3,
+                borderRadius: BorderRadius.circular(12)),
+            child: Center(
+                child: AppIcon(a.kind == 'canvas' ? 'layout' : 'file-text',
+                    size: 19, color: AppColors.fg2)),
+          ),
           onTap: () => openArtifact(context,
               client: widget.client,
               session: t.sessionId,
               id: a.id,
               version: a.latest?.n),
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 72),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-                color: AppColors.surface1,
-                borderRadius: BorderRadius.circular(12)),
-            child: Row(children: [
-              AppIcon('file-text', size: 20, color: AppColors.fg2),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 8),
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(a.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(14, weight: W.label, color: AppColors.fg1)),
-                        const SizedBox(height: 2),
-                        Text(sub,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(12.5, color: AppColors.fg3)),
-                      ]),
-                ),
-              ),
-            ]),
-          ),
         ),
       ),
     );
@@ -493,10 +497,11 @@ class _TaskPhoneDetailState extends State<TaskPhoneDetail> {
   Widget _pinned(TaskItem t) {
     final review = t.status == TaskStatus.inReview;
     final label = busy
-        ? 'Marking done...'
+        ? 'Marking done'
         : (review ? 'Approve and mark done' : 'Mark done');
+    final h = MK.bigButton;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      padding: EdgeInsets.fromLTRB(_gutter, 8, _gutter, 16),
       child: Semantics(
         button: true,
         enabled: !busy,
@@ -505,26 +510,30 @@ class _TaskPhoneDetailState extends State<TaskPhoneDetail> {
         child: TapDetector(
           key: const ValueKey('mark-done'),
           behavior: HitTestBehavior.opaque,
-          onTap: busy ? null : () => _setStatus(TaskStatus.done, done: 'Marked done'),
+          onTap: busy
+              ? null
+              : () => _setStatus(TaskStatus.done, done: 'Marked done'),
           child: Container(
-            constraints: const BoxConstraints(minHeight: 48),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            constraints: BoxConstraints(minHeight: h),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-                color: busy ? AppColors.surface3 : AppColors.fg1,
-                borderRadius: BorderRadius.circular(10)),
+                color: busy ? AppColors.surface2 : AppColors.fg1,
+                borderRadius: BorderRadius.circular(h / 2)),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              AppIcon('check',
-                  size: 16, color: busy ? AppColors.fg3 : AppColors.bg),
+              if (busy)
+                MkMorph(size: 16, color: AppColors.fg2)
+              else
+                AppIcon('check', size: 18, color: MK.onPrimary),
               const SizedBox(width: 8),
               Flexible(
                 child: MediaQuery.withClampedTextScaling(
                   maxScaleFactor: 1.35,
                   child: Text(label,
                       textAlign: TextAlign.center,
-                      style: sans(14,
-                          weight: W.label,
-                          color: busy ? AppColors.fg3 : AppColors.bg)),
+                      style: sans(16,
+                          weight: kAndroidLook ? W.label : FontWeight.w600,
+                          color: busy ? AppColors.fg2 : MK.onPrimary)),
                 ),
               ),
             ]),

@@ -289,17 +289,19 @@ void main() {
         onOpenChanged: (_) {},
       )));
       await t.pump(const Duration(milliseconds: 300));
-      expect(find.byType(WorkLine), findsOneWidget);
+      // Board: each finished step shows in full as a quiet line.
+      expect(find.byType(QuietStepLine), findsNWidgets(2));
       expect(
           find.descendant(
               of: find.byType(DenseToolRow),
               matching:
                   find.textContaining('Edited a.dart', findRichText: true)),
           findsOneWidget);
+      // The quiet line and the open row both name the command.
       expect(
           find.textContaining('flutter test test/a_test.dart',
               findRichText: true),
-          findsOneWidget);
+          findsNWidgets(2));
       expect(find.text('3 passed'), findsOneWidget);
       debugDefaultTargetPlatformOverride = null;
     });

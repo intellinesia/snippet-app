@@ -66,61 +66,73 @@ class _CollapsingRootState extends State<CollapsingRoot> {
                   ),
                 ),
               ];
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      ToastAvoid(
-        child: AnimatedContainer(
-          duration: d,
-          constraints: const BoxConstraints(minHeight: 56),
-          decoration: BoxDecoration(
-            color: _collapsed
-                ? (a ? AppColors.surface1 : AppColors.bg)
-                : AppColors.bg,
-            border: Border(
-                bottom: BorderSide(
-                    width: 0.5,
-                    color: _collapsed && !a
-                        ? AppColors.fg1.withValues(alpha: 0.10)
-                        : Colors.transparent)),
-          ),
-          padding: EdgeInsets.only(
-              left: widget.leading == null ? (a ? 16 : 20) : 4, right: 4),
-          child: Stack(alignment: Alignment.center, children: [
-            Row(children: [
-              if (widget.leading != null) widget.leading!,
-              const Spacer(),
-              ...actions,
-            ]),
-            Positioned.fill(
-              left: a ? (widget.leading == null ? 0 : 52) : 96,
-              right: a ? 104 : 96,
-              child: IgnorePointer(
-                child: AnimatedOpacity(
-                  duration: d,
-                  opacity: _collapsed ? 1 : 0,
-                  child: ExcludeSemantics(
-                    excluding: !_collapsed,
-                    child: Align(
-                      alignment: a ? Alignment.centerLeft : Alignment.center,
-                      child: Text(widget.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: a
-                              ? sans(22, weight: W.label, color: AppColors.fg1)
-                              : sans(16.5,
-                                  weight: FontWeight.w600,
-                                  color: AppColors.fg1)),
-                    ),
+    final bar = ToastAvoid(
+      child: AnimatedContainer(
+        duration: d,
+        constraints: const BoxConstraints(minHeight: 56),
+        decoration: BoxDecoration(
+          color: _collapsed
+              ? (a ? AppColors.surface1 : AppColors.bg)
+              : (a ? AppColors.bg : Colors.transparent),
+          border: Border(
+              bottom: BorderSide(
+                  width: 0.5,
+                  color: _collapsed && !a
+                      ? AppColors.fg1.withValues(alpha: 0.10)
+                      : Colors.transparent)),
+        ),
+        padding: EdgeInsets.only(
+            left: widget.leading == null ? (a ? 16 : 20) : 4, right: 4),
+        child: Stack(alignment: Alignment.center, children: [
+          Row(children: [
+            if (widget.leading != null) widget.leading!,
+            const Spacer(),
+            ...actions,
+          ]),
+          Positioned.fill(
+            left: a ? (widget.leading == null ? 0 : 52) : 96,
+            right: a ? 104 : 96,
+            child: IgnorePointer(
+              child: AnimatedOpacity(
+                duration: d,
+                opacity: _collapsed ? 1 : 0,
+                child: ExcludeSemantics(
+                  excluding: !_collapsed,
+                  child: Align(
+                    alignment: a ? Alignment.centerLeft : Alignment.center,
+                    child: Text(widget.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: a
+                            ? sans(22, weight: W.label, color: AppColors.fg1)
+                            : sans(16.5,
+                                weight: FontWeight.w600, color: AppColors.fg1)),
                   ),
                 ),
               ),
             ),
-          ]),
-        ),
+          ),
+        ]),
       ),
+    );
+    final list = NotificationListener<ScrollNotification>(
+        onNotification: _onScroll, child: widget.child);
+    if (a) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        bar,
+        if (kMobile) const PhoneAttentionLayer(),
+        Expanded(child: list),
+      ]);
+    }
+    // iPhone at rest: no bar, the actions share the large title's row and the
+    // list starts under the status bar. The bar only appears once collapsed.
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       if (kMobile) const PhoneAttentionLayer(),
       Expanded(
-        child: NotificationListener<ScrollNotification>(
-            onNotification: _onScroll, child: widget.child),
+        child: Stack(children: [
+          Positioned.fill(child: list),
+          Positioned(top: 0, left: 0, right: 0, child: bar),
+        ]),
       ),
     ]);
   }
@@ -134,7 +146,11 @@ class LargeTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.fromLTRB(kAndroidLook ? 16 : 20, 0, 20, 4),
+        // Board: iPhone title row centres on the 56 action row; Android sits
+        // 4 under the app bar. Room on the right for the iPhone actions.
+        padding: kAndroidLook
+            ? const EdgeInsets.fromLTRB(20, 4, 20, 4)
+            : const EdgeInsets.fromLTRB(20, 6, 120, 4),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Semantics(
             header: true,

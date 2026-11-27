@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../widgets.dart';
+import '../../mobile_kit.dart';
 import '../../models.dart';
 import '../../theme.dart';
 import '../../tap_detector.dart';
@@ -61,7 +62,7 @@ String taskStateWord(TaskStatus s) => switch (s) {
       TaskStatus.inReview => 'Review',
       TaskStatus.blocked => 'Blocked',
       TaskStatus.failed => 'Failed',
-      TaskStatus.done => 'Done',
+      TaskStatus.done => 'Completed',
       TaskStatus.cancelled => 'Cancelled',
     };
 
@@ -88,44 +89,35 @@ class OwnerAvatar extends StatelessWidget {
   }
 }
 
-/// The state glyph: ring with a gap for Doing (turning unless motion is
-/// reduced), empty circle, amber hand, check, x. Amber only on the hand.
+/// The state mark shared with session rows: morph while doing, an empty
+/// ring for todo, the amber dot when it waits on the user, a tick when
+/// completed and an x ring when failed or cancelled.
 class TaskGlyph extends StatelessWidget {
-  const TaskGlyph(this.status, {super.key, this.size = 20});
+  const TaskGlyph(this.status, {super.key, this.size = 22});
   final TaskStatus status;
   final double size;
 
   @override
   Widget build(BuildContext context) {
-    final Widget g = switch (status) {
-      TaskStatus.inReview || TaskStatus.blocked => Center(
-          child: Container(
-            width: 6,
-            height: 6,
-            decoration:
-                BoxDecoration(color: AppColors.run, shape: BoxShape.circle),
-          ),
-        ),
-      TaskStatus.failed || TaskStatus.cancelled =>
-        AppIcon('x', size: size, color: AppColors.fg3),
-      TaskStatus.inProgress => _Ring(size: size),
-      TaskStatus.done => AppIcon('check', size: size, color: AppColors.fg3),
-      TaskStatus.todo => AppIcon('circle', size: size, color: AppColors.fg3),
+    final state = switch (status) {
+      TaskStatus.inReview || TaskStatus.blocked => MkState.needsYou,
+      TaskStatus.failed || TaskStatus.cancelled => MkState.failed,
+      TaskStatus.inProgress => MkState.working,
+      TaskStatus.done => MkState.done,
+      TaskStatus.todo => MkState.open,
     };
     return ExcludeSemantics(
-        child: SizedBox(width: size, height: size, child: g));
+        child: SizedBox(
+            width: size,
+            height: size,
+            child: OverflowBox(
+                maxWidth: size + 8,
+                maxHeight: size + 8,
+                child: Center(child: MkStateMark(state, size: size)))));
   }
 }
 
-class _Ring extends StatelessWidget {
-  const _Ring({required this.size});
-  final double size;
-  @override
-  Widget build(BuildContext context) =>
-      Spinner(size: size, color: AppColors.fg2);
-}
-
-/// A 48 x 48 trailing bar icon, 20 in fg2.
+/// A 48 x 48 trailing bar icon (44 on iPhone), in the primary ink.
 class BarIcon extends StatelessWidget {
   const BarIcon(this.icon, this.label, this.onTap, {super.key, this.toggled});
   final bool? toggled;
@@ -142,10 +134,11 @@ class BarIcon extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
           child: SizedBox(
-              width: 48,
-              height: 48,
-              child:
-                  Center(child: AppIcon(icon, size: 20, color: AppColors.fg2))),
+              width: kAndroidLook ? 48 : 44,
+              height: kAndroidLook ? 48 : 44,
+              child: Center(
+                  child: AppIcon(icon,
+                      size: kAndroidLook ? 22 : 19, color: AppColors.fg1))),
         ),
       );
 }

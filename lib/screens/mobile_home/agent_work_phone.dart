@@ -9,6 +9,9 @@ import '../../widgets.dart';
 import '../tasks/task_common.dart' show openTaskDetail;
 import 'agents_home.dart';
 
+// Cards and segments sit 16 in from the screen edge on the board.
+const double _inset = 16;
+
 /// Kind label for an inbox entry: Assignment, Question or Result.
 String inboxKind(InboxEntry e) {
   if (e.postKind == 'question') return 'Question';
@@ -87,7 +90,7 @@ class _AgentWorkPageState extends State<AgentWorkPage> {
         child: Container(
           key: ValueKey('inbox-${e.id}'),
           constraints: const BoxConstraints(minHeight: 64),
-          padding: const EdgeInsets.fromLTRB(21, 10, kGutter, 10),
+          padding: const EdgeInsets.fromLTRB(21, 10, _inset, 10),
           decoration: BoxDecoration(
               border: Border(
                   bottom: BorderSide(color: AppColors.border, width: 1))),
@@ -157,7 +160,7 @@ class _AgentWorkPageState extends State<AgentWorkPage> {
       out.add(HomeLabel('$label  ${items.length}', top: 16));
       for (final t in items) {
         out.add(Padding(
-          padding: const EdgeInsets.fromLTRB(kGutter, 0, kGutter, 8),
+          padding: const EdgeInsets.fromLTRB(_inset, 0, _inset, 8),
           child: Semantics(
             button: true,
             label: '${t.title}, ${widget.agentName}',
@@ -217,6 +220,6 @@ class _Note extends StatelessWidget {
   final String text;
   @override
   Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.all(kGutter * 2),
+      padding: const EdgeInsets.all(_inset * 2),
       child: Center(child: Text(text, style: sans(14, color: AppColors.fg3))));
 }

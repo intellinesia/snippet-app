@@ -452,11 +452,9 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     }
   }
 
-  double _mobileHeaderTopPad(HarnessState? s) {
-    if (widget.mobileTopBar != null) return GlassTopFrame.inset + S.s12;
-    if (_isLead) return StageBar.phoneHeight + S.s8;
-    return GlassTopFrame.inset + S.s12;
-  }
+  // Board: the first message sits 14 inside the thread's rounded top.
+  double _mobileHeaderTopPad(HarnessState? s) =>
+      mkChatHeaderHeight + MkThreadCap.reach - 28 + 14;
 
   Widget _mobileHeader(HarnessState? s) {
     final offline = _connError != null;

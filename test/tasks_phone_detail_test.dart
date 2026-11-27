@@ -100,7 +100,7 @@ void main() {
         await pump(tester, Fake(row('in_review')), w, scale);
         expect(tester.takeException(), isNull);
         final title = tester.getTopLeft(find.text('Re-QA toast principle'));
-        expect(tester.widget<Text>(find.text('Re-QA toast principle')).style!.fontSize, 20);
+        expect(tester.widget<Text>(find.text('Re-QA toast principle')).style!.fontSize, 24);
         expect(title.dx, 16);
         final btn = tester.getRect(find.byKey(const ValueKey('mark-done')));
         expect(btn.width, w - 32);
@@ -115,13 +115,17 @@ void main() {
           tester.getRect(find.text('Created by')),
         ];
         final val = tester.getTopLeft(find.text('Buddy'));
-        expect(facts[0].left, 16);
-        // Owner row, avatar at x124 and name at x156
-        expect(val.dx, 156);
+        // Facts are a segmented group on Android: label over value at x32.
+        expect(facts[0].left, 32);
+        expect(val.dx, 32);
+        final card = tester.getRect(find.byKey(const ValueKey('result-a1')));
         for (final k in ['session-row', 'blocked-other']) {
+          // The taller grouped rows can push these past the build extent.
+          await tester.scrollUntilVisible(find.byKey(ValueKey(k)), 120,
+              scrollable: find.byType(Scrollable).first);
           final r = tester.getRect(find.byKey(ValueKey(k)).first);
           expect(r.height, greaterThanOrEqualTo(56), reason: k);
-          expect(r.width, w);
+          expect(r.width, w - 32);
         }
         final blockedRect =
             tester.getRect(find.byKey(const ValueKey('blocked-other')).first);
@@ -129,12 +133,11 @@ void main() {
             of: find.byKey(const ValueKey('blocked-other')),
             matching: find.byWidgetPredicate(
                 (x) => x is AppIcon && x.name == 'x')));
-        expect(blockedIcon.size, 16);
-        expect(blockedIcon.color, AppColors.fg1);
-        final card = tester.getRect(find.byKey(const ValueKey('result-a1')));
+        expect(blockedIcon.size, 19);
+        expect(blockedIcon.color, AppColors.fg2);
         expect(card.left, 16);
         expect(card.width, w - 32);
-        expect(card.height, greaterThanOrEqualTo(72));
+        expect(card.height, greaterThanOrEqualTo(68));
         // ignore: avoid_print
         print('w=$w s=$scale title=$title button=$btn ownerLabel=${facts[0]} value=$val card=$card tag=$tag blocked=$blockedRect iconSize=${blockedIcon.size}');
         expect(find.text('Activity'), findsNothing);
@@ -232,7 +235,7 @@ void main() {
         (x.decoration as BoxDecoration).color == AppColors.run &&
         (x.decoration as BoxDecoration).shape == BoxShape.circle);
     expect(runDots, findsOneWidget);
-    expect(tester.getSize(runDots), const Size(6, 6));
+    expect(tester.getSize(runDots), const Size(9, 9));
     final colours = pageColours();
     expect(colours.contains(AppColors.danger), isFalse);
     // ignore: avoid_print

@@ -6,6 +6,7 @@ import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'composer_pill.dart';
+import '../mobile_kit.dart' show kAndroidLook;
 
 export 'composer_pill.dart';
 export 'composer_queue.dart';
@@ -132,7 +133,7 @@ class _ComposerCardState extends State<ComposerCard> {
                     if (trailing != null) inSlot(trailing(false)),
                     const Spacer(),
                     if (mic != null) inSlot(mic),
-                    inSlot(send),
+                    if (!_sendOutside) inSlot(send),
                   ]),
                 ],
               );
@@ -159,8 +160,10 @@ class _ComposerCardState extends State<ComposerCard> {
                     ),
                     if (trailing != null) inSlot(trailing(compact)),
                     if (mic != null) inSlot(mic),
-                    const SizedBox(width: 4),
-                    inSlot(send),
+                    if (!_sendOutside) ...[
+                      const SizedBox(width: 4),
+                      inSlot(send),
+                    ],
                   ],
                 ),
               ],
@@ -169,8 +172,15 @@ class _ComposerCardState extends State<ComposerCard> {
         ),
       ),
     );
-    return pill;
+    if (!_sendOutside) return pill;
+    return Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+      Expanded(child: pill),
+      const SizedBox(width: 8),
+      send,
+    ]);
   }
+
+  bool get _sendOutside => kMobile && kAndroidLook;
 }
 
 class ComposerIconButton extends StatelessWidget {
@@ -197,7 +207,7 @@ class ComposerIconButton extends StatelessWidget {
           dimension: C7.btn,
           child: Center(
               child: AppIcon(icon,
-                  size: kMobile ? 20 : 22, color: color ?? AppColors.fg2)),
+                  size: kMobile ? 21 : 22, color: color ?? AppColors.fg2)),
         ),
       ),
     );
@@ -220,6 +230,7 @@ class ComposerSendButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (kMobile) return _phone();
     final fill = !kMobile
         ? (!enabled
             ? AppColors.fg1.withValues(alpha: 0.07)
@@ -277,6 +288,58 @@ class ComposerSendButton extends StatelessWidget {
               : 'Send, unavailable',
       excludeSemantics: true,
       child: SizedBox.square(dimension: 48, child: Center(child: button)),
+    );
+  }
+
+  // Board: a 44 s3 circle inside the iPhone capsule; a 52 tonal square
+  // beside the Android field.
+  Widget _phone() {
+    final android = kAndroidLook;
+    final ink = stop
+        ? AppColors.bg
+        : enabled
+            ? AppColors.fg1
+            : (android ? AppColors.fg2 : AppColors.fg3);
+    final fill = stop
+        ? AppColors.fg1
+        : android
+            ? const Color(0xFF3A3A37)
+            : AppColors.surface3;
+    final ShapeBorder shape = android
+        ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
+        : const CircleBorder();
+    final size = android ? 52.0 : 44.0;
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: stop
+          ? 'Stop'
+          : enabled
+              ? 'Send'
+              : 'Send, unavailable',
+      excludeSemantics: true,
+      child: Material(
+        color: fill,
+        shape: shape,
+        child: InkWell(
+          customBorder: shape,
+          onTap: onTap == null
+              ? null
+              : () {
+                  tapHaptic();
+                  onTap!();
+                },
+          child: SizedBox.square(
+            dimension: size,
+            child: Center(
+              child: sending
+                  ? Spinner(size: 16, color: ink)
+                  : AppIcon(stop ? 'stop' : (android ? 'send' : 'arrow-up'),
+                      size: stop ? 15 : (android ? 22 : 21), color: ink),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

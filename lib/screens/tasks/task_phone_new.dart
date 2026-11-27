@@ -8,6 +8,7 @@ import '../../tap_detector.dart';
 import '../../theme.dart';
 import '../../morph_sheet.dart' show SheetSize;
 import '../../widgets.dart';
+import '../../mobile_kit.dart';
 
 /// TK-03: the phone New task sheet (medium). Title, briefing, Owner and
 /// Priority rows and a pinned Create task. Returns true when a task was filed.
@@ -18,8 +19,7 @@ Future<bool> showNewTaskSheet(BuildContext context, DaemonClient client) async {
     title: 'New task',
     size: SheetSize.medium,
     child: NewTaskBody(ctrl: ctrl),
-    pinned: NewTaskPinned(
-        ctrl: ctrl, onDone: (c) => Navigator.of(c).pop(true)),
+    pinned: NewTaskPinned(ctrl: ctrl, onDone: (c) => Navigator.of(c).pop(true)),
   );
   final t = ctrl.created;
   ctrl.dispose();
@@ -71,7 +71,10 @@ class NewTaskController extends ChangeNotifier {
   Future<void> _load() async {
     try {
       final all = await client.coordinationAgents();
-      agents = [for (final a in all) if (!a.isLead) a];
+      agents = [
+        for (final a in all)
+          if (!a.isLead) a
+      ];
       if (!_disposed) notifyListeners();
     } catch (_) {}
     try {
@@ -158,100 +161,154 @@ class NewTaskBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ListenableBuilder(
         listenable: ctrl,
-        builder: (context, _) => Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        builder: (context, _) =>
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Container(
             height: 48,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             alignment: Alignment.centerLeft,
             decoration: BoxDecoration(
                 color: AppColors.surface3,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.border2)),
+                borderRadius: BorderRadius.circular(16)),
             child: TextField(
               key: const ValueKey('new-task-title'),
               controller: ctrl.title,
               textInputAction: TextInputAction.next,
               cursorColor: AppColors.fg1,
-              style: sans(15, color: AppColors.fg1),
+              style: sans(16, weight: W.label, color: AppColors.fg1),
               decoration: InputDecoration(
                 isCollapsed: true,
                 border: InputBorder.none,
                 hintText: 'Task title',
-                hintStyle: sans(15, color: AppColors.fg3),
+                hintStyle: sans(16, color: AppColors.fg4),
               ),
             ),
           ),
           const SizedBox(height: 12),
           Container(
-            constraints: const BoxConstraints(minHeight: 72),
-            padding: const EdgeInsets.all(12),
+            constraints: const BoxConstraints(minHeight: 96),
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
             decoration: BoxDecoration(
                 color: AppColors.surface3,
-                borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(MK.groupRadius)),
             child: TextField(
               key: const ValueKey('new-task-brief'),
               controller: ctrl.brief,
-              minLines: 2,
+              minLines: 3,
               maxLines: 6,
               cursorColor: AppColors.fg1,
-              style: sans(15, color: AppColors.fg1),
+              style: sans(15.5, height: 1.45, color: AppColors.fg1),
               decoration: InputDecoration(
                 isCollapsed: true,
                 border: InputBorder.none,
-                hintText: 'Goal, what done looks like, and the context it needs.',
-                hintStyle: sans(15, color: AppColors.fg3),
+                hintText:
+                    'Goal, what done looks like, and the context it needs.',
+                hintStyle: sans(15.5, height: 1.45, color: AppColors.fg4),
               ),
             ),
           ),
-          const SizedBox(height: 8),
-          Builder(
-            builder: (a) => _OptionRow(
-              key: const ValueKey('row-owner'),
-              label: 'Owner',
-              value: ctrl.ownerLabel,
-              onTap: () async {
-                final picked = await showAppMenu<String>(context,
-                    anchor: a, below: true, alignEnd: true, items: [
-                  appMenuItem(
-                      value: '',
-                      label: 'Lead picks',
-                      selected: ctrl.agentId == null),
-                  for (final g in ctrl.agents)
-                    appMenuItem(
-                        value: g.id,
-                        label: ctrl.agentName(g),
-                        selected: ctrl.agentId == g.id),
-                ]);
-                if (picked != null) ctrl.setOwner(picked.isEmpty ? null : picked);
-              },
+          const SizedBox(height: 12),
+          _OptionGroup(children: [
+            Builder(
+              builder: (a) => _OptionRow(
+                key: const ValueKey('row-owner'),
+                label: 'Owner',
+                value: ctrl.ownerLabel,
+                onTap: () async {
+                  final picked = await showAppMenu<String>(context,
+                      anchor: a,
+                      below: true,
+                      alignEnd: true,
+                      items: [
+                        appMenuItem(
+                            value: '',
+                            label: 'Lead picks',
+                            selected: ctrl.agentId == null),
+                        for (final g in ctrl.agents)
+                          appMenuItem(
+                              value: g.id,
+                              label: ctrl.agentName(g),
+                              selected: ctrl.agentId == g.id),
+                      ]);
+                  if (picked != null) {
+                    ctrl.setOwner(picked.isEmpty ? null : picked);
+                  }
+                },
+              ),
             ),
-          ),
-          Builder(
-            builder: (a) => _OptionRow(
-              key: const ValueKey('row-priority'),
-              label: 'Priority',
-              value: ctrl.priorityLabel,
-              onTap: () async {
-                final picked = await showAppMenu<int>(context,
-                    anchor: a, below: true, alignEnd: true, items: [
-                  for (var i = 0; i < 3; i++)
-                    appMenuItem(
-                        value: i,
-                        label: NewTaskController.priorities[i],
-                        selected: ctrl.priority == i),
-                ]);
-                if (picked != null) ctrl.setPriority(picked);
-              },
+            Builder(
+              builder: (a) => _OptionRow(
+                key: const ValueKey('row-priority'),
+                label: 'Priority',
+                value: ctrl.priorityLabel,
+                onTap: () async {
+                  final picked = await showAppMenu<int>(context,
+                      anchor: a,
+                      below: true,
+                      alignEnd: true,
+                      items: [
+                        for (var i = 0; i < 3; i++)
+                          appMenuItem(
+                              value: i,
+                              label: NewTaskController.priorities[i],
+                              selected: ctrl.priority == i),
+                      ]);
+                  if (picked != null) ctrl.setPriority(picked);
+                },
+              ),
             ),
-          ),
+          ]),
         ]),
       );
 }
 
+/// Owner and Priority as one surface: inset group with a hairline on
+/// iPhone, segmented tiles on Android.
+class _OptionGroup extends StatelessWidget {
+  const _OptionGroup({required this.children});
+  final List<Widget> children;
+  @override
+  Widget build(BuildContext context) {
+    final n = children.length;
+    if (kAndroidLook) {
+      return Column(children: [
+        for (var i = 0; i < n; i++) ...[
+          if (i > 0) const SizedBox(height: 2),
+          ClipRRect(
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(i == 0 ? 20 : 4),
+              bottom: Radius.circular(i == n - 1 ? 20 : 4),
+            ),
+            child: ColoredBox(color: AppColors.surface3, child: children[i]),
+          ),
+        ]
+      ]);
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(MK.groupRadius),
+      child: ColoredBox(
+        color: AppColors.surface3,
+        child: Column(children: [
+          for (var i = 0; i < n; i++) ...[
+            if (i > 0)
+              Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Container(height: 0.5, color: MK.hairline),
+              ),
+            children[i],
+          ]
+        ]),
+      ),
+    );
+  }
+}
+
 class _OptionRow extends StatelessWidget {
   const _OptionRow(
-      {super.key, required this.label, required this.value, required this.onTap});
+      {super.key,
+      required this.label,
+      required this.value,
+      required this.onTap});
   final String label;
   final String value;
   final VoidCallback onTap;
@@ -263,28 +320,26 @@ class _OptionRow extends StatelessWidget {
         child: TapDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
-          child: Column(children: [
-            ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 48),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(children: [
-                  Text(label, style: sans(15, color: AppColors.fg1)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(value,
-                        textAlign: TextAlign.end,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(13, color: AppColors.fg3)),
-                  ),
-                  const SizedBox(width: 4),
-                  AppIcon('chevron-right', size: 16, color: AppColors.fg3),
-                ]),
-              ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 52),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(children: [
+                Text(label, style: sans(15.5, color: AppColors.fg1)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(value,
+                      textAlign: TextAlign.end,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(14.5, color: AppColors.fg3)),
+                ),
+                const SizedBox(width: 6),
+                AppIcon(kAndroidLook ? 'chevron-down' : 'chevron-right',
+                    size: 14, color: AppColors.fg4),
+              ]),
             ),
-            Container(height: 1, color: AppColors.border),
-          ]),
+          ),
         ),
       );
 }
@@ -300,13 +355,13 @@ class NewTaskPinned extends StatelessWidget {
         listenable: ctrl,
         builder: (context, _) {
           final on = ctrl.canCreate;
-          final label = ctrl.busy ? 'Creating...' : 'Create task';
+          final label = ctrl.busy ? 'Creating' : 'Create task';
+          final h = MK.bigButton;
           return Column(mainAxisSize: MainAxisSize.min, children: [
             if (ctrl.error != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: Text(ctrl.error!,
-                    style: sans(12, color: AppColors.fg2)),
+                child: Text(ctrl.error!, style: sans(12, color: AppColors.fg2)),
               ),
             Semantics(
               button: true,
@@ -323,15 +378,21 @@ class NewTaskPinned extends StatelessWidget {
                         if (ok && context.mounted) onDone(context);
                       },
                 child: Container(
-                  height: 48,
+                  height: h,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                       color: on ? AppColors.fg1 : AppColors.surface3,
-                      borderRadius: BorderRadius.circular(6)),
-                  child: Text(label,
-                      style: sans(15,
-                          weight: W.label,
-                          color: on ? AppColors.bg : AppColors.fg3)),
+                      borderRadius: BorderRadius.circular(h / 2)),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    if (ctrl.busy) ...[
+                      MkMorph(size: 16, color: AppColors.fg2),
+                      const SizedBox(width: 8),
+                    ],
+                    Text(label,
+                        style: sans(16,
+                            weight: kAndroidLook ? W.label : FontWeight.w600,
+                            color: on ? AppColors.bg : AppColors.fg3)),
+                  ]),
                 ),
               ),
             ),

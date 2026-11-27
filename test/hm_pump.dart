@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:snippet/mobile_kit.dart';
 import 'package:snippet/screens/mobile_home/agents_home.dart' show StateChip;
 import 'package:snippet/tap_detector.dart';
 import 'package:snippet/theme.dart';
@@ -41,7 +42,10 @@ void hmExpectTargets(WidgetTester t, {double min = 48}) {
     final rb = e.renderObject;
     if (rb is! RenderBox || !rb.hasSize) continue;
     final h = rb.size.height;
-    final chip = e.findAncestorWidgetOfExactType<StateChip>() != null;
+    var group = false;
+    e.visitAncestorElements((x) => !(group = x.widget is MkFilterGroup));
+    // Filter segments are a 36 face in a 44 target, like the old chips.
+    final chip = group || e.findAncestorWidgetOfExactType<StateChip>() != null;
     if (h < (chip ? 44 : min) - 0.01) bad.add('${rb.size} ${(e.widget as TapDetector).key}');
   }
   expect(bad, isEmpty, reason: 'targets under $min: $bad');

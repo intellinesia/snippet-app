@@ -9,6 +9,9 @@ import '../phone_agent_page.dart' show sessionStateWord, shortPath;
 import '../shell_nav.dart' show sessionBusy;
 import 'agents_home.dart';
 
+// Cards and segments sit 16 in from the screen edge on the board.
+const double _inset = 16;
+
 /// Agent context (HM-06): Overview, Files, Tasks and Memory under a pinned
 /// tab row. Files are the folders the agent's sessions work in.
 class AgentContextPage extends StatefulWidget {
@@ -64,7 +67,7 @@ class _AgentContextPageState extends State<AgentContextPage> {
       ]..sort((a, b) => b.lastActive.compareTo(a.lastActive));
 
   Widget _card(String title, String sub, {VoidCallback? onTap}) => Padding(
-        padding: const EdgeInsets.fromLTRB(kGutter, 0, kGutter, 8),
+        padding: const EdgeInsets.fromLTRB(_inset, 0, _inset, 8),
         child: Semantics(
           button: onTap != null,
           label: '$title, $sub',
@@ -98,7 +101,7 @@ class _AgentContextPageState extends State<AgentContextPage> {
 
   Widget _row(String icon, String name, String meta) => Container(
         constraints: const BoxConstraints(minHeight: 48),
-        padding: const EdgeInsets.only(left: 26, right: kGutter),
+        padding: const EdgeInsets.only(left: 26, right: _inset),
         child: Row(children: [
           AppIcon(icon, size: 20, color: AppColors.fg2),
           const SizedBox(width: 16),
@@ -123,7 +126,7 @@ class _AgentContextPageState extends State<AgentContextPage> {
     }.take(4).toList();
     return [
       Padding(
-        padding: const EdgeInsets.fromLTRB(kGutter, 14, kGutter, 8),
+        padding: const EdgeInsets.fromLTRB(_inset, 14, _inset, 8),
         child: Row(children: [
           agentFace(a.id, 48),
           const SizedBox(width: 12),
@@ -222,6 +225,6 @@ class _Note extends StatelessWidget {
   final String text;
   @override
   Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.all(kGutter * 2),
+      padding: const EdgeInsets.all(_inset * 2),
       child: Center(child: Text(text, style: sans(14, color: AppColors.fg3))));
 }

@@ -1,15 +1,14 @@
 import 'dart:async';
+import 'dart:math' show max;
 
 import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../chat/agent_cluster.dart' show GroupGlyph;
-import '../chat/chat_card.dart';
-import '../chat/signal_row.dart'
-    show prettyModel, prettyProfile, prettyProvider;
+import '../chat/signal_row.dart' show prettyModel, prettyProfile;
+import '../mobile_kit.dart';
 import '../mochi.dart';
 import '../models.dart';
-import '../quiet.dart';
 import '../tap_detector.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -20,7 +19,7 @@ import 'mobile_home/agents_home.dart';
 import 'agent_profile_sheet.dart';
 import 'group_messaging.dart' show openGroupThread, groupMemberName;
 import 'lead/coordination_agent_detail.dart';
-import 'session_list_row.dart' show sessionNeedsYou;
+import 'session_list_row.dart' show projectLabel, sessionNeedsYou;
 import 'shell_nav.dart' show sessionBusy;
 
 /// Phone agent page: what the agent is doing, one-tap actions on it, then
@@ -53,35 +52,29 @@ class PhoneAgentPage extends StatefulWidget {
 String sessionStateWord(SessionInfo s) {
   if (sessionNeedsYou(s)) return 'Needs you';
   if (!s.settled && sessionBusy(s)) return 'Working';
-  if (s.settled) return 'Done';
+  if (s.settled) return 'Completed';
   return 'Idle';
 }
 
-/// Static mark beside the state word: dot, hand, tick or ring. No motion.
-Widget sessionStateMark(SessionInfo s, {double size = 16}) =>
+/// Kit state mark for a session row: amber dot, morph, or a tick.
+Widget sessionStateMark(SessionInfo s, {double size = 22}) =>
     switch (sessionStateWord(s)) {
-      'Needs you' => QuietHand(size: size),
-      'Working' => SizedBox.square(
-          dimension: size,
-          child: Center(
-              child: Container(
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                      color: AppColors.fg2, shape: BoxShape.circle)))),
-      'Done' => AppIcon('check', size: size, color: AppColors.fg3),
-      _ => AppIcon('circle', size: size, color: AppColors.fg3),
+      'Needs you' => MkStateMark(MkState.needsYou, size: size),
+      'Working' => MkStateMark(MkState.working, size: size),
+      _ => MkStateMark(MkState.done, size: size),
     };
 
 class _PhoneAgentPageState extends State<PhoneAgentPage> {
   bool _chat = false;
   bool _busy = false;
+  bool _scrolled = false;
+  int _wakeCount = 0;
   bool? _paused;
   Map<String, InferenceProfile> _profiles = const {};
   List<GroupSummary> _groups = const [];
   Map<String, CoordinationAgent> _agents = const {};
   int? _memory;
-  String? _wakes, _reach;
+  String? _reach;
 
   @override
   void initState() {
@@ -108,7 +101,7 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
     widget.client.wakes().then((l) {
       final mine = l.wakes.where((w) => w.owner == a.id && w.enabled).toList();
       if (!mounted || mine.isEmpty) return;
-      setState(() => _wakes = mine.map((w) => w.scheduleText).join(', '));
+      setState(() => _wakeCount = mine.length);
     }).catchError((_) {});
     widget.client.agentReach(a.id).then((r) {
       final on = [
@@ -150,8 +143,8 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
         onDeleted: widget.onClose,
       ));
 
-  void _openContext(int tab) => unawaited(Navigator.of(context).push(
-      MaterialPageRoute(
+  void _openContext(int tab) =>
+      unawaited(Navigator.of(context).push(MaterialPageRoute(
           builder: (_) => AgentContextPage(
               client: widget.client,
               agent: a,
@@ -160,23 +153,29 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
               onOpenSession: widget.onOpenSession))));
 
   void _openWake() => unawaited(Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => PhoneWakePage(
-          client: widget.client, owner: a.id, name: _name))));
+      builder: (_) =>
+          PhoneWakePage(client: widget.client, owner: a.id, name: _name))));
 
   void _openReach() => unawaited(Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => PhoneReachPage(
-          client: widget.client, agentId: a.id, name: _name))));
+      builder: (_) =>
+          PhoneReachPage(client: widget.client, agentId: a.id, name: _name))));
 
   Future<void> _more() async {
-    final pick = await showAppMenu<String>(context, items: [
-      appMenuItem(value: 'model', icon: 'sliders', label: 'Model'),
-      appMenuItem(
-          value: 'pause',
-          icon: _isPaused ? 'play' : 'pause',
-          label: _isPaused ? 'Resume' : 'Pause'),
-      appMenuItem(value: 'rename', icon: 'edit', label: 'Rename'),
-      appMenuItem(value: 'delete', icon: 'trash', label: 'Delete'),
-    ]);
+    Widget tile(String v, String icon, String label) => Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: MkSheetTile(
+              icon: icon,
+              label: label,
+              onTap: () => Navigator.of(context).pop(v)),
+        );
+    final pick = await showMkSheet<String>(context,
+        builder: (_) => Column(mainAxisSize: MainAxisSize.min, children: [
+              tile('model', 'sliders', 'Model'),
+              tile('pause', _isPaused ? 'play' : 'pause',
+                  _isPaused ? 'Resume' : 'Pause'),
+              tile('rename', 'edit', 'Rename'),
+              tile('delete', 'trash', 'Delete'),
+            ]));
     if (!mounted) return;
     switch (pick) {
       case 'model':
@@ -213,6 +212,8 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
         onClose: () => setState(() => _chat = false),
       );
     }
+    final an = kAndroidLook;
+    final mq = MediaQuery.of(context);
     final mine = _mine;
     final ask = mine.where(sessionNeedsYou).firstOrNull;
     final active = [
@@ -222,160 +223,361 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
     final recent = [
       for (final s in mine)
         if (!active.contains(s)) s
-    ].take(3).toList();
+    ];
+    final shown = [
+      ...active,
+      ...recent.take((3 - active.length).clamp(0, 3)),
+    ];
     final profile = a.deskProfile ?? a.profile;
     final model = (_profiles[profile ?? '']?.model ?? '').trim();
     final live = _isPaused ? null : active.firstOrNull;
-    Widget sessionRow(SessionInfo s) => QuietRow(
-          title: s.title.isEmpty ? 'Untitled session' : s.title,
-          sub: [sessionStateWord(s), relativeTime(s.lastActive)]
-              .where((x) => x.isNotEmpty)
-              .join(' \u00b7 '),
-          leading: sessionStateMark(s),
-          trailing: AppIcon('chevron-right', size: 16, color: AppColors.fg3),
-          onTap: () => widget.onOpenSession(s),
-        );
     final statusWord = _isPaused
         ? 'Paused'
         : live == null
             ? 'Idle'
             : sessionStateWord(live);
-    final statusLine = live == null
-        ? statusWord
-        : '$statusWord \u00b7 ${relativeTime(live.runningSince ?? live.lastActive)}';
-    final provider = (_profiles[profile ?? '']?.provider ?? '').trim();
-    final providerValue = [
-      if (provider.isNotEmpty) prettyProvider(provider),
-      if (model.isNotEmpty) prettyModel(model),
-    ].join(', ');
-    final profileValue = [
-      if ((profile ?? '').isNotEmpty) prettyProfile(profile!),
-      if (a.maxContextTokens != null)
-        '${(a.maxContextTokens! / 1000).round()}k context',
-    ].join(', ');
-    final sessionTitle = (live ?? mine.firstOrNull)?.title.trim() ?? '';
-    final rows = <Widget>[
-      if (a.role.isNotEmpty) ProfileRow('Role', a.role),
-      if (providerValue.isNotEmpty)
-        ProfileRow('Provider', providerValue,
-            onTap: () => showAgentProfileSettings(context,
-                client: widget.client, agent: a, name: _name)),
-      if (profileValue.isNotEmpty)
-        ProfileRow('Profile', profileValue,
-            onTap: () => showAgentProfileSettings(context,
-                client: widget.client, agent: a, name: _name)),
-      if (sessionTitle.isNotEmpty)
-        ProfileRow('Session', sessionTitle,
-            onTap: () => widget.onOpenSession(live ?? mine.first)),
-      if (_wakes != null && _wakes!.isNotEmpty)
-        ProfileRow('Wake', _wakes!, onTap: _openWake),
-      if (_memory != null)
-        ProfileRow('Memory', '$_memory ${_memory == 1 ? 'entry' : 'entries'}'),
-      if (_reach != null && _reach!.isNotEmpty)
-        ProfileRow('Reach', _reach!, onTap: _openReach),
-    ];
+    final since = live != null
+        ? relativeTime(live.runningSince ?? live.lastActive)
+        : _isPaused || mine.isEmpty
+            ? ''
+            : relativeTime(mine.first.lastActive);
+    final status =
+        [statusWord.toLowerCase(), if (since.isNotEmpty) since].join(' ');
+    final role = a.role.trim();
+    final needs = statusWord == 'Needs you';
+    final modelValue = model.isNotEmpty
+        ? prettyModel(model)
+        : (profile ?? '').isNotEmpty
+            ? prettyProfile(profile!)
+            : 'Default';
+    final notes = _memory ?? 0;
+    final wakes = _wakeCount;
+    final inbox = mine.where(sessionNeedsYou).length;
+    final barH = an ? 64.0 : 56.0;
+    final bottom =
+        an ? mq.padding.bottom + 10 : max(12.0, mq.padding.bottom - 8);
+
+    final hero = an
+        ? Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+            child: Row(children: [
+              AgentMochi(a.id, size: 72),
+              const SizedBox(width: 16),
+              Expanded(child: _heroText(role, status, needs, false)),
+            ]),
+          )
+        : Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+            child: Column(children: [
+              AgentMochi(a.id, size: 96),
+              const SizedBox(height: 8),
+              _heroText(role, status, needs, true),
+            ]),
+          );
+
+    final views = MkFilterGroup<String>(
+      padding: EdgeInsets.fromLTRB(an ? 16 : 20, an ? 14 : 16, an ? 16 : 20, 0),
+      options: [
+        const MkFilter('chat', 'Chat'),
+        MkFilter('inbox', 'Inbox', count: inbox == 0 ? null : inbox),
+        const MkFilter('board', 'Board'),
+        const MkFilter('desk', 'Desk'),
+      ],
+      selected: 'chat',
+      onSelect: (v) => switch (v) {
+        'chat' => setState(() => _chat = true),
+        'inbox' => widget.onAllSessions(),
+        'board' => _openContext(2),
+        _ => _openContext(0),
+      },
+    );
+
+    final about = an
+        ? MkList(children: [
+            _aboutRow(
+                'brain',
+                'Memory',
+                '$notes ${notes == 1 ? 'note' : 'notes'}',
+                () => _openContext(3)),
+            _aboutRow('repeat', 'Wakes',
+                wakes == 0 ? 'None scheduled' : '$wakes scheduled', _openWake),
+            if (_reach != null && _reach!.isNotEmpty)
+              _aboutRow('bell', 'Reach', _reach!, _openReach),
+          ])
+        : MkGroup(children: [
+            MkGroupRow(
+                icon: 'brain',
+                label: 'Memory',
+                value: '$notes ${notes == 1 ? 'note' : 'notes'}',
+                onTap: () => _openContext(3)),
+            MkGroupRow(
+                icon: 'repeat',
+                label: 'Wakes',
+                value: wakes == 0 ? 'None' : '$wakes',
+                onTap: _openWake),
+            MkGroupRow(
+                icon: 'cpu',
+                label: 'Model',
+                value: modelValue,
+                onTap: () => showAgentProfileSettings(context,
+                    client: widget.client, agent: a, name: _name)),
+            if (_reach != null && _reach!.isNotEmpty)
+              MkGroupRow(
+                  icon: 'bell',
+                  label: 'Reach',
+                  value: _reach!,
+                  onTap: _openReach),
+          ]);
+
+    final list = NotificationListener<ScrollNotification>(
+      onNotification: (n) {
+        if (n.depth == 0 && n.metrics.axis == Axis.vertical) {
+          final s = n.metrics.pixels > 8;
+          if (s != _scrolled) setState(() => _scrolled = s);
+        }
+        return false;
+      },
+      child: ListView(
+        padding: EdgeInsets.only(
+            top: mq.padding.top + barH, bottom: bottom + 56 + 24),
+        children: [
+          hero,
+          // The group's 4 px hit margin should not push the next section down.
+          SizedBox(
+            height: (an ? 14 : 16) + 40,
+            child: OverflowBox(
+                alignment: Alignment.topCenter,
+                maxHeight: (an ? 14 : 16) + 44,
+                child: views),
+          ),
+          if (ask != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+              child: _askCard(ask),
+            ),
+          if (shown.isNotEmpty) ...[
+            MkSection('Sessions',
+                trailing: mine.length > shown.length ? 'See all' : null,
+                onTrailing: widget.onAllSessions),
+            MkList(children: [
+              for (var i = 0; i < shown.length; i++)
+                _sessionRow(shown[i], last: i == shown.length - 1),
+            ]),
+          ],
+          if (an)
+            const MkSection('About')
+          else
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              child: Semantics(
+                  header: true,
+                  child: Text('About', style: sans(13, color: AppColors.fg3))),
+            ),
+          about,
+          if (_groups.isNotEmpty) ...[
+            const MkSection('Groups'),
+            MkList(children: [
+              for (var i = 0; i < _groups.length; i++)
+                MkRow(
+                  title: _groups[i].title.isEmpty ? 'Group' : _groups[i].title,
+                  subtitle: _memberLine(_groups[i]),
+                  leading: GroupGlyph(
+                      size: 32,
+                      ids: _groups[i].agentIds,
+                      count: _groups[i].members.length),
+                  divider: i < _groups.length - 1,
+                  onTap: () => openGroupThread(context,
+                      client: widget.client, group: _groups[i]),
+                ),
+            ]),
+          ],
+        ],
+      ),
+    );
+
+    final bar = Positioned(
+      left: 0,
+      right: 0,
+      top: 0,
+      height: mq.padding.top + barH,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        color: an && _scrolled ? AppColors.surface1 : Colors.transparent,
+        padding:
+            EdgeInsets.fromLTRB(an ? 4 : 14, mq.padding.top, an ? 4 : 14, 0),
+        child: Row(children: [
+          MkIconButton(
+              icon: an ? 'arrow-left' : 'chevron-left',
+              label: 'Back',
+              size: an ? null : 44,
+              onTap: widget.onClose),
+          const Spacer(),
+          MkIconButton(
+              icon: an ? 'more-vertical' : 'more-horizontal',
+              label: 'More',
+              size: an ? null : 44,
+              onTap: _more),
+        ]),
+      ),
+    );
+
+    final cta = an
+        ? Positioned(right: 16, bottom: bottom, child: _messageFab())
+        : Positioned(left: 12, right: 12, bottom: bottom, child: _askBar());
+
     return Material(
       color: AppColors.bg,
-      child: SafeArea(
-        child: Column(children: [
-          PushedBar(
-            title: _name,
-            titleSize: 17,
-            onBack: widget.onClose,
-            actions: [BarIcon('more-horizontal', 'More', _more)],
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 32),
-              children: [
-                const SizedBox(height: 16),
-                Center(
-                    child: ClipOval(child: AgentMochi(a.id, size: 96))),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  child: Text(_name,
-                      maxLines: 1,
-                      textAlign: TextAlign.center,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(20, weight: W.label, color: AppColors.fg1)),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
-                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    live == null
-                        ? AppIcon('circle', size: 16, color: AppColors.fg2)
-                        : sessionStateMark(live),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(statusLine,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(13,
-                              weight: statusWord == 'Needs you'
-                                  ? W.label
-                                  : W.body,
-                              color: statusWord == 'Needs you'
-                                  ? quietAmber
-                                  : AppColors.fg2)),
-                    ),
-                  ]),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-                  child: Row(children: [
-                    Expanded(
-                        child: ProfileTile('chat', 'Chat',
-                            onTap: () => setState(() => _chat = true))),
-                    const SizedBox(width: 8),
-                    Expanded(
-                        child: ProfileTile('task', 'Tasks', onTap: () => _openContext(2))),
-                    const SizedBox(width: 8),
-                    Expanded(
-                        child: ProfileTile('clock', 'Wake', onTap: _openWake)),
-                  ]),
-                ),
-                if (ask != null) ...[
-                  const SizedBox(height: 16),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: _askCard(ask),
-                  ),
-                ],
-                const SizedBox(height: 16),
-                ...rows,
-                if (active.isNotEmpty) ...[
-                  QuietSectionLabel('Active', count: active.length),
-                  for (final s in active) sessionRow(s),
-                ],
-                if (recent.isNotEmpty) ...[
-                  const QuietSectionLabel('Recent'),
-                  for (final s in recent) sessionRow(s),
-                ],
-                if (mine.isNotEmpty)
-                  QuietRow(
-                    title: 'All sessions',
-                    leading: AppIcon('layers', size: 20, color: AppColors.fg2),
-                    meta: '${mine.length}',
-                    trailing: AppIcon('chevron-right',
-                        size: 16, color: AppColors.fg3),
-                    onTap: widget.onAllSessions,
-                  ),
-            if (_groups.isNotEmpty) ...[
-              QuietSectionLabel('Groups', count: _groups.length),
-              for (final g in _groups)
-                QuietRow(
-                  title: g.title.isEmpty ? 'Group' : g.title,
-                  sub: _memberLine(g),
-                  leading: GroupGlyph(
-                      size: 32, ids: g.agentIds, count: g.members.length),
-                  onTap: () => openGroupThread(context,
-                      client: widget.client, group: g),
-                ),
-            ],
+      child: Stack(children: [
+        Positioned.fill(child: list),
+        bar,
+        cta,
+      ]),
+    );
+  }
+
+  Widget _heroText(String role, String status, bool needs, bool centre) {
+    final nameW = Text(_name,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: centre ? TextAlign.center : TextAlign.start,
+        style: sans(24, weight: FontWeight.w600, color: AppColors.fg1));
+    final sub = Text.rich(
+      TextSpan(children: [
+        if (role.isNotEmpty) TextSpan(text: '$role · '),
+        TextSpan(
+            text: status,
+            style: needs ? sans(13.5, weight: W.label, color: MK.amber) : null),
+      ]),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      textAlign: centre ? TextAlign.center : TextAlign.start,
+      style: sans(13.5, color: AppColors.fg3),
+    );
+    return Column(
+      crossAxisAlignment:
+          centre ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [nameW, const SizedBox(height: 2), sub],
+    );
+  }
+
+  Widget _sessionRow(SessionInfo s, {required bool last}) {
+    final word = sessionStateWord(s);
+    final branch = (s.branch ?? '').trim();
+    final base = branch.isNotEmpty ? branch : projectLabel(s);
+    final Widget sub = switch (word) {
+      'Needs you' => Text('Needs you',
+          style: sans(13.5, weight: W.label, color: AppColors.fg2)),
+      'Working' => Text(
+          'working · ${relativeTime(s.runningSince ?? s.lastActive)}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: mkRowSub()),
+      'Completed' => Text('Completed', style: mkRowSub()),
+      _ => Text.rich(
+          TextSpan(children: [
+            TextSpan(text: base, style: mkMonoSub()),
+            const TextSpan(text: ' · idle'),
+          ]),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: mkRowSub()),
+    };
+    return MkRow(
+      title: s.title.isEmpty ? 'Untitled session' : s.title,
+      subtitleWidget: sub,
+      time: relativeTime(s.lastActive),
+      leading: sessionStateMark(s),
+      divider: !last,
+      onTap: () => widget.onOpenSession(s),
+    );
+  }
+
+  Widget _aboutRow(
+          String icon, String label, String value, VoidCallback onTap) =>
+      MkRow(
+        title: label,
+        subtitle: value,
+        leading: AppIcon(icon, size: 22, color: AppColors.fg2),
+        onTap: onTap,
+      );
+
+  Widget _messageFab() => Semantics(
+        button: true,
+        label: 'Message',
+        excludeSemantics: true,
+        child: TapDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => setState(() => _chat = true),
+          child: Container(
+            height: 56,
+            padding: const EdgeInsets.fromLTRB(16, 0, 20, 0),
+            decoration: BoxDecoration(
+              color: AppColors.fg1,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [
+                BoxShadow(
+                    color: Color(0x66000000),
+                    blurRadius: 18,
+                    offset: Offset(0, 6)),
               ],
             ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              AppIcon('sessions', size: 20, color: MK.onPrimary),
+              const SizedBox(width: 10),
+              Text('Message',
+                  style: sans(15, weight: W.label, color: MK.onPrimary)),
+            ]),
           ),
-        ]),
+        ),
+      );
+
+  // A stand-in for the composer: tapping it opens the chat with this agent.
+  Widget _askBar() {
+    Widget circ(String icon, {bool send = false}) => Container(
+          width: 44,
+          height: 44,
+          decoration: send
+              ? BoxDecoration(color: AppColors.surface3, shape: BoxShape.circle)
+              : null,
+          child: Center(
+              child: AppIcon(icon,
+                  size: send ? 19 : 21,
+                  color: send ? AppColors.fg3 : AppColors.fg2)),
+        );
+    return Semantics(
+      button: true,
+      label: 'Ask $_name',
+      excludeSemantics: true,
+      child: TapDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => setState(() => _chat = true),
+        child: MkGlass(
+          radius: 28,
+          child: SizedBox(
+            height: 56,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Row(children: [
+                circ('plus'),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 6),
+                    child: Text('Ask $_name…',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(15.5, color: AppColors.fg3)),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                circ('mic'),
+                const SizedBox(width: 4),
+                circ('arrow-up', send: true),
+              ]),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -393,35 +595,27 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
 
   Widget _askCard(SessionInfo s) {
     final text = '${s.attention?['text'] ?? ''}'.trim();
-    final approval = s.attention?['type'] == 'approval' && widget.onDecide != null;
-    return ChatCard(children: [
-      ChatCardHeader(
-        title: text.isEmpty ? s.title : text,
-        subtitle: text.isEmpty || s.title.isEmpty ? null : s.title,
-        eyebrow: Row(children: [
-          const QuietHand(size: 16),
-          const SizedBox(width: 8),
-          Expanded(
-              child: Text('$_name asks',
-                  style: sans(13, color: AppColors.fg2))),
-          Text(relativeTime(s.lastActive),
-              style: sans(13, color: AppColors.fg3)),
-        ]),
-      ),
-      ChatCardActions(buttons: [
-        if (approval)
-          ChatCardButton('Approve', busy: _busy, onTap: _busy
+    final approval =
+        s.attention?['type'] == 'approval' && widget.onDecide != null;
+    return MkAskCard(
+      avatar: AgentMochi(a.id, size: 28),
+      who: _name,
+      question: text.isEmpty ? s.title : text,
+      time: relativeTime(s.lastActive),
+      primary: approval ? 'Approve' : 'Open',
+      secondary: approval ? 'Reply' : null,
+      onPrimary: !approval
+          ? () => widget.onOpenSession(s)
+          : _busy
               ? null
               : () async {
                   setState(() => _busy = true);
                   await widget.onDecide!(s, true);
                   if (mounted) setState(() => _busy = false);
-                }),
-        ChatCardButton(approval ? 'Reply' : 'Open',
-            kind: ChatCardButtonKind.secondary,
-            onTap: () => widget.onOpenSession(s)),
-      ]),
-    ]);
+                },
+      onSecondary: () => widget.onOpenSession(s),
+      onOpen: () => widget.onOpenSession(s),
+    );
   }
 }
 
@@ -458,7 +652,6 @@ class DetailRow extends StatelessWidget {
         ),
       );
 }
-
 
 /// Profile tile (HM-05): 56 high, radius 12, icon 24 over a 12/400 label.
 class ProfileTile extends StatelessWidget {

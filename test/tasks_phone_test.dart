@@ -6,6 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/models.dart';
+import 'package:snippet/mobile_kit.dart';
+import 'package:snippet/mochi.dart';
 import 'package:snippet/screens/mobile_home/quiet_lists.dart';
 import 'package:snippet/screens/shell_models.dart';
 import 'package:snippet/screens/sidebar.dart';
@@ -99,38 +101,37 @@ void main() {
         }
         expect(tester.takeException(), isNull);
         final title = tester.getTopLeft(find.text('Tasks').last);
-        expect(tester.widget<Text>(find.text('Tasks').last).style!.fontSize, 28);
-        expect(title.dx, 16);
-        // chips
+        // Title follows the kit's large title (size and inset owned there).
+        expect(tester.widget<Text>(find.text('Tasks').last).style!.fontSize,
+            mkLargeTitle().fontSize);
+        expect(title.dx, inInclusiveRange(16, 20));
+        // connected filter group: 44 targets, 4 apart on Android
         final chips = [
-          for (final k in ['all', 'mine', 'agents'])
-            tester.getRect(find.byKey(ValueKey('chip-$k')))
+          for (final k in ['All', 'Mine', 'Agents'])
+            tester.getRect(find.bySemanticsLabel(RegExp('^$k, ')))
         ];
         for (final c in chips) {
           expect(c.height, 44);
         }
         expect(chips[0].left, 16);
-        expect(chips[1].left - chips[0].right, 8);
-        expect(chips[2].left - chips[1].right, 8);
-        // board toggle + plus
+        expect(chips[1].left - chips[0].right, 4);
+        expect(chips[2].left - chips[1].right, 4);
+        // New task split button beside the large title, menu holds Board view
         final plus = tester.getRect(find.bySemanticsLabel('New task'));
-        final board = tester.getRect(find.bySemanticsLabel('Board view'));
-        expect(plus.width, greaterThanOrEqualTo(48));
-        expect(plus.height, greaterThanOrEqualTo(48));
-        expect(plus.right, w - 4);
-        expect(board.width, 48);
-        expect(board.height, 48);
-        expect(board.right, plus.left);
-        expect(board.left, w - 100);
-        // rows
+        final menu = tester.getRect(find.bySemanticsLabel('Task options'));
+        expect(plus.height, 40);
+        expect(menu.right, w - 16);
+        expect(menu.left - plus.right, 2);
+        expect(plus.bottom, lessThanOrEqualTo(chips[0].top));
+        // rows sit in the segmented list (16 inset on Android)
         final cards = find.byType(PhoneTaskCard);
         expect(cards, findsWidgets);
         for (final e in cards.evaluate()) {
           final r = tester.getRect(find.byElementPredicate((x) => x == e));
-          expect(r.width, w);
-          expect(r.height, greaterThanOrEqualTo(56));
+          expect(r.width, w - 32);
+          expect(r.height, greaterThanOrEqualTo(64));
         }
-        // v19 amber discipline: AppColors.run only on the 6 px needs-you dot
+        // v19 amber discipline: AppColors.run only on the needs-you dot
         // (at most one per row), AppColors.danger nowhere, and Text never uses run.
         const amberIds = {'t-r1', 't-b1'};
         final amberSeen = <String>{};
@@ -192,16 +193,20 @@ void main() {
           }
         }
         checkColours();
-        // groups: Needs you (in_review, blocked, failed), Doing, Todo, Done
+        // groups: Needs you (in_review, blocked, failed), Open, Completed
         expect(find.byKey(const ValueKey('group-Needs you')), findsOneWidget);
-        expect(find.byKey(const ValueKey('group-Doing')), findsOneWidget);
+        // Large text pushes Open below the fold of the lazy list.
+        await tester.scrollUntilVisible(
+            find.byKey(const ValueKey('group-Open')), 100,
+            scrollable: find.byType(Scrollable).first);
+        expect(find.byKey(const ValueKey('group-Open')), findsOneWidget);
         expect(find.text('In progress'), findsNothing);
         final r1Rect = tester.getRect(find.byKey(const ValueKey('t-r1')));
         final f1Rect = tester.getRect(find.byKey(const ValueKey('t-f1')));
-        final doingY = tester.getTopLeft(find.byKey(const ValueKey('group-Doing'))).dy;
+        final doingY = tester.getTopLeft(find.byKey(const ValueKey('group-Open'))).dy;
         expect(r1Rect.top, lessThan(doingY));
         expect(f1Rect.top, lessThan(doingY));
-        // v19 glyphs: in_review & blocked use the 6 px amber dot; failed -> x.
+        // State marks: in_review & blocked use the 9 px amber dot; failed -> x.
         Finder amberDot(String key) => find.descendant(
             of: find.byKey(ValueKey(key)),
             matching: find.byWidgetPredicate((w) =>
@@ -215,8 +220,8 @@ void main() {
             .name;
         expect(amberDot('t-r1'), findsOneWidget);
         expect(amberDot('t-b1'), findsOneWidget);
-        expect(tester.getSize(amberDot('t-r1')), const Size(6, 6));
-        expect(tester.getSize(amberDot('t-b1')), const Size(6, 6));
+        expect(tester.getSize(amberDot('t-r1')), const Size(9, 9));
+        expect(tester.getSize(amberDot('t-b1')), const Size(9, 9));
         expect(iconOf('t-f1'), 'x');
         // priority word & time in sub line
         final r1Rich = tester.widget<Text>(find.descendant(
@@ -230,32 +235,29 @@ void main() {
         final titleX = tester.getTopLeft(find.descendant(
             of: find.byKey(const ValueKey('t-r1')),
             matching: find.textContaining('Task r1'))).dx;
-        expect(titleX, 52);
+        // 16 tile inset + 16 + 40 mark slot + 14 gap
+        expect(titleX, 86);
         final av = tester.getRect(find.descendant(
             of: find.byKey(const ValueKey('t-r1')),
-            matching: find.byType(OwnerAvatar)));
-        expect(av.right, w - 16);
-        expect(av.size, const Size(28, 28));
-        final hair = tester.getRect(find
-            .descendant(
-                of: find.byKey(const ValueKey('t-r1')),
-                matching: find.byType(ColoredBox))
-            .last);
-        expect(hair.left, 52);
-        expect(hair.right, w - 16);
+            matching: find.byType(AgentMochi)));
+        expect(av.right, closeTo(w - 32, 0.5));
         // ignore: avoid_print
         print('MEASURE w=$w s=$scale titleX=${title.dx} '
-            'board=${board.left}..${board.right} plus=${plus.left}..${plus.right} '
+            'plus=${plus.left}..${plus.right} '
             'chipH=${chips[0].height} row=${r1Rect.width}x${r1Rect.height} '
-            'textX=$titleX avatar=${av.size.width}x${av.size.height}@R${av.right} '
-            'hair=${hair.left}..${hair.right}');
-        // Todo mapped to Todo group (not Doing/In progress)
+            'textX=$titleX owner=${av.size.width}x${av.size.height}@R${av.right}');
+        // Todo sits in Open after Doing, with the open ring
         await tester.scrollUntilVisible(find.byKey(const ValueKey('t-t1')), 200,
             scrollable: find.byType(Scrollable).first);
-        expect(iconOf('t-t1'), 'circle');
-        expect(find.byKey(const ValueKey('group-Todo')), findsOneWidget);
+        expect(
+            tester
+                .widget<MkStateMark>(find.descendant(
+                    of: find.byKey(const ValueKey('t-t1')),
+                    matching: find.byType(MkStateMark)))
+                .state,
+            MkState.open);
         expect(tester.getTopLeft(find.byKey(const ValueKey('t-t1'))).dy,
-            greaterThan(tester.getTopLeft(find.byKey(const ValueKey('group-Todo'))).dy));
+            greaterThan(tester.getTopLeft(find.byKey(const ValueKey('t-p1'))).dy));
         // done folded to 5; done uses check, cancelled uses x
         await tester.scrollUntilVisible(find.byKey(const ValueKey('t-d0')), 300,
             scrollable: find.byType(Scrollable).first);
@@ -319,8 +321,8 @@ void main() {
     }
     expect(find.byType(PhoneTasksRoot), findsOneWidget);
     expect(find.byType(QuietTasksScreen), findsNothing);
-    expect(find.byKey(const ValueKey('chip-all')), findsOneWidget);
-    expect(find.bySemanticsLabel('Board view'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('^All, ')), findsOneWidget);
+    expect(find.bySemanticsLabel('Task options'), findsOneWidget);
     expect(find.byKey(const ValueKey('group-Needs you')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -335,11 +337,11 @@ void main() {
     for (var i = 0; i < 6; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
-    await tester.tap(find.byKey(const ValueKey('chip-mine')));
+    await tester.tap(find.bySemanticsLabel(RegExp('^Mine, ')));
     await tester.pump();
     expect(find.text('Nothing here'), findsOneWidget);
     expect(find.text('No tasks created by you.'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('chip-agents')));
+    await tester.tap(find.bySemanticsLabel(RegExp('^Agents, ')));
     await tester.pump();
     expect(find.byKey(const ValueKey('t-a')), findsOneWidget);
 

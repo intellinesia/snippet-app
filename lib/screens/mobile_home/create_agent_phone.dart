@@ -9,6 +9,9 @@ import '../../theme.dart';
 import '../../widgets.dart';
 import 'agents_home.dart';
 
+// Cards and segments sit 16 in from the screen edge on the board.
+const double _inset = 16;
+
 /// Create agent (HM-11). Name and Role are sent as the build prompt; the
 /// daemon's build call takes no profile or channel fields.
 class PhoneCreateAgentPage extends StatefulWidget {
@@ -100,7 +103,7 @@ class _PhoneCreateAgentPageState extends State<PhoneCreateAgentPage> {
   }
 
   Widget _field(String label, Widget child) => Padding(
-        padding: const EdgeInsets.fromLTRB(kGutter, 0, kGutter, 12),
+        padding: const EdgeInsets.fromLTRB(_inset, 0, _inset, 12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Padding(
               padding: const EdgeInsets.only(bottom: 4),
@@ -162,7 +165,7 @@ class _PhoneCreateAgentPageState extends State<PhoneCreateAgentPage> {
                   )),
               const HomeLabel('Appearance', top: 8),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: kGutter),
+                padding: const EdgeInsets.symmetric(horizontal: _inset),
                 child: LayoutBuilder(builder: (context, c) {
                   final cell = c.maxWidth / 6;
                   return Wrap(children: [
@@ -202,13 +205,13 @@ class _PhoneCreateAgentPageState extends State<PhoneCreateAgentPage> {
               SwitchRow('Reach me on phone', _reach, (v) => setState(() => _reach = v)),
               if (_error != null)
                 Padding(
-                  padding: const EdgeInsets.all(kGutter),
+                  padding: const EdgeInsets.all(_inset),
                   child: Text(_error!, style: sans(13, color: AppColors.fg2)),
                 ),
             ]),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(kGutter, 8, kGutter, 12),
+            padding: const EdgeInsets.fromLTRB(_inset, 8, _inset, 12),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               if (!_valid)
                 Padding(

@@ -505,12 +505,16 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(children: [
-                                    AgentMochi('lead', size: 24),
+                                    AgentMochi('lead', size: 22),
                                     const SizedBox(width: 8),
-                                    Text('Lead',
-                                        style: sans(13,
-                                            weight: W.label,
-                                            color: AppColors.fg1)),
+                                    Text(
+                                        [
+                                          'Lead',
+                                          _nearestTime(events, idx),
+                                        ]
+                                            .where((x) => x.isNotEmpty)
+                                            .join(' · '),
+                                        style: sans(13, color: AppColors.fg3)),
                                   ]),
                                   const SizedBox(height: 6),
                                   Bubble(mine: false, text: reply, plain: true),
@@ -1443,3 +1447,13 @@ bool _isRestartNote(String s) => s.trim().startsWith('Snippet restarted while');
 
 /// The gap between any two transcript items.
 double get transcriptGap => kMobile ? 12 : 10;
+
+/// Replies carry no time of their own; use the nearest earlier event's.
+String _nearestTime(List<Map<String, dynamic>> events, int idx) {
+  for (var j = idx; j >= 0; j--) {
+    final t = formatEventTime(events[j]['at'] ?? events[j]['created_at']);
+    // Board meta reads 9:20, not 09:20.
+    if (t != null) return t.startsWith('0') ? t.substring(1) : t;
+  }
+  return '';
+}

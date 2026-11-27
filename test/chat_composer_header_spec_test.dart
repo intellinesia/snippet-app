@@ -60,32 +60,27 @@ void main() {
         final pill = t.getRect(find.byType(ComposerPillSurface));
         final send = t.getRect(find.byType(ComposerSendButton));
         final header = find.byType(StageBar);
-        final headerCard = t.getRect(find
-            .descendant(of: header, matching: find.byType(Container))
-            .first);
+        final headerBox = t.getRect(header);
         final backIcon = find.descendant(
             of: header,
             matching: find.byWidgetPredicate(
-                (w) => w is AppIcon && w.name == 'chevron-left'));
+                (w) => w is AppIcon && w.name == 'arrow-left'));
         final moreIcon = find.descendant(
             of: header,
             matching: find.byWidgetPredicate(
-                (w) => w is AppIcon && w.name == 'more-horizontal'));
+                (w) => w is AppIcon && w.name == 'more-vertical'));
         // ignore: avoid_print
-        print('W $vw x$scale pill=$pill send=$send header=$headerCard');
-        expect(pill.left, 16);
-        expect(pill.right, vw - 16);
-        if (scale == 1.0) expect(pill.height, 56);
+        print('W $vw x$scale pill=$pill send=$send header=$headerBox');
+        // Board (Android): a 52 s3 field inset 12, a separate 52 send.
+        expect(pill.left, 12);
+        expect(send.right, vw - 12);
+        expect(pill.right, send.left - 8);
+        if (scale == 1.0) expect(pill.height, 52);
         expect(pill.bottom, 852 - 28);
-        expect(send.size, const Size(48, 48));
-        expect(t.getSize(find.descendant(
-            of: find.byType(ComposerSendButton),
-            matching: find.byType(SizedBox)).at(1)), const Size(28, 28));
+        expect(send.size, const Size(52, 52));
         expect(find.bySemanticsLabel('Send, unavailable'), findsOneWidget);
-        expect(headerCard.left, 16);
-        expect(headerCard.width, vw - 32);
-        if (scale == 1.0) expect(headerCard.height, 58);
-        expect(headerCard.height, greaterThanOrEqualTo(58));
+        expect(headerBox.width, vw);
+        expect(headerBox.height, greaterThanOrEqualTo(64));
         expect(backIcon, findsOneWidget);
         expect(moreIcon, findsOneWidget);
         expect(t.takeException(), isNull);
@@ -97,7 +92,7 @@ void main() {
         // ignore: avoid_print
         print('W $vw x$scale three lines pill height=${tall.height}');
         expect(tall.height, greaterThan(100));
-        expect(t.getRect(find.byType(ComposerSendButton)).size, const Size(48, 48));
+        expect(t.getRect(find.byType(ComposerSendButton)).size, const Size(52, 52));
         expect(t.takeException(), isNull);
         debugDefaultTargetPlatformOverride = null;
       });

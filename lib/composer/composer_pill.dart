@@ -7,19 +7,20 @@ import '../gesture_physics.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../mobile_kit.dart' show MkGlass, kAndroidLook;
 import '../tap_detector.dart';
 
 /// Round 7 composer tokens, local so the theme file stays with its owner.
 abstract final class C7 {
   static Color get row => AppColors.surface3;
-  static Color get rowHi =>
-      Color.alphaBlend(AppColors.fg1.withValues(alpha: 0.07), AppColors.surface3);
+  static Color get rowHi => Color.alphaBlend(
+      AppColors.fg1.withValues(alpha: 0.07), AppColors.surface3);
   static double get pill => kMobile ? 56 : 52;
   static double get pillRadius => kMobile ? 28 : 26;
-  static double get btn => kMobile ? 48 : 40;
+  static double get btn => kMobile ? (kAndroidLook ? 48 : 44) : 40;
   static const double ends = 20;
   static const double inner = 4;
-  static double get field => kMobile ? 15 : 16;
+  static double get field => kMobile ? 15.5 : 16;
   // Phone spec: 15 on a 21 line; desktop keeps 22.
   static double get line => kMobile ? 21 : 22;
   static const SpringDescription morph =
@@ -124,8 +125,8 @@ class _ComposerMorphButtonState extends State<ComposerMorphButton>
         Color.lerp(sendFill.withValues(alpha: 0), sendFill, send)!,
         AppColors.fg1,
         stop)!;
-    final ink = Color.lerp(Color.lerp(AppColors.fg2, sendInk, send)!,
-        AppColors.bg, stop)!;
+    final ink = Color.lerp(
+        Color.lerp(AppColors.fg2, sendInk, send)!, AppColors.bg, stop)!;
     return Container(
       width: C7.btn,
       height: C7.btn,
@@ -205,7 +206,8 @@ class ComposerBareButton extends StatelessWidget {
           child: SizedBox.square(
             dimension: C7.btn,
             child: Center(
-                child: AppIcon(icon, size: size, color: color ?? AppColors.fg2)),
+                child:
+                    AppIcon(icon, size: size, color: color ?? AppColors.fg2)),
           ),
         ),
       ),
@@ -217,7 +219,11 @@ class ComposerBareButton extends StatelessWidget {
 /// The flat Duet pill every composer state sits in.
 class ComposerPillSurface extends StatelessWidget {
   const ComposerPillSurface(
-      {super.key, required this.child, this.highlight = false, this.fill, this.radius});
+      {super.key,
+      required this.child,
+      this.highlight = false,
+      this.fill,
+      this.radius});
 
   final Widget child;
   final bool highlight;
@@ -226,15 +232,31 @@ class ComposerPillSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Board: a 56 glass capsule on iPhone; a 52 filled s3 field on Android.
+    if (kMobile && fill == null && !highlight) {
+      final r = radius ?? (kAndroidLook ? 26.0 : C7.pillRadius);
+      final body = Container(
+        constraints: BoxConstraints(minHeight: kAndroidLook ? 52 : 56),
+        padding:
+            EdgeInsets.symmetric(horizontal: 6, vertical: kAndroidLook ? 2 : 6),
+        child: child,
+      );
+      return kAndroidLook
+          ? DecoratedBox(
+              decoration: BoxDecoration(
+                  color: AppColors.surface3,
+                  borderRadius: BorderRadius.circular(r)),
+              child: body)
+          : MkGlass(radius: r, child: body);
+    }
     return Container(
       constraints: BoxConstraints(minHeight: C7.pill),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: fill ?? (kMobile ? AppColors.surface2 : C7.row),
         borderRadius: BorderRadius.circular(radius ?? C7.pillRadius),
-        border: highlight
-            ? Border.all(color: AppColors.accent, width: 1.5)
-            : null,
+        border:
+            highlight ? Border.all(color: AppColors.accent, width: 1.5) : null,
       ),
       child: child,
     );
@@ -329,7 +351,8 @@ class ComposerVoicePill extends StatelessWidget {
               color: AppColors.fg1,
               size: 18),
         if (recording)
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: timer),
+          Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4), child: timer),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -337,8 +360,7 @@ class ComposerVoicePill extends StatelessWidget {
           ),
         ),
         if (!recording)
-          Padding(
-              padding: const EdgeInsets.only(right: 4), child: timer),
+          Padding(padding: const EdgeInsets.only(right: 4), child: timer),
         if (recording)
           ComposerBareButton('pause',
               label: 'Stop and review', onTap: onStop, size: 18)
@@ -359,8 +381,7 @@ class ComposerVoicePill extends StatelessWidget {
 
 /// A Duet group: rows on their own surface, 2px apart, rounder at the ends.
 class ComposerGroup extends StatelessWidget {
-  const ComposerGroup(
-      {super.key, required this.children, this.ends = C7.ends});
+  const ComposerGroup({super.key, required this.children, this.ends = C7.ends});
 
   final List<Widget> children;
   final double ends;

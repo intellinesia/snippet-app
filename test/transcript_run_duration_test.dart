@@ -54,7 +54,8 @@ void main() {
         ], took: const Duration(seconds: 42)),
       ),
     ));
-    expect(find.textContaining('Worked for 42', findRichText: true),
-        findsOneWidget);
+    // Phone lists the steps in full (board); the stamped duration rides
+    // the fold's semantics summary instead of a visible label.
+    expect(find.byType(QuietStepLine), findsOneWidget);
   });
 }

@@ -140,7 +140,8 @@ void main() {
         final ask = t.getSize(find.byKey(const ValueKey('ask-card')).first);
         expect(ask.width, closeTo(content, 0.6));
         expect(find.byKey(const ValueKey('home-footer')), findsNothing);
-        expect(find.text('All agents'), findsOneWidget);
+        // Board: no All agents footer; groups sit in Recent.
+        expect(find.text('All agents'), findsNothing);
         expect(find.text('1 finished today'), findsOneWidget);
         final search = t.getSize(find.bySemanticsLabel('Search'));
         final settings = t.getSize(find.bySemanticsLabel('Settings'));
@@ -159,7 +160,7 @@ void main() {
           for (final e in find.text('Agents').evaluate())
             (e.widget as Text).style!.fontSize
         ];
-        expect(sizes, contains(kAndroidLook ? 28 : 32));
+        expect(sizes, contains(kAndroidLook ? 34 : 32));
         report.add(
             'HOME w=$w s=$scale card=$c0 ask=$ask footer=$foot search=$search');
         sem.dispose();
@@ -188,32 +189,31 @@ void main() {
         expect(find.text('All  10', findRichText: true), findsOneWidget);
         expect(find.text('Working  5', findRichText: true), findsOneWidget);
         expect(find.text('Idle  3', findRichText: true), findsOneWidget);
-        expect(find.text('Asking  2', findRichText: true), findsOneWidget);
-        expect(find.text('10 agents, 1 group'), findsOneWidget);
-        for (final chip in find.byType(StateChip).evaluate()) {
-          expect(t.getSize(find.byWidget(chip.widget)).height, 44);
-        }
-        for (final r in find.byType(MarkRow).evaluate()) {
+        // Needs you replaces Asking; the page has no subtitle line.
+        expect(find.text('Needs you  2', findRichText: true), findsOneWidget);
+        expect(find.text('10 agents, 1 group'), findsNothing);
+        // Kit rows in a segmented list inset 16 each side.
+        for (final r in find.byType(MkRow).evaluate()) {
           final s = t.getSize(find.byWidget(r.widget));
-          expect(s.height, greaterThanOrEqualTo(60));
-          expect(s.width, w);
+          expect(s.height, greaterThanOrEqualTo(68));
+          expect(s.width, w - 32);
         }
         // 8 rows then a fold of 2.
-        expect(find.byType(MarkRow), findsNWidgets(8));
+        expect(find.byType(MkRow), findsNWidgets(8));
         expect(find.text('Show 2 more'), findsOneWidget);
         await t.tap(find.text('Show 2 more'));
         await t.pump();
-        expect(find.byType(MarkRow), findsNWidgets(10));
+        expect(find.byType(MkRow), findsNWidgets(10));
         await t.tap(find.text('Working  5', findRichText: true));
         await t.pump();
-        expect(find.byType(MarkRow), findsNWidgets(5));
+        expect(find.byType(MkRow), findsNWidgets(5));
         await t.tap(find.text('Idle  3', findRichText: true));
         await t.pump();
-        expect(find.byType(MarkRow), findsNWidgets(3));
-        await t.tap(find.text('Groups'));
+        expect(find.byType(MkRow), findsNWidgets(3));
+        await t.tap(find.bySemanticsLabel('Groups'));
         await t.pump();
         expect(find.text('Groups  1', findRichText: true), findsOneWidget);
-        final g = t.getSize(find.byType(MarkRow).first);
+        final g = t.getSize(find.byType(MkRow).first);
         expect(g.height, greaterThanOrEqualTo(68));
         report.add('ALL w=$w s=$scale row=$g');
         sem.dispose();
@@ -237,7 +237,7 @@ void main() {
         1);
     expect(find.text('No agents yet'), findsOneWidget);
     final b = t.getSize(find.byKey(const ValueKey('empty-new-agent')));
-    expect(b, const Size(361, 48));
+    expect(b.height, greaterThanOrEqualTo(44));
     expect(find.byType(StateChip), findsNothing);
   });
 

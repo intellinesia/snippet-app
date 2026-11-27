@@ -28,13 +28,13 @@ void main() {
             h: 1800);
         hmExpectTargets(t);
         final home = t.getSize(find.byKey(const ValueKey('lead-card')));
-        expect(home.width, closeTo(w - 32, 0.6));
+        expect(home.width, closeTo(w - 40, 0.6));
         expect(home.height, greaterThanOrEqualTo(72));
         final bubble = t.getRect(find.byKey(const ValueKey('lead-user-bubble')));
-        expect(bubble.width, lessThanOrEqualTo((w - 32) * 0.69 + 0.6));
-        expect(bubble.right, closeTo(w - 16, 0.6));
+        expect(bubble.width, lessThanOrEqualTo((w - 40) * 0.69 + 0.6));
+        expect(bubble.right, closeTo(w - 20, 0.6));
         final card = t.getSize(find.byKey(const ValueKey('delegations')));
-        expect(card.width, closeTo(w - 32, 0.6));
+        expect(card.width, closeTo(w - 40, 0.6));
         for (final id in ['sashy', 'buddy', 'ada']) {
           expect(t.getSize(find.byKey(ValueKey('delegation-$id'))).height,
               greaterThanOrEqualTo(48));

@@ -79,13 +79,16 @@ class MkIconButton extends StatelessWidget {
       button: true,
       label: label,
       excludeSemantics: true,
-      child: TapDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        // Keeps a 44 target around a 40 face.
-        child: Padding(
-          padding: EdgeInsets.all(d < 44 ? (44 - d) / 2 : 0),
-          child: face,
+      child: Tooltip(
+        message: label,
+        child: TapDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          // Keeps a 44 target around a 40 face.
+          child: Padding(
+            padding: EdgeInsets.all(d < 44 ? (44 - d) / 2 : 0),
+            child: face,
+          ),
         ),
       ),
     );

@@ -99,7 +99,7 @@ void main() {
 
         expect(r.left, 0);
         expect(r.width, w);
-        expect(r.top, closeTo(96, 0.5));
+        expect(r.top, closeTo(100, 0.5));
         if (scale == 1) expect(r.height, 48);
         expect(r.height, greaterThanOrEqualTo(48));
 
@@ -225,11 +225,11 @@ void main() {
     await t.pump();
     await t.pump(const Duration(milliseconds: 250));
     expect(find.byKey(const ValueKey('bar')), findsNothing);
-    expect(TopZone.lowestBar.value, closeTo(96, 0.5));
+    expect(TopZone.lowestBar.value, closeTo(100, 0.5));
   });
 
   testWidgets(
-      'Agents root carries at most 2 amber elements (bar + card border)',
+      'Agents root carries at most 2 amber elements (bar + card dot)',
       (t) async {
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final agents = [
@@ -281,31 +281,34 @@ void main() {
     // 2. Chip amber dot is removed.
     expect(find.byKey(const ValueKey('chip-amber-dot')), findsNothing);
 
-    // 3. Ask card carries the amber border; its "Needs you" label is neutral.
-    final askCard =
-        t.widget<Container>(find.byKey(const ValueKey('ask-card')).first);
-    final dec = askCard.decoration! as BoxDecoration;
-    expect(dec.border, Border.all(color: quietAmber, width: 1));
-    final cardNeedsText = t.widget<Text>(find.descendant(
-      of: find.byKey(const ValueKey('ask-card')).first,
-      matching: find.text('Needs you'),
-    ));
-    expect(cardNeedsText.style?.color, isNot(quietAmber));
-    expect(cardNeedsText.style?.color, isNot(AppColors.run));
+    // 3. Board: content cards have no outline; amber is only the dot.
+    final card = find.byKey(const ValueKey('ask-card')).first;
+    bool amber(Color? c) => c == quietAmber || c == AppColors.run;
+    expect(
+        find.descendant(
+            of: card,
+            matching: find.byWidgetPredicate((w) =>
+                w is Container &&
+                w.decoration is BoxDecoration &&
+                (w.decoration as BoxDecoration).border != null)),
+        findsNothing);
+    final amberInCard = find
+        .descendant(
+            of: card,
+            matching: find.byWidgetPredicate((w) =>
+                (w is Container &&
+                    w.decoration is BoxDecoration &&
+                    amber((w.decoration as BoxDecoration).color)) ||
+                (w is Text && amber(w.style?.color))))
+        .evaluate()
+        .length;
 
-    // Count distinct amber elements on Agents root: bar (1) + ask card border (1) = 2.
-    var amberElements = 0;
+    // Distinct amber elements on Agents root: the bar and the card's dot.
+    var amberElements = amberInCard;
     if (find.byKey(const ValueKey('bar')).evaluate().isNotEmpty) {
       amberElements++;
     }
     if (find.byKey(const ValueKey('chip-amber-dot')).evaluate().isNotEmpty) {
-      amberElements++;
-    }
-    if (dec.border == Border.all(color: quietAmber, width: 1)) {
-      amberElements++;
-    }
-    if (cardNeedsText.style?.color == quietAmber ||
-        cardNeedsText.style?.color == AppColors.run) {
       amberElements++;
     }
     expect(amberElements, lessThanOrEqualTo(2));

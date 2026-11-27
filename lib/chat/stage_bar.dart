@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../glass.dart';
+import '../mobile_kit.dart';
 import '../mochi.dart';
-import '../widgets.dart' show AppIcon, ProviderLogo, providerLogoAsset;
 import '../platform.dart';
 import '../theme.dart';
-import '../tap_detector.dart';
 import 'chat_style.dart';
 import 'stage_header.dart';
 
@@ -60,7 +59,8 @@ class StageBar extends StatelessWidget {
   /// Phone only: false when the host already floats it on [GlassTopFrame].
   final bool framed;
 
-  static const double phoneHeight = 58;
+  // Board: 56 on iPhone, 64 on Android.
+  static double get phoneHeight => mkChatHeaderHeight;
 
   // Desktop leaves headroom above the cast: the characters' crowns rise past their box.
   static double get height => kMobile ? phoneHeight : ChatHeader.overlap + 24;
@@ -76,131 +76,131 @@ class StageBar extends StatelessWidget {
     final grow = MediaQuery.textScalerOf(context).scale(36) - 36;
     final h = phoneHeight + (grow > 0 ? grow : 0);
     final sub = (subtitle ?? '').trim();
-    final groupAvatar = members.length > 1;
+    final android = kAndroidLook;
+    final face = android ? 36.0 : 32.0;
     final avatar = members.isEmpty
         ? null
-        : groupAvatar
+        : members.length > 1
             ? Container(
-                width: 30,
-                height: 30,
+                width: face,
+                height: face,
                 padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
-                  color: AppColors.surface2,
-                  borderRadius: BorderRadius.circular(8.4),
-                  border: Border.all(color: AppColors.line),
-                ),
+                    color: AppColors.surface2,
+                    borderRadius: BorderRadius.circular(face * 0.28)),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(6.4),
-                  child: AgentMochi(members.first.agentId, size: 26),
+                  borderRadius: BorderRadius.circular(face * 0.22),
+                  child: AgentMochi(members.first.agentId, size: face - 4),
                 ),
               )
             : ClipRRect(
-                borderRadius: BorderRadius.circular(15),
-                child: AgentMochi(members.first.agentId, size: 30));
-    final body = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        constraints: BoxConstraints(minHeight: h),
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        decoration: BoxDecoration(
-          color: subtitleHand ? AppColors.surface2 : AppColors.surface1,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(children: [
-          if (onBack != null)
-            TapDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onBack,
-              child: SizedBox(
-                width: 36,
-                height: 48,
-                child: Center(
-                  child: AppIcon('chevron-left', size: 20, color: AppColors.fg1),
-                ),
-              ),
-            )
-          else
-            const SizedBox(width: 10),
-          if (avatar != null) ...[
-            const SizedBox(width: 4),
-            avatar,
-            const SizedBox(width: 9),
-          ] else
-            const SizedBox(width: 4),
-          Expanded(
-            child: Semantics(
-              button: onTap != null,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onTap,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 48),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(15, weight: W.label, color: AppColors.fg1)),
-                      if (sub.isNotEmpty)
-                        Row(mainAxisSize: MainAxisSize.min, children: [
-                          if (subtitleHand) ...[
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                  color: AppColors.run, shape: BoxShape.circle),
-                            ),
-                            const SizedBox(width: 5),
-                          ],
-                          if (subtitleProvider != null &&
-                              providerLogoAsset(subtitleProvider) != null) ...[
-                            ProviderLogo(subtitleProvider,
-                                size: 12, color: AppColors.fg3),
-                            const SizedBox(width: 5),
-                          ],
-                          Flexible(
-                            child: Text(sub,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: sans(12,
-                                    color: subtitleHand
-                                        ? AppColors.fg2
-                                        : AppColors.fg3)),
-                          ),
-                        ]),
-                      if (below != null) ...[const SizedBox(height: 6), below!],
-                    ],
-                  ),
-                ),
-              ),
+                borderRadius: BorderRadius.circular(face / 2),
+                child: AgentMochi(members.first.agentId, size: face));
+    final text = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment:
+          android ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Row(mainAxisSize: MainAxisSize.min, children: [
+          if (subtitleHand) ...[
+            Container(
+              width: 7,
+              height: 7,
+              decoration:
+                  BoxDecoration(color: MK.amber, shape: BoxShape.circle),
             ),
+            const SizedBox(width: 6),
+          ],
+          Flexible(
+            child: Text(title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: android
+                    ? sans(18, weight: W.label, color: AppColors.fg1)
+                    : sans(15, weight: FontWeight.w600, color: AppColors.fg1)),
           ),
-          if (trailing != null)
-            Padding(
-                padding: const EdgeInsets.only(right: 4), child: trailing!)
-          else if (onTap != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: TapDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onTap,
-                child: SizedBox(
-                  width: 36,
-                  height: 48,
-                  child: Center(
-                    child: AppIcon('more-horizontal',
-                        size: 20, color: AppColors.fg2),
+        ]),
+        if (below != null) ...[const SizedBox(height: 6), below!],
+      ],
+    );
+    final chip = Semantics(
+      button: onTap != null,
+      // The board shows the name only; the state line stays for screen readers.
+      hint: sub.isEmpty ? null : sub,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: android
+            ? ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: Row(children: [
+                  if (avatar != null) ...[avatar, const SizedBox(width: 10)],
+                  Expanded(child: text),
+                ]),
+              )
+            // iPhone: the identity floats as one glass capsule, centred.
+            : MkGlass(
+                radius: 24,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 44),
+                  child: Padding(
+                    padding:
+                        EdgeInsets.fromLTRB(avatar == null ? 16 : 7, 4, 16, 4),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      if (avatar != null) ...[avatar, const SizedBox(width: 8)],
+                      Flexible(child: text),
+                    ]),
                   ),
                 ),
               ),
-            ),
+      ),
+    );
+    final more = onTap == null
+        ? null
+        : MkIconButton(
+            icon: android ? 'more-vertical' : 'more-horizontal',
+            label: 'More',
+            bare: android,
+            onTap: onTap);
+    // iPhone gives any trailing control the same glass circle as back.
+    final Widget? end = trailing == null
+        ? more
+        : android
+            ? trailing
+            : MkGlass(
+                child: SizedBox.square(
+                    dimension: MK.glassButton, child: Center(child: trailing)));
+    final back = onBack == null
+        ? null
+        : MkIconButton(
+            icon: android ? 'arrow-left' : 'chevron-left',
+            label: 'Back',
+            bare: android,
+            onTap: onBack);
+    final side = android ? 48.0 : MK.glassButton;
+    final body = ConstrainedBox(
+      constraints: BoxConstraints(minHeight: h),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: android ? 4 : 14),
+        child: Row(children: [
+          if (back != null)
+            back
+          else if (!android)
+            SizedBox(width: end == null ? 0 : side)
+          else
+            const SizedBox(width: 12),
+          SizedBox(width: android ? 4 : 8),
+          Expanded(child: android ? chip : Center(child: chip)),
+          SizedBox(width: android ? 4 : 8),
+          if (end != null)
+            end
+          else if (!android && back != null)
+            SizedBox(width: side),
         ]),
       ),
     );
-    return framed ? GlassTopFrame(child: body) : body;
+    return framed ? GlassTopFrame(thread: true, child: body) : body;
   }
 
   Widget _desk() {

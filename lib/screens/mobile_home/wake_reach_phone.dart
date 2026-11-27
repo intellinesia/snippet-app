@@ -7,6 +7,9 @@ import '../../theme.dart';
 import '../../wake_models.dart';
 import 'agents_home.dart';
 
+// Cards and segments sit 16 in from the screen edge on the board.
+const double _inset = 16;
+
 /// Wake (HM-12): rule cards with switches; the open card edits a schedule.
 /// Watches (event and poll rules) are created by the agent itself, so the
 /// app can only list, pause and delete them.
@@ -123,7 +126,7 @@ class _PhoneWakePageState extends State<PhoneWakePage> {
       WakeSchedule? wake}) {
     final open = _editing == id;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(kGutter, 0, kGutter, 10),
+      padding: const EdgeInsets.fromLTRB(_inset, 0, _inset, 10),
       child: Container(
         key: ValueKey('rule-$id'),
         constraints: const BoxConstraints(minHeight: 88),
@@ -264,7 +267,7 @@ class _PhoneWakePageState extends State<PhoneWakePage> {
                       enabled: w.enabled),
                 if (_wakes.isEmpty && _watches.isEmpty)
                   Padding(
-                    padding: const EdgeInsets.all(kGutter),
+                    padding: const EdgeInsets.all(_inset),
                     child: Center(
                         child: Text('No wake rules yet',
                             style: sans(14, color: AppColors.fg3))),

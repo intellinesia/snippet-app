@@ -228,12 +228,13 @@ class ChatBubble extends StatelessWidget {
     // v19 phone: your bubble is surface2; agent prose has no bubble.
     final fill = color ??
         (kMobile
-            ? (mine ? AppColors.surface2 : AppColors.surface1)
+            // Board: your bubble is surface3 on the surface1 thread.
+            ? (mine ? AppColors.surface3 : AppColors.surface2)
             : (mine
                 ? Color.lerp(AppColors.surface2, AppColors.surface3, 0.25)!
                 : ChatColors.received));
-    final h = kMobile ? 12.0 : 11.0;
-    final v = kMobile ? 11.0 : 6.0;
+    final h = kMobile ? 15.0 : 11.0;
+    final v = kMobile ? 10.0 : 6.0;
     final tailPad = kMobile ? 0.0 : _tailW;
     if (flat && !kMobile) {
       return ChatBubbleFill(
@@ -284,7 +285,7 @@ class ChatBubble extends StatelessWidget {
               color: fill,
               mine: mine,
               tail: false,
-              radius: kMobile ? 12 : ChatColors.radius,
+              radius: kMobile ? 22 : ChatColors.radius,
               tailW: tailPad),
           child: Padding(
             padding: EdgeInsets.fromLTRB(

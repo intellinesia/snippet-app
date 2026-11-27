@@ -55,18 +55,20 @@ class MK {
   static Color get amber => AppColors.run;
 }
 
-/// Large page title: 32 semibold on iPhone, 28 medium on Android.
-TextStyle mkLargeTitle() => kAndroidLook
-    ? display(28, weight: FontWeight.w500, color: AppColors.fg1)
-    : display(32, weight: FontWeight.w600, color: AppColors.fg1);
+/// Large page title: 32 semibold on iPhone, 34 on Android, tracked -2%.
+TextStyle mkLargeTitle() {
+  final size = kAndroidLook ? 34.0 : 32.0;
+  return display(size, weight: FontWeight.w600, color: AppColors.fg1)
+      .copyWith(letterSpacing: -0.02 * size);
+}
 
 /// Row title, 15.5 medium.
 TextStyle mkRowTitle({Color? color}) =>
-    sans(15.5, weight: W.label, height: 1.3, color: color ?? AppColors.fg1);
+    sans(15.5, weight: W.label, height: 1.4, color: color ?? AppColors.fg1);
 
 /// Row subtitle, 13.5 in the third ink.
 TextStyle mkRowSub({Color? color}) =>
-    sans(13.5, height: 1.3, color: color ?? AppColors.fg3);
+    sans(13.5, height: 1.4, color: color ?? AppColors.fg3);
 
 /// Branches, paths and commands under a row: Geist Mono 12.
 TextStyle mkMonoSub({Color? color}) =>

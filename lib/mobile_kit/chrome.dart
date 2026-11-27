@@ -490,6 +490,85 @@ class MkThreadSurface extends StatelessWidget {
       );
 }
 
+/// Height of the phone chat header under the status bar (board: 56 / 64).
+double get mkChatHeaderHeight => kAndroidLook ? 64 : 56;
+
+/// The rounded thread surface behind a phone chat: page ground above, a
+/// surface1 sheet with 28 top corners starting just under the header.
+class MkThreadBackdrop extends StatelessWidget {
+  const MkThreadBackdrop(
+      {super.key, required this.child, this.enabled = true, this.statusTop});
+  final Widget child;
+  final bool enabled;
+
+  /// Status bar height when the host has already consumed the padding.
+  final double? statusTop;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!enabled) return child;
+    final top = (statusTop ?? MediaQuery.paddingOf(context).top) +
+        mkChatHeaderHeight +
+        (kAndroidLook ? 4 : 6);
+    final status = statusTop ?? MediaQuery.paddingOf(context).top;
+    return Stack(fit: StackFit.expand, children: [
+      ColoredBox(color: AppColors.bg),
+      Positioned(
+        top: top,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: ColoredBox(color: AppColors.surface1),
+        ),
+      ),
+      child,
+      // Nothing scrolls into the status bar either.
+      Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          height: status,
+          child: IgnorePointer(child: ColoredBox(color: AppColors.bg))),
+    ]);
+  }
+}
+
+/// The phone chat header layer: solid ground down to the thread, then the
+/// thread's 28 top corners cut out of it.
+abstract final class MkThreadCap {
+  /// How far below the header the layer reaches.
+  static double get reach => (kAndroidLook ? 4.0 : 6.0) + 28;
+
+  static Widget paint(Color bg) => CustomPaint(painter: _CapPainter(bg));
+}
+
+class _CapPainter extends CustomPainter {
+  _CapPainter(this.color);
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final edge = size.height - 28;
+    final band = Path()..addRect(Rect.fromLTWH(0, 0, size.width, edge));
+    final corners = Path.combine(
+      PathOperation.difference,
+      Path()..addRect(Rect.fromLTWH(0, edge, size.width, 28)),
+      Path()
+        ..addRRect(RRect.fromRectAndCorners(
+            Rect.fromLTWH(0, edge, size.width, 56),
+            topLeft: const Radius.circular(28),
+            topRight: const Radius.circular(28))),
+    );
+    canvas.drawPath(band, Paint()..color = color);
+    canvas.drawPath(corners, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(_CapPainter old) => old.color != color;
+}
+
 /// Modal sheet. iPhone: a floating glass card inset 8 from the edges with
 /// 38 corners. Android: a bottom sheet with 28 top corners and a handle.
 Future<T?> showMkSheet<T>(

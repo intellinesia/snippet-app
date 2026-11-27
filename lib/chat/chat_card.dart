@@ -4,6 +4,7 @@ import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import '../tap_detector.dart';
+import '../mochi.dart' show AgentMochi;
 
 /// The asking agent's colour for a card's primary button and selections.
 class ChatCardAccent extends InheritedWidget {
@@ -63,30 +64,30 @@ class ChatCard extends StatelessWidget {
         // Without it a height-capped slot centres the card in the cap.
         heightFactor: 1,
         child: ConstrainedBox(
-          constraints: BoxConstraints(
-              maxWidth: maxWidth ?? double.infinity),
+          constraints: BoxConstraints(maxWidth: maxWidth ?? double.infinity),
           child: Container(
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                // A surface step, not an outline, sets the card apart.
-                color: fill ?? (kMobile ? AppColors.surface2 : AppColors.surface2),
-                borderRadius: BorderRadius.circular(kMobile ? 10 : R.of(16)),
-                border: border == null ? null : Border.all(color: border!),
-              ),
-              // Own Material so row hovers paint inside the rounded clip.
-              child: Material(
-                type: MaterialType.transparency,
-                child: Opacity(
-                  opacity: dimmed ? 0.85 : 1,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: children,
-                  ),
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              // A surface step, not an outline, sets the card apart.
+              color:
+                  fill ?? (kMobile ? AppColors.surface2 : AppColors.surface2),
+              borderRadius: BorderRadius.circular(kMobile ? 22 : R.of(16)),
+              border: border == null ? null : Border.all(color: border!),
+            ),
+            // Own Material so row hovers paint inside the rounded clip.
+            child: Material(
+              type: MaterialType.transparency,
+              child: Opacity(
+                opacity: dimmed ? 0.85 : 1,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: children,
                 ),
               ),
             ),
           ),
+        ),
       );
 }
 
@@ -131,8 +132,16 @@ class ChatCardHeader extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(title,
-                      style: sans(size,
-                          weight: W.strong, height: 1.3, color: AppColors.fg1)),
+                      // Board ask: the question reads as prose, 16.5/1.4.
+                      style: kMobile && large
+                          ? sans(16.5,
+                              weight: FontWeight.w500,
+                              height: 1.4,
+                              color: AppColors.fg1)
+                          : sans(size,
+                              weight: W.strong,
+                              height: 1.3,
+                              color: AppColors.fg1)),
                   if (subtitleView != null)
                     Padding(
                         padding: const EdgeInsets.only(top: 4),
@@ -311,11 +320,11 @@ class _ChatCardPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final h = kMobile ? 36.0 : 32.0;
+    final h = kMobile ? 40.0 : 32.0;
     final enabled = b.onTap != null && !b.busy;
     final (bg, fg, border) = switch (b.kind) {
       ChatCardButtonKind.primary => kMobile
-          ? (AppColors.fg1, AppColors.bg, AppColors.fg1)
+          ? (AppColors.fg1, const Color(0xFF141413), AppColors.fg1)
           : (
               ChatCardAccent.of(context),
               ChatCardAccent.inkOf(context),
@@ -323,11 +332,7 @@ class _ChatCardPill extends StatelessWidget {
             ),
       ChatCardButtonKind.secondary => kMobile
           ? (AppColors.surface3, AppColors.fg1, AppColors.surface3)
-          : (
-              Colors.transparent,
-              AppColors.fg1,
-              AppColors.fg4
-            ),
+          : (Colors.transparent, AppColors.fg1, AppColors.fg4),
       ChatCardButtonKind.danger => (
           AppColors.danger.withValues(alpha: 0.13),
           AppColors.danger,
@@ -340,7 +345,7 @@ class _ChatCardPill extends StatelessWidget {
       label: b.label,
       child: Pressable(
         kind: PressKind.card,
-        radius: kMobile ? 8 : h / 2,
+        radius: h / 2,
         enabled: enabled,
         child: TapDetector(
           behavior: HitTestBehavior.opaque,
@@ -350,13 +355,17 @@ class _ChatCardPill extends StatelessWidget {
             opacity: enabled ? 1 : 0.45,
             child: Container(
               height: h,
+              // A 40 pill in a 44 target.
+              margin: kMobile
+                  ? const EdgeInsets.symmetric(vertical: 2)
+                  : EdgeInsets.zero,
               alignment: kMobile ? Alignment.center : null,
               padding:
                   kMobile ? null : const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
                 color: bg,
-                borderRadius: BorderRadius.circular(kMobile ? 8 : h / 2),
-                border: Border.all(color: border),
+                borderRadius: BorderRadius.circular(h / 2),
+                border: kMobile ? null : Border.all(color: border),
               ),
               child: ExcludeSemantics(
                 // Desktop: as wide as the label, centred in the pill height.
@@ -374,8 +383,9 @@ class _ChatCardPill extends StatelessWidget {
                           child: Text(b.label,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: sans(kMobile ? 15 : 13,
-                                  weight: W.strong, color: fg)),
+                              style: sans(kMobile ? 14.5 : 13,
+                                  weight: kMobile ? FontWeight.w500 : W.strong,
+                                  color: fg)),
                         ),
                       ]),
                 ),
@@ -656,7 +666,6 @@ class ChatCardFooter extends StatelessWidget {
   }
 }
 
-
 /// Phone approval buttons per spec CH-05: Allow once (primary), then Always
 /// allow and Deny side by side. Never red; targets 48.
 class ApprovalDecideButtons extends StatelessWidget {
@@ -675,7 +684,8 @@ class ApprovalDecideButtons extends StatelessWidget {
   final VoidCallback? onAlways;
   final bool busy;
 
-  Widget _btn(String label, VoidCallback onTap, {required bool primary, bool ghost = false}) =>
+  Widget _btn(String label, VoidCallback onTap,
+          {required bool primary, bool ghost = false}) =>
       Semantics(
         button: true,
         enabled: !busy,
@@ -689,8 +699,8 @@ class ApprovalDecideButtons extends StatelessWidget {
                 : primary
                     ? AppColors.fg1
                     : AppColors.surface3,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             child: InkWell(
               customBorder: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
@@ -730,12 +740,11 @@ class ApprovalDecideButtons extends StatelessWidget {
       const SizedBox(width: 8),
       Expanded(child: _btn('Allow once', onAllowOnce, primary: true)),
       const SizedBox(width: 8),
-      Expanded(child: _btn('Always allow', onAlways!, primary: false, ghost: true)),
+      Expanded(
+          child: _btn('Always allow', onAlways!, primary: false, ghost: true)),
     ]);
   }
 }
-
-
 
 /// Dot-led "Needs you" row, the first line of a pending approval.
 class NeedsYouRow extends StatelessWidget {
@@ -771,4 +780,31 @@ class NeedsYouRow extends StatelessWidget {
             ),
         ]),
       );
+}
+
+/// Board ask head: the asker's face, name, an amber dot and "needs you".
+class ChatCardWho extends StatelessWidget {
+  const ChatCardWho({super.key, required this.agentId, required this.name});
+  final String agentId;
+  final String name;
+
+  @override
+  Widget build(BuildContext context) => Row(children: [
+        AgentMochi(agentId, size: 22),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(13, color: AppColors.fg3)),
+        ),
+        const SizedBox(width: 8),
+        Container(
+            width: 7,
+            height: 7,
+            decoration:
+                BoxDecoration(color: AppColors.run, shape: BoxShape.circle)),
+        const SizedBox(width: 8),
+        Text('needs you', style: sans(13, color: AppColors.fg3)),
+      ]);
 }

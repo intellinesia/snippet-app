@@ -115,8 +115,8 @@ extension _DesktopShellMobileExt on _DesktopShellState {
     );
   }
 
-  Widget _mobileMissionBar({VoidCallback? onActions}) =>
-      MobileMissionBar(onActions: onActions, client: _client);
+  Widget _mobileMissionBar({VoidCallback? onActions}) => MobileMissionBar(
+      onActions: onActions, onBack: _showMobileChats, client: _client);
 
   /// The one create button: Session, Agent or Group.
   void _openNewSheet() {

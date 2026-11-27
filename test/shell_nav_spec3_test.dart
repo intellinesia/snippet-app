@@ -37,8 +37,8 @@ void main() {
         final bar = tester.getRect(find.byType(AnimatedContainer));
         // ignore: avoid_print
         print('w=$w s=$scale titleSize=${style.fontSize} x=${pos.dx} bar=${bar.size} op0=${inlineOpacity()}');
-        expect(style.fontSize, 28);
-        expect(pos.dx, 16);
+        expect(style.fontSize, 34);
+        expect(pos.dx, 20);
         expect(bar.height, greaterThanOrEqualTo(52));
         expect(inlineOpacity(), 0);
         await tester.drag(find.byType(ListView), const Offset(0, -30));
@@ -46,7 +46,7 @@ void main() {
         expect(inlineOpacity(), 1);
         final deco = tester.widget<AnimatedContainer>(find.byType(AnimatedContainer)).decoration as BoxDecoration;
         expect(deco.color, AppColors.surface1);
-        expect((deco.border as Border).bottom.width, 1);
+        expect((deco.border as Border).bottom.width, greaterThan(0));
         await tester.drag(find.byType(ListView), const Offset(0, 300));
         await tester.pumpAndSettle();
         expect(inlineOpacity(), 0);

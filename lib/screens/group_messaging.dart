@@ -4,6 +4,7 @@ import 'dart:async';
 import '../chat/chat_info.dart' show GroupInfoPanel, showGroupInfo;
 import '../motion_routes.dart';
 import 'package:flutter/material.dart';
+import '../mobile_kit.dart';
 import 'package:flutter/services.dart';
 
 import '../api.dart';
@@ -1383,7 +1384,9 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   // The scene sits outside the SafeArea so the header frost can reach
   // up behind the status bar, as on the session screen.
   Widget _chrome(Widget body, bool hideChrome) => kMobile
-      ? SceneBackdrop(
+      ? MkThreadBackdrop(
+          enabled: !hideChrome,
+          statusTop: StatusInset.page(context),
           child: StatusInset(
               top: hideChrome ? 0 : StatusInset.page(context),
               child: body),

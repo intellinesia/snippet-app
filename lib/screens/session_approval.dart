@@ -101,11 +101,10 @@ class _QuestionRecord extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               for (var i = 0; i < rows.length; i++) ...[
-                if (i > 0)
-                  Container(height: 1, color: AppColors.border),
+                if (i > 0) Container(height: 1, color: AppColors.border),
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -461,7 +460,11 @@ class QuestionBar extends StatefulWidget {
       required this.question,
       required this.onSend,
       this.agentName,
+      this.agentId,
       this.active = true});
+
+  /// The asking agent's id, for the phone card's face.
+  final String? agentId;
   @override
   State<QuestionBar> createState() => QuestionBarState();
 }
@@ -1000,11 +1003,25 @@ class QuestionBarState extends State<QuestionBar> {
             : 'Review';
     final q = _currentQuestion;
     final hasCtx = ctx != null && ctx.isNotEmpty && ctx != 'null' && _step == 0;
-    final eyebrow = total > 1
+    final steps = total > 1
         ? (_review
             ? Text('Review', style: sans(13, color: AppColors.fg3))
             : ChatCardSteps(index: _step, total: total))
         : null;
+    final who = kMobile
+        ? ChatCardWho(
+            agentId: widget.agentId ?? 'snippet',
+            name: (widget.agentName ?? '').trim().isEmpty
+                ? 'Agent'
+                : widget.agentName!.trim())
+        : null;
+    final eyebrow = who == null
+        ? steps
+        : steps == null
+            ? who
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [who, const SizedBox(height: 8), steps]);
     if (!kMobile) {
       return Focus(
         focusNode: _keys,
@@ -1015,6 +1032,46 @@ class QuestionBarState extends State<QuestionBar> {
             total: total,
             last: last,
             nextLabel: nextLabel),
+      );
+    }
+    // Board ask: a two-way question is prose plus two pills, one tap.
+    final pair = !_review &&
+            total == 1 &&
+            q != null &&
+            _kind(q) != 'multi_choice' &&
+            !_freeText.contains(q['id'].toString())
+        ? _options(q)
+        : const <_QOption>[];
+    if (pair.length == 2) {
+      final primary =
+          pair.firstWhere((o) => o.recommended, orElse: () => pair.first);
+      final secondary = pair.firstWhere((o) => !identical(o, primary));
+      void answer(_QOption o) {
+        _pick(q!, o);
+        _submit();
+      }
+
+      return Padding(
+        padding: EdgeInsets.fromLTRB(0, S.s4, 0, S.s6),
+        child: ChatCard(children: [
+          ChatCardHeader(
+            title: q!['text']?.toString() ?? '',
+            subtitle: hasCtx ? ctx : null,
+            eyebrow: eyebrow,
+          ),
+          const SizedBox(height: 2),
+          ChatCardActions(
+            link: 'Write your own answer',
+            onLink: _sent ? null : _toggleFreeText,
+            buttons: [
+              ChatCardButton(secondary.label,
+                  kind: ChatCardButtonKind.secondary,
+                  onTap: _sent ? null : () => answer(secondary)),
+              ChatCardButton(_sent ? 'Sending…' : primary.label,
+                  busy: _sent, onTap: _sent ? null : () => answer(primary)),
+            ],
+          ),
+        ]),
       );
     }
     return Focus(

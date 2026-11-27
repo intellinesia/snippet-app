@@ -133,7 +133,7 @@ void main() {
         expect(briefBox.height, greaterThanOrEqualTo(71.99));
         expect(btn.left, 16);
         expect(btn.width, w - 32);
-        expect(btn.height, 48);
+        expect(btn.height, 56); // MK.bigButton on Android
         expect(owner.height, greaterThanOrEqualTo(48));
         expect(prio.height, greaterThanOrEqualTo(48));
         expect(title.width, lessThan(w));

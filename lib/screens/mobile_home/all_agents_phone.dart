@@ -3,13 +3,17 @@ import 'package:flutter/material.dart';
 import '../../api.dart';
 import '../../chat/signal_row.dart' show profileMeta;
 import '../../crew_status.dart';
+import '../../mobile_kit.dart';
+import '../../mochi.dart';
 import '../../models.dart';
-import '../../quiet.dart';
+import '../../tap_detector.dart';
+import '../../toast_avoid.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
 import '../group_messaging.dart' show openGroupThread;
 import '../shell_nav.dart' show sessionBusy;
 import 'agents_home.dart';
+import 'collapsing_root.dart';
 import 'home_data.dart';
 
 enum AllFilter { all, working, idle, asking }
@@ -94,17 +98,14 @@ class _QuietAgentsScreenState extends State<QuietAgentsScreen> {
     final lead = widget.agents.where((a) => a.isLead).firstOrNull;
     String model(CoordinationAgent a) =>
         profileMeta(_profiles, a.deskProfile ?? a.profile).label.toLowerCase();
-    final leadBusy = widget.sessions.any((s) =>
-        s.displayAgentId == 'lead' && !s.settled && sessionBusy(s));
+    final leadBusy = widget.sessions
+        .any((s) => s.displayAgentId == 'lead' && !s.settled && sessionBusy(s));
     final everyone = <_Line>[
       for (final r in [...rows.needs, ...rows.working, ...rows.asleep])
         _Line(r.agent, r.state, r.line, model(r.agent)),
       if (lead != null)
-        _Line(
-            lead,
-            leadBusy ? CrewState.working : CrewState.standingBy,
-            lead.lastMessage?.text ?? 'Orchestrator',
-            model(lead)),
+        _Line(lead, leadBusy ? CrewState.working : CrewState.standingBy,
+            lead.lastMessage?.text ?? 'Orchestrator', model(lead)),
     ];
     int n(CrewState s) => everyone.where((l) => l.state == s).length;
     final working = n(CrewState.working),
@@ -126,163 +127,199 @@ class _QuietAgentsScreenState extends State<QuietAgentsScreen> {
       for (final g in groups)
         if (q.isEmpty || g.title.toLowerCase().contains(q)) g
     ];
-    final subtitle =
-        '${everyone.length} ${everyone.length == 1 ? 'agent' : 'agents'}, ${groups.length} ${groups.length == 1 ? 'group' : 'groups'}';
-
-    final children = <Widget>[];
-    if (_searching) {
-      children.add(Padding(
-        padding: const EdgeInsets.fromLTRB(kGutter, 8, kGutter, 0),
-        child: SizedBox(
-          height: 44,
-          child: TextField(
-            controller: _q,
-            autofocus: true,
-            onChanged: (_) => setState(() {}),
-            style: sans(14, color: AppColors.fg1),
-            cursorColor: AppColors.fg1,
-            decoration: InputDecoration(
-              isDense: true,
-              filled: true,
-              fillColor: AppColors.surface2,
-              hintText: 'Search agents and groups',
-              hintStyle: sans(14, color: AppColors.fg3),
-              prefixIcon: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: AppIcon('search', size: 20, color: AppColors.fg2)),
-              prefixIconConstraints:
-                  const BoxConstraints(minWidth: 0, minHeight: 0),
-              contentPadding: const EdgeInsets.symmetric(vertical: 12),
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none),
+    final a = kAndroidLook;
+    final side = a ? 16.0 : MK.gutter;
+    final children = <Widget>[
+      // iPhone: the back button needs its own row above the large title.
+      if (!a) const SizedBox(height: 50),
+      const LargeTitle('All agents'),
+      if (_searching)
+        ToastAvoid(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(side, 8, side, 0),
+            child: Semantics(
+              textField: true,
+              label: 'Search agents and groups',
+              child: TextField(
+                controller: _q,
+                autofocus: true,
+                onChanged: (_) => setState(() {}),
+                style: sans(15, color: AppColors.fg1),
+                cursorColor: AppColors.fg1,
+                decoration: InputDecoration(
+                  isDense: true,
+                  filled: true,
+                  fillColor: AppColors.surface2,
+                  prefixIcon: Padding(
+                    padding: const EdgeInsets.only(left: 12, right: 8),
+                    child: AppIcon('search', size: 16, color: AppColors.fg3),
+                  ),
+                  prefixIconConstraints:
+                      const BoxConstraints(minWidth: 36, minHeight: 20),
+                  hintText: 'Search agents and groups',
+                  hintStyle: sans(15, color: AppColors.fg3),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(a ? 28 : 12),
+                      borderSide: BorderSide.none),
+                ),
+              ),
             ),
           ),
         ),
-      ));
-    }
-    children.add(Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: _groupsSegment
-          ? ChipRow(gap: 8, chips: [
-              StateChip('Agents', false, () => setState(() => _groupsSegment = false),
-                  fill: AppColors.surface2),
-              StateChip('Groups ${groups.length}', true, () {}),
-            ])
-          : ChipRow(gap: 8, chips: [
-              StateChip('All ${everyone.length}', _filter == AllFilter.all,
-                  () => setState(() => _filter = AllFilter.all),
-                  fill: AppColors.surface2),
-              StateChip('Working $working', _filter == AllFilter.working,
-                  () => setState(() => _filter = AllFilter.working),
-                  fill: AppColors.surface2),
-              StateChip('Idle $idle', _filter == AllFilter.idle,
-                  () => setState(() => _filter = AllFilter.idle),
-                  fill: AppColors.surface2),
-              StateChip('Asking $asking', _filter == AllFilter.asking,
-                  () => setState(() => _filter = AllFilter.asking),
-                  fill: AppColors.surface2, amberDot: asking > 0),
-            ]),
-    ));
+      if (_groupsSegment)
+        MkFilterGroup<bool>(
+          padding: EdgeInsets.fromLTRB(side, a ? 4 : 10, side, 0),
+          options: [
+            const MkFilter(false, 'Agents'),
+            MkFilter(true, 'Groups', count: groups.length),
+          ],
+          selected: true,
+          onSelect: (v) => setState(() => _groupsSegment = v),
+        )
+      else
+        MkFilterGroup<AllFilter>(
+          padding: EdgeInsets.fromLTRB(side, a ? 4 : 10, side, 0),
+          options: [
+            MkFilter(AllFilter.all, 'All', count: everyone.length),
+            MkFilter(AllFilter.working, 'Working', count: working),
+            MkFilter(AllFilter.idle, 'Idle', count: idle),
+            MkFilter(AllFilter.asking, 'Needs you', count: asking),
+          ],
+          selected: _filter,
+          onSelect: (f) => setState(() => _filter = f),
+        ),
+    ];
 
     if (_groupsSegment) {
       if (shownGroups.isEmpty) children.add(const _Empty('No groups'));
-      for (final g in shownGroups) {
-        final members = g.members.length;
-        final workingIds = {
-          for (final l in everyone)
-            if (l.state == CrewState.working) l.agent.id
-        };
-        final active = g.members.where((m) => workingIds.contains(m.id)).length;
-        final at = groupActivityAt(g);
-        children.add(MarkRow(
-          mark: groupMark(44, radius: 12.3),
-          markSize: 44,
-          gap: 12,
-          minHeight: 68,
-          title: g.title.isEmpty ? 'Group' : g.title,
-          time: at == null ? null : relativeTime(at.millisecondsSinceEpoch ~/ 1000),
-          sub: g.preview,
-          subColor: AppColors.fg2,
-          sub2: '$members ${members == 1 ? 'member' : 'members'}, $active active',
-          onTap: () =>
-              openGroupThread(context, client: widget.client, group: g),
-        ));
-      }
+      final workingIds = {
+        for (final l in everyone)
+          if (l.state == CrewState.working) l.agent.id
+      };
+      children.add(const SizedBox(height: 8));
+      children.add(MkList(children: [
+        for (var i = 0; i < shownGroups.length; i++)
+          () {
+            final g = shownGroups[i];
+            final members = g.members.length;
+            final active =
+                g.members.where((m) => workingIds.contains(m.id)).length;
+            final at = groupActivityAt(g);
+            final roster =
+                '$members ${members == 1 ? 'member' : 'members'}, $active active';
+            return MkRow(
+              title: g.title.isEmpty ? 'Group' : g.title,
+              leading: groupMark(40, radius: 14),
+              time: at == null
+                  ? null
+                  : relativeTime(at.millisecondsSinceEpoch ~/ 1000),
+              subtitle: (g.preview ?? '').isEmpty ? roster : g.preview,
+              divider: i < shownGroups.length - 1,
+              onTap: () =>
+                  openGroupThread(context, client: widget.client, group: g),
+            );
+          }(),
+      ]));
     } else {
-      children.add(HomeLabel('Agents',
-          top: 12,
-          trailing: Semantics(
-            button: true,
-            label: 'Groups',
-            excludeSemantics: true,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => setState(() => _groupsSegment = true),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 48, minWidth: 80),
-                child: Align(
-                    alignment: Alignment.centerRight,
-                    child: Text('Groups',
-                        style: sans(12,
-                            weight: FontWeight.w500, color: AppColors.fg3))),
-              ),
-            ),
-          )));
+      children.add(const MkSection('Agents'));
       if (shownAgents.isEmpty) {
         children.add(_Empty(switch (_filter) {
           AllFilter.working => 'No agents are working',
-          AllFilter.asking => 'No agents are asking',
+          AllFilter.asking => 'No agents need you',
           AllFilter.idle => 'No agents are idle',
           AllFilter.all => 'No agents match',
         }));
       }
       final folded = !_expanded && q.isEmpty && shownAgents.length > _fold + 1;
       final visible = folded ? shownAgents.take(_fold).toList() : shownAgents;
-      for (final l in visible) {
-        final working = l.state == CrewState.working;
-        final ask = l.state == CrewState.needsYou;
-        children.add(MarkRow(
-          mark: agentFace(l.agent.id, 36),
-          title: l.agent.displayName,
-          sub: [if (l.model.isNotEmpty) l.model, if (l.line.isNotEmpty) l.line]
-              .join('  ·  '),
-          subStyleSize: 12.5,
-          trailing: ask
-              ? const QuietHand(size: 20)
-              : working
-                  ? AppIcon('circle', size: 20, color: AppColors.fg2)
-                  : null,
-          onTap: () => l.agent.isLead
-              ? widget.onOpenLead()
-              : widget.onOpenAgent(l.agent),
-        ));
-      }
+      children.add(MkList(children: [
+        for (var i = 0; i < visible.length; i++)
+          () {
+            final l = visible[i];
+            final busy = l.state == CrewState.working;
+            final ask = l.state == CrewState.needsYou;
+            return MkRow(
+              title: l.agent.displayName,
+              leading: AgentMochi(l.agent.id, size: 40),
+              subtitle: [
+                if (l.model.isNotEmpty) l.model,
+                if (l.line.isNotEmpty) l.line
+              ].join(' · '),
+              trailing: ask
+                  ? const MkStateMark(MkState.needsYou)
+                  : busy
+                      ? const MkStateMark(MkState.working)
+                      : null,
+              divider: i < visible.length - 1 || folded,
+              onTap: () => l.agent.isLead
+                  ? widget.onOpenLead()
+                  : widget.onOpenAgent(l.agent),
+            );
+          }(),
+      ]));
       if (folded) {
-        children.add(TextLink('Show ${shownAgents.length - _fold} more',
-            () => setState(() => _expanded = true),
-            left: 62));
+        children.add(_Fold('Show ${shownAgents.length - _fold} more',
+            () => setState(() => _expanded = true)));
       }
     }
-    children.add(const SizedBox(height: 24));
+    children.add(SizedBox(height: MK.bottomClearance(context)));
 
-    return Column(children: [
-      PushedBar(
-        title: 'All agents',
-        subtitle: subtitle,
-        onBack: widget.onBack,
-        actions: [
-          BarIcon('search', 'Search', () {
-            setState(() {
-              _searching = !_searching;
-              if (!_searching) _q.clear();
-            });
-          }, color: AppColors.fg2),
-        ],
-      ),
-      Expanded(child: ListView(padding: EdgeInsets.zero, children: children)),
-    ]);
+    return CollapsingRoot(
+      title: 'All agents',
+      leading: MkIconButton(
+          icon: a ? 'arrow-left' : 'chevron-left',
+          label: 'Back',
+          onTap: widget.onBack ?? () => Navigator.maybePop(context)),
+      actions: [
+        MkIconButton(
+            icon: 'users',
+            label: 'Groups',
+            bare: !a,
+            onTap: () => setState(() => _groupsSegment = !_groupsSegment)),
+        MkIconButton(
+            icon: 'search',
+            label: 'Search',
+            bare: !a,
+            onTap: () => setState(() {
+                  _searching = !_searching;
+                  if (!_searching) _q.clear();
+                })),
+      ],
+      child: ListView(padding: EdgeInsets.zero, children: children),
+    );
   }
+}
+
+class _Fold extends StatelessWidget {
+  const _Fold(this.label, this.onTap);
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: label,
+        excludeSemantics: true,
+        child: TapDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                  horizontal: kAndroidLook ? 28 : MK.gutter),
+              child: Row(children: [
+                Text(label,
+                    style: sans(14, weight: W.label, color: AppColors.fg3)),
+                const SizedBox(width: 6),
+                AppIcon('chevron-down', size: 16, color: AppColors.fg3),
+              ]),
+            ),
+          ),
+        ),
+      );
 }
 
 class _Empty extends StatelessWidget {

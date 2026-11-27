@@ -281,7 +281,11 @@ void main() {
       }
 
       expect(find.byType(StageBar), findsOneWidget);
-      expect(find.textContaining(' and you'), findsOneWidget);
+      // The member line moved from the header face into its semantics hint.
+      expect(
+          find.byWidgetPredicate((w) =>
+              w is Semantics && (w.properties.hint ?? '').contains(' and you')),
+          findsOneWidget);
       expect(find.byType(GroupPostHeader), findsOneWidget);
       expect(find.byType(CappedProse), findsNWidgets(2));
       expect(find.text('Thanks @argon'), findsOneWidget);
@@ -296,7 +300,11 @@ void main() {
         'since': DateTime.now().millisecondsSinceEpoch ~/ 1000,
       });
       await tester.pump();
-      expect(find.text('Argon is typing'), findsOneWidget);
+      expect(
+          find.byWidgetPredicate((w) =>
+              w is Semantics &&
+              (w.properties.hint ?? '').contains('Argon is typing')),
+          findsOneWidget);
 
       debugDefaultTargetPlatformOverride = null;
     });

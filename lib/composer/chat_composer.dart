@@ -161,6 +161,12 @@ class ChatComposer extends StatelessWidget {
         attach: attach ??
             ComposerIconButton('plus', tooltip: 'Attach', onTap: onAttach),
         trailing: trailing,
+        mic: kCanRecord
+            ? ComposerBareButton('mic',
+                label: 'Record',
+                onTap: () => unawaited(voice.toggleRecording()),
+                size: 21)
+            : null,
         send: _phoneAction(),
       );
 
@@ -169,21 +175,16 @@ class ChatComposer extends StatelessWidget {
   Widget _phoneAction() {
     final stop = running && onStop != null && !hasDraft();
     final on = stop || canSend();
-    void mic() => unawaited(voice.toggleRecording());
-    // Phone spec: a voice icon and a separate send circle, both always there.
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      if (kCanRecord)
-        ComposerBareButton('mic', label: 'Record', onTap: mic, size: 20),
-      GestureDetector(
-        onLongPress: running && canSend() ? onSteer : null,
-        child: ComposerSendButton(
-          enabled: on,
-          sending: sending,
-          stop: stop,
-          onTap: stop ? onStop : (canSend() ? onSend : null),
-        ),
+    // Board: the mic rides the field; send is its own always-there button.
+    return GestureDetector(
+      onLongPress: running && canSend() ? onSteer : null,
+      child: ComposerSendButton(
+        enabled: on,
+        sending: sending,
+        stop: stop,
+        onTap: stop ? onStop : (canSend() ? onSend : null),
       ),
-    ]);
+    );
   }
 
   Widget _deskCard(Widget? attachmentBar) {
@@ -263,9 +264,9 @@ class ChatComposer extends StatelessWidget {
                   : kDesktopComposerWidth + 2 * S.s20),
           child: LiveCaptionAnchor(
             padding: EdgeInsets.fromLTRB(
-                kMobile ? M.gutter : S.s20,
+                kMobile ? 12 : S.s20,
                 S.s8,
-                kMobile ? M.gutter : S.s20,
+                kMobile ? 12 : S.s20,
                 kMobile ? 8 + (keyboard > 0 ? 0 : mq.padding.bottom) : 18),
             child: ListenableBuilder(
               listenable: Listenable.merge([voice, input, listen]),

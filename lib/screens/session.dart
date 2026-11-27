@@ -55,7 +55,7 @@ import 'limit_card.dart';
 import 'routing_screen.dart' show limitLabel;
 import '../motion.dart';
 import '../motion_routes.dart';
-import '../chat_scene.dart';
+import '../mobile_kit.dart';
 import '../theme.dart';
 import '../tool_activity.dart';
 import '../tool_sheet.dart';
@@ -1641,8 +1641,11 @@ class _SessionScreenState extends State<SessionScreen>
       ? ChatBubbleScope(child: _buildScreen(context))
       : _buildScreen(context);
 
+  // Phones draw the flat rounded thread surface of the approved design.
   Widget _chatBackdrop(Widget body) =>
-      kMobile ? SceneBackdrop(child: body) : body;
+      kMobile ? MkThreadBackdrop(child: body) : body;
+
+  Color get _threadGround => kMobile ? AppColors.surface1 : AppColors.bg;
 
   Widget _buildScreen(BuildContext context) {
     // Depend on Theme so this rebuilds when the user switches palettes.
@@ -1781,6 +1784,8 @@ class _SessionScreenState extends State<SessionScreen>
                                                     question:
                                                         s.pendingQuestion!,
                                                     agentName: _meAgentName,
+                                                    agentId:
+                                                        _me?.displayAgentId,
                                                     active: widget
                                                             .acceptDrops &&
                                                         _live &&
@@ -2151,19 +2156,16 @@ class _SessionScreenState extends State<SessionScreen>
                                                                       end: Alignment
                                                                           .bottomCenter,
                                                                       colors: [
-                                                                        AppColors
-                                                                            .bg
+                                                                        _threadGround
                                                                             .withValues(alpha: 0),
-                                                                        AppColors
-                                                                            .bg,
+                                                                        _threadGround,
                                                                       ],
                                                                     ),
                                                                   ),
                                                                 ),
                                                               ),
                                                               ColoredBox(
-                                                                color: AppColors
-                                                                    .bg,
+                                                                color: _threadGround,
                                                                 child: Padding(
                                                                   padding:
                                                                       const EdgeInsets
@@ -2192,6 +2194,7 @@ class _SessionScreenState extends State<SessionScreen>
                                                         left: 0,
                                                         right: 0,
                                                         child: GlassTopFrame(
+                                                          thread: kMobile,
                                                           child: widget
                                                                   .mobileTopBar
                                                                   ?.call(() =>

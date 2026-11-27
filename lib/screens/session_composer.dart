@@ -976,7 +976,9 @@ extension _SessionScreenComposerExt on _SessionScreenState {
             ),
       onAttach: _onAttachTap,
       // The phone tray carries the model; the desktop card keeps it inline.
-      trailing: kMobile && !_showsQuickActions && ownModel ? _modelChip : null,
+      trailing: kMobile && !_showsQuickActions && ownModel && !_isLead
+          ? _modelChip
+          : null,
       deskModel: ownModel
           ? Row(mainAxisSize: MainAxisSize.min, children: [
               // Keyed so panel actions (Usage > Switch) anchor to the chip.

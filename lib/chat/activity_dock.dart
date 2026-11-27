@@ -9,6 +9,8 @@ import '../platform.dart';
 import '../theme.dart';
 import '../tool_activity.dart';
 import '../tool_sheet.dart' show ToolBatch;
+import '../transcript.dart' show QuietStepLine;
+import '../mobile_kit.dart' show MkMorph;
 import '../widgets.dart';
 import '../tap_detector.dart';
 
@@ -159,41 +161,22 @@ class _ActivityDockState extends State<ActivityDock> {
         ),
       );
     }
-    // XO-03: a floating surface-2 pill, sized to its content rather than a
-    // transcript-width bar. It reads state in words and never uses amber/red.
-    final agent = widget.agentId.isEmpty ? 'Agent' : widget.agentId;
-    final label = '$agent running $clock';
+    // Board: a quiet centred meta line, "Working · 12s", with the morph.
     return Semantics(
       button: true,
-      label: 'Running, $step',
+      label: 'Working, $clock${step.isEmpty ? '' : ', $step'}',
       excludeSemantics: true,
       child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => widget.onOpen(null),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 236),
-          child: Container(
-            height: 36,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: AppColors.surface2,
-              borderRadius: BorderRadius.circular(18),
-            ),
+        child: SizedBox(
+          height: 44,
+          child: Center(
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              SizedBox(
-                width: 14,
-                height: 14,
-                child: Center(child: Spinner(size: 12, color: AppColors.fg2)),
-              ),
-              const SizedBox(width: 7),
-              Flexible(
-                child: Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(12.5, color: AppColors.fg2, tabular: true)),
-              ),
+              Text('Working · $clock',
+                  style: sans(12, color: AppColors.fg4, tabular: true)),
               const SizedBox(width: 6),
-              AppIcon('chevron-right', size: 14, color: AppColors.fg3),
+              const MkMorph(size: 13),
             ]),
           ),
         ),
@@ -250,31 +233,32 @@ class ActivityPill extends StatelessWidget {
         ),
       );
     }
-    return TapDetector(
-      behavior: HitTestBehavior.opaque,
+    // Board: each step in full as a quiet line; a tap opens that step.
+    return Semantics(
+      button: true,
+      label: describeWork(steps).text,
+      excludeSemantics: true,
       onTap: () => onOpen(null),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 48),
-        padding: const EdgeInsets.fromLTRB(12, 0, 8, 0),
-        decoration: BoxDecoration(
-            color: AppColors.surface1, borderRadius: BorderRadius.circular(10)),
-        child: Row(children: [
-          AppIcon('terminal', size: 16, color: AppColors.fg2),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(describeWork(steps).text,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sans(13.5, color: AppColors.fg2)),
+      child: TapDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => onOpen(null),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(2, 2, 0, 2),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < steps.length; i++)
+                TapDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => onOpen(i),
+                  child: Padding(
+                    padding: EdgeInsets.only(top: i == 0 ? 0 : 7),
+                    child: QuietStepLine(steps[i]),
+                  ),
+                ),
+            ],
           ),
-          if (t != null) ...[
-            const SizedBox(width: 10),
-            Text(formatWorkDuration(t),
-                style: sans(12, color: AppColors.fg3, tabular: true)),
-          ],
-          const SizedBox(width: 6),
-          AppIcon('chevron-right', size: 16, color: AppColors.fg3),
-        ]),
+        ),
       ),
     );
   }

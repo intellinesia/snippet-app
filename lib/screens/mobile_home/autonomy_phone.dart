@@ -6,6 +6,9 @@ import '../../theme.dart';
 import '../../widgets.dart';
 import 'agents_home.dart';
 
+// Cards and segments sit 16 in from the screen edge on the board.
+const double _inset = 16;
+
 /// Lead autonomy (HM-10): Ask / Plan / Act, per-tool overrides, daily summary.
 /// Reads `mode`, `tool_overrides` and `summary` from GET /lead/autonomy and
 /// writes `mode` through POST /lead/autonomy. Rows whose data the daemon does
@@ -72,7 +75,7 @@ class _AutonomyPhonePageState extends State<AutonomyPhonePage> {
                 padding: const EdgeInsets.only(top: 16, bottom: 24),
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: kGutter),
+                    padding: const EdgeInsets.symmetric(horizontal: _inset),
                     child: Container(
                       key: const ValueKey('autonomy-seg'),
                       constraints: const BoxConstraints(minHeight: 48),
@@ -118,7 +121,7 @@ class _AutonomyPhonePageState extends State<AutonomyPhonePage> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(kGutter, 8, kGutter, 0),
+                    padding: const EdgeInsets.fromLTRB(_inset, 8, _inset, 0),
                     child: Text(_explain[_mode]!,
                         style: sans(13, color: AppColors.fg3)),
                   ),
@@ -132,7 +135,7 @@ class _AutonomyPhonePageState extends State<AutonomyPhonePage> {
                           key: ValueKey('override-${e.key}'),
                           constraints: const BoxConstraints(minHeight: 48),
                           padding:
-                              const EdgeInsets.symmetric(horizontal: kGutter),
+                              const EdgeInsets.symmetric(horizontal: _inset),
                           child: Row(children: [
                             Expanded(
                                 child: Text(e.key,
@@ -153,7 +156,7 @@ class _AutonomyPhonePageState extends State<AutonomyPhonePage> {
                   if (summary != null)
                     Padding(
                       padding:
-                          const EdgeInsets.fromLTRB(kGutter, 24, kGutter, 0),
+                          const EdgeInsets.fromLTRB(_inset, 24, _inset, 0),
                       child:
                           Text(summary, style: sans(12, color: AppColors.fg3)),
                     ),

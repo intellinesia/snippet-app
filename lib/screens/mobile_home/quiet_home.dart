@@ -339,27 +339,48 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
       }
     }
     if (f == HomeFilter.all) {
-      if (w.groups.isNotEmpty) {
-        body.add(const HomeLabel('Groups'));
-        final workingIds = {
-          for (final a in all)
-            if (a.state == CrewState.working) a.agent.id
-        };
-        for (final g in sortedGroups(w.groups)) {
-          final n = g.members.length;
-          final active =
-              g.members.where((m) => workingIds.contains(m.id)).length;
-          body.add(MarkRow(
-            mark: groupMark(36),
-            title: g.title.isEmpty ? 'Group' : g.title,
-            sub: '$n ${n == 1 ? 'member' : 'members'} · $active active',
-            trailing: AppIcon('chevron-right', size: 16, color: AppColors.fg3),
-            hairline: false,
-            onTap: w.onOpenGroup == null ? null : () => w.onOpenGroup!(g),
-          ));
-        }
-      }
-      if (recent.isNotEmpty) {
+      // Board: groups live in Recent beside agents, newest first.
+      final workingIds = {
+        for (final a in all)
+          if (a.state == CrewState.working) a.agent.id
+      };
+      final rows = <(int, Widget)>[
+        for (final a in recent.take(3))
+          (
+            a.activityMs,
+            MarkRow(
+              mark: agentFace(a.agent.id, 40),
+              title: a.agent.displayName,
+              time:
+                  a.activityMs == 0 ? null : relativeTime(a.activityMs ~/ 1000),
+              sub: a.line,
+              onTap: () => open(a.agent),
+            )
+          ),
+        for (final g in sortedGroups(w.groups))
+          () {
+            final n = g.members.length;
+            final active =
+                g.members.where((m) => workingIds.contains(m.id)).length;
+            final at = DateTime.tryParse(g.lastEventAt ?? '')
+                    ?.millisecondsSinceEpoch ??
+                0;
+            final preview = (g.preview ?? '').trim();
+            return (
+              at,
+              MarkRow(
+                mark: groupMark(40),
+                title: g.title.isEmpty ? 'Group' : g.title,
+                time: at == 0 ? null : relativeTime(at ~/ 1000),
+                sub: preview.isNotEmpty
+                    ? preview
+                    : '$n ${n == 1 ? 'member' : 'members'} · $active active',
+                onTap: w.onOpenGroup == null ? null : () => w.onOpenGroup!(g),
+              )
+            );
+          }(),
+      ]..sort((x, y) => y.$1.compareTo(x.$1));
+      if (rows.isNotEmpty) {
         body.add(HomeLabel('Recent',
             trailing: finished > 0
                 ? Semantics(
@@ -372,31 +393,17 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
                         child: Center(
                           widthFactor: 1,
                           child: Text('$finished finished today',
-                              style: sans(13, color: AppColors.fg3)),
+                              style: sans(13, color: AppColors.fg4)),
                         ),
                       ),
                     ),
                   )
                 : null));
-        for (final a in recent.take(3)) {
-          final at = a.activityMs;
-          body.add(MarkRow(
-            mark: agentFace(a.agent.id, 36),
-            title: a.agent.displayName,
-            time: at == 0 ? null : relativeTime(at ~/ 1000),
-            sub: a.line,
-            onTap: () => open(a.agent),
-          ));
+        for (final r in rows) {
+          body.add(r.$2);
         }
       }
     }
-
-    final foot = w.onAllAgents == null
-        ? const SizedBox(height: 16)
-        : Padding(
-            padding: const EdgeInsets.only(top: 8, bottom: 16),
-            child: TextLink('All agents', w.onAllAgents!),
-          );
 
     return root(CustomScrollView(slivers: [
       SliverList(
@@ -419,10 +426,8 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
           ...body,
         ]),
       ),
-      SliverFillRemaining(
-        hasScrollBody: false,
-        child: Align(alignment: Alignment.bottomCenter, child: foot),
-      ),
+      SliverToBoxAdapter(
+          child: SizedBox(height: MK.bottomClearance(context) + 16)),
     ]));
   }
 }

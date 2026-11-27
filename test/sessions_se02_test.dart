@@ -46,8 +46,8 @@ void main() {
         await tester.pump();
         expect(tester.takeException(), isNull);
         final t = tester.widget<Text>(find.text('Sessions').last);
-        expect(t.style!.fontSize, 28);
-        expect(tester.getTopLeft(find.text('Sessions').last).dx, 16);
+        expect(t.style!.fontSize, 34);
+        expect(tester.getTopLeft(find.text('Sessions').last).dx, 20);
         // Connected filter group: segments at least 44 high, tight gaps.
         final chipAll = tester.getRect(find.bySemanticsLabel('All, 4'));
         expect(chipAll.height, greaterThanOrEqualTo(44));

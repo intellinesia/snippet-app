@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../ambient/controller.dart';
 import '../api.dart';
 import '../glass.dart';
+import '../mobile_kit.dart';
 import '../mochi.dart';
 import '../motion_routes.dart';
 import '../theme.dart';
@@ -253,9 +254,10 @@ Future<void> openMobileTasksPage(BuildContext context, DaemonClient client) {
 }
 
 class MobileMissionBar extends StatelessWidget {
-  const MobileMissionBar({super.key, this.onActions, this.client});
+  const MobileMissionBar({super.key, this.onActions, this.onBack, this.client});
 
   final VoidCallback? onActions;
+  final VoidCallback? onBack;
   final DaemonClient? client;
 
   @override
@@ -264,68 +266,75 @@ class MobileMissionBar extends StatelessWidget {
 
   Widget _bar(BuildContext context) {
     final c = client;
-    return SizedBox(
-      height: 60,
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: M.gutter),
-        child: Row(children: [
-          SizedBox(width: S.s40),
-          SizedBox(width: S.of(10)),
-          Expanded(
-            child: Center(
-              child: Semantics(
-                button: onActions != null,
-                label: 'Lead',
-                hint: 'Session actions',
-                child: TapDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: onActions,
-                  child: HitArea(
-                    alignment: Alignment.center,
-                    child: Glass(
-                      radius: BorderRadius.circular(R.of(20)),
-                      child: Container(
-                        height: 40,
-                        padding: EdgeInsets.symmetric(horizontal: S.s16),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          AgentMochi('lead', size: 22),
-                          SizedBox(width: S.of(7)),
-                          Flexible(
-                            child: Text(
-                              'Lead',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TS.ui(AppColors.fg1).copyWith(
-                                  fontSize: 14,
-                                  fontWeight: W.strong,
-                                  height: 1.2),
-                            ),
-                          ),
-                        ]),
-                      ),
-                    ),
-                  ),
+    final android = kAndroidLook;
+    final side = android ? 48.0 : MK.glassButton;
+    final identity = Row(mainAxisSize: MainAxisSize.min, children: [
+      AgentMochi('lead', size: android ? 36 : 30),
+      SizedBox(width: android ? 12 : 8),
+      Flexible(
+        child: Text('Lead',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: android
+                ? sans(18, weight: W.label, color: AppColors.fg1)
+                : sans(15, weight: FontWeight.w600, color: AppColors.fg1)),
+      ),
+    ]);
+    final chip = Semantics(
+      button: onActions != null,
+      label: 'Lead',
+      hint: 'Session actions',
+      child: TapDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onActions,
+        child: android
+            ? ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: Align(alignment: Alignment.centerLeft, child: identity))
+            : MkGlass(
+                radius: 24,
+                child: Container(
+                  height: 44,
+                  padding: const EdgeInsets.fromLTRB(7, 0, 16, 0),
+                  child: identity,
                 ),
               ),
-            ),
-          ),
-          SizedBox(width: S.of(10)),
+      ),
+    );
+    return SizedBox(
+      height: mkChatHeaderHeight,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: android ? 4 : M.gutter),
+        child: Row(children: [
+          if (onBack != null) ...[
+            MkIconButton(
+                icon: android ? 'arrow-left' : 'chevron-left',
+                label: 'Back',
+                bare: android,
+                onTap: onBack),
+            SizedBox(width: android ? 4 : 8),
+          ] else
+            SizedBox(width: android ? 12 : side + 8),
+          Expanded(child: android ? chip : Center(child: chip)),
+          const SizedBox(width: 8),
           if (c != null)
             ListenableBuilder(
               listenable: AmbientController.instance,
               builder: (context, _) {
                 final live = AmbientController.instance.running;
-                return RoundBtn(
+                final btn = RoundBtn(
                   tooltip: live ? 'Voice call' : 'Start voice',
-                  size: 44,
+                  size: side,
                   onTap: () => startMobileVoice(context, c),
                   child: AppIcon('phone',
-                      size: 18, color: live ? AppColors.ok : AppColors.fg1),
+                      size: android ? 22 : 18,
+                      color: live ? AppColors.ok : AppColors.fg1),
                 );
+                return android ? btn : MkGlass(child: btn);
               },
             )
           else
-            SizedBox(width: S.s40),
+            SizedBox(width: side),
         ]),
       ),
     );
@@ -431,11 +440,14 @@ class MobileBackBar extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: M.gutter),
         child: Row(children: [
           if (back != null)
-            RoundBtn(
-                icon: menu ? 'menu' : 'chevron-left',
-                tooltip: menu ? 'Menu' : 'Back',
-                size: 44,
-                iconSize: menu ? 18 : 20,
+            MkIconButton(
+                icon: menu
+                    ? 'menu'
+                    : kAndroidLook
+                        ? 'arrow-left'
+                        : 'chevron-left',
+                label: menu ? 'Menu' : 'Back',
+                bare: kAndroidLook,
                 onTap: back),
           if (back == null && trailing.isNotEmpty)
             SizedBox(width: 48.0 * trailing.length),

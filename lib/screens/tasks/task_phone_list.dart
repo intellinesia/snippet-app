@@ -5,14 +5,17 @@ import '../../pull_refresh.dart';
 import '../../tap_detector.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
+import '../../mobile_kit.dart';
+import '../../mochi.dart';
 import '../mobile_home/collapsing_root.dart';
 import 'task_phone.dart';
 import 'task_phone_board.dart';
 
 enum TaskScope { all, mine, agents }
 
-/// The phone Tasks root (TK-01): collapsing large title, All / Mine / Agents
-/// chips, then Needs you, Doing, Todo and Done groups of 56-high rows.
+/// The phone Tasks root (TK-01): large title with the New task split button,
+/// the All / Mine / Agents filter group, then Needs you, Open and Completed
+/// sections of state-led rows.
 class PhoneTasksRoot extends StatefulWidget {
   const PhoneTasksRoot({
     super.key,
@@ -65,19 +68,29 @@ class _PhoneTasksRootState extends State<PhoneTasksRoot> {
   @override
   Widget build(BuildContext context) {
     final all = widget.tasks;
-    final shown = [for (final t in all) if (_in(t, _scope)) t];
-    List<TaskItem> of(Set<TaskStatus> s) =>
-        [for (final t in shown) if (s.contains(t.status)) t];
+    final shown = [
+      for (final t in all)
+        if (_in(t, _scope)) t
+    ];
+    List<TaskItem> of(Set<TaskStatus> s) => [
+          for (final t in shown)
+            if (s.contains(t.status)) t
+        ];
     final done = of({TaskStatus.done, TaskStatus.cancelled})
       ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     final groups = <(String, List<TaskItem>)>[
       ('Needs you', of(taskNeedsYou)),
-      ('Doing', of({TaskStatus.inProgress})),
-      ('Todo', of({TaskStatus.todo})),
+      (
+        'Open',
+        [
+          ...of({TaskStatus.inProgress}),
+          ...of({TaskStatus.todo})
+        ]
+      ),
     ];
 
     final children = <Widget>[
-      LargeTitle(widget.title),
+      _head(),
       if (widget.stateBody == null && all.isNotEmpty) _chips(all),
     ];
     if (widget.stateBody != null) {
@@ -105,12 +118,12 @@ class _PhoneTasksRootState extends State<PhoneTasksRoot> {
       for (final (label, items) in groups) {
         if (items.isEmpty) continue;
         children.add(_label(label, items.length));
-        children.addAll(items.map(_row));
+        children.add(_rows(items));
       }
       if (done.isNotEmpty) {
-        children.add(_label('Done', done.length));
+        children.add(_label('Completed', done.length));
         final cut = _doneOpen ? done.length : kDoneVisible;
-        children.addAll(done.take(cut).map(_row));
+        children.add(_rows(done.take(cut).toList()));
         if (done.length > kDoneVisible) {
           children.add(_fold(done.length - kDoneVisible));
         }
@@ -132,14 +145,13 @@ class _PhoneTasksRootState extends State<PhoneTasksRoot> {
       }
     }
 
-    final trailing = [
-      ...widget.actions,
-      BarIcon(_board ? 'list' : 'kanban', _board ? 'List view' : 'Board view',
-          () => setState(() => _board = !_board),
-          toggled: _board),
-      BarIcon('plus', 'New task', widget.onNew),
-    ];
     if (_board) {
+      final trailing = [
+        ...widget.actions,
+        BarIcon('list', 'List view', () => setState(() => _board = false),
+            toggled: true),
+        BarIcon('plus', 'New task', widget.onNew),
+      ];
       return PhoneTaskBoard(
         title: widget.title,
         tasks: [for (final t in all) t],
@@ -154,11 +166,11 @@ class _PhoneTasksRootState extends State<PhoneTasksRoot> {
     return CollapsingRoot(
       title: widget.title,
       leading: widget.leading,
-      actions: trailing,
+      actions: widget.actions,
       child: PullToRefresh(
         onRefresh: widget.onRefresh,
         child: ListView(
-          padding: EdgeInsets.only(bottom: S.s24),
+          padding: EdgeInsets.only(bottom: MK.bottomClearance(context)),
           children: children,
         ),
       ),
@@ -172,81 +184,86 @@ class _PhoneTasksRootState extends State<PhoneTasksRoot> {
         onTap: () => setState(() => _doneOpen = !_doneOpen),
       );
 
-  Widget _label(String t, int n) => Padding(
+  // Title row: the large title with the New task split button beside it.
+  Widget _head() => Padding(
+        padding: const EdgeInsets.only(right: 16),
+        child: Row(children: [
+          Expanded(child: LargeTitle(widget.title)),
+          MkSplitButton(
+            label: 'New task',
+            icon: 'plus',
+            onTap: widget.onNew,
+            onMenu: _menu,
+            menuLabel: 'Task options',
+          ),
+        ]),
+      );
+
+  void _menu() {
+    showMkSheet<void>(context,
+        title: widget.title,
+        builder: (ctx) => Column(mainAxisSize: MainAxisSize.min, children: [
+              MkSheetTile(
+                icon: 'kanban',
+                label: 'Board view',
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  setState(() => _board = true);
+                },
+              ),
+            ]));
+  }
+
+  // Only Completed carries a count on the board.
+  Widget _label(String t, int n) => KeyedSubtree(
         key: ValueKey('group-$t'),
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
-        child: Semantics(
-          header: true,
-          child: Row(children: [
-            Text(t, style: sans(12, weight: W.label, color: AppColors.fg3)),
-            const SizedBox(width: 12),
-            Text('$n', style: sans(12, color: AppColors.fg3)),
-          ]),
-        ),
+        child: MkSection(t, trailing: t == 'Completed' ? '$n' : null),
       );
 
   Widget _chips(List<TaskItem> all) {
     int n(TaskScope s) => all.where((t) => _in(t, s)).length;
-    Widget chip(String label, TaskScope s) {
-      final on = _scope == s;
-      return Semantics(
-        button: true,
-        selected: on,
-        label: '$label ${n(s)}',
-        excludeSemantics: true,
-        child: TapDetector(
-          key: ValueKey('chip-${s.name}'),
-          behavior: HitTestBehavior.opaque,
-          onTap: () => setState(() => _scope = s),
-          child: Container(
-            height: 44,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-                color: on ? AppColors.fg1 : AppColors.surface2,
-                borderRadius: BorderRadius.circular(22)),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Text(label,
-                  style: sans(13,
-                      weight: on ? W.label : W.body,
-                      color: on ? AppColors.bg : AppColors.fg2)),
-              const SizedBox(width: 6),
-              Text('${n(s)}',
-                  style: sans(13, color: on ? AppColors.bg : AppColors.fg3)),
-            ]),
-          ),
-        ),
-      );
-    }
-
     return MediaQuery.withClampedTextScaling(
       maxScaleFactor: 1.35,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
-        child: Row(children: [
-          chip('All', TaskScope.all),
-          const SizedBox(width: 8),
-          chip('Mine', TaskScope.mine),
-          const SizedBox(width: 8),
-          chip('Agents', TaskScope.agents),
-        ]),
+      child: MkFilterGroup<TaskScope>(
+        padding: kAndroidLook
+            ? const EdgeInsets.fromLTRB(16, 4, 16, 0)
+            : const EdgeInsets.fromLTRB(20, 10, 20, 0),
+        options: [
+          MkFilter(TaskScope.all, 'All', count: n(TaskScope.all)),
+          MkFilter(TaskScope.mine, 'Mine', count: n(TaskScope.mine)),
+          MkFilter(TaskScope.agents, 'Agents', count: n(TaskScope.agents)),
+        ],
+        selected: _scope,
+        onSelect: (s) => setState(() => _scope = s),
       ),
     );
   }
 
-  Widget _row(TaskItem t) => PhoneTaskCard(
-        key: ValueKey('t-${t.id}'),
-        task: t,
-        owner: taskOwner(t, widget.sessions, widget.agentNames),
-        onTap: () => widget.onOpen(t),
-      );
+  Widget _rows(List<TaskItem> items) => MkList(children: [
+        for (var i = 0; i < items.length; i++)
+          _row(items[i], last: i == items.length - 1),
+      ]);
+
+  Widget _row(TaskItem t, {bool last = false}) {
+    final o = taskOwnerAgent(t, widget.sessions, widget.agentNames);
+    return PhoneTaskCard(
+      key: ValueKey('t-${t.id}'),
+      task: t,
+      owner: o?.name,
+      ownerId: o?.id,
+      last: last,
+      onTap: () => widget.onOpen(t),
+    );
+  }
 }
 
 /// A 48 high fold row: label 14/500 fg2 and a chevron 16.
 class _FoldRow extends StatelessWidget {
   const _FoldRow(
-      {super.key, required this.label, required this.open, required this.onTap});
+      {super.key,
+      required this.label,
+      required this.open,
+      required this.onTap});
   final String label;
   final bool open;
   final VoidCallback onTap;
@@ -261,15 +278,16 @@ class _FoldRow extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 48),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: EdgeInsets.symmetric(
+                  horizontal: kAndroidLook ? 28 : MK.gutter),
               child: Row(children: [
                 Flexible(
                   child: Text(label,
-                      style: sans(14, weight: W.label, color: AppColors.fg2)),
+                      style: sans(14, weight: W.label, color: AppColors.fg3)),
                 ),
                 const SizedBox(width: 6),
                 AppIcon(open ? 'chevron-up' : 'chevron-down',
-                    size: 16, color: AppColors.fg2),
+                    size: 16, color: AppColors.fg3),
               ]),
             ),
           ),
@@ -277,17 +295,24 @@ class _FoldRow extends StatelessWidget {
       );
 }
 
-/// One task row: glyph column x16..36, text at x52, owner avatar at the end.
+/// One task row, built like a session row: the state mark leads, title
+/// over owner, priority and time, the owner's character on the right.
 class PhoneTaskCard extends StatelessWidget {
   const PhoneTaskCard(
       {super.key,
       required this.task,
       required this.owner,
       required this.onTap,
+      this.ownerId,
+      this.last = false,
       this.showPriority = true});
   final TaskItem task;
   final String? owner;
+  final String? ownerId;
   final VoidCallback onTap;
+
+  /// No hairline under the last row of a run (iPhone).
+  final bool last;
 
   /// False where the source has no priority (a goal's task list).
   final bool showPriority;
@@ -300,22 +325,61 @@ class PhoneTaskCard extends StatelessWidget {
     final time = shortAgo(task.updatedAt);
     final rest = [
       if (owner != null) owner!,
-      if (showPriority) priorityWord(task.priority),
+      if (showPriority && !finished) priorityWord(task.priority),
       if (time.isNotEmpty) time,
-    ].join(' - ');
+    ].join(' · ');
     final big = MediaQuery.textScalerOf(context).scale(10) > 13.5;
     final sub = Text.rich(
       TextSpan(children: [
         if (word != null)
           TextSpan(
-              text: rest.isEmpty ? word : '$word - ',
-              style: sans(12.5, weight: W.label, color: AppColors.fg2)),
+              text: rest.isEmpty ? word : '$word · ',
+              style: sans(13.5, weight: W.label, color: AppColors.fg2)),
         TextSpan(text: rest),
       ]),
       maxLines: big ? 2 : 1,
       overflow: TextOverflow.ellipsis,
-      style: sans(12.5, color: AppColors.fg3),
+      style: mkRowSub(),
     );
+    final id = ownerId;
+    final a = kAndroidLook;
+    final whoSize = a ? 28.0 : 24.0;
+    final Widget? who = id != null && id.isNotEmpty
+        ? ExcludeSemantics(child: AgentMochi(id, size: whoSize))
+        : owner != null
+            ? OwnerAvatar(owner!, size: whoSize)
+            : null;
+    final titleText = Text(task.title,
+        maxLines: big ? 2 : 1,
+        overflow: TextOverflow.ellipsis,
+        style: mkRowTitle().copyWith(fontSize: a ? 15.5 : 15));
+    // Android rows sit inside segmented tiles, which own the outer inset.
+    final left = a ? 16.0 : MK.gutter;
+    final markSlot = a ? 40.0 : 24.0;
+    final gap = a ? 14.0 : 12.0;
+    final Widget text;
+    if (a) {
+      text = Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [titleText, const SizedBox(height: 2), sub]);
+    } else {
+      // iPhone puts the owner's character on the title line.
+      text = Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Expanded(child: titleText),
+              if (who != null) ...[
+                const SizedBox(width: 8),
+                SizedBox(width: whoSize, height: whoSize, child: who),
+              ],
+            ]),
+            const SizedBox(height: 2),
+            sub,
+          ]);
+    }
     return Semantics(
       button: true,
       label: '${task.title}, ${word ?? task.status.label}, '
@@ -324,46 +388,33 @@ class PhoneTaskCard extends StatelessWidget {
       child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 55),
-            child: Padding(
-              padding:
-                  const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                SizedBox(
-                    width: 36,
-                    child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: TaskGlyph(task.status))),
-                Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(task.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(15,
-                                color: finished
-                                    ? AppColors.fg3
-                                    : AppColors.fg1)),
-                        const SizedBox(height: 2),
-                        sub,
-                      ]),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: left),
+          child: Row(children: [
+            SizedBox(
+                width: markSlot, child: Center(child: TaskGlyph(task.status))),
+            SizedBox(width: gap),
+            Expanded(
+              child: Container(
+                constraints: BoxConstraints(minHeight: a ? 68 : 64),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  border: !a && !last
+                      ? Border(
+                          bottom: BorderSide(color: MK.hairline, width: 0.5))
+                      : null,
                 ),
-                if (owner != null) ...[
-                  const SizedBox(width: 12),
-                  OwnerAvatar(owner!),
-                ],
-              ]),
+                child: Row(children: [
+                  Expanded(child: text),
+                  if (a && who != null) ...[
+                    const SizedBox(width: 14),
+                    SizedBox(width: whoSize, height: whoSize, child: who),
+                  ],
+                ]),
+              ),
             ),
-          ),
-          Container(
-              height: 1,
-              margin: const EdgeInsets.only(left: 52, right: 16),
-              color: AppColors.border),
-        ]),
+          ]),
+        ),
       ),
     );
   }

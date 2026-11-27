@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:progressive_background_blur/progressive_background_blur.dart';
 
 import 'theme.dart';
+import 'mobile_kit.dart' show MkThreadCap;
 
 class GlassStyle {
   static bool get light => AppColors.bg.computeLuminance() > 0.18;
@@ -91,7 +92,11 @@ class StatusInset extends InheritedWidget {
 
 /// The frosted strip a chat header floats on; the transcript scrolls under it.
 class GlassTopFrame extends StatelessWidget {
-  const GlassTopFrame({super.key, required this.child, this.color});
+  const GlassTopFrame(
+      {super.key, required this.child, this.color, this.thread = false});
+
+  /// Phone chat: the header layer ends where the rounded thread begins.
+  final bool thread;
 
   final Widget child;
   final Color? color;
@@ -113,33 +118,43 @@ class GlassTopFrame extends StatelessWidget {
     // Quiet v10: the status bar and header sit on solid ground, no blur;
     // a 24pt eased fade on the content side is the only transition.
     final frame = Stack(clipBehavior: Clip.none, children: [
-      Positioned(
-        top: -up,
-        left: 0,
-        right: 0,
-        bottom: -(24 - fade),
-        child: IgnorePointer(
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Expanded(child: ColoredBox(color: bg)),
-            Container(
-              height: 24,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  stops: const [0, 0.5, 1],
-                  colors: [
-                    bg,
-                    bg.withValues(alpha: 0.6),
-                    bg.withValues(alpha: 0),
-                  ],
-                ),
-              ),
-            ),
-          ]),
+      if (thread)
+        Positioned(
+          top: -up,
+          left: 0,
+          right: 0,
+          bottom: fade - MkThreadCap.reach,
+          child: IgnorePointer(child: MkThreadCap.paint(bg)),
+        )
+      else
+        Positioned(
+          top: -up,
+          left: 0,
+          right: 0,
+          bottom: -(24 - fade),
+          child: IgnorePointer(
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: ColoredBox(color: bg)),
+                  Container(
+                    height: 24,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        stops: const [0, 0.5, 1],
+                        colors: [
+                          bg,
+                          bg.withValues(alpha: 0.6),
+                          bg.withValues(alpha: 0),
+                        ],
+                      ),
+                    ),
+                  ),
+                ]),
+          ),
         ),
-      ),
       Padding(
           padding: const EdgeInsets.only(bottom: fade),
           child: _Frosted(child: child)),

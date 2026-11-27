@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:snippet/mobile_kit.dart' show MkMorph;
 import 'package:snippet/chat/activity_dock.dart';
 import 'package:snippet/chat/tool_call_row.dart';
 import 'package:snippet/chat/tool_output_sheet.dart';
@@ -117,7 +118,7 @@ void main() {
     resetPlatform();
   });
 
-  testWidgets('phone activity dock is a 36-high content-sized floating pill',
+  testWidgets('phone activity dock is a quiet centred Working line',
       (tester) async {
     usePhone();
     final batch = ToolBatch([bashStep(running: true)], running: true);
@@ -130,10 +131,11 @@ void main() {
     )));
     await tester.pump();
 
+    // Board: "Working · 4s" with the morph, in a 44 target, no pill.
     final size = tester.getSize(find.byType(ActivityDock));
-    expect(size.height, 36);
-    expect(size.width, lessThanOrEqualTo(236));
-    expect(find.textContaining('Sashy running'), findsOneWidget);
+    expect(size.height, 44);
+    expect(find.textContaining('Working · '), findsOneWidget);
+    expect(find.byType(MkMorph), findsOneWidget);
     resetPlatform();
   });
 }

@@ -15,6 +15,7 @@ import '../panel.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../mobile_kit.dart';
 import '../empty_art.dart' show EmptyArtKind;
 import 'artifact_viewer.dart' show ArtifactViewer;
 import 'tasks/task_common.dart' show TaskEmptyNote;
@@ -274,8 +275,7 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
                             alignment: Alignment.center,
                             child: Text(label,
                                 style: sans(13,
-                                    weight:
-                                        _kind == kind ? W.label : W.body,
+                                    weight: _kind == kind ? W.label : W.body,
                                     color: _kind == kind
                                         ? AppColors.fg1
                                         : AppColors.fg2)),
@@ -301,7 +301,7 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
               ),
             ),
           ));
-    if (kMobile) return _phone(shown, searchW, chipsW);
+    if (kMobile) return _phone(shown, all ?? const []);
     return _desktop(shown, searchW, chipsW);
   }
 
@@ -413,8 +413,7 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
             decoration: BoxDecoration(
                 border: Border(
                     bottom: BorderSide(
-                        color: AppColors.paneLine,
-                        width: AppColors.hairline))),
+                        color: AppColors.paneLine, width: AppColors.hairline))),
             child: Row(children: [
               Expanded(
                 child: Text(c.displayTitle,
@@ -436,72 +435,84 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
                 Btn('Open canvas',
                     small: true,
                     variant: BtnVariant.surface,
-                    onTap: () =>
-                        openArtifactCard(context, widget.client, c)),
+                    onTap: () => openArtifactCard(context, widget.client, c)),
               ]),
             ),
           ),
         ],
       );
 
-  /// Phone: the tab-root pattern, a pinned bar over a list that starts with
-  /// the 28/500 title, search and filter chips.
-  Widget _phone(List<ArtifactCard> shown, Widget searchW, Widget chipsW) {
-    final head = [const LargeTitle('Artifacts'), searchW, chipsW];
+  /// Phone: large title with search and Show in the header, the kind
+  /// filter group, then a two-column grid of preview cards.
+  Widget _phone(List<ArtifactCard> shown, List<ArtifactCard> all) {
+    final a = kAndroidLook;
+    final canPop = Navigator.of(context).canPop();
+    final actions = [
+      MkAction('search', 'Search', () {
+        setState(() {
+          _searchOpen = !_searchOpen;
+          if (!_searchOpen) _query = '';
+        });
+      }),
+      MkAction('sliders-horizontal', 'Show', _openShow),
+    ];
+    final head = <Widget>[
+      const LargeTitle('Artifacts'),
+      if (_searchOpen) _phoneSearch(),
+      if (all.isNotEmpty) _phoneFilters(all.length),
+    ];
     final Widget list;
     if (_error != null || _all == null || shown.isEmpty) {
       list = ListView(
           children: [...head, SizedBox(height: 280, child: _body(shown))]);
     } else {
+      final rows = (shown.length + 1) ~/ 2;
       list = ListView.builder(
-        padding: EdgeInsets.only(bottom: S.s24),
-        itemCount: shown.length + 1,
-        itemBuilder: (_, i) => i == 0
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch, children: head)
-            : Padding(
-                padding: EdgeInsets.symmetric(horizontal: S.s8),
-                child: _row(shown[i - 1])),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: EdgeInsets.only(bottom: MK.bottomClearance(context)),
+        itemCount: rows + 1,
+        itemBuilder: (_, i) {
+          if (i == 0) {
+            return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [...head, SizedBox(height: a ? 8 : 6)]);
+          }
+          final l = shown[(i - 1) * 2];
+          final r =
+              (i - 1) * 2 + 1 < shown.length ? shown[(i - 1) * 2 + 1] : null;
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: IntrinsicHeight(
+              child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(child: _card(l)),
+                    const SizedBox(width: 12),
+                    Expanded(child: r == null ? const SizedBox() : _card(r)),
+                  ]),
+            ),
+          );
+        },
       );
     }
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(
+        bottom: false,
         child: CollapsingRoot(
           title: 'Artifacts',
-          leading: Navigator.of(context).canPop()
-              ? Semantics(
-                  button: true,
+          leading: canPop
+              ? MkIconButton(
+                  icon: a ? 'arrow-left' : 'chevron-left',
                   label: 'Back',
-                  excludeSemantics: true,
-                  child: TapDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => Navigator.of(context).maybePop(),
-                    child: SizedBox(
-                        width: 48,
-                        height: 48,
-                        child: Center(
-                            child: AppIcon('chevron-left',
-                                size: 20, color: AppColors.fg1))),
-                  ),
-                )
+                  onTap: () => Navigator.of(context).maybePop())
               : null,
+          // The kit puts these on the title row (iPhone glass capsule) or in
+          // the app bar (Android).
           actions: [
-            Semantics(
-              button: true,
-              label: 'New canvas',
-              excludeSemantics: true,
-              child: TapDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: _creating ? null : _newCanvas,
-                child: SizedBox(
-                    width: 48,
-                    height: 48,
-                    child: Center(
-                        child:
-                            AppIcon('plus', size: 20, color: AppColors.fg2))),
-              ),
-            ),
+            for (final x in actions)
+              MkIconButton(
+                  icon: x.icon, label: x.label, onTap: x.onTap, bare: !a)
           ],
           child: list,
         ),
@@ -509,8 +520,196 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
     );
   }
 
-  Widget _quietNote(String icon, String title, String body,
-      {Widget? action}) {
+  Widget _phoneSearch() => ToastAvoid(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(kAndroidLook ? 16 : MK.gutter, 8,
+              kAndroidLook ? 16 : MK.gutter, 0),
+          child: Semantics(
+            textField: true,
+            label: 'Search artifacts',
+            child: TextField(
+              autofocus: true,
+              onChanged: (v) => setState(() => _query = v),
+              style: sans(15, color: AppColors.fg1),
+              cursorColor: AppColors.fg1,
+              decoration: InputDecoration(
+                isDense: true,
+                filled: true,
+                fillColor: AppColors.surface2,
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.only(left: 12, right: 8),
+                  child: AppIcon('search', size: 16, color: AppColors.fg3),
+                ),
+                prefixIconConstraints:
+                    const BoxConstraints(minWidth: 36, minHeight: 20),
+                hintText: 'Search artifacts',
+                hintStyle: sans(15, color: AppColors.fg3),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(kAndroidLook ? 28 : 12),
+                    borderSide: BorderSide.none),
+              ),
+            ),
+          ),
+        ),
+      );
+
+  // The board shows All, Documents, Images and Canvases; PDFs and Files are
+  // picked from Show and join the group while selected.
+  Widget _phoneFilters(int total) {
+    const main = <(String?, String)>[
+      (null, 'All'),
+      ('document', 'Documents'),
+      ('image', 'Images'),
+      ('canvas', 'Canvases'),
+    ];
+    final extra = _kinds.where((k) => k.$1 == _kind && !main.contains(k));
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.35,
+      child: ToastAvoid(
+        child: MkFilterGroup<String?>(
+          padding: kAndroidLook
+              ? const EdgeInsets.fromLTRB(16, 4, 16, 0)
+              : const EdgeInsets.fromLTRB(20, 10, 20, 0),
+          options: [
+            for (final (k, l) in [...main, ...extra])
+              MkFilter(k, l, count: k == null ? total : null),
+          ],
+          selected: _kind,
+          onSelect: (k) => setState(() => _kind = k),
+        ),
+      ),
+    );
+  }
+
+  void _openShow() {
+    showMkSheet<void>(context,
+        title: 'Show',
+        builder: (ctx) => Column(mainAxisSize: MainAxisSize.min, children: [
+              for (final (k, l) in _kinds)
+                Semantics(
+                  button: true,
+                  selected: _kind == k,
+                  label: 'Show $l',
+                  excludeSemantics: true,
+                  child: TapDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      setState(() => _kind = k);
+                    },
+                    child: SizedBox(
+                      height: 48,
+                      child: Row(children: [
+                        Expanded(
+                            child: Text(l,
+                                style: sans(15.5,
+                                    weight: _kind == k ? W.label : W.body,
+                                    color: AppColors.fg1))),
+                        if (_kind == k)
+                          AppIcon('check', size: 18, color: AppColors.fg1),
+                      ]),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 12),
+              MkSheetTile(
+                icon: 'plus',
+                label: 'New canvas',
+                onTap: _creating
+                    ? null
+                    : () {
+                        Navigator.of(ctx).pop();
+                        _newCanvas();
+                      },
+              ),
+            ]));
+  }
+
+  static String _ago(DateTime t) {
+    final d = DateTime.now().difference(t);
+    if (d.inMinutes < 1) return 'now';
+    if (d.inMinutes < 60) return '${d.inMinutes}m';
+    if (d.inHours < 24) return '${d.inHours}h';
+    return '${d.inDays}d';
+  }
+
+  /// One grid card: a 150 preview, the title over two lines, kind and age.
+  /// Android wraps it in a tonal container with 24 corners.
+  Widget _card(ArtifactCard c) {
+    final a = kAndroidLook;
+    final meta = [
+      c.kindLabel,
+      if (c.updatedAt != null) _ago(c.updatedAt!),
+    ].join(' · ');
+    final detail = [
+      c.kindLabel,
+      if (c.rev > 0) 'r${c.rev}',
+      if (c.author != null) c.author == 'user' ? 'You' : c.author!,
+      if (c.updatedAt != null) formatCanvasRelativeTime(c.updatedAt!),
+    ].join(' · ');
+    final thumb = (c.thumbUrl ?? '').isEmpty
+        ? (c.kind == 'document' ? const _DocLines() : _KindTile(c.kind))
+        : Image(
+            image: widget.client.canvasImage(c.thumbUrl!, rev: c.rev),
+            fit: BoxFit.cover,
+            alignment: Alignment.topCenter,
+            errorBuilder: (_, __, ___) =>
+                c.kind == 'document' ? const _DocLines() : _KindTile(c.kind),
+          );
+    final pad = EdgeInsets.symmetric(horizontal: a ? 6 : 0);
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          height: 150,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(a ? 18 : 16)),
+          child: thumb,
+        ),
+        const SizedBox(height: 8),
+        Padding(
+          padding: pad,
+          child: Text(c.displayTitle,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: sans(13.5,
+                  weight: W.label, height: 1.3, color: AppColors.fg1)),
+        ),
+        const SizedBox(height: 3),
+        Padding(
+          padding: pad,
+          child: Text(meta,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(12, color: AppColors.fg4, tabular: true)),
+        ),
+      ],
+    );
+    return Semantics(
+      button: true,
+      label: 'Open ${c.kindLabel.toLowerCase()} ${c.displayTitle}, $detail',
+      excludeSemantics: true,
+      child: TapDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => openArtifactCard(context, widget.client, c),
+        child: a
+            ? Container(
+                padding: const EdgeInsets.fromLTRB(6, 6, 6, 12),
+                decoration: BoxDecoration(
+                    color: AppColors.surface1,
+                    borderRadius: BorderRadius.circular(MK.cardRadius)),
+                child: body,
+              )
+            : body,
+      ),
+    );
+  }
+
+  Widget _quietNote(String icon, String title, String body, {Widget? action}) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
@@ -577,9 +776,7 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
     final on = _selected?.id == c.id;
     final author = c.author?.trim() ?? '';
     // Some producers record a file path as the author; that is not a who.
-    final who = author == 'user'
-        ? 'You'
-        : (author.contains('/') ? '' : author);
+    final who = author == 'user' ? 'You' : (author.contains('/') ? '' : author);
     final meta = [c.kindLabel, if (who.isNotEmpty) who].join('  ·  ');
     return Semantics(
       button: true,
@@ -666,12 +863,10 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
       excludeSemantics: true,
       child: Material(
         color: Colors.transparent,
-        borderRadius:
-            BorderRadius.circular(kMobile ? R.sm : PaneRow.radius),
+        borderRadius: BorderRadius.circular(kMobile ? R.sm : PaneRow.radius),
         child: InkWell(
           onTap: () => openArtifactCard(context, widget.client, c),
-          borderRadius:
-              BorderRadius.circular(kMobile ? R.sm : PaneRow.radius),
+          borderRadius: BorderRadius.circular(kMobile ? R.sm : PaneRow.radius),
           hoverColor: kMobile ? null : AppColors.hoverPlate,
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: kMobile ? 64 : 48),
@@ -707,16 +902,15 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
                                 weight: kMobile ? W.label : W.body,
                                 color: kMobile
                                     ? AppColors.fg1
-                                    : Color.lerp(AppColors.fg1,
-                                        AppColors.fg2, 0.3))),
+                                    : Color.lerp(
+                                        AppColors.fg1, AppColors.fg2, 0.3))),
                         SizedBox(height: S.s2),
                         Text(detail,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: sans(12,
-                                color: kMobile
-                                    ? AppColors.fg3
-                                    : AppColors.fg4)),
+                                color:
+                                    kMobile ? AppColors.fg3 : AppColors.fg4)),
                       ],
                     ),
                   ),
@@ -730,5 +924,54 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
       ),
     );
   }
+}
 
+/// A document without a rendered page: a few quiet text lines.
+class _DocLines extends StatelessWidget {
+  const _DocLines();
+  @override
+  Widget build(BuildContext context) {
+    Widget bar(double f, {Color? c}) => FractionallySizedBox(
+          alignment: Alignment.centerLeft,
+          widthFactor: f,
+          child: Container(
+            height: 6,
+            margin: const EdgeInsets.only(bottom: 7),
+            decoration: BoxDecoration(
+                color: c ?? AppColors.surface3,
+                borderRadius: BorderRadius.circular(3)),
+          ),
+        );
+    return Container(
+      color: Color.lerp(AppColors.bg, AppColors.surface1, 0.5),
+      padding: const EdgeInsets.all(14),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        bar(0.6, c: Color.lerp(AppColors.surface3, AppColors.fg4, 0.25)),
+        bar(1),
+        bar(0.85),
+        bar(1),
+        bar(0.7),
+        bar(0.9),
+      ]),
+    );
+  }
+}
+
+/// A kind with no picture: its icon, centred.
+class _KindTile extends StatelessWidget {
+  const _KindTile(this.kind);
+  final String kind;
+  @override
+  Widget build(BuildContext context) => Center(
+        child: AppIcon(
+            switch (kind) {
+              'canvas' => 'grid',
+              'image' => 'image',
+              'pdf' => 'pdf',
+              'document' => 'file-text',
+              _ => 'file',
+            },
+            size: 24,
+            color: AppColors.fg4),
+      );
 }

@@ -401,7 +401,8 @@ void main() {
     _usePhoneView();
     await _pumpRows(tester, CollapsedActivity(_activityRows()));
 
-    await tester.tap(find.byType(WorkLine));
+    // Board: steps show in full as quiet lines; a tap opens the rows.
+    await tester.tap(find.byType(QuietStepLine).first);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -409,7 +410,7 @@ void main() {
     expect(find.text('Show'), findsNothing);
     expect(find.text('Hide'), findsNothing);
 
-    await tester.tap(find.byType(WorkLine));
+    await tester.tap(find.byType(QuietStepLine).first);
     await tester.pumpAndSettle();
 
     expect(find.byType(DenseToolRow), findsNothing);
@@ -453,17 +454,19 @@ void main() {
       ]),
     );
 
-    final summary = find.textContaining('Worked for 1.4s', findRichText: true);
-    expect(summary, findsOneWidget);
+    // Board: every step is listed; the first line opens the rows.
+    expect(find.byType(QuietStepLine), findsNWidgets(3));
+    final summary = find.byType(QuietStepLine).first;
 
     await tester.tap(summary);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.byType(DenseToolRow), findsNWidgets(3));
-    await tester.tap(find.textContaining(
-        'flutter test test/work_notes_test.dart',
-        findRichText: true));
+    await tester.tap(find
+        .textContaining('flutter test test/work_notes_test.dart',
+            findRichText: true)
+        .last);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 

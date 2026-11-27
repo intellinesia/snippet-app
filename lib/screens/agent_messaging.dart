@@ -7,6 +7,7 @@ import 'shell_nav.dart' show sessionBusy;
 
 import '../motion_routes.dart';
 import 'package:flutter/material.dart';
+import '../mobile_kit.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
@@ -1130,7 +1131,9 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   // The scene sits outside the SafeArea so the header frost can reach
   // up behind the status bar, as on the session screen.
   Widget _chrome(Widget body, bool hideChrome) => kMobile
-      ? SceneBackdrop(
+      ? MkThreadBackdrop(
+          enabled: !hideChrome,
+          statusTop: StatusInset.page(context),
           child: StatusInset(
               top: hideChrome ? 0 : StatusInset.page(context),
               child: body),
