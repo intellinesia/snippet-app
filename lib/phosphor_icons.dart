@@ -93,7 +93,7 @@ abstract final class PhIcons {
   static const IconData hardDrives = IconData(0xe2a0, fontFamily: 'Phosphor');
   static const IconData hash = IconData(0xe2a2, fontFamily: 'Phosphor');
   static const IconData house = IconData(0xe2c2, fontFamily: 'Phosphor');
-  static const IconData sunHorizon = IconData(0xe5b6, fontFamily: 'Phosphor');
+  static const IconData stackSimple = IconData(0xe468, fontFamily: 'Phosphor');
   static const IconData chatsTeardrop = IconData(0xe180, fontFamily: 'Phosphor');
   static const IconData image = IconData(0xe2ca, fontFamily: 'Phosphor');
   static const IconData info = IconData(0xe2ce, fontFamily: 'Phosphor');
@@ -263,7 +263,7 @@ abstract final class PhIconsFill {
   static const IconData hardDrives = IconData(0xe2a0, fontFamily: 'PhosphorFill');
   static const IconData hash = IconData(0xe2a2, fontFamily: 'PhosphorFill');
   static const IconData house = IconData(0xe2c2, fontFamily: 'PhosphorFill');
-  static const IconData sunHorizon = IconData(0xe5b6, fontFamily: 'PhosphorFill');
+  static const IconData stackSimple = IconData(0xe468, fontFamily: 'PhosphorFill');
   static const IconData chatsTeardrop = IconData(0xe180, fontFamily: 'PhosphorFill');
   static const IconData image = IconData(0xe2ca, fontFamily: 'PhosphorFill');
   static const IconData info = IconData(0xe2ce, fontFamily: 'PhosphorFill');

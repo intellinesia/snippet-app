@@ -21,7 +21,7 @@ bool shouldRestoreShellTab(OpenTabDescriptor tab, {required bool mobile}) =>
 /// switches this; desktop keeps its sidebar rail instead, so this is phone-only.
 enum MobileHome {
   home('Home', 'home'),
-  chats('Sessions', 'layers'),
+  chats('Sessions', 'sessions'),
   tasks('Tasks', 'task'),
   agents('Agents', 'users');
 
