@@ -738,6 +738,9 @@ class ThemeManager extends ChangeNotifier {
   static const activeJsonPrefsKey = 'theme_active_json';
   static const defaultTheme = 'quiet';
   static const defaultFont = 'Inter';
+
+  /// Phones default to Geist, the face of the mobile design language.
+  static String get platformFont => kMobile ? 'Geist' : defaultFont;
   static const defaultMonoFont = 'GeistMono';
   static const _accentPrefsKey = 'accent_name';
   static const _fontPrefsKey = 'ui_font_family';
@@ -838,7 +841,7 @@ class ThemeManager extends ChangeNotifier {
 
   FontPreset get currentFont =>
       allFonts.where((f) => f.family == _resolved.type.uiFont).firstOrNull ??
-      allFonts[_indexOr(allFonts.map((f) => f.family), defaultFont)];
+      allFonts[_indexOr(allFonts.map((f) => f.family), platformFont)];
 
   FontPreset get currentMonoFont =>
       allMonoFonts
@@ -893,7 +896,7 @@ class ThemeManager extends ChangeNotifier {
     final uiFont =
         savedFont != null && allFonts.any((f) => f.family == savedFont)
             ? savedFont
-            : defaultFont;
+            : platformFont;
     final savedMono = p.getString(_monoFontPrefsKey);
     final codeFont =
         savedMono != null && allMonoFonts.any((f) => f.family == savedMono)
@@ -929,8 +932,9 @@ class ThemeManager extends ChangeNotifier {
 
   // Local only until the daemon theme store ships; the cache is what init restores.
   Future<void> _commit(ResolvedTheme next) async {
-    final safe =
-        _retiredThemes.contains(next.id) ? ResolvedTheme.fromPreset(_quiet) : next;
+    final safe = _retiredThemes.contains(next.id)
+        ? ResolvedTheme.fromPreset(_quiet)
+        : next;
     _resolved = safe;
     _activeId = safe.id;
     notifyListeners();
@@ -1089,14 +1093,14 @@ class AppColors {
           : currentTheme.border;
 
   // Spec: dark rgba(0,0,0,0.58); light rgba(20,20,18,0.36) so paper stays warm.
-  static Color get scrim => ThemeManager.instance.resolved.translucency.scrim ==
-              0.6 &&
-          currentTheme.bg.computeLuminance() > 0.18
-      ? const Color(0x5C141412)
-      : const Color(0xFF000000).withValues(
-          alpha: ThemeManager.instance.resolved.translucency.scrim == 0.6
-              ? 0.58
-              : ThemeManager.instance.resolved.translucency.scrim);
+  static Color get scrim =>
+      ThemeManager.instance.resolved.translucency.scrim == 0.6 &&
+              currentTheme.bg.computeLuminance() > 0.18
+          ? const Color(0x5C141412)
+          : const Color(0xFF000000).withValues(
+              alpha: ThemeManager.instance.resolved.translucency.scrim == 0.6
+                  ? 0.58
+                  : ThemeManager.instance.resolved.translucency.scrim);
   // Lighter, so a glass sheet still shows the page through its blur.
   static Color get glassScrim => const Color(0xFF000000).withValues(
       alpha: ThemeManager.instance.resolved.translucency.glassScrim);
@@ -1137,9 +1141,8 @@ class AppColors {
       _quietDeskLight ? currentTheme.surface3 : currentTheme.surface2;
 
   /// Sidebar keyboard-focus plate (s3 dark, DCDCD5 light).
-  static Color get sidebarFocus => _quietDeskLight
-      ? const Color(0xFFDCDCD5)
-      : currentTheme.surface3;
+  static Color get sidebarFocus =>
+      _quietDeskLight ? const Color(0xFFDCDCD5) : currentTheme.surface3;
 
   /// Pointer hover plate, between chrome and the selected plate.
   static Color get hoverPlate => _quietDesk
@@ -1314,8 +1317,7 @@ class S {
   static ThemeSpaceScale get _scale =>
       kMobile ? ThemeSpaceScale.defaults : _space.scale;
   static ThemeSpaceTokens get _space => ThemeManager.instance.resolved.space;
-  static double get _density =>
-      kMobile ? 1.0 : math.max(0.0, _space.density);
+  static double get _density => kMobile ? 1.0 : math.max(0.0, _space.density);
 
   static double get s2 => _scale.s2 * _density;
   static double get s4 => _scale.s4 * _density;

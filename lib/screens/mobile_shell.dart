@@ -1,3 +1,4 @@
+import '../mobile_kit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -59,6 +60,13 @@ class MobileShell extends StatefulWidget {
   @override
   State<MobileShell> createState() => _MobileShellState();
 }
+
+const _tabPlaces = [
+  QuietPlace.agents,
+  QuietPlace.sessions,
+  QuietPlace.artifacts,
+  QuietPlace.tasks,
+];
 
 class _MobileShellState extends State<MobileShell>
     with SingleTickerProviderStateMixin {
@@ -333,42 +341,35 @@ class _MobileShellState extends State<MobileShell>
     final showBar = widget.onNew != null && chatsVisible && !drilledDown;
     final shell = Scaffold(
       backgroundColor: AppColors.bg,
+      // The bar floats over content; extendBody hands its height to the
+      // body's bottom padding so lists still clear it.
+      extendBody: true,
       bottomNavigationBar: showBar
-          ? ColoredBox(
-              color: AppColors.bg,
-              child: SafeArea(
-                top: false,
-                child: QuietTabBar(
-                  // Agents is Home on the phone: faces first, then the lists.
-                  places: const [
-                    QuietPlace.agents,
-                    QuietPlace.sessions,
-                    QuietPlace.artifacts,
-                    QuietPlace.tasks,
-                  ],
-                  selected: switch (mobileHome) {
-                    MobileHome.home => QuietPlace.agents,
-                    MobileHome.chats => QuietPlace.sessions,
-                    MobileHome.tasks => QuietPlace.tasks,
-                    MobileHome.agents => QuietPlace.agents,
-                  },
-                  onSelect: (p) {
-                    if (p == QuietPlace.artifacts) {
-                      widget.onArtifacts?.call();
-                      return;
-                    }
-                    onMobileHome(switch (p) {
-                      QuietPlace.home => MobileHome.home,
-                      QuietPlace.sessions => MobileHome.chats,
-                      QuietPlace.tasks => MobileHome.tasks,
-                      QuietPlace.agents => MobileHome.home,
-                      QuietPlace.artifacts => MobileHome.home,
-                    });
-                  },
-                  onNew: widget.onNew!,
-                  onNewLong: widget.onNewLong,
-                ),
-              ),
+          ? MkTabBar(
+              // Agents is Home on the phone: faces first, then the lists.
+              tabs: [
+                for (final p in _tabPlaces) MkTab(p.label, p.icon),
+              ],
+              selected: switch (mobileHome) {
+                MobileHome.home => 0,
+                MobileHome.agents => 0,
+                MobileHome.chats => 1,
+                MobileHome.tasks => 3,
+              },
+              onSelect: (i) {
+                final p = _tabPlaces[i];
+                if (p == QuietPlace.artifacts) {
+                  widget.onArtifacts?.call();
+                  return;
+                }
+                onMobileHome(switch (p) {
+                  QuietPlace.sessions => MobileHome.chats,
+                  QuietPlace.tasks => MobileHome.tasks,
+                  _ => MobileHome.home,
+                });
+              },
+              onCompose: widget.onNew!,
+              onComposeLong: widget.onNewLong,
             )
           : null,
       body: Stack(children: [

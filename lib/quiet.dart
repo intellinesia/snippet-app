@@ -412,7 +412,7 @@ class _QuietOfflineBannerState extends State<QuietOfflineBanner> {
 /// The places, in order. Phone shows Agents, Sessions, Artifacts, Tasks.
 enum QuietPlace {
   home('Home', 'home'),
-  sessions('Sessions', 'layers'),
+  sessions('Sessions', 'sessions'),
   artifacts('Artifacts', 'file-stack'),
   tasks('Tasks', 'list-checks'),
   agents('Agents', 'users');
