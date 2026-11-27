@@ -147,7 +147,7 @@ class MkFilterGroup<T> extends StatelessWidget {
       required this.options,
       required this.selected,
       required this.onSelect,
-      this.padding = const EdgeInsets.fromLTRB(20, 14, 20, 4)});
+      this.padding = const EdgeInsets.fromLTRB(20, 10, 20, 0)});
   final List<MkFilter<T>> options;
   final T selected;
   final ValueChanged<T> onSelect;
@@ -185,29 +185,33 @@ class MkFilterGroup<T> extends StatelessWidget {
       child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => onSelect(o.value),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          height: 36,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-              color: on ? AppColors.fg1 : AppColors.surface2,
-              borderRadius: radius),
-          child: Text.rich(
-            TextSpan(children: [
-              TextSpan(text: o.label),
-              if (o.count != null)
-                TextSpan(
-                    text: '  ${o.count}',
-                    style: sans(13.5,
-                        color: on
-                            ? MK.onPrimary.withValues(alpha: 0.6)
-                            : AppColors.fg4)),
-            ]),
-            maxLines: 1,
-            style: sans(13.5,
-                weight: W.label, color: on ? MK.onPrimary : AppColors.fg2),
+        // 36 face inside a 44 target.
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            height: 36,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+                color: on ? AppColors.fg1 : AppColors.surface2,
+                borderRadius: radius),
+            child: Text.rich(
+              TextSpan(children: [
+                TextSpan(text: o.label),
+                if (o.count != null)
+                  TextSpan(
+                      text: '  ${o.count}',
+                      style: sans(13.5,
+                          color: on
+                              ? MK.onPrimary.withValues(alpha: 0.6)
+                              : AppColors.fg4)),
+              ]),
+              maxLines: 1,
+              style: sans(13.5,
+                  weight: W.label, color: on ? MK.onPrimary : AppColors.fg2),
+            ),
           ),
         ),
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:snippet/mobile_kit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/mobile_home/quiet_home.dart';
@@ -47,15 +48,15 @@ void main() {
         final t = tester.widget<Text>(find.text('Sessions').last);
         expect(t.style!.fontSize, 28);
         expect(tester.getTopLeft(find.text('Sessions').last).dx, 16);
-        // Chips: 44 high, gap 8.
-        final chipAll = tester.getRect(find.bySemanticsLabel('All 4'));
-        expect(chipAll.height, 44);
-        final chipW = tester.getRect(find.bySemanticsLabel('Working 1'));
-        expect(chipW.left - chipAll.right, 8);
+        // Connected filter group: segments at least 44 high, tight gaps.
+        final chipAll = tester.getRect(find.bySemanticsLabel('All, 4'));
+        expect(chipAll.height, greaterThanOrEqualTo(44));
+        final chipW = tester.getRect(find.bySemanticsLabel('Working, 1'));
+        expect(chipW.left - chipAll.right, lessThanOrEqualTo(4));
         for (final l in ['Filter', 'Search']) {
           final r = tester.getRect(find.bySemanticsLabel(l));
-          expect(r.width, greaterThanOrEqualTo(48));
-          expect(r.height, greaterThanOrEqualTo(48));
+          expect(r.width, greaterThanOrEqualTo(kAndroidLook ? 48 : 44));
+          expect(r.height, greaterThanOrEqualTo(kAndroidLook ? 48 : 44));
         }
         expect(tester.getRect(find.bySemanticsLabel('Search')).right, w - 4);
         expect(tester.getRect(find.bySemanticsLabel('Filter')).right, w - 52);
@@ -64,18 +65,19 @@ void main() {
         expect(rows, findsNWidgets(4));
         for (final e in rows.evaluate()) {
           final r = tester.getRect(find.byElementPredicate((x) => x == e));
-          expect(r.height, greaterThanOrEqualTo(56));
-          expect(r.width, w);
+          expect(r.height, greaterThanOrEqualTo(60));
+          expect(r.width, kAndroidLook ? w - 32 : w);
         }
         // Title never "Untitled session"; fallback names the folder.
         expect(find.text('Untitled session'), findsNothing);
         expect(find.text('New session in snippet-mobile-all'), findsOneWidget);
-        // Title text x62 (1x only: avatar 36 + gutter 16 + gap 10).
-        expect(tester.getTopLeft(find.text('Wire the wake')).dx, 62);
+        // Title after the state mark: gutter + 24 mark + 14 gap.
+        expect(tester.getTopLeft(find.text('Wire the wake')).dx,
+            (kAndroidLook ? 32 : MK.gutter) + 24 + 14);
         // Group label.
         expect(find.text('snippet-mobile-all'), findsNWidgets(2)); // group label + sub
         // Needs you row: amber word only; failed row carries the word.
-        expect(find.text('Needs you'), findsNWidgets(2)); // chip + row
+        expect(find.text('Needs you'), findsOneWidget); // row; the chip is rich text
         expect(find.text('Failed - feat/wake'), findsOneWidget);
       });
     }
@@ -87,10 +89,10 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(_wrap(1, _screen(_sessions)));
     await tester.pump();
-    expect(find.bySemanticsLabel('Working 1'), findsOneWidget);
-    expect(find.bySemanticsLabel('Needs you 1'), findsOneWidget);
-    expect(find.bySemanticsLabel('Done 2'), findsOneWidget);
-    await tester.tap(find.bySemanticsLabel('Done 2'));
+    expect(find.bySemanticsLabel('Working, 1'), findsOneWidget);
+    expect(find.bySemanticsLabel('Needs you, 1'), findsOneWidget);
+    expect(find.bySemanticsLabel('Done, 2'), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('Done, 2'));
     await tester.pump();
     expect(find.byType(SessionRowPhone), findsNWidgets(2));
   });
@@ -105,7 +107,7 @@ void main() {
     expect(find.text('Start one from a folder on your Mac.'), findsOneWidget);
     await tester.pumpWidget(_wrap(1, _screen([_sessions[1]])));
     await tester.pump();
-    await tester.tap(find.bySemanticsLabel('Working 0'));
+    await tester.tap(find.bySemanticsLabel('Working, 0'));
     await tester.pump();
     expect(find.text('Nothing here'), findsOneWidget);
     expect(find.text('No working sessions.'), findsOneWidget);

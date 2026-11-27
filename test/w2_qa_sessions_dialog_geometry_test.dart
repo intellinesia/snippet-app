@@ -302,8 +302,8 @@ void main() {
         await t.pump();
         expect(t.takeException(), isNull);
         expect(find.textContaining('Needs you'), findsNothing);
-        final allChip = t.getRect(find.bySemanticsLabel('All 1'));
-        final doneChip = t.getRect(find.bySemanticsLabel('Done 1'));
+        final allChip = t.getRect(find.bySemanticsLabel('All, 1'));
+        final doneChip = t.getRect(find.bySemanticsLabel('Done, 1'));
 
         debugPrint(
             'MEASURE SE-02 w=${w.toInt()} s=${s}x: needsHidden=true all=${allChip.width.toStringAsFixed(1)}x${allChip.height.toStringAsFixed(1)} '

@@ -3,13 +3,12 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../mochi.dart';
 import '../../models.dart';
-import '../../quiet.dart';
 import '../../tap_detector.dart';
 import '../../theme.dart';
 import '../../toast_avoid.dart';
 import '../../widgets.dart';
+import '../../mobile_kit.dart';
 import '../session_list_row.dart' show projectLabel, sessionNeedsYou;
 import '../shell_nav.dart' show sessionBusy;
 import 'agents_home.dart' show SwitchRow;
@@ -224,7 +223,8 @@ class _QuietSessionsScreenState extends State<QuietSessionsScreen> {
       if (_searching)
         ToastAvoid(
             child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          padding: EdgeInsets.fromLTRB(kAndroidLook ? 16 : MK.gutter, 8,
+              kAndroidLook ? 16 : MK.gutter, 0),
           child: TextField(
             controller: _q,
             autofocus: true,
@@ -235,12 +235,18 @@ class _QuietSessionsScreenState extends State<QuietSessionsScreen> {
               isDense: true,
               filled: true,
               fillColor: AppColors.surface2,
+              prefixIcon: Padding(
+                padding: const EdgeInsets.only(left: 12, right: 8),
+                child: AppIcon('search', size: 16, color: AppColors.fg3),
+              ),
+              prefixIconConstraints:
+                  const BoxConstraints(minWidth: 36, minHeight: 20),
               hintText: 'Search sessions',
               hintStyle: sans(15, color: AppColors.fg3),
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(kAndroidLook ? 28 : 12),
                   borderSide: BorderSide.none),
             ),
           ),
@@ -272,22 +278,18 @@ class _QuietSessionsScreenState extends State<QuietSessionsScreen> {
             .reduce(math.max)
             .compareTo(groups[a]!.map((s) => s.lastActive).reduce(math.max)));
       for (final k in keys) {
-        children.add(Padding(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 4),
-          child: Text(k,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: sans(12, weight: W.label, color: AppColors.fg3)),
-        ));
+        children.add(MkSection(k));
         final rows = groups[k]!;
-        for (var i = 0; i < rows.length; i++) {
-          children.add(_row(rows[i], names, last: i == rows.length - 1));
-        }
+        children.add(MkList(children: [
+          for (var i = 0; i < rows.length; i++)
+            _row(rows[i], names, last: i == rows.length - 1),
+        ]));
       }
     } else {
-      for (var i = 0; i < shown.length; i++) {
-        children.add(_row(shown[i], names, last: i == shown.length - 1));
-      }
+      children.add(MkList(children: [
+        for (var i = 0; i < shown.length; i++)
+          _row(shown[i], names, last: i == shown.length - 1),
+      ]));
     }
     children.add(const SizedBox(height: 24));
     return CollapsingRoot(
@@ -344,10 +346,11 @@ class _IconTap extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
           child: SizedBox(
-              width: 48,
-              height: 48,
-              child:
-                  Center(child: AppIcon(icon, size: 20, color: AppColors.fg2))),
+              width: kAndroidLook ? 48 : 44,
+              height: kAndroidLook ? 48 : 44,
+              child: Center(
+                  child: AppIcon(icon,
+                      size: kAndroidLook ? 22 : 19, color: AppColors.fg1))),
         ),
       );
 }
@@ -370,82 +373,29 @@ class _ChipRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
     final scaler = mq.textScaler.clamp(maxScaleFactor: 1.35);
+    // Needs you shows only while something needs the user (or it is selected).
     final visible = [
       for (final f in SessionsFilter.values)
-        if (f != SessionsFilter.needs || (counts[f] ?? 0) > 0 || f == filter)
-          f,
+        if (f != SessionsFilter.needs || (counts[f] ?? 0) > 0 || f == filter) f,
     ];
     return MediaQuery(
       data: mq.copyWith(textScaler: scaler),
-      child: SizedBox(
-        height: 44,
-        child: ListView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          children: [
-            for (var i = 0; i < visible.length; i++) ...[
-              if (i > 0) const SizedBox(width: 8),
-              _Chip(visible[i], counts[visible[i]] ?? 0, visible[i] == filter,
-                  () => onSelect(visible[i])),
-            ],
-          ],
-        ),
+      child: MkFilterGroup<SessionsFilter>(
+        padding: EdgeInsets.fromLTRB(
+            kAndroidLook ? 16 : MK.gutter, 2, kAndroidLook ? 16 : MK.gutter, 0),
+        options: [
+          for (final f in visible)
+            MkFilter(f, _filterLabel(f), count: counts[f] ?? 0),
+        ],
+        selected: filter,
+        onSelect: onSelect,
       ),
     );
   }
 }
 
-class _Chip extends StatelessWidget {
-  const _Chip(this.f, this.count, this.selected, this.onTap);
-  final SessionsFilter f;
-  final int count;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final label = _filterLabel(f);
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: '$label $count',
-      child: ExcludeSemantics(
-        child: TapDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: Container(
-            height: 44,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: selected ? AppColors.fg1 : AppColors.surface2,
-              borderRadius: BorderRadius.circular(22),
-            ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              if (f == SessionsFilter.needs && count > 0) ...[
-                Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                        color: quietAmber, shape: BoxShape.circle)),
-                const SizedBox(width: 6),
-              ],
-              Text(label,
-                  style: sans(13,
-                      weight: selected ? W.label : W.body,
-                      color: selected ? AppColors.bg : AppColors.fg2)),
-              const SizedBox(width: 6),
-              Text('$count',
-                  style:
-                      sans(13, color: selected ? AppColors.bg : AppColors.fg3)),
-            ]),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// One session row (SE-02): 36 avatar at x16, text at x62, time at the end.
+/// One session row: the state mark leads, title over a mono branch, time on
+/// the right. No folder tiles.
 class SessionRowPhone extends StatelessWidget {
   const SessionRowPhone({
     super.key,
@@ -470,20 +420,25 @@ class SessionRowPhone extends StatelessWidget {
     final title = sessionRowTitle(s);
     final time = relativeTime(s.lastActive);
     final sub = _sub(s);
-    final agentId = s.displayAgentId ?? 'snippet';
+    final ch = s.changes ?? s.totalChanges;
+    final diff = ch == null || (ch.added == 0 && ch.removed == 0)
+        ? null
+        : '+${ch.added} -${ch.removed}';
 
-    Widget avatar;
+    Widget mark;
     if (selecting) {
-      avatar = AppIcon(selected ? 'check-circle' : 'circle',
+      mark = AppIcon(selected ? 'check-circle' : 'circle',
           size: 24,
           color: selected ? AppColors.fg1 : AppColors.fg3,
           filled: selected);
-    } else if (s.agentId == null && s.workerAgentId == null) {
-      avatar = AppIcon('folder', size: 20, color: AppColors.fg2);
     } else {
-      avatar = AgentMochi(agentId,
-          size: 28,
-          state: busy ? AgentCharacterState.working : AgentCharacterState.idle);
+      mark = MkStateMark(needs
+          ? MkState.needsYou
+          : busy
+              ? MkState.working
+              : failed
+                  ? MkState.failed
+                  : MkState.done);
     }
     final stateWord = needs
         ? 'Needs you'
@@ -491,7 +446,10 @@ class SessionRowPhone extends StatelessWidget {
             ? 'Working'
             : failed
                 ? 'Failed'
-                : 'Done';
+                : 'Completed';
+    // Android rows sit inside segmented cards, which own the outer inset.
+    final left = kAndroidLook ? 16.0 : MK.gutter;
+    const markSlot = 24.0, gap = 14.0;
     return Semantics(
       button: true,
       selected: selected,
@@ -502,65 +460,65 @@ class SessionRowPhone extends StatelessWidget {
           onTap: onTap,
           onLongPress: onLongPress,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 56),
+            constraints: const BoxConstraints(minHeight: 64),
             child: Stack(children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                child: Row(children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                        color: AppColors.surface2, shape: BoxShape.circle),
-                    child: avatar,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(15,
-                                height: 20 / 15,
-                                weight: W.label,
-                                color: AppColors.fg1)),
-                        if (needs)
-                          Row(children: [
-                            const QuietHand(size: 16),
-                            const SizedBox(width: 4),
-                            Text('Needs you',
-                                style: sans(12.5,
-                                    weight: W.label, color: quietAmber)),
-                          ])
-                        else
-                          Text(sub,
+                padding: EdgeInsets.fromLTRB(left, 11, left, 11),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: markSlot,
+                      height: 21,
+                      child: OverflowBox(
+                          maxHeight: 30, child: Center(child: mark)),
+                    ),
+                    const SizedBox(width: gap),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: sans(12.5,
-                                  height: 18 / 12.5, color: AppColors.fg3)),
-                      ],
+                              style: mkRowTitle()),
+                          const SizedBox(height: 2),
+                          if (needs)
+                            Text('Needs you',
+                                style:
+                                    sans(13, weight: W.label, color: MK.amber))
+                          else
+                            Text.rich(
+                              TextSpan(children: [
+                                TextSpan(text: sub),
+                                if (diff != null) ...[
+                                  TextSpan(
+                                      text: '  ·  ',
+                                      style: TextStyle(color: AppColors.fg4)),
+                                  TextSpan(text: diff),
+                                ],
+                              ]),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: mkMonoSub(),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-                  if (busy || failed) ...[
-                    const SizedBox(width: 8),
-                    busy
-                        ? const SpinnerGlyph(size: 14)
-                        : AppIcon('x', size: 14, color: AppColors.fg2),
-                    const SizedBox(width: 6),
-                  ] else
-                    const SizedBox(width: 8),
-                  Text(time, style: sans(12, color: AppColors.fg3)),
-                ]),
+                    const SizedBox(width: 12),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(time, style: mkTime()),
+                    ),
+                  ],
+                ),
               ),
-              if (!last)
+              if (!last && !kAndroidLook)
                 Positioned(
-                    left: 62,
-                    right: 16,
+                    left: left + markSlot + gap,
+                    right: left,
                     bottom: 0,
-                    child: Container(height: 1, color: AppColors.border)),
+                    child: Container(height: 0.5, color: MK.hairline)),
             ]),
           ),
         ),
@@ -569,13 +527,12 @@ class SessionRowPhone extends StatelessWidget {
   }
 }
 
-/// The working glyph: the shared breathing dots.
+/// The working glyph on phone: the morph, the one working indicator.
 class SpinnerGlyph extends StatelessWidget {
   const SpinnerGlyph({super.key, this.size = 14});
   final double size;
   @override
-  Widget build(BuildContext context) =>
-      Spinner(size: size, color: AppColors.fg2);
+  Widget build(BuildContext context) => MkMorph(size: size);
 }
 
 class _Empty extends StatelessWidget {
