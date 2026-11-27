@@ -142,7 +142,10 @@ const Map<SettingsPage, (String, List<String>)> _kSettingsMeta = {
     'Theme palette, accent colour, UI typeface and code font saved on this device.',
     ['theme', 'accent', 'color', 'font', 'typeface', 'cove', 'geist'],
   ),
-  SettingsPage.models: ('', ['inference', 'models', 'providers', 'keys']),
+  SettingsPage.models: (
+    'Models, providers and the keys they use',
+    ['inference', 'models', 'providers', 'keys']
+  ),
   SettingsPage.routing: (
     'Which model does each kind of work',
     ['fallback', 'limits', 'priority'],
@@ -151,18 +154,36 @@ const Map<SettingsPage, (String, List<String>)> _kSettingsMeta = {
     'Tokens and rate limits by provider',
     ['tokens', 'cost', 'billing', 'limits'],
   ),
-  SettingsPage.memory: ('', ['remember']),
-  SettingsPage.scheduled: ('', ['recurring', 'cron']),
-  SettingsPage.wakes: ('', ['wake', 'schedule', 'agents']),
-  SettingsPage.keepWarm: ('', ['keep warm', 'cache', 'warm']),
-  SettingsPage.vault: ('', ['secrets', 'keys', 'credentials']),
+  SettingsPage.memory: (
+    'What agents remember between sessions',
+    ['remember'],
+  ),
+  SettingsPage.scheduled: (
+    'Recurring jobs and when they next run',
+    ['recurring', 'cron'],
+  ),
+  SettingsPage.wakes: (
+    'When agents wake up on their own',
+    ['wake', 'schedule', 'agents'],
+  ),
+  SettingsPage.keepWarm: (
+    'Sessions kept cached so replies stay quick',
+    ['keep warm', 'cache', 'warm'],
+  ),
+  SettingsPage.vault: (
+    'Secrets agents use without seeing them',
+    ['secrets', 'keys', 'credentials'],
+  ),
   SettingsPage.voice: (
-    '',
+    'Voice notes and how they are transcribed',
     ['voice notes', 'transcription', 'speech model', 'microphone'],
   ),
-  SettingsPage.webSearch: ('', ['exa', 'search', 'internet', 'browse']),
+  SettingsPage.webSearch: (
+    'Let agents search and read the web',
+    ['exa', 'search', 'internet', 'browse'],
+  ),
   SettingsPage.accounts: (
-    '',
+    'Signed-in subscriptions and rotation',
     ['subscription', 'rotation', 'chatgpt', 'xai', 'claude'],
   ),
 };

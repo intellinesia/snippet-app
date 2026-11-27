@@ -10,6 +10,8 @@ import '../api.dart';
 import '../models.dart';
 import '../notifications.dart';
 import '../panel.dart';
+import '../mobile_kit/controls.dart' show MkToggle;
+import '../mobile_kit/lists.dart' show MkGroup, MkGroupRow;
 import '../platform.dart';
 import '../settings_form.dart';
 import '../settings_target.dart';
@@ -1433,9 +1435,11 @@ Future<void> _showMachineMenu(
       alignEnd: true,
       minWidth: 160,
       items: [
-        if (connect) appMenuItem(value: 'connect', label: 'Connect'),
-        appMenuItem(value: 'rename', label: 'Rename'),
-        appMenuItem(value: 'remove', label: 'Remove', danger: true),
+        if (connect)
+          appMenuItem(value: 'connect', label: 'Connect', icon: 'link'),
+        appMenuItem(value: 'rename', label: 'Rename', icon: 'edit'),
+        appMenuItem(
+            value: 'remove', label: 'Remove', icon: 'trash', danger: true),
       ]);
   if (picked == 'connect') onSelect();
   if (picked == 'rename') onRename();
@@ -2146,6 +2150,31 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
 
   Widget _machineRowBase(Instance i) {
     final isActive = i.url == widget.active?.url;
+    if (kMobile && _renamingUrl != i.url) {
+      final canConnect = !isActive && widget.onSelect != null;
+      // The row is the menu: Connect, Rename and Remove behind one tap.
+      return Builder(
+        builder: (anchor) => MkGroupRow(
+          label: i.label.isEmpty ? hostOf(i.url) : i.label,
+          subtitle: hostOf(i.url),
+          icon: 'monitor',
+          value: isActive ? 'Active' : null,
+          trailing: Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: AppIcon('more-horizontal', size: 20, color: AppColors.fg3),
+          ),
+          onTap: () => _showMachineMenu(
+            context,
+            anchor: anchor,
+            instance: i,
+            connect: canConnect,
+            onSelect: () => widget.onSelect?.call(i),
+            onRename: () => _startRename(i),
+            onRemove: () => _confirmRemove(i),
+          ),
+        ),
+      );
+    }
     if (_renamingUrl == i.url) {
       return SettingsRow(
         label: i.label,
@@ -2187,8 +2216,57 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
         ),
       );
 
+  /// Phone Machines page on the kit's grouped rows.
+  Widget _kitGeneral() => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: 8),
+          MkGroup(
+            header: 'Saved',
+            footer:
+                'Snippet talks to the daemon on each machine. Run snippet serve on a new one and paste the link it prints.',
+            children: [
+              if (_instances.isEmpty)
+                const MkGroupRow(
+                  label: 'No saved machines',
+                  subtitle: 'Run snippet serve on one and add its link.',
+                  icon: 'monitor',
+                )
+              else
+                for (final i in _instances) _machineRow(i),
+            ],
+          ),
+          MkGroup(
+            header: 'Sessions',
+            children: [
+              MkGroupRow(
+                label: 'Ask before running commands',
+                subtitle:
+                    'Off lets agents run commands and edit files without asking, in every session here.',
+                icon: 'shield',
+                onTap: _manual == null ? null : () => _setManual(!_manual!),
+                trailing: MkToggle(
+                    value: _manual ?? false,
+                    onChanged: _manual == null ? null : _setManual),
+              ),
+              if (kCanNotify)
+                MkGroupRow(
+                  label: 'Notifications',
+                  subtitle: 'When a session needs you or finishes',
+                  icon: 'bell',
+                  onTap: _notifBusy ? null : () => _toggleNotif(!_notif),
+                  trailing: MkToggle(
+                      value: _notif,
+                      onChanged: _notifBusy ? null : _toggleNotif),
+                ),
+            ],
+          ),
+        ],
+      );
+
   List<Widget> _nativeGeneral() {
     if (widget.v5Desktop) return _v5General();
+    if (kMobile && !_addingMachine) return [_kitGeneral()];
     return [
       if (_addingMachine)
         ..._addMachineBody()
@@ -2333,44 +2411,8 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
 
   Widget _mobileGeneralBody() {
     if (_addingMachine) return _mobileAddMachineBody();
-    return PageBody(children: [
-      const SettingsGroupLabel('Machines'),
-      ListGroup(children: [
-        if (_instances.isEmpty)
-          const SettingsRow(
-            label: 'No saved machines',
-            sub: 'Run snippet serve on one and add its link.',
-          )
-        else
-          for (final i in _instances) _machineRow(i),
-      ]),
-      Padding(
-        padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
-        child: Text(
-          'Snippet talks to the daemon on each machine. Run snippet serve on '
-          'a new one and paste the link it prints.',
-          style: TS.meta(),
-        ),
-      ),
-      const SettingsGroupLabel('Sessions'),
-      ListGroup(children: [
-        SettingsRow(
-          label: 'Ask before running commands',
-          sub:
-              'Off lets agents run shell commands and edit files without stopping to ask. Applies to every session on this machine.',
-          trailing: SettingsSwitch(
-              value: _manual ?? false,
-              onChanged: _manual == null ? null : _setManual),
-        ),
-        if (kCanNotify)
-          SettingsRow(
-            label: 'Notifications',
-            sub: 'When a session needs you or finishes.',
-            trailing: SettingsSwitch(
-                value: _notif, onChanged: _notifBusy ? null : _toggleNotif),
-          ),
-      ]),
-    ]);
+    return SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 32), child: _kitGeneral());
   }
 
   Widget _mobileBody(SettingsPage page) => switch (page) {

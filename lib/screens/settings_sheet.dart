@@ -135,6 +135,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
   static String _count(int n, String noun) => '$n $noun${n == 1 ? '' : 's'}';
 
   static String _compact(int n) {
+    if (n >= 1000000000) return '${(n / 1000000000).toStringAsFixed(1)}B';
     if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
     if (n >= 1000) return '${(n / 1000).round()}k';
     return '$n';
@@ -276,6 +277,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
               MkGroupRow(
                 key: Key('settings-sheet-row-${r.page.name}'),
                 label: _label(r.page),
+                subtitle: settingsPageDescription(r.page),
                 icon: _phoneIcon[r.page] ?? r.icon ?? 'settings',
                 value: _values[r.page],
                 onTap: () => _open(r.page),

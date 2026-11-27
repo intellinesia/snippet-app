@@ -32,7 +32,7 @@ PopupMenuItem<T> appMenuItem<T>({
       height: M.minTarget + 8,
       padding: EdgeInsets.zero,
       child: _SheetRowBody(
-          icon: icon,
+          icon: icon ?? _verbIcon(label),
           label: label,
           trailing: detail,
           danger: danger,
@@ -54,6 +54,27 @@ PopupMenuItem<T> appMenuItem<T>({
         selected: selected,
         disabled: !enabled),
   );
+}
+
+/// Phone sheet rows always lead with an icon; common verbs get theirs when the
+/// caller gave none.
+String? _verbIcon(String label) {
+  final w = label.toLowerCase().split(' ').first;
+  return const {
+    'rename': 'edit',
+    'edit': 'edit',
+    'remove': 'trash',
+    'delete': 'trash',
+    'connect': 'link',
+    'disconnect': 'x',
+    'copy': 'copy',
+    'open': 'external-link',
+    'share': 'share',
+    'download': 'download',
+    'pin': 'pin',
+    'unpin': 'pin',
+    'archive': 'archive',
+  }[w];
 }
 
 /// A richer popover row: icon, title, optional one-line description, and a
@@ -446,7 +467,8 @@ List<Widget> _appMenuSheetEntries<T>(
       splashFactory: NoSplash.splashFactory,
       hoverColor: Colors.transparent,
       highlightColor: AppColors.surface2,
-      focusColor: AppColors.surface2,
+      // Autofocus is for keyboards; a touch-opened sheet shows no preselection.
+      focusColor: Colors.transparent,
       child: entry.child,
     ));
     first = false;

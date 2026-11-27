@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'file_icons.dart';
+import 'mobile_kit/tokens.dart';
 import 'platform.dart';
 import 'theme.dart';
 import 'widgets.dart';
@@ -221,18 +222,22 @@ class _TurnChangesCardState extends State<TurnChangesCard> {
         : reverted
             ? 'Reverted $total ${total == 1 ? 'file' : 'files'}'
             : '$total ${total == 1 ? 'file' : 'files'} changed';
-    final names = files.take(3).map((f) => f.path.split('/').last).join(', ');
-    final fileLine = [names, if (total > 3) '+${total - 3}']
+    final names = files.take(2).map((f) => f.path.split('/').last).join(', ');
+    final more = total - (files.length < 2 ? files.length : 2);
+    final fileLine = [names, if (more > 0) 'and $more more']
         .where((x) => x.isNotEmpty)
         .join(' ');
+    final hair = Container(
+        height: 0.5,
+        margin: const EdgeInsets.only(left: 52),
+        color: MK.hairline);
 
-    Widget action(String label, double width, VoidCallback? onTap) {
+    Widget action(String label, VoidCallback? onTap) {
       return TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Container(
-          // Board pill: s3, no outline, inside a 44 target.
-          height: 44,
+          height: 48,
           alignment: Alignment.center,
           child: Container(
             height: 36,
@@ -250,144 +255,181 @@ class _TurnChangesCardState extends State<TurnChangesCard> {
     }
 
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: S.s4),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: AppColors.surface1,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            TapDetector(
+      padding: EdgeInsets.symmetric(vertical: S.s6),
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          // The phone transcript sits on surface1, so the card steps up one.
+          color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(MK.groupRadius),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Semantics(
+            button: true,
+            expanded: _open,
+            child: TapDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => setState(() => _open = !_open),
-              child: SizedBox(
-                height: 48,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 64),
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(7, 0, 8, 0),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 14, 12),
                   child: Row(children: [
                     SizedBox(
-                      width: 18,
-                      height: 18,
+                      width: 24,
                       child: Center(
                         child: reverting
-                            ? Spinner(size: 13, color: AppColors.fg2)
+                            ? Spinner(size: 16, color: AppColors.fg2)
                             : AppIcon(reverted ? 'check' : 'file-diff',
-                                size: 14,
-                                color:
-                                    reverted ? AppColors.fg3 : AppColors.fg2),
+                                size: 20, color: AppColors.fg2),
                       ),
                     ),
-                    const SizedBox(width: 7),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: Text(title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(14, color: AppColors.fg2)),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: sans(15.5,
+                                  weight: W.label, color: AppColors.fg1)),
+                          if (fileLine.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(fileLine,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: sans(13, color: AppColors.fg3)),
+                          ],
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 12),
+                    _Delta(_n(e['add']), _n(e['del']), size: 13.5, tint: true),
                     const SizedBox(width: 10),
-                    _Delta(_n(e['add']), _n(e['del']), size: 12.5),
-                    const SizedBox(width: 8),
                     AnimatedRotation(
-                      turns: _open ? 0.25 : 0,
+                      turns: _open ? 0.5 : 0,
                       duration: Motion.fast,
-                      child: AppIcon('chevron-right',
-                          size: 12, color: AppColors.fg3),
+                      child: AppIcon('chevron-down',
+                          size: 16, color: AppColors.fg3),
                     ),
                   ]),
                 ),
               ),
             ),
-            if (_open) ...[
-              Container(height: 1, color: AppColors.line),
-              for (final f in files)
-                TapDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: widget.onOpenFile == null
-                      ? null
-                      : () => widget.onOpenFile!(f.path),
-                  child: SizedBox(
-                    height: 48,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Row(children: [
-                        FileGlyph(f.path.split('/').last, size: 15),
-                        const SizedBox(width: 9),
-                        Expanded(child: _Path(f.path)),
-                        const SizedBox(width: 10),
-                        _Delta(f.add, f.del, size: 12.5, color: AppColors.fg3),
-                      ]),
-                    ),
-                  ),
-                ),
-              if (hidden > 0)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(32, 0, 10, 0),
-                  child: SizedBox(
-                    height: 32,
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                          '$hidden more ${hidden == 1 ? 'file' : 'files'}',
-                          style: sans(12, color: AppColors.fg3)),
-                    ),
-                  ),
-                ),
-              Container(
-                height: 52,
-                padding: const EdgeInsets.fromLTRB(10, 4, 6, 4),
-                decoration: BoxDecoration(
-                    border: Border(top: BorderSide(color: AppColors.line))),
-                child: Row(children: [
-                  if (reverting)
-                    Text('Reverting', style: sans(12, color: AppColors.fg2))
-                  else if (reverted)
-                    Text('Reverted', style: sans(12, color: AppColors.fg3)),
-                  const Spacer(),
-                  if (reverted)
-                    action('Undo', 90, widget.onReview)
-                  else if (!reverting)
-                    action('Revert all', 120, widget.onReview),
-                ]),
+          ),
+          if (_open) ...[
+            Container(height: 0.5, color: MK.hairline),
+            for (var i = 0; i < files.length; i++) ...[
+              if (i > 0) hair,
+              _PhoneFileRow(
+                path: files[i].path,
+                add: files[i].add,
+                del: files[i].del,
+                onTap: widget.onOpenFile == null
+                    ? null
+                    : () => widget.onOpenFile!(files[i].path),
               ),
             ],
-          ]),
-        ),
-        if (!_open && fileLine.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(left: 32, top: 2),
-            child: Text(fileLine,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sans(12, color: AppColors.fg3)),
-          ),
-      ]),
+            if (hidden > 0) ...[
+              hair,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(52, 0, 16, 0),
+                child: SizedBox(
+                  height: 44,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                        '$hidden more ${hidden == 1 ? 'file' : 'files'}',
+                        style: sans(13, color: AppColors.fg3)),
+                  ),
+                ),
+              ),
+            ],
+            Container(height: 0.5, color: MK.hairline),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 12, 4),
+              child: Row(children: [
+                if (reverting)
+                  Text('Reverting', style: sans(13, color: AppColors.fg2))
+                else if (reverted)
+                  Text('Reverted', style: sans(13, color: AppColors.fg3)),
+                const Spacer(),
+                if (reverted)
+                  action('Undo', widget.onReview)
+                else if (!reverting)
+                  action('Revert all', widget.onReview),
+              ]),
+            ),
+          ],
+        ]),
+      ),
     );
   }
 }
 
-class _Path extends StatelessWidget {
-  const _Path(this.path);
+/// One changed file on phone: name over its folder, deltas trailing.
+class _PhoneFileRow extends StatelessWidget {
+  const _PhoneFileRow(
+      {required this.path, required this.add, required this.del, this.onTap});
   final String path;
+  final int add;
+  final int del;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    // Mono, trimmed from the start so the file name stays readable.
-    final shown =
-        path.length > 34 ? '\u2026${path.substring(path.length - 33)}' : path;
-    return Text(shown,
-        maxLines: 1,
-        softWrap: false,
-        overflow: TextOverflow.ellipsis,
-        style: mono(12.5, color: AppColors.fg2));
+    final cut = path.lastIndexOf('/');
+    final name = cut < 0 ? path : path.substring(cut + 1);
+    final dir = cut <= 0 ? '' : path.substring(0, cut);
+    return TapDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 56),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 9, 16, 9),
+          child: Row(children: [
+            SizedBox(
+                width: 24, child: Center(child: FileGlyph(name, size: 18))),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: mono(13.5, color: AppColors.fg1)),
+                  if (dir.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(dir,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: mono(11.5, color: AppColors.fg3)),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            _Delta(add, del, size: 13, tint: true),
+          ]),
+        ),
+      ),
+    );
   }
 }
 
 class _Delta extends StatelessWidget {
-  const _Delta(this.add, this.del, {required this.size, this.color});
+  const _Delta(this.add, this.del,
+      {required this.size, this.color, this.tint = false});
+
+  /// Phone: the theme's diff colours.
+  final bool tint;
 
   final Color? color;
 
@@ -401,13 +443,17 @@ class _Delta extends StatelessWidget {
       if (add > 0)
         Text('+$add',
             style: kMobile
-                ? sans(size, color: color ?? AppColors.fg1, tabular: true)
+                ? sans(size,
+                    color: tint ? AppColors.diffAddFg : color ?? AppColors.fg1,
+                    tabular: true)
                 : mono(size, color: color ?? AppColors.fg2)),
       if (add > 0 && del > 0) SizedBox(width: S.s6),
       if (del > 0)
-        Text(kMobile ? '-$del' : '−$del',
+        Text('−$del',
             style: kMobile
-                ? sans(size, color: color ?? AppColors.fg2, tabular: true)
+                ? sans(size,
+                    color: tint ? AppColors.diffDelFg : color ?? AppColors.fg2,
+                    tabular: true)
                 : mono(size, color: color ?? AppColors.fg3)),
     ]);
   }

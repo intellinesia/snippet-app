@@ -275,9 +275,13 @@ class MkGroupRow extends StatelessWidget {
     this.destructive = false,
     this.valueMono = false,
     this.bareIcon = false,
+    this.subtitle,
   });
   final String label;
   final String? icon;
+
+  /// A description line under the label.
+  final String? subtitle;
 
   /// The icon alone, as on the sheet tiles above, without the tinted box.
   final bool bareIcon;
@@ -314,6 +318,9 @@ class MkGroupRow extends StatelessWidget {
                     child: AppIcon(icon!,
                         size: a ? 19 : 17, color: AppColors.fg2)),
               );
+    final sub = subtitle == null || subtitle!.isEmpty ? null : subtitle!;
+    final hasValue = value != null && value!.isNotEmpty;
+    final subStyle = sans(a ? 13.5 : 13, color: AppColors.fg3);
     final Widget content;
     if (a) {
       content = Row(children: [
@@ -324,7 +331,15 @@ class MkGroupRow extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(label, style: mkRowTitle(color: ink)),
-              if (value != null && value!.isNotEmpty)
+              if (sub != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(sub,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: subStyle),
+                )
+              else if (hasValue)
                 Text(value!,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -332,7 +347,20 @@ class MkGroupRow extends StatelessWidget {
             ],
           ),
         ),
-        if (trailing != null) trailing!,
+        // With a description the value moves to the trailing edge.
+        if (sub != null && hasValue)
+          Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 110),
+              child: Text(value!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: valueStyle),
+            ),
+          ),
+        if (trailing != null) ...[const SizedBox(width: 12), trailing!],
       ]);
     } else {
       content = Row(children: [
@@ -345,20 +373,50 @@ class MkGroupRow extends StatelessWidget {
                   ? null
                   : Border(bottom: BorderSide(color: MK.hairline, width: 0.5)),
             ),
+            padding:
+                sub == null ? null : const EdgeInsets.symmetric(vertical: 10),
             child: Row(children: [
               Expanded(
-                  child: Text(label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(15.5, color: ink))),
+                  child: sub == null
+                      ? Text(label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(15.5, color: ink))
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: sans(15.5, color: ink)),
+                            const SizedBox(height: 2),
+                            Text(sub,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: subStyle),
+                          ],
+                        )),
               // Tight so the value and chevron sit on the trailing edge.
-              if (value != null && value!.isNotEmpty)
+              if (hasValue && sub == null)
                 Expanded(
                   child: Text(value!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.right,
                       style: valueStyle),
+                )
+              else if (hasValue)
+                Padding(
+                  padding: const EdgeInsets.only(left: 12),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 110),
+                    child: Text(value!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
+                        style: valueStyle),
+                  ),
                 ),
               if (trailing != null) ...[const SizedBox(width: 8), trailing!],
               if (chevron && onTap != null && trailing == null) ...[

@@ -94,7 +94,9 @@ void main() {
     expect(find.text('Review changes'), findsNothing);
     await tester.tap(find.text('2 files changed'));
     await tester.pump();
-    expect(find.text('lib/a.dart'), findsOneWidget);
+    // Name over its folder.
+    expect(find.text('a.dart'), findsOneWidget);
+    expect(find.text('lib'), findsNWidgets(2));
     expect(find.text('Revert all'), findsOneWidget);
     expect(tester.getSize(find.ancestor(
             of: find.text('Revert all'), matching: find.byType(Container)).first).height,
