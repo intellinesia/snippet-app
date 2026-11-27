@@ -325,7 +325,7 @@ class ApprovalBarState extends State<ApprovalBar> {
 
     if (!kMobile) {
       final alwaysLabel = ruleLabel != null
-          ? 'Always allow $ruleLabel in this session'
+          ? 'Always allow $ruleLabel'
           : (canAlways ? 'Always allow' : null);
       _alwaysKind = ruleLabel != null ? 'approve_rule' : 'approve_all';
       final agent = (widget.agentName ?? widget.agentId ?? '').trim();

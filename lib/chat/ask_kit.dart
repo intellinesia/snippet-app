@@ -137,35 +137,40 @@ class AskButton extends StatelessWidget {
           child: InkWell(
             onTap: enabled ? onTap : null,
             borderRadius: radius,
-            child: Container(
+            child: SizedBox(
               height: kMobile ? 36 : 28,
-              padding: EdgeInsets.symmetric(horizontal: hPad),
-              alignment: Alignment.center,
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                if (busy) ...[
-                  Spinner(size: 12, color: ink),
-                  const SizedBox(width: 6),
-                ] else if (icon != null) ...[
-                  AskIcon(icon!, size: 13, color: ink),
-                  const SizedBox(width: 6),
-                ],
-                Flexible(
-                  child: Text(label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(kMobile ? 12.5 : 12,
-                          height: 16 / (kMobile ? 12.5 : 12),
-                          weight: FontWeight.w500,
-                          color: ink)),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: hPad),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    if (busy) ...[
+                      Spinner(size: 12, color: ink),
+                      const SizedBox(width: 6),
+                    ] else if (icon != null) ...[
+                      AskIcon(icon!, size: 13, color: ink),
+                      const SizedBox(width: 6),
+                    ],
+                    Flexible(
+                      child: Text(label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(kMobile ? 12.5 : 12,
+                              height: 16 / (kMobile ? 12.5 : 12),
+                              weight: FontWeight.w500,
+                              color: ink)),
+                    ),
+                    if (shortcut != null && shortcut!.isNotEmpty && !busy) ...[
+                      const SizedBox(width: 6),
+                      Text(shortcut!,
+                          style: codeMono(10,
+                              height: 14 / 10,
+                              color: ink.withValues(alpha: 0.6))),
+                    ],
+                  ],
                 ),
-                if (shortcut != null && shortcut!.isNotEmpty && !busy) ...[
-                  const SizedBox(width: 6),
-                  Text(shortcut!,
-                      style: codeMono(10,
-                          height: 14 / 10,
-                          color: ink.withValues(alpha: 0.6))),
-                ],
-              ]),
+              ),
             ),
           ),
         ),
@@ -215,8 +220,11 @@ class DesktopAskCard extends StatelessWidget {
         right.add(a);
       }
     }
+    final leadingGhost = left.isNotEmpty &&
+        left.first is AskButton &&
+        (left.first as AskButton).variant == AskButtonVariant.ghost;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      padding: EdgeInsets.fromLTRB(leadingGhost ? 6 : 14, 9, 14, 9),
       decoration: BoxDecoration(
         color: AppColors.surface1,
         border: Border(top: BorderSide(color: AppColors.border)),
@@ -224,16 +232,21 @@ class DesktopAskCard extends StatelessWidget {
       child: Row(children: [
         if (left.isNotEmpty)
           Expanded(
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: left,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                alignment: WrapAlignment.start,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: left,
+              ),
             ),
-          ),
-        if (left.isEmpty) const Spacer(),
+          )
+        else
+          const Spacer(),
         if (right.isNotEmpty) ...[
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Row(mainAxisSize: MainAxisSize.min, children: [
             for (var i = 0; i < right.length; i++) ...[
               if (i > 0) const SizedBox(width: 6),
@@ -643,10 +656,14 @@ class AskOptionCard extends StatelessWidget {
       selected: selected,
       label: title,
       child: Material(
-        color: selected ? AppColors.surface3 : AppColors.surface1,
+        color: selected
+            ? (kMobile ? AppColors.surface3 : AppColors.surface2)
+            : (kMobile ? AppColors.surface1 : AppColors.bg),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
-          side: selected ? BorderSide(color: AppColors.fg1) : BorderSide.none,
+          side: selected
+              ? BorderSide(color: AppColors.fg1)
+              : (kMobile ? BorderSide.none : BorderSide(color: AppColors.border)),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
