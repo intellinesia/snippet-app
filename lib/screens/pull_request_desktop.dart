@@ -1611,23 +1611,23 @@ class _DesktopFilesState extends State<_DesktopFiles> {
     final viewed = files.where((f) => widget.viewed.contains(f.path)).length;
     final pending = widget.pending.length;
     return Padding(
-      padding: EdgeInsets.fromLTRB(S.s20, S.s6, S.of(14), S.s6),
+      padding: EdgeInsets.fromLTRB(S.s20, S.s4, S.of(14), S.s4),
       child: Row(children: [
-        SizedBox(
-          width: 14,
-          height: 14,
-          child: viewed == files.length && files.isNotEmpty
-              ? AppIcon('check-circle', size: 14, color: AppColors.ok)
-              : CircularProgressIndicator(
-                  value: files.isEmpty ? 0 : viewed / files.length,
-                  strokeWidth: 2,
-                  color: AppColors.accent,
-                  backgroundColor: AppColors.fg4.withValues(alpha: 0.3),
-                ),
-        ),
-        SizedBox(width: S.s8),
         Text('$viewed of ${files.length} viewed',
-            style: sans(13, color: AppColors.fg3)),
+            style: sans(12, color: AppColors.fg3, tabular: true)),
+        SizedBox(width: S.s8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(2),
+          child: SizedBox(
+            width: 40,
+            height: 3,
+            child: LinearProgressIndicator(
+              value: files.isEmpty ? 0 : viewed / files.length,
+              color: viewed == files.length ? AppColors.ok : AppColors.accent,
+              backgroundColor: AppColors.fg1.withValues(alpha: 0.12),
+            ),
+          ),
+        ),
         if (pending > 0) ...[
           SizedBox(width: S.s12),
           AppIcon('message', size: 12, color: AppColors.accent),
@@ -1645,7 +1645,7 @@ class _DesktopFilesState extends State<_DesktopFiles> {
                   borderRadius: BorderRadius.circular(R.sm)),
             ),
             icon: AppIcon('folder-open', size: 13, color: AppColors.fg3),
-            label: Text('Jump to file', style: sans(13, color: AppColors.fg2)),
+            label: Text('Jump to file', style: sans(12, color: AppColors.fg2)),
           ),
         ),
       ]),
@@ -1661,7 +1661,7 @@ class _DesktopFilesState extends State<_DesktopFiles> {
         for (final f in files)
           SliverPadding(
             key: _keys.putIfAbsent(f.path, () => GlobalKey()),
-            padding: EdgeInsets.symmetric(horizontal: S.s16),
+            padding: EdgeInsets.symmetric(horizontal: S.s12),
             sliver: PrFileDiff(
               file: f,
               lines: _parsed[f.path] ?? const [],

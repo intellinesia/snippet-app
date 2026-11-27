@@ -50,6 +50,7 @@ class ChatComposer extends StatelessWidget {
     this.deskModel,
     this.deskCold,
     this.deskHint,
+    this.deskUsage,
     this.highlight = false,
     this.attentionExclude,
     this.besideCard,
@@ -105,6 +106,9 @@ class ChatComposer extends StatelessWidget {
   final Widget? deskModel;
   final Widget? deskCold;
   final Widget? Function()? deskHint;
+
+  /// Context usage, shown at the right of the line under the card.
+  final Widget? deskUsage;
   final bool highlight;
   final String? attentionExclude;
 
@@ -212,6 +216,7 @@ class ChatComposer extends StatelessWidget {
       cold: deskCold,
       hint: deskHint?.call(),
       recipient: deskRecipient,
+      usage: deskUsage,
       action: _deskAction(),
     );
   }

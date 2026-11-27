@@ -2389,7 +2389,7 @@ class _PrFileDiffState extends State<PrFileDiff> {
   TextSpan _span(int index, String text) => _spans.putIfAbsent(
       index,
       () => highlightedCodeSpan(text.isEmpty ? ' ' : text,
-          language: _ext, fontSize: kMobile ? 12 : 13, height: 1.5));
+          language: _ext, fontSize: 12, height: 1.5));
 
   (int, int)? get _range {
     if (_selStart == null) return null;
@@ -2497,7 +2497,7 @@ class _PrFileDiffState extends State<PrFileDiff> {
       return Text(path,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: mono(13, color: AppColors.fg1));
+          style: mono(kMobile ? 13 : 12, color: AppColors.fg1));
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(path.substring(slash + 1),
@@ -2518,14 +2518,18 @@ class _PrFileDiffState extends State<PrFileDiff> {
       child: InkWell(
         onTap: () => setState(() => _collapsed = !_collapsed),
         child: Container(
-          margin: EdgeInsets.only(top: S.s8),
-          padding: EdgeInsets.fromLTRB(S.s8, S.s6, S.s8, S.s6),
+          margin: EdgeInsets.only(top: kMobile ? S.s8 : S.s6),
+          padding: kMobile
+              ? EdgeInsets.fromLTRB(S.s8, S.s6, S.s8, S.s6)
+              : const EdgeInsets.fromLTRB(8, 0, 4, 0),
+          constraints: kMobile ? null : const BoxConstraints(minHeight: 32),
           child: Row(children: [
-            AppIcon(_collapsed ? 'chevron-right' : 'chevron-down', size: 14, color: AppColors.fg3),
+            AppIcon(_collapsed ? 'chevron-right' : 'chevron-down',
+                size: kMobile ? 14 : 12, color: AppColors.fg3),
             SizedBox(width: S.s6),
             Expanded(child: _fileName(f.path)),
             SizedBox(width: S.s8),
-            prSize(f.additions, f.deletions, size: 11.5),
+            prSize(f.additions, f.deletions, size: kMobile ? 11.5 : 11),
             if (widget.onViewed != null) ...[
               SizedBox(width: S.s6),
               Tooltip(
@@ -2539,14 +2543,35 @@ class _PrFileDiffState extends State<PrFileDiff> {
                           child: SelectCheck(widget.viewed, size: 20),
                         ),
                       )
-                    : Checkbox(
-                  value: widget.viewed,
-                  visualDensity: VisualDensity.compact,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  activeColor: AppColors.accent,
-                  side: BorderSide(color: AppColors.fg4, width: 1.5),
-                  onChanged: (v) => widget.onViewed!(v ?? false),
-                ),
+                    : HoverSurface(
+                        radius: 6,
+                        onTap: () => widget.onViewed!(!widget.viewed),
+                        child: Container(
+                          height: 24,
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            widget.viewed
+                                ? AppIcon('check-square',
+                                    size: 13, color: AppColors.fg1)
+                                : Container(
+                                    width: 11,
+                                    height: 11,
+                                    margin: const EdgeInsets.all(1),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(3),
+                                      border: Border.all(
+                                          color: AppColors.fg3, width: 1.2),
+                                    ),
+                                  ),
+                            const SizedBox(width: 5),
+                            Text('Viewed',
+                                style: sans(12,
+                                    color: widget.viewed
+                                        ? AppColors.fg1
+                                        : AppColors.fg3)),
+                          ]),
+                        ),
+                      ),
               ),
             ],
           ]),
@@ -2562,8 +2587,10 @@ class _PrFileDiffState extends State<PrFileDiff> {
     if (line.kind == DiffKind.hunk) {
       return Container(
         color: AppColors.accentBg,
-        padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.of(5)),
-        child: Text(line.text, style: codeMono(12, color: AppColors.accent)),
+        padding: EdgeInsets.symmetric(
+            horizontal: S.of(10), vertical: kMobile ? S.of(5) : 3),
+        child: Text(line.text,
+            style: codeMono(kMobile ? 12 : 11.5, color: AppColors.accent)),
       );
     }
     final bg = selected
@@ -2586,12 +2613,13 @@ class _PrFileDiffState extends State<PrFileDiff> {
         onLongPress: kMobile ? () => _extend(index) : null,
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Container(
-            width: kMobile ? 40 : 46,
+            width: 40,
             padding: EdgeInsets.only(right: S.s6),
             color: selected ? AppColors.accent.withValues(alpha: 0.3) : null,
             child: Text('${number ?? ''}',
                 textAlign: TextAlign.right,
-                style: codeMono(11, height: 1.75, color: selected ? AppColors.fg1 : AppColors.fg4)),
+                // Same 18px line as the 12pt code beside it.
+                style: codeMono(11, height: 18 / 11, color: selected ? AppColors.fg1 : AppColors.fg4)),
           ),
           SizedBox(
             width: 16,

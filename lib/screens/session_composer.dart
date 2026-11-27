@@ -624,12 +624,12 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     );
   }
 
-  /// Desktop: how full the context is, beside the model; opens usage.
-  Widget _contextRing() {
+  /// Desktop: how full the context is, under the composer; opens usage.
+  Widget? _contextUsage() {
     final s = _state;
     final win = s?.contextWindow ?? 0;
     final used = s?.lastPromptTokens ?? 0;
-    if (win <= 0 || used <= 0) return const SizedBox.shrink();
+    if (win <= 0 || used <= 0) return null;
     final f = (used / win).clamp(0.0, 1.0);
     String k(int v) => v >= 1000 ? '${(v / 1000).round()}k' : '$v';
     final color = f > 0.9
@@ -647,20 +647,25 @@ extension _SessionScreenComposerExt on _SessionScreenState {
           sessionRailFloating.value = true;
         },
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
-          // A flat gauge: rings read as busy spinners next to the run state.
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(2),
-            child: SizedBox(
-              width: 16,
-              height: 3,
-              child: LinearProgressIndicator(
-                value: f,
-                color: color,
-                backgroundColor: AppColors.fg1.withValues(alpha: 0.12),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Text('${(f * 100).round()}% context',
+                style: sans(12, height: 16 / 12, color: AppColors.fg3,
+                    tabular: true)),
+            const SizedBox(width: 7),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: SizedBox(
+                width: 24,
+                height: 3,
+                child: LinearProgressIndicator(
+                  value: f,
+                  color: color,
+                  backgroundColor: AppColors.fg1.withValues(alpha: 0.12),
+                ),
               ),
             ),
-          ),
+          ]),
         ),
       ),
     );
@@ -983,9 +988,9 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                   onTap: () => _switchModel(chipCtx),
                 ),
               ),
-              _contextRing(),
             ])
           : null,
+      deskUsage: kMobile ? null : _contextUsage(),
       deskHint: !kMobile && running
           ? () => DeskRunningLabel(
                 startedAt: DateTime.tryParse(_state?.turnStartedAt ?? ''),

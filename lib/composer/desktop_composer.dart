@@ -348,39 +348,51 @@ class DeskComposerMeta extends InheritedWidget {
 
 /// The quiet machine, project and branch line under the desktop composer.
 class DeskMachineLine extends StatelessWidget {
-  const DeskMachineLine({super.key, required this.meta});
+  const DeskMachineLine({super.key, this.meta, this.trailing});
 
-  final DeskComposerMeta meta;
+  final DeskComposerMeta? meta;
+
+  /// Right-aligned, e.g. context usage.
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
-    final parts = [
-      meta.machine.trim(),
-      meta.project.trim(),
-      meta.branch.trim(),
-    ].where((p) => p.isNotEmpty).join(' · ');
-    if (parts.isEmpty) return const SizedBox.shrink();
+    final meta = this.meta;
+    final parts = meta == null
+        ? ''
+        : [
+            meta.machine.trim(),
+            meta.project.trim(),
+            meta.branch.trim(),
+          ].where((p) => p.isNotEmpty).join(' · ');
+    if (parts.isEmpty && trailing == null) return const SizedBox.shrink();
     return Padding(
       // Aligned with the card's content.
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        AppIcon('laptop', size: 13, color: AppColors.fg3),
-        const SizedBox(width: 7),
-        Flexible(
-          child: Text(parts,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: sans(12, height: 16 / 12, color: AppColors.fg3)),
-        ),
-        if (meta.online) ...[
-          const SizedBox(width: 7),
-          Container(
-            width: 5,
-            height: 5,
-            decoration:
-                BoxDecoration(shape: BoxShape.circle, color: AppColors.ok),
-          ),
-        ],
+      padding: const EdgeInsets.fromLTRB(12, 8, 6, 0),
+      child: Row(children: [
+        Expanded(
+            child: Row(children: [
+          if (parts.isNotEmpty) ...[
+            AppIcon('laptop', size: 13, color: AppColors.fg3),
+            const SizedBox(width: 7),
+            Flexible(
+              child: Text(parts,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(12, height: 16 / 12, color: AppColors.fg3)),
+            ),
+            if (meta!.online) ...[
+              const SizedBox(width: 7),
+              Container(
+                width: 5,
+                height: 5,
+                decoration:
+                    BoxDecoration(shape: BoxShape.circle, color: AppColors.ok),
+              ),
+            ],
+          ],
+        ])),
+        if (trailing != null) trailing!,
       ]),
     );
   }
@@ -401,6 +413,7 @@ class DeskComposerCard extends StatelessWidget {
     this.hint,
     this.mic,
     this.recipient,
+    this.usage,
     this.focus,
     this.highlight = false,
     this.attentionExclude,
@@ -412,6 +425,9 @@ class DeskComposerCard extends StatelessWidget {
   final Widget? attachments;
   final Widget? attach;
   final Widget? model;
+
+  /// Context usage, at the right of the line under the card.
+  final Widget? usage;
 
   /// Cold-cache chip, after the model chip.
   final Widget? cold;
@@ -500,7 +516,10 @@ class DeskComposerCard extends StatelessWidget {
                 child: attachments!,
               ),
             card(focused),
-            if (meta != null && meta.hasParts) DeskMachineLine(meta: meta),
+            if ((meta != null && meta.hasParts) || usage != null)
+              DeskMachineLine(
+                  meta: meta != null && meta.hasParts ? meta : null,
+                  trailing: usage),
           ],
         );
     if (focus == null) return body(false);
@@ -684,7 +703,8 @@ class DeskQueueCard extends StatelessWidget {
                   child: Text('$n queued, sent in order when this turn ends',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(11.5, height: 15 / 11.5, color: AppColors.fg3)),
+                      style:
+                          sans(11.5, height: 15 / 11.5, color: AppColors.fg3)),
                 ),
                 link('Clear', onClear, AppColors.fg3),
                 link('Send all', onSendAll, AppColors.fg2),
