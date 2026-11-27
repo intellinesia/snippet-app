@@ -81,17 +81,17 @@ void main() {
         expect(tester.takeException(), isNull);
         final labels = ['New session', 'New agent', 'New group', 'New shell', 'New task'];
         final rects = [
-          for (final l in labels)
-            tester.getRect(find
-                .ancestor(of: find.text(l), matching: find.byType(InkWell))
-                .first)
+          for (final l in labels) tester.getRect(find.bySemanticsLabel(l))
         ];
         // ignore: avoid_print
         print('sheet w=$w s=$scale rows=${rects.map((r) => r.size).toList()}');
+        // New session spans the sheet; the rest are pills in a two-up grid.
+        expect(rects.first.width, greaterThan(w - 40));
         for (var i = 0; i < rects.length; i++) {
-          expect(rects[i].width, w);
-          expect(rects[i].height, greaterThanOrEqualTo(56));
-          if (i > 0) expect(rects[i].top, greaterThan(rects[i - 1].top));
+          expect(rects[i].height, greaterThanOrEqualTo(48));
+          expect(rects[i].left, greaterThanOrEqualTo(0));
+          expect(rects[i].right, lessThanOrEqualTo(w));
+          if (i > 0) expect(rects[i].top, greaterThan(rects.first.top));
         }
         final sheet = tester.getRect(find.byType(BottomSheet));
         // ignore: avoid_print

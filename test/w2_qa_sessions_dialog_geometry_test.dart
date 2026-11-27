@@ -269,9 +269,10 @@ void main() {
 
         expect(card.left, 16);
         expect(card.width, w - 32);
+        // Attach sits inside the prompt box; Start is in the top bar.
         expect(attach.size, const Size(48, 48));
-        expect(attach.left, 30);
-        expect(start.size, const Size(120, 48));
+        expect(attach.left, 32);
+        expect(start.height, 48);
       });
 
       _phoneTest('SE-02 zero Needs you chip hidden w=$w s=$s', (t) async {

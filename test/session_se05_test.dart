@@ -33,7 +33,7 @@ void main() {
                 onStart: (a, b, c, d) async {})));
         await t.pump();
         expect(t.takeException(), isNull);
-        // Card: 16 inset, full content width, min 330.
+        // Prompt box first: 16 inset, full content width.
         final card = t.getRect(find
             .ancestor(
                 of: find.text('What should it do?'),
@@ -41,12 +41,14 @@ void main() {
             .last);
         expect(card.left, 16);
         expect(card.width, w - 32);
-        expect(card.height, greaterThanOrEqualTo(330));
-        // Chips: hit area 44 high; folder chip names the folder.
-        expect(t.getRect(find.bySemanticsLabel('snippet-mobile-all')).height, 44);
-        // Disabled Start is visible and 120 x 48.
+        expect(card.height, greaterThanOrEqualTo(150));
+        // Setup rows are at least 48 high; the folder row names the folder.
+        expect(t.getRect(find.bySemanticsLabel('snippet-mobile-all')).height,
+            greaterThanOrEqualTo(48));
+        // Disabled Start sits in the top bar with a 48 target.
         final start = t.getRect(find.bySemanticsLabel('Start'));
-        expect(start.size, const Size(120, 48));
+        expect(start.height, 48);
+        expect(start.top, lessThan(80));
         await t.enterText(find.byType(TextField), 'Do the thing');
         await t.pump();
         expect(find.bySemanticsLabel('Start'), findsOneWidget);

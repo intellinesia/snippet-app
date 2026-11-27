@@ -256,7 +256,7 @@ void main() {
         'Routing');
   });
 
-  group('phone sheet', () {
+  group('phone page', () {
     Future<BuildContext> phone(WidgetTester t, double w, double h,
             {double textScale = 1}) =>
         _host(t, w, h,
@@ -265,23 +265,16 @@ void main() {
             padding: const EdgeInsets.only(top: 22, bottom: 20));
 
     for (final (w, h) in const [(360.0, 640.0), (393.0, 852.0), (430.0, 932.0)]) {
-      _spec('P1 $w x $h: full width, medium 60%, then large', (t) async {
+      _spec('P1 $w x $h: a full-screen page with a back target', (t) async {
         final ctx = await phone(t, w, h);
         await _open(t, ctx);
-        final sheet = t.getRect(find.byKey(const Key('settings-sheet')));
-        expect(sheet.width, w);
-        // Visible height at medium = viewport minus the sheet top.
-        expect((h - sheet.top - (0.6 * h).roundToDouble()).abs() <= 2, isTrue,
-            reason: 'top ${sheet.top}');
-        final grab = t.getRect(find.byKey(const Key('settings-sheet-grabber')));
-        expect(grab.size, const Size(96, 48));
-        final close = t.getRect(find.byKey(const Key('settings-sheet-close')));
-        expect(close.size, const Size(48, 48));
-        await t.tap(find.byKey(const Key('settings-sheet-grabber')));
-        await t.pumpAndSettle();
-        final large = t.getRect(find.byKey(const Key('settings-sheet')));
-        expect((large.top - (22 + 8)).abs() <= 1, isTrue,
-            reason: 'large top ${large.top}');
+        final page = t.getRect(find.byKey(const Key('settings-sheet')));
+        expect(page.width, w);
+        expect(page.height, h);
+        final back = t.getRect(find.bySemanticsLabel('Back'));
+        expect(back.width, greaterThanOrEqualTo(44));
+        expect(back.height, greaterThanOrEqualTo(44));
+        expect(find.byKey(const Key('settings-sheet-index')), findsOneWidget);
         expect(find.byType(BackdropFilter), findsNothing);
       });
     }
@@ -297,18 +290,15 @@ void main() {
       });
     }
 
-    _spec('P3/P6 row opens page at large; back: page, index, closed',
+    _spec('P3/P6 row opens its page; back: page, index, closed',
         (t) async {
       final ctx = await phone(t, 393, 852);
       await _open(t, ctx);
       await t.tap(find.byKey(const Key('settings-sheet-row-models')));
       await t.pumpAndSettle();
-      expect(
-          t.widget<Text>(find.byKey(const Key('settings-sheet-title'))).data,
-          'Inference profiles');
-      expect(find.byKey(const Key('settings-sheet-back')), findsOneWidget);
-      final top = t.getRect(find.byKey(const Key('settings-sheet'))).top;
-      expect((top - 30).abs() <= 1, isTrue, reason: 'top $top');
+      expect(find.text('Profiles'), findsWidgets);
+      expect(find.byKey(const Key('settings-sheet-index')), findsNothing);
+      expect(find.bySemanticsLabel('Back'), findsOneWidget);
       await t.binding.handlePopRoute();
       await t.pumpAndSettle();
       expect(find.byKey(const Key('settings-sheet-index')), findsOneWidget);
@@ -317,13 +307,12 @@ void main() {
       expect(find.byKey(const Key('settings-sheet')), findsNothing);
     });
 
-    _spec('P5 deep link opens at large on the page with a 48 back row',
+    _spec('P5 deep link opens on the page with a 48 back row',
         (t) async {
       final ctx = await phone(t, 393, 852);
       await _open(t, ctx,
           page: SettingsPage.vault, backLabel: 'App Redesign');
-      final top = t.getRect(find.byKey(const Key('settings-sheet'))).top;
-      expect((top - 30).abs() <= 1, isTrue);
+      expect(find.byKey(const Key('settings-sheet-index')), findsNothing);
       final row = t.getRect(find.byKey(const Key('settings-sheet-back-line')));
       expect(row.height, 48);
       await t.binding.handlePopRoute();
@@ -334,6 +323,9 @@ void main() {
     _spec('P4 search: results, then back clears first', (t) async {
       final ctx = await phone(t, 360, 640);
       await _open(t, ctx);
+      // Android keeps the field behind the app bar's search action.
+      await t.tap(find.bySemanticsLabel('Search settings'));
+      await t.pumpAndSettle();
       await t.enterText(
           find.descendant(
               of: find.byKey(const Key('settings-sheet-search')),

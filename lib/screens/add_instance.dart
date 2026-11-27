@@ -7,7 +7,8 @@ import 'package:flutter_zxing/flutter_zxing.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../api.dart';
-import '../desktop_layout.dart';
+import '../mobile_kit.dart';
+import '../mochi.dart' show AgentCharacter;
 import '../models.dart';
 import '../platform.dart';
 import '../theme.dart';
@@ -291,6 +292,8 @@ class _StepLabel extends StatelessWidget {
 /// Full-screen "Add machine": a live QR scanner on phones (desktop shows an
 /// instruction block instead), plus a fixed paste-a-connection-string bar at
 /// the bottom. Pops with the verified [Instance].
+enum _Mode { intro, scan, paste }
+
 class AddInstanceScreen extends StatefulWidget {
   const AddInstanceScreen({super.key});
   @override
@@ -301,6 +304,7 @@ class _AddInstanceScreenState extends State<AddInstanceScreen>
     with WidgetsBindingObserver {
   final _paste = TextEditingController();
   PermissionStatus? _perm;
+  _Mode _mode = _Mode.intro;
   bool _busy = false;
   String? _error;
 
@@ -367,75 +371,184 @@ class _AddInstanceScreenState extends State<AddInstanceScreen>
   @override
   Widget build(BuildContext context) {
     Theme.of(context); // Rebuild on theme change
-    return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: Column(children: [
-          SettingsHeader(
-              title: 'Add machine',
-              compact: true,
-              onBack: () => Navigator.pop(context)),
-          // Phone-only screen now (desktop uses the compact dialog above).
-          Expanded(child: _body()),
-        ]),
+    final a = kAndroidLook;
+    final title = switch (_mode) {
+      _Mode.intro => '',
+      _Mode.scan => 'Scan QR code',
+      _Mode.paste => 'Paste a link',
+    };
+    return PopScope(
+      canPop: _mode == _Mode.intro,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) setState(() => _mode = _Mode.intro);
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.bg,
+        body: SafeArea(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            SizedBox(
+              height: a ? 64 : 52,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: a ? 4 : 12),
+                child: Row(children: [
+                  MkIconButton(
+                      icon: _mode == _Mode.intro
+                          ? 'x'
+                          : (a ? 'arrow-left' : 'chevron-left'),
+                      label: _mode == _Mode.intro ? 'Close' : 'Back',
+                      onTap: () => _mode == _Mode.intro
+                          ? Navigator.pop(context)
+                          : setState(() {
+                              _mode = _Mode.intro;
+                              _error = null;
+                            })),
+                  Expanded(
+                    child: Text(title,
+                        textAlign: a ? TextAlign.start : TextAlign.center,
+                        style: a
+                            ? sans(22, weight: W.label, color: AppColors.fg1)
+                            : sans(16.5,
+                                weight: FontWeight.w600, color: AppColors.fg1)),
+                  ),
+                  const SizedBox(width: 44),
+                ]),
+              ),
+            ),
+            Expanded(
+              child: switch (_mode) {
+                _Mode.intro => _intro(),
+                _Mode.scan => _scanPage(),
+                _Mode.paste => _pastePage(),
+              },
+            ),
+          ]),
+        ),
       ),
     );
   }
 
-  Widget _body() {
-    final empty = _paste.text.trim().isEmpty;
-    return ListView(
-      padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16,
-          S.s24 + MediaQuery.of(context).padding.bottom),
-      children: [
-        // The viewport and its caption share one card, as in the mockup.
-        Container(
-          padding: EdgeInsets.all(S.s16),
-          decoration: BoxDecoration(
-            color: AppColors.surface1,
-            borderRadius: BorderRadius.circular(R.lg),
-            border: Border.all(color: AppColors.line),
+  static const _command = 'snippet serve --enable';
+
+  Widget _intro() => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Spacer(flex: 2),
+          const Center(child: AgentCharacter('01', size: 120)),
+          const SizedBox(height: 22),
+          Semantics(
+            header: true,
+            child: Text('Connect a machine',
+                textAlign: TextAlign.center,
+                style: display(26, weight: FontWeight.w600, color: AppColors.fg1)),
           ),
-          child: Column(children: [
-            Center(
-              child: SizedBox(
-                width: 248,
-                height: 248,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(R.md),
-                  child: _scanArea(),
-                ),
-              ),
-            ),
-            SizedBox(height: S.s12),
-            Text.rich(
-              TextSpan(style: sans(13, color: AppColors.fg3), children: [
-                const TextSpan(text: 'Scan the QR from '),
-                TextSpan(
-                    text: 'snippet serve --enable',
-                    style: mono(13, color: AppColors.fg2)),
-              ]),
+          const SizedBox(height: 10),
+          Text('Run this on your computer, then scan the code it shows.',
               textAlign: TextAlign.center,
+              style: sans(15, height: 1.45, color: AppColors.fg3)),
+          const Spacer(flex: 2),
+          Container(
+            height: 52,
+            padding: const EdgeInsets.only(left: 16),
+            decoration: BoxDecoration(
+                color: AppColors.surface1,
+                borderRadius: BorderRadius.circular(14)),
+            child: Row(children: [
+              Expanded(
+                child: SelectableText(_command,
+                    maxLines: 1, style: mono(14, color: AppColors.fg1)),
+              ),
+              MkIconButton(
+                  icon: 'copy',
+                  label: 'Copy command',
+                  bare: true,
+                  size: a48,
+                  onTap: () {
+                    Clipboard.setData(const ClipboardData(text: _command));
+                    toast(context, 'Copied');
+                  }),
+            ]),
+          ),
+          const Spacer(flex: 3),
+          MkBigButton('Scan QR code',
+              icon: 'scan', onTap: () => setState(() => _mode = _Mode.scan)),
+          const SizedBox(height: 10),
+          MkBigButton('Paste a link',
+              icon: 'link',
+              secondary: true,
+              onTap: () => setState(() => _mode = _Mode.paste)),
+        ]),
+      );
+
+  double get a48 => kAndroidLook ? 48 : 44;
+
+  Widget _scanPage() => ListView(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        children: [
+          AspectRatio(
+            aspectRatio: 1,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(MK.cardRadius),
+              child: _scanArea(),
             ),
-          ]),
-        ),
-        SizedBox(height: S.s16),
-        AppField(
-            label: 'Paste the link from snippet serve',
-            controller: _paste,
-            mono: true,
-            hint: 'https://…?token=…',
-            onSubmitted: _connect),
-        if (_error != null) ...[
-          SizedBox(height: S.s8),
-          Text(_error!, style: sans(12, color: AppColors.danger)),
+          ),
+          const SizedBox(height: 16),
+          Text.rich(
+            TextSpan(style: sans(14, color: AppColors.fg3), children: [
+              const TextSpan(text: 'Point at the code from '),
+              TextSpan(text: _command, style: mono(13, color: AppColors.fg2)),
+            ]),
+            textAlign: TextAlign.center,
+          ),
+          if (_busy) ...[
+            const SizedBox(height: 16),
+            Center(child: MkMorph(size: 20, color: AppColors.fg2)),
+          ],
+          if (_error != null) ...[
+            const SizedBox(height: 12),
+            Text(_error!,
+                textAlign: TextAlign.center,
+                style: sans(13, color: AppColors.danger)),
+          ],
         ],
-        SizedBox(height: S.s16),
-        Btn(_busy ? 'Connecting…' : 'Connect',
-            full: true,
-            disabled: empty || _busy,
-            onTap: () => _connect(_paste.text)),
-      ],
+      );
+
+  Widget _pastePage() {
+    final empty = _paste.text.trim().isEmpty;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('Paste the link from $_command.',
+            style: sans(15, height: 1.45, color: AppColors.fg3)),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+              color: AppColors.surface1,
+              borderRadius: BorderRadius.circular(14)),
+          child: TextField(
+            controller: _paste,
+            autofocus: true,
+            minLines: 1,
+            maxLines: 4,
+            style: mono(13.5, color: AppColors.fg1),
+            cursorColor: AppColors.fg1,
+            onSubmitted: _connect,
+            decoration: InputDecoration(
+              isCollapsed: true,
+              border: InputBorder.none,
+              hintText: 'https://…?token=…',
+              hintStyle: mono(13.5, color: AppColors.fg4),
+            ),
+          ),
+        ),
+        if (_error != null) ...[
+          const SizedBox(height: 10),
+          Text(_error!, style: sans(13, color: AppColors.danger)),
+        ],
+        const Spacer(),
+        MkBigButton(_busy ? 'Connecting' : 'Connect',
+            onTap: empty || _busy ? null : () => _connect(_paste.text)),
+      ]),
     );
   }
 
@@ -444,7 +557,7 @@ class _AddInstanceScreenState extends State<AddInstanceScreen>
     if (perm == null) {
       return ColoredBox(
           color: AppColors.surface1,
-          child: Center(child: DelayedSpinner(size: 22)));
+          child: Center(child: MkMorph(size: 22, color: AppColors.fg3)));
     }
     if (!perm.isGranted) {
       final permanent = perm.isPermanentlyDenied || perm.isRestricted;

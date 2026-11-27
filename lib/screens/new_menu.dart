@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../mobile_kit.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -93,7 +94,8 @@ String _parentOf(String path) {
   return parent.isEmpty ? '~' : parent;
 }
 
-/// The phone New sheet behind the one create button: five one-line rows.
+/// The phone New sheet behind the one create button: New session across
+/// the top, the other kinds as a grid of pills.
 Future<void> showNewSheet(
   BuildContext context, {
   required VoidCallback onNewSession,
@@ -102,35 +104,15 @@ Future<void> showNewSheet(
   VoidCallback? onNewShell,
   VoidCallback? onNewTask,
 }) async {
-  final dark = AppColors.bg.computeLuminance() < 0.5;
-  final reduced = reduceMotion(context);
-  final rows = <(_NewAction, String, String, String)>[
-    (_NewAction.session, 'chat', 'New session', 'Start work with an agent'),
-    (_NewAction.agent, 'bot', 'New agent', 'Add an agent to your roster'),
-    (_NewAction.group, 'users', 'New group', 'Bring agents into one thread'),
-    if (onNewShell != null)
-      (_NewAction.shell, 'terminal', 'New shell', 'Open a terminal here'),
-    if (onNewTask != null)
-      (_NewAction.task, 'kanban', 'New task', 'Add work to the task list'),
+  final rows = <(_NewAction, String, String)>[
+    (_NewAction.agent, 'bot', 'New agent'),
+    (_NewAction.group, 'users', 'New group'),
+    if (onNewTask != null) (_NewAction.task, 'kanban', 'New task'),
+    if (onNewShell != null) (_NewAction.shell, 'terminal', 'New shell'),
   ];
-  final picked = await showModalBottomSheet<_NewAction>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: false,
-    backgroundColor: AppColors.surface1,
-    barrierColor: Colors.black.withValues(alpha: dark ? 0.58 : 0.32),
-    shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-    clipBehavior: Clip.antiAlias,
-    constraints: BoxConstraints(
-        maxHeight: MediaQuery.sizeOf(context).height * 0.85,
-        maxWidth: double.infinity),
-    sheetAnimationStyle: AnimationStyle(
-      duration: Duration(milliseconds: reduced ? 1 : 200),
-      reverseDuration: Duration(milliseconds: reduced ? 1 : 200),
-      curve: Curves.easeOut,
-      reverseCurve: Curves.easeOut,
-    ),
+  final picked = await showMkSheet<_NewAction>(
+    context,
+    title: 'New',
     builder: (ctx) => _NewSheetBody(rows: rows),
   );
   switch (picked) {
@@ -150,93 +132,38 @@ Future<void> showNewSheet(
 
 class _NewSheetBody extends StatelessWidget {
   const _NewSheetBody({required this.rows});
-  final List<(_NewAction, String, String, String)> rows;
+  final List<(_NewAction, String, String)> rows;
 
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.paddingOf(context).bottom;
-    final screenH = MediaQuery.sizeOf(context).height;
-    return ConstrainedBox(
-      constraints: BoxConstraints(minHeight: (screenH * 0.45).clamp(0, screenH * 0.85)),
-      child: FocusScope(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.only(top: 8),
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                      color: AppColors.surface3,
-                      borderRadius: BorderRadius.circular(2)),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 13, 20, 8),
-                child: Text('New',
-                    style: sans(13, weight: W.label, color: AppColors.fg3)),
-              ),
-              for (var i = 0; i < rows.length; i++)
-                _NewSheetRow(
-                  rows[i].$1,
-                  rows[i].$2,
-                  rows[i].$3,
-                  rows[i].$4,
-                  autofocus: i == 0,
-                  last: i == rows.length - 1,
-                ),
-              SizedBox(height: bottom + 8),
-            ],
-          ),
-        ),
+    void pick(_NewAction v) => Navigator.of(context).pop(v);
+    Widget tile((_NewAction, String, String) r) =>
+        MkSheetTile(icon: r.$2, label: r.$3, onTap: () => pick(r.$1));
+    final pairs = <Widget>[];
+    for (var i = 0; i < rows.length; i += 2) {
+      pairs.add(Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Row(children: [
+          Expanded(child: tile(rows[i])),
+          const SizedBox(width: 8),
+          Expanded(
+              child: i + 1 < rows.length
+                  ? tile(rows[i + 1])
+                  : const SizedBox()),
+        ]),
+      ));
+    }
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          MkBigButton('New session',
+              icon: 'chat', onTap: () => pick(_NewAction.session)),
+          const SizedBox(height: 4),
+          ...pairs,
+        ],
       ),
     );
   }
-}
-
-class _NewSheetRow extends StatelessWidget {
-  const _NewSheetRow(this.value, this.icon, this.label, this.hint,
-      {required this.autofocus, required this.last});
-
-  final _NewAction value;
-  final String icon, label, hint;
-  final bool autofocus, last;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-        button: true,
-        label: label,
-        hint: hint,
-        excludeSemantics: true,
-        child: InkWell(
-          autofocus: autofocus,
-          onTap: () => Navigator.of(context).pop(value),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 56),
-            child: Stack(children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(26, 8, 16, 8),
-                child: Row(children: [
-                  AppIcon(icon, size: 20, color: AppColors.fg1),
-                  const SizedBox(width: 18),
-                  Expanded(
-                    child: Text(label,
-                        style: sans(15, color: AppColors.fg1)),
-                  ),
-                ]),
-              ),
-              if (!last)
-                Positioned(
-                  left: 64,
-                  right: 16,
-                  bottom: 0,
-                  child: Container(height: 1, color: AppColors.border),
-                ),
-            ]),
-          ),
-        ),
-      );
 }

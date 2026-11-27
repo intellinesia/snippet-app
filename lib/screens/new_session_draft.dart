@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../api.dart';
 import '../composer/desktop_composer.dart';
 import '../desktop_pick.dart';
+import '../mobile_kit.dart';
 import '../mochi.dart';
 import '../platform.dart';
 import '../models.dart';
@@ -14,7 +15,6 @@ import '../theme.dart';
 import '../tap_detector.dart';
 import '../widgets.dart';
 import 'new_session_picker.dart';
-import 'spec_bar.dart';
 
 /// `sheet` is the new-session dialog body; `hero` is the empty-state composer
 /// with its settings as chips.
@@ -1170,175 +1170,322 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
     }
   }
 
-  /// SE-05 phone page: bar B, then one 16 radius card with the context chips
-  /// (36 visual, 44 hit), the prompt and the Start row.
+  /// Phone page: the prompt first, then Agent, Folder, Model and Workspace
+  /// as one group. iPhone draws a large sheet with round cancel and confirm
+  /// buttons; Android a full-screen dialog with a filled Start button.
   Widget _phoneCard() {
+    final a = kAndroidLook;
     final canSend = !_starting && _input.text.trim().isNotEmpty;
+    final cancel = widget.onCancel ?? () => Navigator.of(context).maybePop();
     final current = _current;
-    Widget pill(String icon, String label, VoidCallback onTap, {Key? key}) =>
-        Semantics(
-          key: key,
-          button: true,
-          label: label,
-          child: ExcludeSemantics(
-            child: TapDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onTap,
-              child: SizedBox(
-                height: 44,
-                child: Center(
-                  child: Container(
-                    height: 36,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                        color: AppColors.surface2,
-                        borderRadius: BorderRadius.circular(18)),
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      AppIcon(icon, size: 16, color: AppColors.fg2),
-                      const SizedBox(width: 6),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 180),
-                        child: Text(label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(12.5, color: AppColors.fg1)),
-                      ),
-                    ]),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
     final profileLabel = current?.name ?? _agentName;
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      body: SafeArea(
-        child:
-            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          SpecBar(
-              title: 'New session',
-              onBack:
-                  widget.onCancel ?? () => Navigator.of(context).maybePop()),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+    final box = a ? AppColors.surface1 : AppColors.surface2;
+    final hint = _agent == null ? 'What should it do?' : 'What should $_agentName do?';
+    Widget start;
+    if (a) {
+      start = Semantics(
+        button: true,
+        enabled: canSend,
+        label: 'Start',
+        excludeSemantics: true,
+        child: TapDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: canSend ? _start : null,
+          child: SizedBox(
+            height: 48,
+            child: Center(
               child: Container(
-                constraints: const BoxConstraints(minHeight: 330),
-                padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                height: 40,
+                padding: const EdgeInsets.symmetric(horizontal: 18),
                 decoration: BoxDecoration(
-                    color: AppColors.surface1,
-                    borderRadius: BorderRadius.circular(16)),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SizedBox(
-                        height: 44,
-                        child: ListView(
-                          scrollDirection: Axis.horizontal,
-                          children: [
-                            pill('folder', _folderLabel, _pickFolder,
-                                key: _folderKey),
-                            const SizedBox(width: 6),
-                            Builder(
-                                builder: (a) => pill('sliders', profileLabel,
-                                    () => _pickProfile(a))),
-                          ],
-                        ),
-                      ),
-                      if (_startError != null) _startFailure(_startError!),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(
-                            minHeight: 120, maxHeight: 200),
-                        child: TextField(
-                          controller: _input,
-                          focusNode: _focus,
-                          minLines: 5,
-                          maxLines: null,
-                          style: sans(15, height: 1.5, color: AppColors.fg1),
-                          cursorColor: AppColors.fg1,
-                          decoration: InputDecoration(
-                            isCollapsed: true,
-                            border: InputBorder.none,
-                            hintText: 'What should it do?',
-                            hintStyle: sans(15, color: AppColors.fg3),
-                          ),
-                        ),
-                      ),
-                      if (_files.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: [
-                            for (var i = 0; i < _files.length; i++)
-                              _fileChip(i),
-                          ],
-                        ),
-                      ],
-                      const SizedBox(height: 12),
-                      Row(children: [
-                        Semantics(
-                          button: true,
-                          label: 'Add context',
-                          child: ExcludeSemantics(
-                            child: TapDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: _addFiles,
-                              child: SizedBox(
-                                  width: 48,
-                                  height: 48,
-                                  child: Center(
-                                      child: AppIcon('plus',
-                                          size: 20, color: AppColors.fg2))),
-                            ),
-                          ),
-                        ),
-                        const Spacer(),
-                        Semantics(
-                          button: true,
-                          enabled: canSend,
-                          label: 'Start',
-                          child: ExcludeSemantics(
-                            child: TapDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: canSend ? _start : null,
-                              child: Container(
-                                width: 120,
-                                height: 48,
-                                decoration: BoxDecoration(
-                                    color: canSend
-                                        ? AppColors.fg1
-                                        : AppColors.surface3,
-                                    borderRadius: BorderRadius.circular(10)),
-                                child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      _starting
-                                          ? const Spinner(size: 14)
-                                          : AppIcon('arrow-right',
-                                              size: 16,
-                                              color: canSend
-                                                  ? AppColors.bg
-                                                  : AppColors.fg3),
-                                      const SizedBox(width: 6),
-                                      Text('Start',
-                                          style: sans(14,
-                                              weight: W.label,
-                                              color: canSend
-                                                  ? AppColors.bg
-                                                  : AppColors.fg3)),
-                                    ]),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ]),
-                    ]),
+                    color: canSend ? AppColors.fg1 : AppColors.surface3,
+                    borderRadius: BorderRadius.circular(20)),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  if (_starting) ...[
+                    MkMorph(size: 14, color: AppColors.fg2),
+                    const SizedBox(width: 8),
+                  ],
+                  Text('Start',
+                      style: sans(14.5,
+                          weight: W.label,
+                          color: canSend ? MK.onPrimary : AppColors.fg3)),
+                ]),
               ),
             ),
           ),
+        ),
+      );
+    } else {
+      start = Semantics(
+        button: true,
+        enabled: canSend,
+        label: 'Start',
+        excludeSemantics: true,
+        child: TapDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: canSend ? _start : null,
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: Center(
+              child: canSend
+                  ? Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                          color: AppColors.fg1, shape: BoxShape.circle),
+                      child: Center(
+                          child: AppIcon('check',
+                              size: 19, color: MK.onPrimary)),
+                    )
+                  : MkGlass(
+                      child: SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: Center(
+                            child: _starting
+                                ? MkMorph(size: 16, color: AppColors.fg2)
+                                : AppIcon('check',
+                                    size: 19, color: AppColors.fg4)),
+                      ),
+                    ),
+            ),
+          ),
+        ),
+      );
+    }
+    final header = SizedBox(
+      height: a ? 64 : 62,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: a ? 4 : 12),
+        child: Row(children: [
+          MkIconButton(
+              icon: 'x', label: 'Cancel', onTap: cancel, size: a ? 48 : 44),
+          SizedBox(width: a ? 8 : 0),
+          Expanded(
+            child: Text('New session',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: a ? TextAlign.start : TextAlign.center,
+                style: a
+                    ? sans(22, weight: W.label, color: AppColors.fg1)
+                    : sans(17, weight: FontWeight.w600, color: AppColors.fg1)),
+          ),
+          start,
+          if (a) const SizedBox(width: 12),
         ]),
+      ),
+    );
+    final prompt = Container(
+      constraints: const BoxConstraints(minHeight: 150),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      decoration: BoxDecoration(
+          color: box, borderRadius: BorderRadius.circular(MK.groupRadius)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 96, maxHeight: 220),
+          child: TextField(
+            controller: _input,
+            focusNode: _focus,
+            minLines: 4,
+            maxLines: null,
+            style: sans(16, height: 1.45, color: AppColors.fg1),
+            cursorColor: AppColors.fg1,
+            decoration: InputDecoration(
+              isCollapsed: true,
+              border: InputBorder.none,
+              hintText: hint,
+              hintStyle: sans(16, color: AppColors.fg4),
+            ),
+          ),
+        ),
+        if (_files.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            for (var i = 0; i < _files.length; i++) _fileChip(i),
+          ]),
+        ],
+        Align(
+          alignment: Alignment.centerLeft,
+          // Its own node, not folded into the text field's label.
+          child: Semantics(
+            container: true,
+            child: MkIconButton(
+              icon: 'paperclip',
+              label: 'Add context',
+              bare: true,
+              size: a ? 48 : 44,
+              onTap: _addFiles),
+          ),
+        ),
+      ]),
+    );
+    Widget pickValue(Widget lead, String text, {bool monoText = false}) =>
+        Row(mainAxisSize: MainAxisSize.min, children: [
+          lead,
+          Flexible(
+            child: Text(text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: monoText
+                    ? mono(a ? 12.5 : 12, color: a ? AppColors.fg1 : AppColors.fg3)
+                    : (a
+                        ? sans(16, weight: W.label, color: AppColors.fg1)
+                        : sans(15, color: AppColors.fg3))),
+          ),
+        ]);
+    Widget row(String label, Widget value, String said, VoidCallback onTap,
+        {Key? key}) {
+      final chevron = AppIcon('chevron-down', size: 14, color: AppColors.fg3);
+      return Semantics(
+        key: key,
+        button: true,
+        label: said,
+        hint: label,
+        excludeSemantics: true,
+        child: InkWell(
+          onTap: onTap,
+          splashFactory: a ? InkRipple.splashFactory : NoSplash.splashFactory,
+          highlightColor: AppColors.fg1.withValues(alpha: 0.04),
+          child: Container(
+            constraints: BoxConstraints(minHeight: a ? 64 : 52),
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: a ? 10 : 0),
+            child: a
+                ? Row(children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(label, style: sans(13, color: AppColors.fg3)),
+                          const SizedBox(height: 2),
+                          value,
+                        ],
+                      ),
+                    ),
+                    chevron,
+                  ])
+                : Row(children: [
+                    Text(label, style: sans(15.5, color: AppColors.fg1)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: Align(
+                            alignment: Alignment.centerRight, child: value)),
+                    const SizedBox(width: 8),
+                    chevron,
+                  ]),
+          ),
+        ),
+      );
+    }
+
+    final rows = <Widget>[
+      Builder(
+          builder: (c) => row(
+              'Agent',
+              pickValue(
+                  Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: AgentMochi(_agentId, size: a ? 22 : 20)),
+                  _agentName),
+              _agentName,
+              () => _pickAgent(c))),
+      row('Folder', pickValue(const SizedBox(), _folderLabel, monoText: true),
+          _folderLabel, _pickFolder,
+          key: _folderKey),
+      Builder(
+          builder: (c) => row('Model', pickValue(const SizedBox(), profileLabel),
+              profileLabel, () => _pickProfile(c))),
+      if (_isRepo)
+        Builder(
+            builder: (c) => row(
+                'Workspace',
+                pickValue(const SizedBox(), _worktreeLabel,
+                    monoText: _wt == _Wt.existing),
+                _worktreeLabel,
+                () => _pickWorktree(c))),
+    ];
+    final group = a
+        ? Column(children: [
+            for (var i = 0; i < rows.length; i++) ...[
+              if (i > 0) const SizedBox(height: 2),
+              ClipRRect(
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(i == 0 ? 20 : 4),
+                  bottom: Radius.circular(i == rows.length - 1 ? 20 : 4),
+                ),
+                child: Material(color: box, child: rows[i]),
+              ),
+            ]
+          ])
+        : ClipRRect(
+            borderRadius: BorderRadius.circular(MK.groupRadius),
+            child: Material(
+              color: box,
+              child: Column(children: [
+                for (var i = 0; i < rows.length; i++) ...[
+                  if (i > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 16, right: 16),
+                      child: Container(height: 0.5, color: MK.hairline),
+                    ),
+                  rows[i],
+                ]
+              ]),
+            ),
+          );
+    final note = switch (_wt) {
+      _Wt.fresh when _isRepo => 'Starts in a new worktree on its own branch.',
+      _Wt.existing => 'Continues in the $_worktreeLabel worktree.',
+      _ => 'Starts in this folder.',
+    };
+    final body = ListView(
+      padding: EdgeInsets.fromLTRB(
+          16, a ? 12 : 4, 16, 24 + MediaQuery.paddingOf(context).bottom),
+      children: [
+        if (_startError != null) _startFailure(_startError!),
+        prompt,
+        if (a)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 24, 12, 10),
+            child: Text('Setup',
+                style: sans(14, weight: W.label, color: AppColors.fg2)),
+          )
+        else
+          const SizedBox(height: 10),
+        group,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+          child: Text(note, style: sans(13, color: AppColors.fg4)),
+        ),
+      ],
+    );
+    final content = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [header, Expanded(child: body)]);
+    if (a) {
+      return Scaffold(
+        backgroundColor: AppColors.bg,
+        body: SafeArea(bottom: false, child: content),
+      );
+    }
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(38)),
+            child: ColoredBox(
+              color: Color.lerp(AppColors.surface1, AppColors.surface2, 0.5)!,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: content,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
