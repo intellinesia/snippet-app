@@ -254,6 +254,7 @@ class _LedgerLineState extends State<LedgerLine> {
       // Desktop TC-01/02: one s1 surface, a state icon at x+14, the sentence
       // at x+32, mono duration at the right and expansion behind one hairline.
       final lifted = _phrase != null && !widget.open;
+      final expanded = widget.open || lifted;
       // Steps read as quiet text; a plate only on hover or when open.
       return MouseRegion(
         onEnter: (_) => setState(() => _hover = true),
@@ -273,7 +274,14 @@ class _LedgerLineState extends State<LedgerLine> {
             children: [
               TapDetector(
                 behavior: HitTestBehavior.opaque,
-                onTap: widget.onTap,
+                onTap: () {
+                  if (lifted) {
+                    setState(() => _phrase = null);
+                  } else {
+                    if (_phrase != null) setState(() => _phrase = null);
+                    widget.onTap();
+                  }
+                },
                 child: SizedBox(
                   height: 30,
                   child: Padding(
@@ -307,7 +315,7 @@ class _LedgerLineState extends State<LedgerLine> {
                         height: 28,
                         child: Center(
                           child: AnimatedRotation(
-                            turns: widget.open ? 0.25 : 0,
+                            turns: expanded ? 0.25 : 0,
                             duration: const Duration(milliseconds: 160),
                             child: AppIcon('chevron-right',
                                 size: 12, color: AppColors.fg3),
@@ -784,7 +792,7 @@ class _LedgerGanttState extends State<LedgerGantt> {
         for (var i = 0; i < n; i++) row(i),
         Container(
           margin: const EdgeInsets.only(top: 6),
-          padding: const EdgeInsets.only(top: 8),
+          padding: const EdgeInsets.fromLTRB(6, 8, 6, 2),
           decoration: BoxDecoration(
               border: Border(top: BorderSide(color: AppColors.line))),
           child: Row(children: [

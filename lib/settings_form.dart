@@ -29,7 +29,7 @@ abstract final class Grouped {
   static const double gutter = 12;
   static double get rowMin => _phone ? _ph(64, 56) : 48;
   static double get rowMinTwoLine => _phone ? _ph(76, 66) : 56;
-  static double get padX => _phone ? 16 : 0;
+  static double get padX => _phone ? 16 : 14;
   static double get padY => _phone ? _ph(10, 8) : 10;
   static double get icon => _phone ? _ph(22, 20) : 16;
   static double get iconGap => _phone ? _ph(14, 12) : 12;
@@ -414,7 +414,7 @@ class SettingsRow extends StatelessWidget {
             minHeight: hasSub ? Grouped.rowMinTwoLine : Grouped.rowMin),
         child: Padding(
           padding: EdgeInsets.symmetric(
-              horizontal: Grouped.padX, vertical: Grouped.padY),
+              horizontal: kMobile ? Grouped.padX : 0, vertical: Grouped.padY),
           child: Row(children: [
             if (lead != null) ...[lead, SizedBox(width: Grouped.iconGap)],
             Expanded(
@@ -488,7 +488,7 @@ class SettingsRow extends StatelessWidget {
           minHeight: hasSub ? Grouped.rowMinTwoLine : Grouped.rowMin),
       child: Padding(
         padding: EdgeInsets.symmetric(
-            horizontal: Grouped.padX, vertical: Grouped.padY),
+            horizontal: kMobile ? Grouped.padX : 0, vertical: Grouped.padY),
         child: v == null || v.isEmpty
             ? row(null)
             : LayoutBuilder(

@@ -12,7 +12,6 @@ import '../notifications.dart';
 import '../panel.dart';
 import '../platform.dart';
 import '../settings_form.dart';
-import '../settings_table.dart';
 import '../settings_target.dart';
 import '../inline_flow.dart';
 import '../store.dart';
@@ -1915,74 +1914,48 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     widget.onAdd?.call(inst);
   }
 
-  Widget _tableCell(String text, {Color? color}) => Text(
-        text,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: sans(12.5, color: color ?? AppColors.fg2),
+  Widget _machineGhostBtn(String label, VoidCallback onTap) => Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(6),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+            child: Text(label,
+                style: sans(12, weight: FontWeight.w500, color: AppColors.fg2)),
+          ),
+        ),
       );
 
-  Widget _machineTable() {
-    Widget header(String t) => Text(t,
-        style: sans(11, weight: FontWeight.w500, color: AppColors.fg3));
-    Widget line() => Container(height: 1, color: AppColors.line);
-    // Large text: each machine stacks its values under the name (D7).
-    final stacked = MediaQuery.textScalerOf(context).scale(1) > 1.5;
-    final rows = <Widget>[
-      if (!stacked)
-        _tableRow(header('Machine'), header('Status'), header('Agents'),
-            header('Approvals'), const SizedBox.shrink(),
-            height: 28),
-      for (final i in _instances) ...[
-        if (!stacked || i != _instances.first) line(),
-        if (_removingUrl == i.url)
-          _removeStrip(i)
-        else
-          _machineTableRow(i, stacked: stacked),
-      ],
-    ];
-    return Padding(
-      padding: EdgeInsets.only(bottom: S.s8),
-      child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ...rows,
-            line(),
-            Padding(
-              padding: const EdgeInsets.only(top: 8, bottom: 16),
-              child: Text(
-                  'Approvals decide what an agent may run on that machine without asking you.',
-                  style: sans(12, weight: W.body, color: AppColors.fg3)),
-            ),
-          ]),
-    );
-  }
-
-  Widget _tableRow(Widget a, Widget b, Widget c, Widget d, Widget e,
-          {double height = 40}) =>
-      ConstrainedBox(
-        constraints: BoxConstraints(minHeight: height),
-        child: Row(children: [
-          Expanded(flex: 4, child: a),
-          Expanded(flex: 3, child: b),
-          Expanded(flex: 2, child: c),
-          Expanded(flex: 3, child: d),
-          SizedBox(width: 28, child: e),
-        ]),
+  Widget _machineTable() => SettingsGroup(
+        header: 'Connected machines',
+        footer:
+            'Approvals decide what an agent may run on that machine without asking you.',
+        children: [
+          for (final i in _instances)
+            if (_removingUrl == i.url)
+              _removeStrip(i)
+            else
+              _machineTableRow(i),
+        ],
       );
 
-  Widget _machineTableRow(Instance i, {bool stacked = false}) {
+  Widget _machineTableRow(Instance i) {
     final isActive = i.url == widget.active?.url;
     if (_renamingUrl == i.url) {
-      return SizedBox(
-        height: 40,
-        child: InlineEditField(
-          controller: _renameController,
-          hint: 'Machine name',
-          commitOnTapOutside: false,
-          showActions: true,
-          onSubmit: () => _commitRename(i),
-          onCancel: () => setState(() => _renamingUrl = null),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: SizedBox(
+          height: 36,
+          child: InlineEditField(
+            controller: _renameController,
+            hint: 'Machine name',
+            commitOnTapOutside: false,
+            showActions: true,
+            onSubmit: () => _commitRename(i),
+            onCancel: () => setState(() => _renamingUrl = null),
+          ),
         ),
       );
     }
@@ -2000,73 +1973,118 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
         : manual
             ? 'Ask first'
             : 'Auto';
-    if (stacked) {
-      final meta = sans(12.5, color: AppColors.fg2);
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isActive ? AppColors.ok : AppColors.fg4),
-                        ),
-                        Text(i.label.isEmpty ? hostOf(i.url) : i.label,
-                            style: sans(12.5, color: AppColors.fg1)),
-                        if (isActive)
-                          Text('Active', style: sans(11, color: AppColors.fg3)),
-                      ]),
-                  const SizedBox(height: 4),
-                  Wrap(spacing: 16, runSpacing: 4, children: [
-                    Text(status, style: meta),
-                    Text(
-                        agents == null
-                            ? 'Agents \u2014'
-                            : agents == 1
-                                ? '1 agent'
-                                : '$agents agents',
-                        style: meta),
-                    Text('Approvals: $approvals', style: meta),
-                  ]),
-                ]),
-          ),
-          SizedBox(width: 28, child: _machineMenu(i, connect: canConnect)),
-        ]),
-      );
-    }
-    return _tableRow(
-      Row(children: [
-        Container(
-          width: 7,
-          height: 7,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: health == true ? AppColors.diffAddFg : AppColors.fg4,
+    final name = i.label.isEmpty ? hostOf(i.url) : i.label;
+    final actions = Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (canConnect)
+          _machineGhostBtn('Switch', () => widget.onSelect?.call(i))
+        else
+          _machineGhostBtn('Rename', () => _startRename(i)),
+        Builder(
+          builder: (anchor) => _machineGhostBtn(
+            'Manage',
+            () => _showMachineMenu(
+              context,
+              anchor: anchor,
+              instance: i,
+              connect: canConnect,
+              onSelect: () => widget.onSelect?.call(i),
+              onRename: () => _startRename(i),
+              onRemove: () => _confirmRemove(i),
+            ),
           ),
         ),
-        const SizedBox(width: 9),
-        Flexible(
-            child: _tableCell(i.label.isEmpty ? hostOf(i.url) : i.label,
-                color: AppColors.fg1)),
-        if (isActive) ...[
-          SizedBox(width: S.s8),
-          const SettingsTag('Active'),
+      ],
+    );
+    final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.5;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 11),
+      child: Row(
+        crossAxisAlignment:
+            largeText ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+        children: [
+          Padding(
+            padding: EdgeInsets.only(top: largeText ? 6 : 0),
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: health == true ? AppColors.diffAddFg : AppColors.fg4,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(name,
+                        style: sans(13,
+                            weight: FontWeight.w500, color: AppColors.fg1)),
+                    if (isActive)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.diffAddBg,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text('Active',
+                            style: sans(11,
+                                weight: FontWeight.w500,
+                                color: AppColors.diffAddFg)),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 2,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(hostOf(i.url),
+                        style: mono(11.5, color: AppColors.fg3)),
+                    Text('·', style: sans(11.5, color: AppColors.fg4)),
+                    Text(status,
+                        style: sans(11.5,
+                            color: health == true
+                                ? AppColors.diffAddFg
+                                : AppColors.fg3)),
+                    if (agents != null) ...[
+                      Text('·', style: sans(11.5, color: AppColors.fg4)),
+                      Text(agents == 1 ? '1 agent' : '$agents agents',
+                          style: sans(11.5, color: AppColors.fg3)),
+                    ],
+                    if (manual != null) ...[
+                      Text('·', style: sans(11.5, color: AppColors.fg4)),
+                      Text('Approvals: $approvals',
+                          style: sans(11.5, color: AppColors.fg3)),
+                    ],
+                  ],
+                ),
+                if (largeText) ...[
+                  const SizedBox(height: 6),
+                  actions,
+                ],
+              ],
+            ),
+          ),
+          if (!largeText) ...[
+            const SizedBox(width: 12),
+            actions,
+          ],
         ],
-      ]),
-      _tableCell(status),
-      _tableCell(agents == null ? '\u2014' : '$agents'),
-      _tableCell(approvals),
-      _machineMenu(i, connect: canConnect),
+      ),
     );
   }
 
