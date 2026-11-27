@@ -1230,13 +1230,13 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                   tooltip: tip,
                   onTap: tap);
           return Row(mainAxisSize: MainAxisSize.min, children: [
-            b('home', 'Home', place == 'home' && _place != QuietPlace.sessions,
+            b('home', 'Home', place == 'home',
                 () => _selectPlace(QuietPlace.home)),
             b('chat-thread', 'Sessions', place == 'sessions',
                 _openSessionsPage),
-            b('list-checks', 'Tasks', _place == QuietPlace.tasks,
+            b('list-checks', 'Tasks', place == 'tasks',
                 () => _selectPlace(QuietPlace.tasks)),
-            b('file-stack', 'Artifacts', false,
+            b('file-stack', 'Artifacts', place == 'artifacts',
                 () => openArtifactsList(context)),
           ]);
         },

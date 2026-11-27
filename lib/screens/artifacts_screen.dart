@@ -366,19 +366,24 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
           iconSize: 13,
           tooltip: _expanded ? 'Show the list' : 'Expand',
           onTap: () => setState(() => _expanded = !_expanded));
+      // Not 'Close': the shell hides that inside a tab, which has its own.
+      final close = IconBtn('x',
+          size: 28,
+          iconSize: 13,
+          tooltip: 'Close preview',
+          onTap: () => setState(() {
+                _selected = null;
+                _expanded = false;
+              }));
       final doc = sel.documentRef;
       detail = sel.isCanvas || doc == null
-          ? _canvasPreview(sel, expand)
+          ? _canvasPreview(sel, [expand, close])
           : ArtifactViewer(
               key: ValueKey('artifact-preview-${sel.id}'),
               client: widget.client,
               session: doc.session,
               id: doc.id,
-              headerActions: [expand],
-              onClose: () => setState(() {
-                _selected = null;
-                _expanded = false;
-              }),
+              headerActions: [expand, close],
             );
     }
     return ColoredBox(
@@ -399,7 +404,7 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
     );
   }
 
-  Widget _canvasPreview(ArtifactCard c, Widget expand) => Column(
+  Widget _canvasPreview(ArtifactCard c, List<Widget> actions) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
@@ -417,15 +422,7 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
                     overflow: TextOverflow.ellipsis,
                     style: sans(13, weight: W.label, color: AppColors.fg1)),
               ),
-              expand,
-              IconBtn('x',
-                  size: 28,
-                  iconSize: 13,
-                  tooltip: 'Close',
-                  onTap: () => setState(() {
-                        _selected = null;
-                        _expanded = false;
-                      })),
+              ...actions,
             ]),
           ),
           Expanded(
