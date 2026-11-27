@@ -338,7 +338,14 @@ extension _RailPages on _SessionRailState {
             onTap: () => _go('files')),
       if (w.onShell != null) _navRow('terminal', 'Shell', onTap: w.onShell!),
     ];
-    final landingTop = ((_bodyH - 360) / 2).clamp(44.0, 270.0).toDouble();
+    final hasLive = s != null &&
+        (s.status == 'running' ||
+            steps.isNotEmpty ||
+            nFiles > 0 ||
+            t != null);
+    final landingTop = hasLive
+        ? 4.0
+        : ((_bodyH - 360) / 2).clamp(24.0, 140.0).toDouble();
 
     return [
       head,
@@ -348,18 +355,21 @@ extension _RailPages on _SessionRailState {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 320),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              SizedBox(height: landingTop),
-              const Center(child: EmptyArt(EmptyArtKind.overview, width: 112)),
-              const SizedBox(height: 42),
+              if (!hasLive) ...[
+                SizedBox(height: landingTop),
+                const Center(child: EmptyArt(EmptyArtKind.overview, width: 96)),
+                const SizedBox(height: 24),
+              ] else
+                SizedBox(height: landingTop),
               for (var i = 0; i < cards.length; i++) ...[
-                if (i > 0) const SizedBox(height: 10),
+                if (i > 0) const SizedBox(height: 8),
                 cards[i],
               ],
             ]),
           ),
         ),
       ),
-      const SizedBox(height: 28),
+      const SizedBox(height: 20),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4),
         child: Column(
@@ -841,7 +851,7 @@ extension _RailPages on _SessionRailState {
         return [
           _subHeader('Memory'),
           SizedBox(
-            height: (_bodyH - 52).clamp(240.0, 4000.0),
+            height: _bodyH.clamp(240.0, 4000.0),
             child: DeskMemoryView(
                 client: widget.client,
                 sessionId: widget.sessionId,

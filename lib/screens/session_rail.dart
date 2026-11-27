@@ -534,8 +534,10 @@ class _SessionRailState extends State<SessionRail> {
                     Expanded(
                       child: LayoutBuilder(
                         builder: (_, box) {
-                          // Diffs and Files carry their own row insets.
-                          final list = _page == 'changes' || _page == 'files';
+                          // Diffs, Files and Memory carry their own row insets.
+                          final list = _page == 'changes' ||
+                              _page == 'files' ||
+                              _page == 'memory';
                           final pad = list
                               ? const EdgeInsets.fromLTRB(0, 4, 0, 0)
                               : const EdgeInsets.fromLTRB(16, 14, 16, 0);
