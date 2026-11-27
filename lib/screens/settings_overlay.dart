@@ -153,8 +153,13 @@ class SettingsHost {
   final String? targetId;
   final ValueChanged<String>? onSearchAll;
 
-  Widget body(SettingsPage page, {ValueChanged<SettingsPage>? onOpenPage}) =>
+  Widget body(
+    SettingsPage page, {
+    ValueChanged<SettingsPage>? onOpenPage,
+    SettingsBreadcrumbController? breadcrumb,
+  }) =>
       SettingsChromeScope(
+          breadcrumb: breadcrumb,
           child: SettingsSectionView(
         key: ValueKey('settings-body-${page.name}'),
         client: client,
@@ -200,6 +205,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
   final _listFocus = FocusNode(debugLabel: 'Settings pages');
   final _headingFocus = FocusNode(debugLabel: 'Settings heading');
   final _listScroll = ScrollController();
+  final _breadcrumb = SettingsBreadcrumbController();
   int _sel = 0;
   // The list's focus ring shows once the keyboard has moved its cursor.
   bool _keyed = false;
@@ -227,12 +233,14 @@ class _SettingsDialogState extends State<SettingsDialog> {
     _listFocus.dispose();
     _headingFocus.dispose();
     _listScroll.dispose();
+    _breadcrumb.dispose();
     super.dispose();
   }
 
   void _close() => Navigator.of(context).maybePop();
 
   void _open(SettingsPage page) {
+    _breadcrumb.clear();
     setState(() {
       _page = page;
       _cursor = _flat.indexWhere((r) => r.page == page);
@@ -251,6 +259,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
     if (k == LogicalKeyboardKey.escape) {
       if (_query.text.isNotEmpty) {
         _query.clear();
+      } else if (_breadcrumb.current != null) {
+        _breadcrumb.current!.onBack();
       } else {
         _close();
       }
@@ -616,7 +626,13 @@ class _SettingsDialogState extends State<SettingsDialog> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (_deepLink && widget.host.backLabel != null) _backLine(),
-          Expanded(child: widget.host.body(_page, onOpenPage: _open)),
+          Expanded(
+            child: widget.host.body(
+              _page,
+              onOpenPage: _open,
+              breadcrumb: _breadcrumb,
+            ),
+          ),
         ],
       );
     } else if (results.isEmpty) {
@@ -638,15 +654,70 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 child: Focus(
                   focusNode: _headingFocus,
                   skipTraversal: true,
-                  child: Semantics(
-                    header: true,
-                    child: Text(
-                      title,
-                      key: const Key('settings-title'),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(16, weight: W.label, color: AppColors.fg1),
-                    ),
+                  child: ListenableBuilder(
+                    listenable: _breadcrumb,
+                    builder: (context, _) {
+                      final crumb =
+                          results == null ? _breadcrumb.current : null;
+                      if (crumb == null) {
+                        return Semantics(
+                          header: true,
+                          child: Text(
+                            title,
+                            key: const Key('settings-title'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style:
+                                sans(16, weight: W.label, color: AppColors.fg1),
+                          ),
+                        );
+                      }
+                      return Semantics(
+                        header: true,
+                        child: Row(children: [
+                          Material(
+                            color: Colors.transparent,
+                            borderRadius: BorderRadius.circular(6),
+                            clipBehavior: Clip.antiAlias,
+                            child: InkWell(
+                              onTap: crumb.onBack,
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.fromLTRB(4, 5, 7, 5),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(PhIcons.arrowLeft,
+                                        size: 13, color: AppColors.fg2),
+                                    const SizedBox(width: 6),
+                                    Text(crumb.parent,
+                                        style: sans(13,
+                                            weight: FontWeight.w500,
+                                            color: AppColors.fg2)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            child: Text('/',
+                                style: sans(13, color: AppColors.fg4)),
+                          ),
+                          Expanded(
+                            child: Text(
+                              crumb.title,
+                              key: const Key('settings-title'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: sans(14,
+                                  weight: FontWeight.w600,
+                                  color: AppColors.fg1),
+                            ),
+                          ),
+                        ]),
+                      );
+                    },
                   ),
                 ),
               ),

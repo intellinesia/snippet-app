@@ -735,24 +735,9 @@ class _AccountsScreenState extends State<AccountsScreen> {
     final kind = _kinds[provider];
     if (kind == null) return const SizedBox.shrink();
     final pasted = _usesPaste(kind);
-    return SettingsColumn(children: [
-      SettingsHeader(
-        back: _backTo('Accounts', _cancelAdd),
-        title: 'Add ${kind.title} account',
-        subtitle: kind.footer,
-        actions: [
-          Btn(
-              pasted
-                  ? (_busy ? 'Adding…' : 'Add account')
-                  : (_busy ? 'Starting…' : 'Sign in'),
-              small: true,
-              disabled: _busy,
-              onTap: _submitAdd),
-        ],
-      ),
-      SizedBox(height: S.s8),
+    final fields = <Widget>[
       SettingsGroup(
-        footer: _addError,
+        footer: _addError ?? kind.footer,
         children: [
           if (pasted)
             SettingsRow(
@@ -763,13 +748,13 @@ class _AccountsScreenState extends State<AccountsScreen> {
                   hint: kind.pasteFieldHint,
                   mono: true,
                   obscure: true,
-                  width: 260),
+                  width: 240),
             ),
           SettingsRow(
             label: 'Name',
             sub: 'Optional. Shown in the account list.',
             trailing: SettingsField(
-                controller: _label, hint: 'Work, Personal…', width: 260),
+                controller: _label, hint: 'Work, Personal…', width: 240),
           ),
         ],
       ),
@@ -787,6 +772,35 @@ class _AccountsScreenState extends State<AccountsScreen> {
             }),
           ),
         ),
+    ];
+    final actionLabel = pasted
+        ? (_busy ? 'Adding…' : 'Add account')
+        : (_busy ? 'Starting…' : 'Sign in');
+    if (SettingsChromeScope.of(context)) {
+      return SettingsNestedPage(
+        parent: 'Accounts',
+        title: 'Add ${kind.title} account',
+        onBack: _cancelAdd,
+        footerRight: Row(mainAxisSize: MainAxisSize.min, children: [
+          Btn('Cancel',
+              small: true, variant: BtnVariant.ghost, onTap: _cancelAdd),
+          const SizedBox(width: 8),
+          Btn(actionLabel, small: true, disabled: _busy, onTap: _submitAdd),
+        ]),
+        children: fields,
+      );
+    }
+    return SettingsColumn(children: [
+      SettingsHeader(
+        back: _backTo('Accounts', _cancelAdd),
+        title: 'Add ${kind.title} account',
+        subtitle: kind.footer,
+        actions: [
+          Btn(actionLabel, small: true, disabled: _busy, onTap: _submitAdd),
+        ],
+      ),
+      SizedBox(height: S.s8),
+      ...fields,
     ]);
   }
 
@@ -800,15 +814,78 @@ class _AccountsScreenState extends State<AccountsScreen> {
     final uri = _parseUri(pending.result['verification_uri']);
     final needsCode = pending.result['needs_code'] == true ||
         _kinds[pending.provider]?.signIn == _SignIn.linkAndCode;
+    void cancelSignIn() {
+      _poll?.cancel();
+      setState(() {
+        _pendingSignIn = null;
+        _addError = null;
+      });
+    }
+
+    final group = SettingsGroup(
+      footer: needsCode
+          ? _addError
+          : 'Snippet picks the account up once you finish.',
+      children: [
+        if (needsCode && uri != null)
+          SettingsRow(
+            label: 'Sign-in page',
+            sub: '$uri',
+            trailing: Btn('Open sign-in page',
+                variant: BtnVariant.surface,
+                small: true,
+                onTap: () => _openExternal(uri)),
+          ),
+        if (needsCode)
+          SettingsRow(
+            label: 'Code',
+            sub: 'Paste the code from the sign-in page.',
+            trailing: SettingsField(
+                controller: _code,
+                hint: 'Code from the sign-in page',
+                mono: true,
+                width: 240,
+                onSubmitted: (_) => _submitComplete(pending)),
+          )
+        else
+          SettingsRow(
+            label: 'Code',
+            sub: 'Enter this code on the sign-in page.',
+            trailing: SelectableText('${pending.result['user_code'] ?? ''}',
+                style: mono(16, color: AppColors.fg1)),
+          ),
+      ],
+    );
+    if (SettingsChromeScope.of(context)) {
+      return SettingsNestedPage(
+        parent: 'Accounts',
+        title: 'Finish sign-in',
+        onBack: cancelSignIn,
+        footerLeft: Text(
+            '${_title(pending.provider)} · waiting for the sign-in page',
+            style: sans(11.5, color: AppColors.fg3)),
+        footerRight: Row(mainAxisSize: MainAxisSize.min, children: [
+          Btn('Cancel',
+              small: true, variant: BtnVariant.ghost, onTap: cancelSignIn),
+          if (uri != null && !needsCode) ...[
+            const SizedBox(width: 8),
+            Btn('Open sign-in page',
+                small: true, onTap: () => _openExternal(uri)),
+          ],
+          if (needsCode) ...[
+            const SizedBox(width: 8),
+            Btn(_busy ? 'Finishing…' : 'Finish',
+                small: true,
+                disabled: _busy,
+                onTap: () => _submitComplete(pending)),
+          ],
+        ]),
+        children: [group],
+      );
+    }
     return SettingsColumn(children: [
       SettingsHeader(
-        back: _backTo('Accounts', () {
-          _poll?.cancel();
-          setState(() {
-            _pendingSignIn = null;
-            _addError = null;
-          });
-        }),
+        back: _backTo('Accounts', cancelSignIn),
         title: 'Finish sign-in',
         subtitle: '${_title(pending.provider)} · waiting for the sign-in page',
         actions: [
@@ -823,40 +900,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
         ],
       ),
       SizedBox(height: S.s8),
-      SettingsGroup(
-        footer: needsCode
-            ? _addError
-            : 'Snippet picks the account up once you finish.',
-        children: [
-          if (needsCode && uri != null)
-            SettingsRow(
-              label: 'Sign-in page',
-              sub: '$uri',
-              trailing: Btn('Open sign-in page',
-                  variant: BtnVariant.surface,
-                  small: true,
-                  onTap: () => _openExternal(uri)),
-            ),
-          if (needsCode)
-            SettingsRow(
-              label: 'Code',
-              sub: 'Paste the code from the sign-in page.',
-              trailing: SettingsField(
-                  controller: _code,
-                  hint: 'Code from the sign-in page',
-                  mono: true,
-                  width: 260,
-                  onSubmitted: (_) => _submitComplete(pending)),
-            )
-          else
-            SettingsRow(
-              label: 'Code',
-              sub: 'Enter this code on the sign-in page.',
-              trailing: SelectableText('${pending.result['user_code'] ?? ''}',
-                  style: mono(16, color: AppColors.fg1)),
-            ),
-        ],
-      ),
+      group,
     ]);
   }
 
@@ -867,29 +911,21 @@ class _AccountsScreenState extends State<AccountsScreen> {
     final limited = account.limitedUntil;
     final limitedLabel = limited == null ? null : rateResetLabel(limited);
     final usage = account.usage;
-    return SettingsColumn(children: [
-      SettingsHeader(
-        back: _backTo('Accounts', () => _selectKey(null)),
-        title: name,
-        subtitle: _title(provider),
-        actions: [
-          if (index > 0)
-            IconBtn('chevron-up',
-                size: 28,
-                iconSize: 15,
-                tooltip: 'Move up',
-                onTap:
-                    _busy ? null : () => _move(provider, accounts, index, -1)),
-          if (index < accounts.length - 1)
-            IconBtn('chevron-down',
-                size: 28,
-                iconSize: 15,
-                tooltip: 'Move down',
-                onTap:
-                    _busy ? null : () => _move(provider, accounts, index, 1)),
-        ],
-      ),
-      SizedBox(height: S.s8),
+    final reorder = Row(mainAxisSize: MainAxisSize.min, children: [
+      if (index > 0)
+        IconBtn('chevron-up',
+            size: 28,
+            iconSize: 15,
+            tooltip: 'Move up',
+            onTap: _busy ? null : () => _move(provider, accounts, index, -1)),
+      if (index < accounts.length - 1)
+        IconBtn('chevron-down',
+            size: 28,
+            iconSize: 15,
+            tooltip: 'Move down',
+            onTap: _busy ? null : () => _move(provider, accounts, index, 1)),
+    ]);
+    final detailBody = <Widget>[
       SettingsGroup(children: [
         SettingsRow(
           label: 'Name',
@@ -955,34 +991,84 @@ class _AccountsScreenState extends State<AccountsScreen> {
           trailing: Text(account.id, style: mono(13, color: AppColors.fg2)),
         ),
       ]),
-      if (canRemove)
+      if (canRemove && _removingAccount == '$provider/${account.id}')
         SettingsGroup(children: [
-          if (_removingAccount == '$provider/${account.id}')
-            InlineConfirmStrip(
-              title:
-                  'Remove ${account.label.isEmpty ? account.id : account.label}?',
-              body:
-                  'Snippet will stop switching to it from ${_title(provider)}.',
-              onCancel: () {
-                if (mounted) setState(() => _removingAccount = null);
-              },
-              onConfirm: () async {
-                setState(() => _removingAccount = null);
-                await _mutate(
-                    () => widget.client.removeAccount(provider, account.id),
-                    provider);
-              },
-            )
-          else
-            SettingsRow(
-              label: 'Remove account',
-              danger: true,
-              onTap: _busy
-                  ? null
-                  : () => setState(
-                      () => _removingAccount = '$provider/${account.id}'),
-            ),
+          InlineConfirmStrip(
+            title:
+                'Remove ${account.label.isEmpty ? account.id : account.label}?',
+            body:
+                'Snippet will stop switching to it from ${_title(provider)}.',
+            onCancel: () {
+              if (mounted) setState(() => _removingAccount = null);
+            },
+            onConfirm: () async {
+              setState(() => _removingAccount = null);
+              await _mutate(
+                  () => widget.client.removeAccount(provider, account.id),
+                  provider);
+            },
+          ),
+        ])
+      else if (canRemove && !SettingsChromeScope.of(context))
+        SettingsGroup(children: [
+          SettingsRow(
+            label: 'Remove account',
+            danger: true,
+            onTap: _busy
+                ? null
+                : () => setState(
+                    () => _removingAccount = '$provider/${account.id}'),
+          ),
         ]),
+    ];
+    if (SettingsChromeScope.of(context)) {
+      return SettingsNestedPage(
+        parent: 'Accounts',
+        title: name,
+        onBack: () => _selectKey(null),
+        identity: SettingsIdentityStrip(
+          leading: ProviderLogo(provider, size: 16),
+          title: name,
+          badge: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+            decoration: BoxDecoration(
+              color: account.active ? AppColors.diffAddBg : AppColors.surface2,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(account.active ? 'In use' : 'Standby',
+                style: sans(11,
+                    weight: FontWeight.w500,
+                    color: account.active
+                        ? AppColors.diffAddFg
+                        : AppColors.fg3)),
+          ),
+          subtitle: '${_title(provider)} · ${account.id}',
+          trailing: (index > 0 || index < accounts.length - 1) ? reorder : null,
+        ),
+        footerLeft: canRemove && _removingAccount != '$provider/${account.id}'
+            ? Btn('Remove account',
+                small: true,
+                variant: BtnVariant.danger,
+                disabled: _busy,
+                onTap: () => setState(
+                    () => _removingAccount = '$provider/${account.id}'))
+            : null,
+        footerRight: Btn('Done',
+            small: true,
+            variant: BtnVariant.secondary,
+            onTap: () => _selectKey(null)),
+        children: detailBody,
+      );
+    }
+    return SettingsColumn(children: [
+      SettingsHeader(
+        back: _backTo('Accounts', () => _selectKey(null)),
+        title: name,
+        subtitle: _title(provider),
+        actions: [reorder],
+      ),
+      SizedBox(height: S.s8),
+      ...detailBody,
     ]);
   }
 

@@ -156,32 +156,18 @@ class SignalRow extends StatelessWidget {
   }
 }
 
-/// The line is the target: hover is one surface step, radius 8.
-class _LineTarget extends StatefulWidget {
+class _LineTarget extends StatelessWidget {
   const _LineTarget({required this.onTap, required this.child});
   final VoidCallback onTap;
   final Widget child;
 
   @override
-  State<_LineTarget> createState() => _LineTargetState();
-}
-
-class _LineTargetState extends State<_LineTarget> {
-  bool _hover = false;
-
-  @override
   Widget build(BuildContext context) => MouseRegion(
-        onEnter: (_) => setState(() => _hover = true),
-        onExit: (_) => setState(() => _hover = false),
+        cursor: SystemMouseCursors.click,
         child: TapDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: widget.onTap,
-          child: Container(
-            decoration: BoxDecoration(
-                color: _hover ? AppColors.surface2 : Colors.transparent,
-                borderRadius: BorderRadius.circular(8)),
-            child: widget.child,
-          ),
+          onTap: onTap,
+          child: child,
         ),
       );
 }

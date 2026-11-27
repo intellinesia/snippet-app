@@ -715,12 +715,86 @@ class RecurringScreenState extends State<RecurringScreen>
     final paused = !_enabled(job);
     final error = job.lastError?.trim() ?? '';
     final next = _nextIn(job);
+    final title = job.title.isEmpty ? job.id : job.title;
+    final sub = '${job.scheduleLabel} · ${_targetLabel(job)}';
+    final statusRows = SettingsGroup(children: [
+      SettingsRow(
+        label: 'Status',
+        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+          Tag(paused ? 'Paused' : 'Active',
+              tone: paused ? Tone.neutral : Tone.accent),
+          if (next.isNotEmpty && !paused) ...[
+            SizedBox(width: S.s8),
+            Text(next, style: mono(12, color: AppColors.fg3)),
+          ],
+        ]),
+      ),
+      SettingsRow(
+        label: 'Last run',
+        trailing: Text(
+            job.lastRunAt == null ? 'Never' : relativeTime(job.lastRunAt!),
+            style: sans(13, color: AppColors.fg2)),
+      ),
+      if (error.isNotEmpty)
+        SettingsRow(
+          label: 'Last error',
+          sub: error,
+          danger: true,
+        ),
+    ]);
+    if (SettingsChromeScope.of(context)) {
+      return SettingsNestedPage(
+        parent: 'Scheduled',
+        title: title,
+        onBack: () => setState(() => _selId = null),
+        identity: SettingsIdentityStrip(
+          leading: AppIcon('scheduled', size: 15, color: AppColors.fg2),
+          title: title,
+          badge: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+            decoration: BoxDecoration(
+              color: paused ? AppColors.surface2 : AppColors.diffAddBg,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(paused ? 'Paused' : 'Active',
+                style: sans(11,
+                    weight: FontWeight.w500,
+                    color: paused ? AppColors.fg3 : AppColors.diffAddFg)),
+          ),
+          subtitle: sub,
+          trailing: Btn(paused ? 'Resume' : 'Pause',
+              variant: BtnVariant.secondary,
+              small: true,
+              icon: paused ? 'play' : 'pause',
+              onTap: () => _toggle(job)),
+        ),
+        footerLeft: Btn('Delete job',
+            small: true,
+            variant: BtnVariant.danger,
+            onTap: () {
+              setState(() => _selId = null);
+              _remove(job);
+            }),
+        footerRight: Row(mainAxisSize: MainAxisSize.min, children: [
+          Btn('Cancel',
+              small: true,
+              variant: BtnVariant.ghost,
+              onTap: () => setState(() => _selId = null)),
+          const SizedBox(width: 8),
+          Btn('Save changes',
+              small: true,
+              disabled: _submitting,
+              onTap: () => _saveEdit(job)),
+        ]),
+        children: [statusRows, _deskFields(job: job)],
+      );
+    }
     return SettingsColumn(children: [
       SettingsHeader(
         back: SettingsBack('Scheduled',
             onTap: () => setState(() => _selId = null)),
-        title: job.title.isEmpty ? job.id : job.title,
-        subtitle: '${job.scheduleLabel} · ${_targetLabel(job)}',
+        title: title,
+        subtitle: sub,
         actions: [
           Btn(paused ? 'Resume' : 'Pause',
               variant: BtnVariant.surface,
@@ -734,31 +808,7 @@ class RecurringScreenState extends State<RecurringScreen>
         ],
       ),
       SizedBox(height: S.s8),
-      SettingsGroup(children: [
-        SettingsRow(
-          label: 'Status',
-          trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-            Tag(paused ? 'Paused' : 'Active',
-                tone: paused ? Tone.neutral : Tone.accent),
-            if (next.isNotEmpty && !paused) ...[
-              SizedBox(width: S.s8),
-              Text(next, style: mono(12, color: AppColors.fg3)),
-            ],
-          ]),
-        ),
-        SettingsRow(
-          label: 'Last run',
-          trailing: Text(
-              job.lastRunAt == null ? 'Never' : relativeTime(job.lastRunAt!),
-              style: sans(13, color: AppColors.fg2)),
-        ),
-        if (error.isNotEmpty)
-          SettingsRow(
-            label: 'Last error',
-            sub: error,
-            danger: true,
-          ),
-      ]),
+      statusRows,
       _deskFields(job: job),
       SettingsGroup(children: [
         SettingsRow(
@@ -813,6 +863,21 @@ class RecurringScreenState extends State<RecurringScreen>
             if (!_removing.contains(j.id)) j
         ];
         if (_adding) {
+          if (SettingsChromeScope.of(context)) {
+            return SettingsNestedPage(
+              parent: 'Scheduled',
+              title: 'New scheduled job',
+              onBack: _cancelAdd,
+              footerRight: Row(mainAxisSize: MainAxisSize.min, children: [
+                Btn('Cancel',
+                    small: true, variant: BtnVariant.ghost, onTap: _cancelAdd),
+                const SizedBox(width: 8),
+                Btn('Save job',
+                    small: true, disabled: _submitting, onTap: _saveInline),
+              ]),
+              children: [_deskFields()],
+            );
+          }
           return SettingsColumn(children: [
             SettingsHeader(
               back: SettingsBack('Scheduled', onTap: _cancelAdd),

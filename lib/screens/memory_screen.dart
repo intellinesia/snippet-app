@@ -280,6 +280,21 @@ class _MemoryScreenState extends State<MemoryScreen> {
     final open = _open;
     if (open != null) {
       final scope = _openScope;
+      final scopeView = _ScopeView(
+        key: ValueKey(open),
+        client: widget.client,
+        scopeKey: open,
+        scope: scope,
+        hideSubtitle: true,
+      );
+      if (SettingsChromeScope.of(context)) {
+        return SettingsBreadcrumbHost(
+          parent: 'Memory',
+          title: scopeTitle(scope, open),
+          onBack: _close,
+          child: scopeView,
+        );
+      }
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -297,15 +312,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
               ),
             ),
           ),
-          Expanded(
-            child: _ScopeView(
-              key: ValueKey(open),
-              client: widget.client,
-              scopeKey: open,
-              scope: scope,
-              hideSubtitle: true,
-            ),
-          ),
+          Expanded(child: scopeView),
         ],
       );
     }

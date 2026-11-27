@@ -641,9 +641,18 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
             _scheduleReasoning();
           }),
         );
+    final hosted = !widget.inSplit && SettingsChromeScope.of(context);
     final connection = <Widget>[
       if (signIn != null)
-        Padding(padding: EdgeInsets.all(S.s12), child: signIn)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppColors.bg,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: signIn,
+        )
       else
         SettingsRow(
           label: 'API key',
@@ -672,23 +681,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
               hint: 'https://api.example.com/v1'),
         ),
     ];
-    return SettingsColumn(children: [
-      SettingsHeader(
-        back: widget.inSplit
-            ? null
-            : SettingsBack('Profiles', onTap: _dismiss),
-        title: title,
-        subtitle: [
-          _providerLabel(_provider),
-          if (modelName.isNotEmpty) modelName,
-          if (_active) 'used for new sessions',
-        ].join(' · '),
-        actions: [
-          Btn(_busy ? 'Saving…' : (_isEdit ? 'Save' : 'Add profile'),
-              small: true, disabled: !canSave, onTap: _save),
-        ],
-      ),
-      SizedBox(height: S.s8),
+    final sections = <Widget>[
       SettingsGroup(
         header: 'Model',
         footer: _modelHint,
@@ -783,7 +776,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
           sub: 'Tokens. Blank keeps the default.',
           trailing: SettingsField(
               controller: _ctx,
-              width: 150,
+              width: 240,
               mono: true,
               number: true,
               hint: '200000'),
@@ -791,36 +784,38 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
         SettingsRow(
           label: 'Compact at',
           sub: 'History is summarised when the window is this full.',
-          trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-            SizedBox(
-              width: 160,
-              child: SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  trackHeight: 3,
-                  activeTrackColor: AppColors.accent,
-                  inactiveTrackColor: AppColors.surface3,
-                  thumbColor: AppColors.fg1,
-                  overlayShape: SliderComponentShape.noOverlay,
-                  thumbShape:
-                      const RoundSliderThumbShape(enabledThumbRadius: 7),
-                ),
-                child: Slider(
-                  value: compact.toDouble(),
-                  min: 10,
-                  max: 100,
-                  divisions: 18,
-                  onChanged: (v) =>
-                      setState(() => _compact.text = '${v.round()}'),
+          trailing: SizedBox(
+            width: 240,
+            child: Row(children: [
+              Expanded(
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    trackHeight: 3,
+                    activeTrackColor: AppColors.accent,
+                    inactiveTrackColor: AppColors.surface3,
+                    thumbColor: AppColors.fg1,
+                    overlayShape: SliderComponentShape.noOverlay,
+                    thumbShape:
+                        const RoundSliderThumbShape(enabledThumbRadius: 7),
+                  ),
+                  child: Slider(
+                    value: compact.toDouble(),
+                    min: 10,
+                    max: 100,
+                    divisions: 18,
+                    onChanged: (v) =>
+                        setState(() => _compact.text = '${v.round()}'),
+                  ),
                 ),
               ),
-            ),
-            SizedBox(
-              width: 40,
-              child: Text('$compact%',
-                  textAlign: TextAlign.right,
-                  style: sans(13, color: AppColors.fg2)),
-            ),
-          ]),
+              SizedBox(
+                width: 40,
+                child: Text('$compact%',
+                    textAlign: TextAlign.right,
+                    style: mono(12, color: AppColors.fg2)),
+              ),
+            ]),
+          ),
         ),
         if (_usesOpenAiAdapter(_provider))
           SettingsRow(
@@ -832,7 +827,9 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
       ]),
       SettingsGroup(
         header: 'Connection',
-        footer: 'Keys stay on the machine running snippet.',
+        footer: signIn == null
+            ? 'Keys stay on the machine running snippet.'
+            : null,
         children: connection,
       ),
       SettingsGroup(header: 'Options', children: [
@@ -857,7 +854,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
               value: _active, onChanged: (v) => setState(() => _active = v)),
         ),
       ]),
-      if (_isEdit && widget.onDelete != null)
+      if (!hosted && _isEdit && widget.onDelete != null)
         SettingsGroup(children: [
           SettingsRow(
               label: 'Delete profile', danger: true, onTap: widget.onDelete),
@@ -867,6 +864,77 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
           padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s12),
           child: Text(_error!, style: sans(12, color: AppColors.run)),
         ),
+    ];
+    if (hosted) {
+      return SettingsNestedPage(
+        parent: 'Inference profiles',
+        title: title,
+        onBack: _dismiss,
+        identity: _isEdit
+            ? SettingsIdentityStrip(
+                leading: ProviderLogo(_provider, size: 16),
+                title: title,
+                badge: _active
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.diffAddBg,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text('Active',
+                            style: sans(11,
+                                weight: FontWeight.w500,
+                                color: AppColors.diffAddFg)),
+                      )
+                    : null,
+                subtitle: [
+                  _providerLabel(_provider),
+                  if (modelName.isNotEmpty) modelName,
+                ].join(' · '),
+                trailing: !_active
+                    ? Btn('Set active',
+                        small: true,
+                        variant: BtnVariant.secondary,
+                        onTap: () => setState(() => _active = true))
+                    : null,
+              )
+            : null,
+        footerLeft: _isEdit && widget.onDelete != null
+            ? Btn('Delete profile',
+                small: true,
+                variant: BtnVariant.danger,
+                onTap: widget.onDelete)
+            : Text('Used for new sessions if set active',
+                style: sans(11.5, color: AppColors.fg3)),
+        footerRight: Row(mainAxisSize: MainAxisSize.min, children: [
+          Btn('Cancel',
+              small: true, variant: BtnVariant.ghost, onTap: _dismiss),
+          const SizedBox(width: 8),
+          Btn(_busy ? 'Saving…' : (_isEdit ? 'Save changes' : 'Add profile'),
+              small: true, disabled: !canSave, onTap: _save),
+        ]),
+        children: sections,
+      );
+    }
+    return SettingsColumn(children: [
+      SettingsHeader(
+        back: widget.inSplit
+            ? null
+            : SettingsBack('Profiles', onTap: _dismiss),
+        title: title,
+        subtitle: [
+          _providerLabel(_provider),
+          if (modelName.isNotEmpty) modelName,
+          if (_active) 'used for new sessions',
+        ].join(' · '),
+        actions: [
+          Btn(_busy ? 'Saving…' : (_isEdit ? 'Save' : 'Add profile'),
+              small: true, disabled: !canSave, onTap: _save),
+        ],
+      ),
+      SizedBox(height: S.s8),
+      ...sections,
     ]);
   }
 

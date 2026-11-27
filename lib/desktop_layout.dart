@@ -119,16 +119,333 @@ class SettingsBack extends StatelessWidget {
   }
 }
 
+class SettingsBreadcrumb {
+  const SettingsBreadcrumb({
+    required this.parent,
+    required this.title,
+    required this.onBack,
+  });
+
+  final String parent;
+  final String title;
+  final VoidCallback onBack;
+}
+
+class SettingsBreadcrumbController extends ChangeNotifier {
+  SettingsBreadcrumb? _current;
+  Object? _owner;
+
+  SettingsBreadcrumb? get current => _current;
+
+  void set(Object owner, SettingsBreadcrumb crumb) {
+    final prev = _current;
+    _owner = owner;
+    _current = crumb;
+    if (prev == null ||
+        prev.parent != crumb.parent ||
+        prev.title != crumb.title) {
+      notifyListeners();
+    }
+  }
+
+  void clear([Object? owner]) {
+    if (owner != null && _owner != owner) return;
+    if (_current == null) return;
+    _owner = null;
+    _current = null;
+    notifyListeners();
+  }
+}
+
 /// Set by the Settings dialog and sheet: they draw the page title, back and
 /// close, so page headers and columns inside give that chrome up.
 class SettingsChromeScope extends InheritedWidget {
-  const SettingsChromeScope({super.key, required super.child});
+  const SettingsChromeScope({
+    super.key,
+    this.breadcrumb,
+    required super.child,
+  });
+
+  final SettingsBreadcrumbController? breadcrumb;
 
   static bool of(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<SettingsChromeScope>() != null;
 
+  static SettingsBreadcrumbController? breadcrumbOf(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<SettingsChromeScope>()
+          ?.breadcrumb;
+
   @override
-  bool updateShouldNotify(SettingsChromeScope oldWidget) => false;
+  bool updateShouldNotify(SettingsChromeScope oldWidget) =>
+      breadcrumb != oldWidget.breadcrumb;
+}
+
+/// Unified desktop nested Settings page: hoists `← Parent / Title` into the
+/// modal's single top bar, scrolls the form cleanly, and pins actions in a
+/// bottom bar so Save / Cancel / Delete never scroll away.
+class SettingsNestedPage extends StatefulWidget {
+  const SettingsNestedPage({
+    super.key,
+    required this.parent,
+    required this.title,
+    required this.onBack,
+    required this.children,
+    this.identity,
+    this.footerLeft,
+    this.footerRight,
+  });
+
+  final String parent;
+  final String title;
+  final VoidCallback onBack;
+  final Widget? identity;
+  final List<Widget> children;
+  final Widget? footerLeft;
+  final Widget? footerRight;
+
+  @override
+  State<SettingsNestedPage> createState() => _SettingsNestedPageState();
+}
+
+class _SettingsNestedPageState extends State<SettingsNestedPage> {
+  SettingsBreadcrumbController? _ctrl;
+
+  void _sync() {
+    final c = _ctrl;
+    if (c == null) return;
+    final crumb = SettingsBreadcrumb(
+      parent: widget.parent,
+      title: widget.title,
+      onBack: widget.onBack,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      c.set(this, crumb);
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final next = SettingsChromeScope.breadcrumbOf(context);
+    if (next != _ctrl) {
+      _ctrl?.clear(this);
+      _ctrl = next;
+    }
+    _sync();
+  }
+
+  @override
+  void didUpdateWidget(SettingsNestedPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.parent != widget.parent ||
+        oldWidget.title != widget.title ||
+        oldWidget.onBack != widget.onBack) {
+      _sync();
+    }
+  }
+
+  @override
+  void dispose() {
+    final c = _ctrl;
+    if (c != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => c.clear(this));
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Theme.of(context);
+    final hasFooter = widget.footerLeft != null || widget.footerRight != null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(28, 20, 28, 28),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 640),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (widget.identity != null) ...[
+                      widget.identity!,
+                      Container(
+                        margin: const EdgeInsets.only(top: 16, bottom: 20),
+                        height: 1,
+                        color: AppColors.line,
+                      ),
+                    ],
+                    ...widget.children,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (hasFooter)
+          Container(
+            height: 54,
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            decoration: BoxDecoration(
+              color: AppColors.surface1,
+              border: Border(top: BorderSide(color: AppColors.line)),
+            ),
+            child: Row(
+              children: [
+                if (widget.footerLeft != null) widget.footerLeft!,
+                const Spacer(),
+                if (widget.footerRight != null) widget.footerRight!,
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Compact identity strip at the top of a nested Settings detail page.
+class SettingsIdentityStrip extends StatelessWidget {
+  const SettingsIdentityStrip({
+    super.key,
+    required this.leading,
+    required this.title,
+    this.badge,
+    this.subtitle,
+    this.trailing,
+  });
+
+  final Widget leading;
+  final String title;
+  final Widget? badge;
+  final String? subtitle;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.border),
+            ),
+            alignment: Alignment.center,
+            child: leading,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(14.5,
+                            weight: FontWeight.w600, color: AppColors.fg1)),
+                    if (badge != null) badge!,
+                  ],
+                ),
+                if (subtitle != null && subtitle!.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(subtitle!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: mono(11.5, color: AppColors.fg3)),
+                ],
+              ],
+            ),
+          ),
+          if (trailing != null) ...[
+            const SizedBox(width: 12),
+            trailing!,
+          ],
+        ],
+      );
+}
+
+/// Registers a breadcrumb in the Settings dialog's top bar around a custom
+/// full-height child (e.g. a split file browser that manages its own scroll).
+class SettingsBreadcrumbHost extends StatefulWidget {
+  const SettingsBreadcrumbHost({
+    super.key,
+    required this.parent,
+    required this.title,
+    required this.onBack,
+    required this.child,
+  });
+
+  final String parent;
+  final String title;
+  final VoidCallback onBack;
+  final Widget child;
+
+  @override
+  State<SettingsBreadcrumbHost> createState() => _SettingsBreadcrumbHostState();
+}
+
+class _SettingsBreadcrumbHostState extends State<SettingsBreadcrumbHost> {
+  SettingsBreadcrumbController? _ctrl;
+
+  void _sync() {
+    final c = _ctrl;
+    if (c == null) return;
+    final crumb = SettingsBreadcrumb(
+      parent: widget.parent,
+      title: widget.title,
+      onBack: widget.onBack,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      c.set(this, crumb);
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final next = SettingsChromeScope.breadcrumbOf(context);
+    if (next != _ctrl) {
+      _ctrl?.clear(this);
+      _ctrl = next;
+    }
+    _sync();
+  }
+
+  @override
+  void didUpdateWidget(SettingsBreadcrumbHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.parent != widget.parent ||
+        oldWidget.title != widget.title ||
+        oldWidget.onBack != widget.onBack) {
+      _sync();
+    }
+  }
+
+  @override
+  void dispose() {
+    final c = _ctrl;
+    if (c != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => c.clear(this));
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 class SettingsHeader extends StatelessWidget {
@@ -205,10 +522,10 @@ class SettingsHeader extends StatelessWidget {
       );
     }
     return Padding(
-      // Desktop: on the row-text edge, like the section labels below.
+      // Desktop: flush with the editorial column, matching section labels below.
       padding: kMobile
           ? const EdgeInsets.fromLTRB(0, 4, 0, 8)
-          : EdgeInsets.fromLTRB(Grouped.padX, 0, 0, 4),
+          : const EdgeInsets.fromLTRB(0, 0, 0, 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
