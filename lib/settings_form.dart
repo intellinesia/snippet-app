@@ -255,12 +255,10 @@ class GroupedTiles extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(height: 1, color: AppColors.border),
             for (var i = 0; i < n; i++) ...[
               if (i > 0) Container(height: 1, color: AppColors.border),
               children[i],
             ],
-            Container(height: 1, color: AppColors.border),
           ],
         ),
       );

@@ -780,7 +780,7 @@ class _VoiceScreenState extends State<VoiceScreen> {
 
     return [
       SettingsGroup(
-        header: 'Listening',
+        header: kMobile ? 'Listening' : null,
         footer: 'Keys stay on the server. Replies need a Deepgram or Rime key.',
         children: [
           SettingsPickerRow<String>(
