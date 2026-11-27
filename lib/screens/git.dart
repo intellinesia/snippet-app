@@ -1289,10 +1289,21 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
   double _measureGutter() {
     var max = 0;
     for (final l in _parsedLines) {
-      final v = l.newLine ?? l.oldLine ?? 0;
-      if (v > max) max = v;
+      for (final v in [l.oldLine ?? 0, l.newLine ?? 0]) {
+        if (v > max) max = v;
+      }
     }
-    final width = 7.0 * max.toString().length;
+    // Measured in the real face: a fixed per-digit guess wrapped wide numbers
+    // where the mono font runs wider than 7pt.
+    final painter = TextPainter(
+      text: TextSpan(
+          text: '8' * max.toString().length,
+          style: codeMono(kMobile ? 11 : 12)),
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout();
+    final width = painter.width.ceilToDouble() + 2;
+    painter.dispose();
     return width < 18 ? 18 : width;
   }
 
@@ -1370,6 +1381,9 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
           SizedBox(
             width: _gutterWidth,
             child: Text(n,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.clip,
                 textAlign: TextAlign.right,
                 style: codeMono(11, height: 1.5, color: gutterFg)),
           ),
@@ -1401,6 +1415,9 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
             child: Padding(
               padding: const EdgeInsets.only(right: 14),
               child: Text(oldStr,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.clip,
                   textAlign: TextAlign.right,
                   style: codeMono(12, height: 20 / 12, color: gutterFg)),
             ),
@@ -1410,6 +1427,9 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
             child: Padding(
               padding: const EdgeInsets.only(right: 14),
               child: Text(newStr,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.clip,
                   textAlign: TextAlign.right,
                   style: codeMono(12, height: 20 / 12, color: gutterFg)),
             ),

@@ -16,14 +16,12 @@ const double _avatar = 24;
 /// Desktop post body width is the column minus this (MSG-02).
 const double kPostBodyInset = 40;
 
-/// Desktop: your bubble is at most this wide (MSG-01).
-const double kUserBubbleMax = 360;
 
 /// Desktop chat body: 13/400 on a 19 line, a step below white.
 TextStyle deskBody({Color? color}) =>
     sans(13, height: 19 / 13, color: color ?? AppColors.fg2);
 
-/// Desktop: your message sits in a quiet bubble (radius 8, pad 12×8, max 360);
+/// Desktop: your message sits in a quiet bubble (radius 8, pad 12×8, max 640);
 /// agent prose has no bubble.
 class SoftBubble extends StatelessWidget {
   const SoftBubble({
@@ -56,9 +54,7 @@ class SoftBubble extends StatelessWidget {
         ? AppColors.surface3
         : Color.lerp(AppColors.surface2, AppColors.surface3, 0.25)!;
     return LayoutBuilder(builder: (_, box) {
-      final cap = box.maxWidth.isFinite
-          ? (box.maxWidth - 36).clamp(0.0, kUserBubbleMax).toDouble()
-          : kUserBubbleMax;
+      final cap = userBubbleCap(box.maxWidth);
       return ConstrainedBox(
         constraints: BoxConstraints(maxWidth: cap),
         child: Container(
@@ -435,12 +431,7 @@ class SentMeta extends StatelessWidget {
     final s = state ?? (read != null ? SendState.read : SendState.sent);
     final children = <Widget>[
       switch (s) {
-        SendState.sending => SizedBox.square(
-            dimension: 11,
-            child: CircularProgressIndicator(
-                strokeWidth: 1.4,
-                strokeCap: StrokeCap.round,
-                color: AppColors.fg3)),
+        SendState.sending => Spinner(size: 11, color: AppColors.fg3),
         SendState.sent => Icon(PhIcons.check, size: 13, color: AppColors.fg3),
         SendState.read =>
           Icon(PhIcons.checkCircle, size: 13, color: AppColors.fg2),

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../components.dart' show Spinner;
-import '../composer/chat_composer.dart' show kChatMeasure;
 import '../menu_widgets.dart' show relativeTime;
 import '../mochi.dart';
 import '../models.dart';
@@ -12,16 +11,24 @@ import '../panel.dart' show presentScreen, PanelStyle;
 import '../shell_panel.dart';
 import '../tap_detector.dart';
 import '../theme.dart';
-import '../widgets.dart' show AppIcon;
-import 'compact_btn.dart';
+import '../widgets.dart' show AppIcon, HeaderAction;
 import 'lead/lead_state.dart' show isDedicatedLeadSession, isInboxSessionRow;
 import 'session_list_row.dart' show sessionNeedsYou, projectLabel;
 import 'shell_nav.dart' show sessionBusy;
 
 enum SessionsFilter { all, needsYou, running, mine }
 
-/// Desktop Sessions page: the cross-agent session inbox. Needs-you first,
-/// then running, then recent. Opening a row opens the session as a tab.
+enum _Group {
+  needsYou('Needs you'),
+  running('Running'),
+  recent('Recent');
+
+  const _Group(this.label);
+  final String label;
+}
+
+/// Desktop Sessions page in the Tasks layout: a header strip, then one 32pt
+/// row per session grouped needs-you, running, recent. Opening a row opens the session as a tab.
 class SessionsInboxView extends StatefulWidget {
   const SessionsInboxView({
     super.key,
@@ -88,11 +95,12 @@ class _SessionsInboxViewState extends State<SessionsInboxView> {
   @override
   Widget build(BuildContext context) {
     Theme.of(context);
-    final list = [
+    final all = [
       for (final s in _sessions)
-        if (!isDedicatedLeadSession(s.id) && !isInboxSessionRow(s) && _keep(s))
-          s
-    ]..sort((a, b) => b.lastActive.compareTo(a.lastActive));
+        if (!isDedicatedLeadSession(s.id) && !isInboxSessionRow(s)) s
+    ];
+    final list = [for (final s in all) if (_keep(s)) s]
+      ..sort((a, b) => b.lastActive.compareTo(a.lastActive));
     final needs = [for (final s in list) if (sessionNeedsYou(s)) s];
     final running = [
       for (final s in list)
@@ -102,75 +110,83 @@ class _SessionsInboxViewState extends State<SessionsInboxView> {
       for (final s in list)
         if (!sessionNeedsYou(s) && !sessionBusy(s)) s
     ];
-    final empty = _sessions.every(
-        (s) => isDedicatedLeadSession(s.id) || isInboxSessionRow(s));
+    final groups = [
+      if (needs.isNotEmpty) (_Group.needsYou, needs),
+      if (running.isNotEmpty) (_Group.running, running),
+      if (recent.isNotEmpty) (_Group.recent, recent),
+    ];
     return ColoredBox(
       color: AppColors.bg,
-      child: empty
-          ? _empty()
-          : Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                // One reading column, the same measure as the chat.
-                constraints: const BoxConstraints(maxWidth: kChatMeasure),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 22, 24, 0),
-                        child: Row(children: [
-                          Text('Sessions',
-                              style: sans(15,
-                                  weight: FontWeight.w600,
-                                  color: AppColors.fg1)),
-                          const Spacer(),
-                          for (final (f, label) in const [
-                            (SessionsFilter.all, 'All'),
-                            (SessionsFilter.needsYou, 'Needs you'),
-                            (SessionsFilter.running, 'Running'),
-                            (SessionsFilter.mine, 'Mine'),
-                          ]) ...[
-                            const SizedBox(width: 2),
-                            _FilterChip(
-                                label: label,
-                                selected: _filter == f,
-                                onTap: () => setState(() => _filter = f)),
-                          ],
-                        ]),
-                      ),
-                      Expanded(
-                        child: ListView(
-                          padding: const EdgeInsets.fromLTRB(12, 14, 12, 24),
-                          children: [
-                            if (list.isEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 40),
-                                child: Center(
-                                  child: Text('Nothing here for this filter.',
-                                      style: sans(12, color: AppColors.fg3)),
-                                ),
-                              ),
-                            ..._section('Needs you', needs),
-                            ..._section('Running', running),
-                            ..._section('Recent', recent),
-                          ],
-                        ),
-                      ),
-                    ]),
-              ),
-            ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        // The Tasks header strip: title and count, filters and the action.
+        Container(
+          height: PaneRow.height,
+          padding: const EdgeInsets.fromLTRB(20, 0, 12, 0),
+          decoration: BoxDecoration(
+              border: Border(
+                  bottom: BorderSide(
+                      color: AppColors.paneLine, width: AppColors.hairline))),
+          child: Row(children: [
+            Text('Sessions',
+                style: sans(13, weight: W.label, color: PaneRow.labelOn)),
+            const SizedBox(width: 8),
+            Text('${all.length}',
+                style: sans(12, color: AppColors.fg4, tabular: true)),
+            const Spacer(),
+            for (final (f, label) in const [
+              (SessionsFilter.all, 'All'),
+              (SessionsFilter.needsYou, 'Needs you'),
+              (SessionsFilter.running, 'Running'),
+              (SessionsFilter.mine, 'Mine'),
+            ]) ...[
+              const SizedBox(width: 2),
+              _FilterChip(
+                  label: label,
+                  selected: _filter == f,
+                  onTap: () => setState(() => _filter = f)),
+            ],
+            if (widget.onNewSession != null) ...[
+              const SizedBox(width: 10),
+              HeaderAction('New session', onTap: widget.onNewSession),
+            ],
+          ]),
+        ),
+        Expanded(
+          child: all.isEmpty
+              ? _empty()
+              : list.isEmpty
+                  ? Center(
+                      child: Text('Nothing here for this filter.',
+                          style: sans(12, color: AppColors.fg3)))
+                  : ListView(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      children: [
+                        for (var g = 0; g < groups.length; g++)
+                          ..._section(groups[g].$1, groups[g].$2,
+                              first: g == 0),
+                      ],
+                    ),
+        ),
+      ]),
     );
   }
 
-  List<Widget> _section(String label, List<SessionInfo> all) {
-    if (all.isEmpty) return const [];
+  List<Widget> _section(_Group group, List<SessionInfo> all,
+      {required bool first}) {
     // Long histories stay cheap: the count is real, the rows stop at 60.
     final rows = all.take(60);
     return [
       Padding(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
-        child: Text('$label  ${all.length}',
-            style: sans(11.5, weight: FontWeight.w500, color: AppColors.fg3)),
+        // The same inset and 22pt mark column as the task group headings.
+        padding: EdgeInsets.fromLTRB(14, first ? 8 : 18, 14, 6),
+        child: Row(children: [
+          SizedBox(width: 22, child: Center(child: _groupMark(group))),
+          const SizedBox(width: 4),
+          Text(group.label,
+              style: sans(12.5, weight: W.label, color: AppColors.fg2)),
+          const SizedBox(width: 8),
+          Text('${all.length}', style: sans(12, color: AppColors.fg4)),
+        ]),
       ),
       for (final s in rows)
         SessionInboxRow(
@@ -178,9 +194,18 @@ class _SessionsInboxViewState extends State<SessionsInboxView> {
           agentName: _names[s.displayAgentId] ?? '',
           onTap: () => widget.onOpen(s),
         ),
-      const SizedBox(height: 10),
     ];
   }
+
+  static Widget _groupMark(_Group g) => switch (g) {
+        _Group.needsYou => Container(
+            width: 7,
+            height: 7,
+            decoration:
+                BoxDecoration(color: AppColors.accent, shape: BoxShape.circle)),
+        _Group.running => AppIcon('activity', size: 13, color: AppColors.fg3),
+        _Group.recent => AppIcon('clock', size: 13, color: AppColors.fg3),
+      };
 
   Widget _empty() => Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -198,14 +223,6 @@ class _SessionsInboxViewState extends State<SessionsInboxView> {
           const SizedBox(height: 8),
           Text('Start a session from Home, or mention an agent anywhere.',
               style: sans(12, color: AppColors.fg2)),
-          if (widget.onNewSession != null) ...[
-            const SizedBox(height: 22),
-            CompactBtn('Start a session',
-                primary: true, onTap: widget.onNewSession),
-          ],
-          const SizedBox(height: 22),
-          Text('Needs-you items will appear here first.',
-              style: sans(11, color: AppColors.fg3)),
         ]),
       );
 }
@@ -227,17 +244,16 @@ class _FilterChip extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             onTap: onTap,
             child: Container(
-              height: 26,
+              height: PaneRow.pill,
               padding: const EdgeInsets.symmetric(horizontal: 10),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: selected ? AppColors.hoverPlate : Colors.transparent,
-                borderRadius: BorderRadius.circular(R.of(6)),
+                color: selected ? PaneRow.plate : Colors.transparent,
+                borderRadius: BorderRadius.circular(PaneRow.radius),
               ),
               child: Text(label,
-                  style: sans(12,
-                      weight: FontWeight.w500,
-                      color: selected ? AppColors.fg1 : AppColors.fg3)),
+                  style: sans(PaneRow.label,
+                      color: selected ? PaneRow.labelOn : PaneRow.labelOff)),
             ),
           ),
         ),
@@ -320,38 +336,57 @@ class _SessionInboxRowState extends State<SessionInboxRow> {
           behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
           child: Container(
-            height: 54,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            height: 32,
+            margin: const EdgeInsets.symmetric(horizontal: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
               color: _hover ? AppColors.hoverPlate : Colors.transparent,
-              borderRadius: BorderRadius.circular(R.md),
+              borderRadius: BorderRadius.circular(PaneRow.radius),
             ),
             child: Row(children: [
-              ClipOval(
-                  child: AgentMochi(s.displayAgentId ?? 'snippet', size: 24)),
-              const SizedBox(width: 12),
+              SizedBox(
+                  width: 22,
+                  child: Center(
+                      child: ClipOval(
+                          child: AgentMochi(s.displayAgentId ?? 'snippet',
+                              size: rowAvatarSize(32))))),
+              const SizedBox(width: 8),
               Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(13,
-                            weight: FontWeight.w500, color: AppColors.fg1)),
-                    const SizedBox(height: 3),
-                    Text(summary.isEmpty ? who : '$who  ·  $summary',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(12, color: AppColors.fg3)),
-                  ],
-                ),
+                flex: 5,
+                child: Text(title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13, color: PaneRow.labelOn)),
               ),
-              const SizedBox(width: 16),
-              if (mark != null) ...[mark, const SizedBox(width: 10)],
-              Text(relativeTime(s.lastActive),
-                  style: sans(11.5, color: AppColors.fg3, tabular: true)),
+              if (summary.isNotEmpty) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 4,
+                  child: Text(summary,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12.5, color: AppColors.fg4)),
+                ),
+              ] else
+                const Spacer(flex: 4),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 150,
+                child: Text(who,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(12, color: AppColors.fg3)),
+              ),
+              SizedBox(
+                  width: 22,
+                  child: mark == null ? null : Center(child: mark)),
+              SizedBox(
+                width: 34,
+                child: Text(relativeTime(s.lastActive),
+                    maxLines: 1,
+                    textAlign: TextAlign.right,
+                    style: sans(12, color: AppColors.fg4, tabular: true)),
+              ),
             ]),
           ),
         ),

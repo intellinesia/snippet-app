@@ -699,10 +699,8 @@ class _LedgerGanttState extends State<LedgerGantt> {
     }
 
     final tally = <LedgerKind, int>{};
-    var failed = 0;
     for (final s in steps) {
       tally.update(_kindOf(s).$1, (v) => v + 1, ifAbsent: () => 1);
-      if (!s.running && _stepFailed(s)) failed++;
     }
     String noun(LedgerKind k, int c) => switch (k) {
           LedgerKind.read => _plural(c, 'read', 'reads'),
@@ -724,7 +722,10 @@ class _LedgerGanttState extends State<LedgerGantt> {
           ? widget.rows![i]
           : null;
       // The line already names the step; open straight to its output.
-      final Widget? detail = raw is DenseToolRow ? toolRowBody(raw) : raw;
+      // The peek sits on surface2, so the block takes the sunken tone.
+      final Widget? detail = raw is DenseToolRow
+          ? toolRowBody(raw, fill: AppColors.surface1)
+          : raw;
       final line = Padding(
         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
         child: Row(children: [
@@ -765,7 +766,8 @@ class _LedgerGanttState extends State<LedgerGantt> {
           SpringExpand(
             open: _open == i,
             child: Padding(
-              padding: const EdgeInsets.only(left: 23, bottom: 4),
+              // Lines the block up with the step text after the icon.
+              padding: const EdgeInsets.fromLTRB(28, 2, 4, 6),
               child: raw is DenseToolRow
                   ? detail
                   : WorkSteps(rows: [detail], header: false),
@@ -791,8 +793,6 @@ class _LedgerGanttState extends State<LedgerGantt> {
                   style: sans(12, color: AppColors.fg3)),
               const SizedBox(width: 12),
             ],
-            if (failed > 0)
-              Text('$failed failed', style: sans(12, color: AppColors.fg3)),
             const Spacer(),
             if (el != null)
               Text(_clock(el), style: mono(11.5, color: AppColors.fg3)),

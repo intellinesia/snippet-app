@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart' hide testWidgets;
 import 'package:flutter_test/flutter_test.dart' as flutter_test
     show testWidgets;
+import 'package:snippet/chat/chat_style.dart' show userBubbleCap;
 import 'package:snippet/chat/group_notice.dart';
 import 'package:snippet/chat/group_post.dart';
 import 'package:snippet/chat/run_head.dart';
@@ -97,7 +98,7 @@ void main() {
     expect(d.borderRadius, BorderRadius.circular(10));
   });
 
-  testWidgets('MSG-01 your bubble: quiet fill, radius 8, pad 12x8, at most 360',
+  testWidgets('MSG-01 your bubble: quiet fill, radius 8, pad 12x8, capped wide',
       (t) async {
     await pump(
         t,
@@ -115,7 +116,7 @@ void main() {
     expect(d.border, isNull);
     expect(c.padding,
         const EdgeInsets.symmetric(horizontal: 12, vertical: 8));
-    expect(t.getSize(box.first).width, 360);
+    expect(t.getSize(box.first).width, userBubbleCap(720));
   });
 
   testWidgets('MSG-01 meta: sending, read and failed with a 28 Retry',

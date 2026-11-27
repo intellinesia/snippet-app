@@ -135,7 +135,7 @@ class TaskGroupHeader extends StatelessWidget {
       );
 }
 
-/// The dense desktop row: status, id, title, assignee, workspace and age on
+/// The dense desktop row: status, id, title, assignee and age on
 /// one 32pt line. Selection and hover are fills, not outlines.
 class DenseTaskRow extends StatefulWidget {
   const DenseTaskRow({
@@ -144,13 +144,11 @@ class DenseTaskRow extends StatefulWidget {
     required this.onTap,
     this.selected = false,
     this.checked = false,
-    this.workspace,
     this.onStatus,
   });
   final TaskItem task;
   final bool selected;
   final bool checked;
-  final String? workspace;
   final VoidCallback onTap;
 
   /// Opens the quick status menu from the status mark.
@@ -225,16 +223,6 @@ class _DenseTaskRowState extends State<DenseTaskRow> {
             if (agent.isNotEmpty) ...[
               const SizedBox(width: 10),
               AgentMochi(agent, size: rowAvatarSize(32)),
-            ],
-            if ((widget.workspace ?? '').isNotEmpty) ...[
-              const SizedBox(width: 8),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 90),
-                child: Text(widget.workspace!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(12, color: AppColors.fg4)),
-              ),
             ],
             const SizedBox(width: 10),
             SizedBox(

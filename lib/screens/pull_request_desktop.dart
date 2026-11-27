@@ -506,11 +506,8 @@ class _DesktopPullRequestsState extends State<DesktopPullRequests> {
   @override
   Widget build(BuildContext context) {
     final selected = _selected;
-    final list = Container(
-      decoration: BoxDecoration(
-        color: AppColors.paneBg,
-        border: Border(right: BorderSide(color: AppColors.paneLine, width: AppColors.hairline)),
-      ),
+    final list = ColoredBox(
+      color: AppColors.bg,
       child: PrListPanel(
         client: widget.client,
         session: widget.session,
@@ -518,11 +515,6 @@ class _DesktopPullRequestsState extends State<DesktopPullRequests> {
         selected: selected,
         refreshTick: _tick,
         onSelect: (n) => setState(() => _selected = n),
-        onLoaded: (prs) {
-          if (_selected == null && prs.isNotEmpty) {
-            setState(() => _selected = prs.first.number);
-          }
-        },
       ),
     );
     return Material(
@@ -531,11 +523,8 @@ class _DesktopPullRequestsState extends State<DesktopPullRequests> {
         final narrow = box.maxWidth < 760;
         final showList = !_listHidden && (!narrow || selected == null);
         final detail = selected == null
-            ? const EmptyState(
-                icon: 'git-branch',
-                title: 'No pull request selected',
-                body: 'Pick one from the list.',
-              )
+            ? const TaskEmptyNote(
+                title: 'Select a pull request', art: EmptyArtKind.search)
             : _DesktopPrDetail(
                 key: ValueKey('pr-$selected'),
                 client: widget.client,
@@ -553,10 +542,16 @@ class _DesktopPullRequestsState extends State<DesktopPullRequests> {
                 onChanged: () async => setState(() => _tick++),
               );
         if (narrow) return showList ? list : detail;
+        // The Tasks layout: the list takes the room, the selected pull
+        // request sits in a pane on the right; hiding the list widens it.
+        final paneW = (box.maxWidth * 0.5).clamp(480.0, 760.0).toDouble();
         return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          if (showList)
-            SizedBox(width: box.maxWidth >= 1200 ? 340 : 300, child: list),
-          Expanded(child: detail),
+          if (showList) ...[
+            Expanded(child: list),
+            Container(width: AppColors.hairline, color: AppColors.paneLine),
+            SizedBox(width: paneW, child: detail),
+          ] else
+            Expanded(child: detail),
         ]);
       }),
     );

@@ -67,7 +67,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('bash'), findsOneWidget);
-    expect(find.text('exit 0'), findsOneWidget);
+    expect(find.text('exit 0'), findsNothing); // success needs no badge
     expect(find.text('Copy'), findsOneWidget);
     resetPlatform();
   });

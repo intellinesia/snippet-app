@@ -1089,7 +1089,7 @@ class _AgentRowShellState extends State<AgentRowShell> {
       kMobile ? _legacyRow(context) : _desktopRow(context);
 }
 
-/// A short accent arc turning round an avatar while its agent works.
+/// A small accent dot breathing at an avatar's corner while its agent works.
 class WorkingRing extends StatefulWidget {
   const WorkingRing({super.key});
 
@@ -1098,64 +1098,54 @@ class WorkingRing extends StatefulWidget {
 }
 
 class _WorkingRingState extends State<WorkingRing> {
-  final _spin = AmbientLoop(const Duration(milliseconds: 1400));
+  final _pulse =
+      AmbientLoop(const Duration(milliseconds: 1100), reverse: true);
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _spin.bind(context);
+    _pulse.bind(context);
     if (reduceMotion(context)) {
-      _spin.stop();
+      _pulse.stop(at: 1);
     } else {
-      _spin.start();
+      _pulse.start();
     }
   }
 
   @override
   void dispose() {
-    _spin.dispose();
+    _pulse.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) => IgnorePointer(
         child: CustomPaint(
-          painter: _RingPainter(_spin, AppColors.accent),
+          painter: _PulseDotPainter(_pulse, AppColors.accent, AppColors.bg),
         ),
       );
 }
 
-class _RingPainter extends CustomPainter {
-  _RingPainter(this.turn, this.color) : super(repaint: turn);
+class _PulseDotPainter extends CustomPainter {
+  _PulseDotPainter(this.t, this.color, this.ground) : super(repaint: t);
 
-  final Animation<double> turn;
+  final Animation<double> t;
   final Color color;
+  final Color ground;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final rect = (Offset.zero & size).deflate(1);
-    final outline = avatarBorder(rect.width).getOuterPath(rect);
-    final track = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
-      ..color = color.withValues(alpha: 0.18);
-    canvas.drawPath(outline, track);
-    final arc = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..strokeCap = StrokeCap.round
-      ..color = color;
-    // Same sweep as the old 1.9 rad arc, traced along whatever outline the theme uses.
-    final metric = outline.computeMetrics().first;
-    final len = metric.length;
-    final start = turn.value * len;
-    final end = start + len * 1.9 / (2 * 3.141592653589793);
-    canvas.drawPath(metric.extractPath(start, end.clamp(0, len)), arc);
-    if (end > len) canvas.drawPath(metric.extractPath(0, end - len), arc);
+    final r = (size.width * 0.14).clamp(2.5, 5.0).toDouble();
+    final c = Offset(size.width - r, size.height - r);
+    // A ground-coloured rim keeps the dot legible on any avatar.
+    canvas.drawCircle(c, r + 1.5, Paint()..color = ground);
+    canvas.drawCircle(c, r,
+        Paint()..color = color.withValues(alpha: 0.45 + 0.55 * t.value));
   }
 
   @override
-  bool shouldRepaint(_RingPainter old) => old.color != color;
+  bool shouldRepaint(_PulseDotPainter old) =>
+      old.color != color || old.ground != ground;
 }
 
 /// Desktop sidebar row: 60px, radius 14, 2px gap, selected on the row surface.

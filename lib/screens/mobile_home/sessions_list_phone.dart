@@ -569,61 +569,13 @@ class SessionRowPhone extends StatelessWidget {
   }
 }
 
-/// A ring with a gap; spins unless reduced motion is on.
-class SpinnerGlyph extends StatefulWidget {
+/// The working glyph: the shared breathing dots.
+class SpinnerGlyph extends StatelessWidget {
   const SpinnerGlyph({super.key, this.size = 14});
   final double size;
   @override
-  State<SpinnerGlyph> createState() => _SpinnerGlyphState();
-}
-
-class _SpinnerGlyphState extends State<SpinnerGlyph>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(seconds: 1));
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (reduceMotion(context)) {
-      _c.stop();
-    } else if (!_c.isAnimating) {
-      _c.repeat();
-    }
-  }
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => SizedBox.square(
-        dimension: widget.size,
-        child: RotationTransition(
-          turns: _c,
-          child: CustomPaint(painter: _Ring(AppColors.fg2)),
-        ),
-      );
-}
-
-class _Ring extends CustomPainter {
-  _Ring(this.color);
-  final Color color;
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6
-      ..strokeCap = StrokeCap.round;
-    canvas.drawArc(
-        Rect.fromLTWH(1, 1, size.width - 2, size.height - 2), 0, 4.6, false, p);
-  }
-
-  @override
-  bool shouldRepaint(_Ring o) => o.color != color;
+  Widget build(BuildContext context) =>
+      Spinner(size: size, color: AppColors.fg2);
 }
 
 class _Empty extends StatelessWidget {

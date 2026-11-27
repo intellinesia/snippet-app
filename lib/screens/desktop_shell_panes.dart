@@ -299,9 +299,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           ),
         ],
         actions: [
-          if (agent.id != 'lead') _workViewButton(agent.id),
           // Open, the panel's own row carries the hide button.
-          if (_panelHidden) _panelButton('info', 'agent info'),
+          if (_panelHidden) _panelButton('sidebar', 'panel'),
         ],
       );
     }
@@ -311,30 +310,13 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         return null;
       }
       final ids = request.iconAgentIds ?? const <String>[];
-      final names = [
-        for (final id in ids)
-          _coordinationAgents
-                  .where((a) => a.id == id)
-                  .map((a) => a.displayName.trim())
-                  .where((n) => n.isNotEmpty)
-                  .firstOrNull ??
-              id,
-      ];
       return ChatHeaderBar(
         tabs: _paneTabsFor(t),
         agentIds: ids,
         title: (request.title ?? '').trim().isEmpty ? 'Group' : request.title!,
-        subtitle: names.isEmpty ? '' : '${names.join(', ')} and you',
-        leading: [
-          Builder(
-            builder: (ctx) => IconBtn('plus',
-                size: 28,
-                iconSize: 12,
-                tooltip: 'Open a tab',
-                onTap: () => _showAgentAddMenu(ctx, null, const [])),
-          ),
-        ],
-        actions: [_panelButton('users', 'members')],
+        // A group has no workspace and one panel, so no "+" menu.
+        // Open, the panel's own row carries the hide button.
+        actions: [if (_panelHidden) _panelButton('sidebar', 'panel')],
       );
     }
     if (!t.isSessionChat || readout != null) return null;
@@ -364,21 +346,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       actions: [_sessionPanelButton(width)],
     );
   }
-
-  /// Chat or the agent's desk work, toggled from the header rather than a
-  /// permanent switch in the window bar.
-  Widget _workViewButton(String agentId) => ValueListenableBuilder<Set<String>>(
-        valueListenable: agentWorkView,
-        builder: (_, work, __) {
-          final on = work.contains(agentId);
-          return IconBtn('layers',
-              size: 28,
-              iconSize: 12,
-              active: on,
-              tooltip: on ? 'Back to chat' : 'Show desk work',
-              onTap: () => setAgentWorkView(agentId, !on));
-        },
-      );
 
   /// The agent, Lead or group panel: opened only from the chat header.
   Widget _panelButton(String icon, String what) => IconBtn(icon,
@@ -738,8 +705,13 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   Widget? _sessionSidePanel() {
     final tab = _activeTab;
     final agent = _activeAgent;
-    final side = tab?.readout?.request?.sidePanel;
+    final request = tab?.readout?.request;
+    final side = request?.sidePanel;
     if (tab != null && side != null) {
+      // Restored or sidebar-opened groups skip _openShellPanel; wire the
+      // toggle here so the panel row always carries its hide button.
+      request!.toggleSide ??= _togglePanel;
+      request.showSide ??= _showAgentInfo;
       return _panelHidden
           ? null
           : KeyedSubtree(
@@ -1077,8 +1049,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     );
   }
 
-  /// An agent or group pane's "+": its views, the agent's sessions and a
-  /// terminal, as the session pane's menu offers.
+  /// An agent pane's "+": its views and the agent's sessions. No terminal:
+  /// an agent chat has no workspace to run one in.
   void _showAgentAddMenu(
       BuildContext ctx, String? agentId, List<SessionInfo> sessions) {
     final work = agentId != null && agentWorkView.value.contains(agentId);
@@ -1112,11 +1084,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
               icon: 'chat-thread',
               label: s.title.trim().isEmpty ? '(untitled)' : s.title.trim(),
               onTap: () => _openSessionView(s.id, s.title, s.profile)),
-      ],
-      terminals: [
-        if (_client != null)
-          PaneAddEntry(
-              icon: 'terminal', label: 'New terminal', onTap: _newGlobalShell),
       ],
     );
   }

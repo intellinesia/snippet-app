@@ -16,8 +16,8 @@ import '../chat/grouped_card.dart';
 import '../markdown_preview.dart' show plainPreview;
 import '../gesture_physics.dart';
 import '../models.dart';
-import '../panel.dart';
 import '../platform.dart';
+import '../preview_canvas.dart' show showPreviewCanvas;
 import 'artifact_viewer_controls.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -235,16 +235,12 @@ Future<void> openArtifact(
           onClose: close),
     );
   }
-  return presentScreen<void>(
+  // Desktop previews float on the canvas over the app, not in a side panel.
+  return showPreviewCanvas(
     context,
-    style: PanelStyle.drawer,
-    maxWidth: 820,
-    purpose: ShellPanelPurpose.artifact,
-    panelId: id,
-    title: title,
-    originClient: client,
-    originSessionId: session,
-    builder: (_, close) => ArtifactViewer(
+    client: client,
+    sheetWidth: 960,
+    sheet: (_, close) => ArtifactViewer(
       client: client,
       session: session,
       id: id,

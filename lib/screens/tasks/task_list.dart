@@ -30,7 +30,6 @@ class TaskList extends StatelessWidget {
     this.selectedId,
     this.hasMore,
     this.onLoadMore,
-    this.sessionFolders,
     this.agentNames,
     this.phoneTab = TaskTab.active,
     this.onComplete,
@@ -66,9 +65,6 @@ class TaskList extends StatelessWidget {
   /// at rest instead of animating in.
   final DateTime? appearSince;
   final String? selectedId;
-
-  /// session id → folder name, for the phone card's "agent · folder" line.
-  final Map<String, String>? sessionFolders;
 
   /// agent id → display name, for the row's meta line.
   final Map<String, String>? agentNames;
@@ -179,7 +175,6 @@ class TaskList extends StatelessWidget {
             key: ValueKey('t-${t.id}'),
             task: t,
             selected: t.id == selectedId,
-            workspace: sessionFolders?[t.sessionId],
             onTap: () => onOpen(t),
             onStatus:
                 onStatus == null ? null : (anchor) => onStatus!(t, anchor),

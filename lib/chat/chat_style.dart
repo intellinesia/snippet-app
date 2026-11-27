@@ -254,13 +254,13 @@ class ChatBubble extends StatelessWidget {
         ),
       );
     }
-    // MSG-01 desktop: your bubble is s2, radius 8, pad 12x8, at most 360 wide.
+    // Desktop: your bubble is s2, radius 8, pad 12x8; ChatBubbleRow caps it.
     if (!kMobile && mine && color == null) {
       return ChatBubbleFill(
         fill: fill,
         child: Builder(
           builder: (bubbleCtx) => Container(
-            constraints: const BoxConstraints(maxWidth: 360),
+            constraints: const BoxConstraints(maxWidth: kUserBubbleMax),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: fill,
@@ -373,6 +373,16 @@ bool readingMode(String body) =>
     body.contains('```') ||
     RegExp(r'^\s*\|?\s*:?-{3,}:?\s*\|', multiLine: true).hasMatch(body);
 
+/// Desktop: your bubble is at most this wide, and at most [kUserBubbleDeskShare]
+/// of the column, so a long message reads as a wide block, not a tall strip.
+const double kUserBubbleMax = 640;
+const double kUserBubbleDeskShare = 0.78;
+
+/// The desktop cap for your bubble in a column [width] wide.
+double userBubbleCap(double width) => !width.isFinite
+    ? kUserBubbleMax
+    : (width * kUserBubbleDeskShare).clamp(0.0, kUserBubbleMax).toDouble();
+
 /// Bubble caps as fractions of the content width (viewport minus 32).
 const double kUserBubbleShare = 0.79;
 const double kAgentBubbleShare = 0.88;
@@ -405,14 +415,14 @@ class ChatBubbleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(builder: (_, box) {
-        // Phone keeps the proportional caps. Desktop MSG-01 caps your bubble
-        // at min(column - 36, 360); agent prose/cards use the column caps.
+        // Phone keeps the proportional caps. Desktop caps your bubble with
+        // userBubbleCap; agent prose/cards use the column caps.
         final share =
             fill ? 1.0 : (mine ? kUserBubbleShare : kAgentBubbleShare);
         final max = !box.maxWidth.isFinite
             ? 520.0
             : !kMobile && mine && !fill
-                ? (box.maxWidth - 36).clamp(0.0, 360.0).toDouble()
+                ? userBubbleCap(box.maxWidth)
                 : box.maxWidth * share;
         final bubble = fill
             ? SizedBox(width: max, child: child)

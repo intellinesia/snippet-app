@@ -455,7 +455,6 @@ class _TaskListViewState extends State<TaskListView> {
               task: t,
               selected: t.id == _selected,
               checked: _checked.contains(t.id),
-              workspace: _workspace(t),
               onTap: () => setState(() {
                 _selected = t.id;
                 _creating = false;

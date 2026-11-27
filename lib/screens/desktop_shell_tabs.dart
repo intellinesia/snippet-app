@@ -571,19 +571,6 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     if (root == null || root.sessionId == null) return;
     final existing =
         _tabs.indexWhere((t) => t.isPrs && t.instanceUrl == root.instanceUrl);
-    if (!kMobile) {
-      _openInnerTab(
-          existing >= 0
-              ? _tabs[existing]
-              : _ShellTab.prs(
-                  client: root.client,
-                  instanceUrl: root.instanceUrl,
-                  session: root.sessionId!,
-                  github: status,
-                ),
-          existing);
-      return;
-    }
     _openMainTab(
         existing >= 0
             ? null
@@ -627,7 +614,8 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     final purpose = t.readout?.request?.purpose;
     return purpose == ShellPanelPurpose.sessions ||
         purpose == ShellPanelPurpose.agents ||
-        purpose == ShellPanelPurpose.artifacts;
+        purpose == ShellPanelPurpose.artifacts ||
+        purpose == ShellPanelPurpose.pullRequests;
   }
 
   /// Puts [tab] in the active tab's place, else appends it. Returns its index.
@@ -690,7 +678,9 @@ extension _DesktopShellTabsExt on _DesktopShellState {
         // The canvas needs the wide main area, never the side pane.
         r.request?.purpose != ShellPanelPurpose.canvas &&
         r.request?.purpose != ShellPanelPurpose.artifacts &&
-        r.request?.purpose != ShellPanelPurpose.sessions;
+        r.request?.purpose != ShellPanelPurpose.sessions &&
+        // Pull requests are a place of their own: a main tab, never a panel.
+        r.request?.purpose != ShellPanelPurpose.pullRequests;
     if (inner) {
       _openInnerTab(probe, existing);
     } else {
@@ -722,11 +712,12 @@ extension _DesktopShellTabsExt on _DesktopShellState {
   }
 
   void _openFileTab(DaemonClient client, String url, String path, String name) {
-    final pane = _canvasPane;
+    // Desktop: files open in the main pane beside the chat, so the panel they
+    // were picked from stays where it is.
+    final pane = kMobile ? _canvasPane : _Pane.left;
     final group = _activeGroupKeyFor(pane) ?? _activeTab?.key;
     if (group == null) return;
-    // The canvas takes the inspector's place.
-    sessionRailCollapsed.value = true;
+    if (kMobile) sessionRailCollapsed.value = true;
     final existing = _tabs.indexWhere(
         (t) => t.isFile && t.instanceUrl == url && t.filePath == path);
     _setState(() {
@@ -794,7 +785,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     String sessionId,
     GitFile f,
   ) {
-    final pane = _focusedPane;
+    final pane = kMobile ? _focusedPane : _Pane.left;
     final group = _activeGroupKeyFor(pane) ?? _activeTab?.key;
     if (group == null) return;
     final staged = f.staged && !f.unstaged;

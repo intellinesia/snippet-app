@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
+import '../preview_canvas.dart' show showPreviewCanvas;
 import 'file_preview_parts.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -84,17 +85,15 @@ Future<void> presentFileOnDesktop(
   required String path,
   required String name,
 }) {
-  return presentScreen<void>(
-    context,
-    style: PanelStyle.drawer,
-    purpose: ShellPanelPurpose.file,
-    panelId: path,
-    originClient: client,
-    maxWidth: 1060,
-    maxHeight: 760,
-    builder: (_, close) =>
-        FileViewer(client: client, path: path, name: name, onClose: close),
-  );
+  // Previews float on the canvas over the app rather than taking a panel.
+  if (mediaKindOf(path) == MediaKind.image) {
+    return showPreviewCanvas(context, client: client, images: [path]);
+  }
+  return showPreviewCanvas(context,
+      client: client,
+      sheetWidth: 1060,
+      sheet: (_, close) =>
+          FileViewer(client: client, path: path, name: name, onClose: close));
 }
 
 String _homeShort(String path) =>

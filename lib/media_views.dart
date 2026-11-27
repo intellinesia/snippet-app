@@ -14,6 +14,7 @@ import 'api.dart';
 import 'chat/desktop_rich_cards.dart';
 import 'gesture_physics.dart';
 import 'platform.dart';
+import 'preview_canvas.dart' show showPreviewCanvas;
 import 'screens/file_viewer.dart';
 import 'theme.dart';
 import 'tool_sheet.dart';
@@ -162,13 +163,23 @@ List<SentAttachment> parseSentAttachments(String text) => [
         ),
     ];
 
-/// Open a file the way the platform wants: on desktop in the canvas pane beside
-/// the session, on phones images in the full-screen viewer
-/// and everything else in the file viewer.
+/// Open a file the way the platform wants: on desktop on the preview canvas,
+/// on phones images in the full-screen viewer and everything else in the file
+/// viewer.
 void openMedia(BuildContext context, DaemonClient client, String path,
     {List<String>? gallery}) {
   if (!kMobile) {
-    // The canvas pane beside the chat, not a new tab.
+    // Images float on the preview canvas, with their neighbours as a gallery.
+    if (mediaKindOf(path) == MediaKind.image) {
+      final images = [
+        for (final p in gallery ?? const <String>[])
+          if (mediaKindOf(p) == MediaKind.image) p
+      ];
+      final all = images.contains(path) ? images : [path];
+      showPreviewCanvas(context,
+          client: client, images: all, initial: all.indexOf(path));
+      return;
+    }
     presentFileOnDesktop(context,
         client: client, path: path, name: baseName(path));
     return;

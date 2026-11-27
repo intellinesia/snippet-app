@@ -117,58 +117,12 @@ class TaskGlyph extends StatelessWidget {
   }
 }
 
-class _Ring extends StatefulWidget {
+class _Ring extends StatelessWidget {
   const _Ring({required this.size});
   final double size;
   @override
-  State<_Ring> createState() => _RingState();
-}
-
-class _RingState extends State<_Ring> with SingleTickerProviderStateMixin {
-  late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(seconds: 1));
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (reduceMotion(context)) {
-      _c.stop();
-    } else if (!_c.isAnimating) {
-      _c.repeat();
-    }
-  }
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => RotationTransition(
-        turns: _c,
-        child: CustomPaint(
-            size: Size.square(widget.size),
-            painter: _RingPainter(AppColors.fg2)),
-      );
-}
-
-class _RingPainter extends CustomPainter {
-  _RingPainter(this.color);
-  final Color color;
-  @override
-  void paint(Canvas canvas, Size s) {
-    final p = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.75
-      ..strokeCap = StrokeCap.round;
-    final r = Rect.fromCircle(center: s.center(Offset.zero), radius: s.width / 2 - 2);
-    canvas.drawArc(r, 0.6, 5.2, false, p);
-  }
-
-  @override
-  bool shouldRepaint(_RingPainter o) => o.color != color;
+  Widget build(BuildContext context) =>
+      Spinner(size: size, color: AppColors.fg2);
 }
 
 /// A 48 x 48 trailing bar icon, 20 in fg2.

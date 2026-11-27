@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'ambient_loop.dart';
 import 'platform.dart';
 import 'theme.dart';
 import 'screens/action_list.dart' show ActionGroup, ActionRow;
@@ -623,21 +625,76 @@ class IconTile extends StatelessWidget {
   }
 }
 
-class Spinner extends StatelessWidget {
+/// The one working indicator: three dots breathing in turn, never a turning
+/// ring. Keeps the square box the old ring took so layouts do not shift.
+class Spinner extends StatefulWidget {
   const Spinner({super.key, this.size = 16, this.color});
 
   final double size;
   final Color? color;
 
   @override
-  Widget build(BuildContext context) => SizedBox.square(
-        dimension: size,
-        child: CircularProgressIndicator(
-          strokeWidth: size <= 14 ? 1.6 : 2,
-          strokeCap: StrokeCap.round,
-          color: color ?? AppColors.fg3,
+  State<Spinner> createState() => _SpinnerState();
+}
+
+class _SpinnerState extends State<Spinner> {
+  final _c = AmbientLoop(const Duration(milliseconds: 1200));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _c.bind(context);
+    if (reduceMotion(context)) {
+      _c.stop(at: 0.2);
+    } else {
+      _c.start();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        label: 'Working',
+        child: SizedBox.square(
+          dimension: widget.size,
+          child: RepaintBoundary(
+            child: CustomPaint(
+                painter: WorkingDotsPainter(_c, widget.color ?? AppColors.fg3)),
+          ),
         ),
       );
+}
+
+/// Three dots across the box's middle; each brightens a beat after the last.
+class WorkingDotsPainter extends CustomPainter {
+  WorkingDotsPainter(this.t, this.color) : super(repaint: t);
+
+  final Animation<double> t;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final r = (w * 0.1).clamp(1.1, 3.0).toDouble();
+    final gap = (w - r * 2) / 2;
+    final y = size.height / 2;
+    final p = Paint();
+    for (var i = 0; i < 3; i++) {
+      final phase = (t.value - i * 0.16) % 1.0;
+      // A short lift then a long rest reads as a calm pulse.
+      final lift = phase < 0.4 ? math.sin(phase / 0.4 * math.pi) : 0.0;
+      p.color = color.withValues(alpha: color.a * (0.28 + 0.72 * lift));
+      canvas.drawCircle(Offset(r + gap * i, y), r * (0.85 + 0.15 * lift), p);
+    }
+  }
+
+  @override
+  bool shouldRepaint(WorkingDotsPainter old) => old.color != color;
 }
 
 class DelayedSpinner extends StatefulWidget {

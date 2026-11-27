@@ -113,7 +113,6 @@ class TasksPanelState extends State<TasksPanel> {
   final FocusNode _keys = FocusNode(debugLabel: 'tasks-keys');
   String? _selectedTaskId;
   bool _creatingTask = false;
-  Map<String, String> _sessionFolders = const {};
   Map<String, SessionInfo> _sessions = const {};
   Map<String, String> _agentNames = const {};
   Set<String>? _agentTaskIds;
@@ -164,17 +163,13 @@ class TasksPanelState extends State<TasksPanel> {
     if (mounted) setState(() {});
   }
 
-  /// session id → last path segment, for the phone card meta line. Best
-  /// effort: an unreachable daemon just leaves the line shorter.
+  /// The sessions behind the tasks. Best effort: an unreachable daemon just
+  /// leaves the lines shorter.
   Future<void> _loadFolders() async {
     try {
       final sessions = await widget.client.sessions();
       if (!mounted) return;
       setState(() => _sessions = {for (final x in sessions) x.id: x});
-      setState(() => _sessionFolders = {
-            for (final s in sessions)
-              s.id: lastPathSegment(s.projectFolder),
-          });
     } catch (_) {}
   }
 
@@ -847,7 +842,6 @@ class TasksPanelState extends State<TasksPanel> {
       onRefresh: _feed.refresh,
       hasMore: _feed.hasMore,
       onLoadMore: _feed.loadMore,
-      sessionFolders: _sessionFolders,
       agentNames: _agentNames,
       phoneTab: _tab,
       onComplete: _complete,

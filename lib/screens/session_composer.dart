@@ -647,15 +647,18 @@ extension _SessionScreenComposerExt on _SessionScreenState {
           sessionRailFloating.value = true;
         },
         child: Padding(
-          padding: const EdgeInsets.all(6),
-          child: SizedBox(
-            width: 11,
-            height: 11,
-            child: CircularProgressIndicator(
-              value: f,
-              strokeWidth: 1.5,
-              color: color,
-              backgroundColor: AppColors.fg1.withValues(alpha: 0.12),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+          // A flat gauge: rings read as busy spinners next to the run state.
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: SizedBox(
+              width: 16,
+              height: 3,
+              child: LinearProgressIndicator(
+                value: f,
+                color: color,
+                backgroundColor: AppColors.fg1.withValues(alpha: 0.12),
+              ),
             ),
           ),
         ),

@@ -12,6 +12,8 @@ import '../widgets.dart';
 import 'mobile_chrome.dart';
 import 'pane_add_menu.dart';
 import '../tap_detector.dart';
+import '../empty_art.dart' show EmptyArtKind;
+import 'tasks/task_common.dart' show TaskEmptyNote;
 
 part 'pull_request_desktop.dart';
 

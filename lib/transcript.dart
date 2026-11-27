@@ -7,7 +7,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'ambient_loop.dart';
 import 'chat/ledger_line.dart';
 import 'chat/tool_call_row.dart';
 import 'chat/tool_output_sheet.dart';
@@ -57,73 +56,16 @@ List<InlineSpan> workSpans(WorkSummary w, TextStyle base) {
   return spans;
 }
 
-/// The small amber ring for work in progress.
-class RunSpinner extends StatefulWidget {
+/// Work in progress: the shared breathing dots.
+class RunSpinner extends StatelessWidget {
   const RunSpinner({super.key, this.size = 12, this.color});
 
   final double size;
   final Color? color;
 
   @override
-  State<RunSpinner> createState() => RunSpinnerState();
-}
-
-class RunSpinnerState extends State<RunSpinner> {
-  final _c = AmbientLoop(const Duration(milliseconds: 900));
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _c.bind(context);
-    if (reduceMotion(context)) {
-      _c.stop(at: 0);
-    } else {
-      _c.start();
-    }
-  }
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => Center(
-        child: RepaintBoundary(
-          child: RotationTransition(
-            turns: _c,
-            child: SizedBox.square(
-              dimension: widget.size,
-              child: CustomPaint(
-                painter: _SpinnerPainter(
-                    widget.color ?? AppColors.run, AppColors.runBg),
-              ),
-            ),
-          ),
-        ),
-      );
-}
-
-class _SpinnerPainter extends CustomPainter {
-  const _SpinnerPainter(this.head, this.track);
-  final Color head;
-  final Color track;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = (Offset.zero & size).deflate(1);
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..color = track;
-    canvas.drawArc(rect, 0, 6.2832, false, paint);
-    canvas.drawArc(rect, -1.5708, 1.5708, false, paint..color = head);
-  }
-
-  @override
-  bool shouldRepaint(_SpinnerPainter old) =>
-      old.head != head || old.track != track;
+  Widget build(BuildContext context) =>
+      Center(child: Spinner(size: size, color: color ?? AppColors.run));
 }
 
 /// The fold line of a finished run of tool calls: "Worked for 38s", flush
@@ -475,13 +417,15 @@ class _DenseToolRowState extends State<DenseToolRow> {
 }
 
 /// The opened body of a tool row without its title, for lists that already name the step.
-Widget? toolRowBody(DenseToolRow r) {
+Widget? toolRowBody(DenseToolRow r, {Color? fill}) {
   final step = ToolStep(tool: r.tool, args: r.args, result: r.result);
   final command = toolBaseName(r.tool) == 'bash';
   if (!toolHasDetail(step) && !(command && step.running && step.args is Map)) {
     return null;
   }
-  return command ? TerminalBlock(step: step) : _StepDetail(step: step);
+  return command
+      ? TerminalBlock(step: step, fill: fill)
+      : _StepDetail(step: step);
 }
 
 final _ansiCodes = RegExp(r'\x1B\[[0-9;]*[A-Za-z]');
@@ -545,8 +489,12 @@ class TerminalBlock extends StatefulWidget {
     this.outputCap = 8,
     this.tail = false,
     this.size,
+    this.fill,
   });
   final ToolStep step;
+
+  /// Block fill; set it when the host surface matches the default.
+  final Color? fill;
 
   /// Clamp the command to this many lines behind "Show full command".
   final int? commandLines;
@@ -619,13 +567,15 @@ class _TerminalBlockState extends State<TerminalBlock> {
     final (String, bool)? badge = step.running
         ? null
         : exit != null
-            ? ('exit $exit', exit != 0)
+            // Exit 0 is the default; only another code is worth a word.
+            ? (exit == 0 ? null : ('exit $exit', true))
             : (step.failed ? ('failed', true) : null);
+    final fill = widget.fill ?? (kMobile ? AppColors.surface1 : AppColors.surface2);
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-          color: kMobile ? AppColors.surface1 : AppColors.surface2,
+          color: fill,
           borderRadius: BorderRadius.circular(kMobile ? 6 : 10)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -660,8 +610,11 @@ class _TerminalBlockState extends State<TerminalBlock> {
                         style: TextStyle(color: AppColors.fg2)),
                   ],
                 ]),
+                // Ellipsis without a line cap would cut the command to one line.
                 maxLines: clampCmd && !_cmdFull ? widget.commandLines : null,
-                overflow: TextOverflow.ellipsis),
+                overflow: clampCmd && !_cmdFull
+                    ? TextOverflow.ellipsis
+                    : TextOverflow.clip),
           if (clampCmd)
             TapDetector(
               behavior: HitTestBehavior.opaque,
@@ -697,14 +650,8 @@ class _TerminalBlockState extends State<TerminalBlock> {
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
                                 colors: widget.tail
-                                    ? [
-                                        AppColors.surface2,
-                                        AppColors.surface2.withValues(alpha: 0),
-                                      ]
-                                    : [
-                                        AppColors.surface2.withValues(alpha: 0),
-                                        AppColors.surface2,
-                                      ],
+                                    ? [fill, fill.withValues(alpha: 0)]
+                                    : [fill.withValues(alpha: 0), fill],
                               ),
                             ),
                           ),

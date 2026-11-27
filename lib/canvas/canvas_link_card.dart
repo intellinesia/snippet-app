@@ -4,7 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../api.dart' show DaemonClient;
-import '../components.dart' show LoadingBlock;
+import '../components.dart' show LoadingBlock, Spinner;
 import '../media_views.dart' show DaemonScope;
 import '../platform.dart';
 import '../theme.dart';
@@ -436,11 +436,7 @@ class _CanvasLinkCardState extends State<CanvasLinkCard>
         ),
       );
     } else if (isLoading) {
-      thumb = thumbIcon(SizedBox.square(
-        dimension: 16,
-        child:
-            CircularProgressIndicator(strokeWidth: 1.5, color: AppColors.fg3),
-      ));
+      thumb = thumbIcon(Spinner(size: 16, color: AppColors.fg3));
     } else if (isUnreachable) {
       thumb = thumbIcon(AppIcon('wifi-off', size: 16, color: AppColors.fg2));
     } else {

@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/call_prompt_card.dart';
 import 'package:snippet/call_tracking.dart';
+import 'package:snippet/components.dart' show Spinner;
 import 'package:snippet/chat/ask_kit.dart';
 import 'package:snippet/chat/canvas_ask_card.dart';
 import 'package:snippet/inline_flow.dart';
@@ -276,7 +277,7 @@ void main() {
       onCancel: () {},
       onConfirm: () {},
     )));
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(Spinner), findsOneWidget);
   });
 
   testDesktopWidgets(

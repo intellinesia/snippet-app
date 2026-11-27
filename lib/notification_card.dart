@@ -266,11 +266,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
     Widget statusOrActions() {
       if (busy) {
         return Row(children: [
-          SizedBox.square(
-            dimension: 14,
-            child: CircularProgressIndicator(
-                strokeWidth: 1.5, color: AppColors.fg2),
-          ),
+          Spinner(size: 14, color: AppColors.fg2),
           const SizedBox(width: 8),
           Text(_sending, style: sans(13, color: AppColors.fg2)),
         ]);

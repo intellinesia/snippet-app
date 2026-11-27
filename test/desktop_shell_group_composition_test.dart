@@ -78,7 +78,7 @@ void main() {
         // XO-03: the members panel is closed until the header opens it.
         expect(find.byType(GroupInfoPanel), findsNothing);
         expect(find.byKey(const ValueKey('chat-header-bar')), findsOneWidget);
-        await tester.tap(find.byTooltip('Show members'));
+        await tester.tap(find.byTooltip('Show panel'));
         await settle(tester);
         expect(find.byType(GroupInfoPanel), findsOneWidget);
         expect(find.byType(DesktopHome), findsNothing,

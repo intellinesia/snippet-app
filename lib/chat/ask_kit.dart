@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app_icons.dart';
+import '../components.dart' show Spinner;
 import '../platform.dart';
 import '../theme.dart';
 
@@ -126,13 +127,7 @@ class AskButton extends StatelessWidget {
               alignment: Alignment.center,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 if (busy) ...[
-                  SizedBox(
-                    width: 12,
-                    height: 12,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 1.6,
-                        valueColor: AlwaysStoppedAnimation(ink)),
-                  ),
+                  Spinner(size: 12, color: ink),
                   const SizedBox(width: 6),
                 ] else if (icon != null) ...[
                   AskIcon(icon!, size: 13, color: ink),
