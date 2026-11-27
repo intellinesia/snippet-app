@@ -1,6 +1,7 @@
 import '../../task_reason.dart';
 import '../../phosphor_icons.dart';
 import 'package:flutter/material.dart';
+import '../../empty_art.dart';
 
 import '../../models.dart';
 import '../../platform.dart';
@@ -253,6 +254,7 @@ class TaskList extends StatelessWidget {
       if (query.trim().isNotEmpty) {
         return TaskEmptyNote(
           title: 'No matching tasks',
+          art: EmptyArtKind.search,
           body: 'Nothing matches “${query.trim()}”.',
         );
       }
@@ -261,6 +263,7 @@ class TaskList extends StatelessWidget {
             ? 'Nothing in ${filter.first.label}'
             : 'Nothing in ${filter.length} columns',
         body: 'Try another column, or clear the filter.',
+        art: EmptyArtKind.search,
       );
     }
     if (tasks.isEmpty) {

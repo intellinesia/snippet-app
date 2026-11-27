@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../empty_art.dart';
 import '../../platform.dart';
 import 'package:flutter/services.dart';
 
@@ -438,6 +439,7 @@ class _TaskListViewState extends State<TaskListView> {
     if (groups.isEmpty) {
       return TaskEmptyNote(
         title: _feed.tasks.isEmpty ? 'No tasks yet' : 'No tasks match',
+        art: _feed.tasks.isEmpty ? EmptyArtKind.tasks : EmptyArtKind.search,
         body: _feed.tasks.isEmpty
             ? 'File a task and Lead routes it to a session.'
             : 'Try another search or clear the filter.',

@@ -6,7 +6,7 @@ import '../../models.dart';
 import '../../panel.dart';
 import '../../platform.dart';
 import '../../swr.dart';
-import '../git_diff_sidebar_panel.dart' show PanelEmptyArt;
+import '../../empty_art.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
 import 'create_task_form.dart';
@@ -139,19 +139,21 @@ String taskAge(TaskItem task) {
 /// Desktop titles sit below white; weight and size carry the hierarchy.
 Color get taskTitleInk => Color.lerp(AppColors.fg1, AppColors.fg2, 0.3)!;
 
-/// Capy's quiet centred empty note, reused across the task surfaces.
+/// A quiet centred empty note, reused across the task surfaces.
 class TaskEmptyNote extends StatelessWidget {
-  const TaskEmptyNote({super.key, required this.title, this.body});
+  const TaskEmptyNote(
+      {super.key, required this.title, this.body, this.art = EmptyArtKind.tasks});
 
   final String title;
   final String? body;
+  final EmptyArtKind art;
 
   @override
   Widget build(BuildContext context) => Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const PanelEmptyArt(width: 72, height: 56),
+            EmptyArt(art, width: 76),
             const SizedBox(height: 12),
             Text(title,
                 textAlign: TextAlign.center,

@@ -350,7 +350,7 @@ extension _RailPages on _SessionRailState {
             constraints: const BoxConstraints(maxWidth: 320),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               SizedBox(height: landingTop),
-              const Center(child: PanelEmptyArt()),
+              const Center(child: EmptyArt(EmptyArtKind.overview)),
               const SizedBox(height: 42),
               for (var i = 0; i < cards.length; i++) ...[
                 if (i > 0) const SizedBox(height: 10),
