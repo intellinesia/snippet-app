@@ -11,7 +11,6 @@ import 'package:snippet/mochi.dart';
 import 'package:snippet/screens/mobile_home/quiet_lists.dart';
 import 'package:snippet/screens/shell_models.dart';
 import 'package:snippet/screens/sidebar.dart';
-import 'package:snippet/screens/tasks/task_phone.dart';
 import 'package:snippet/screens/tasks/task_phone_list.dart';
 import 'package:snippet/screens/tasks/tasks_panel.dart';
 import 'package:snippet/theme.dart';
