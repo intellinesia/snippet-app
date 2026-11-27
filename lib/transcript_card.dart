@@ -85,7 +85,7 @@ class _TranscriptCardState extends State<TranscriptCard> {
     final body = widget.body?.trim() ?? '';
     final pad = kMobile
         ? EdgeInsets.fromLTRB(S.s12, S.of(9), S.s12, S.of(10))
-        : EdgeInsets.fromLTRB(S.s12, S.of(7), S.s12, S.s8);
+        : const EdgeInsets.fromLTRB(12, 9, 12, 10);
     final content = Padding(
       padding: pad,
       child: Column(

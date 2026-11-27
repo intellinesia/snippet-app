@@ -1900,7 +1900,17 @@ class Bubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (var i = 0; i < segments.length; i++) ...[
-            if (i > 0) SizedBox(height: S.s6),
+            if (i > 0)
+              SizedBox(
+                height: !kMobile &&
+                        (segments[i] is! CanvasTextSegment ||
+                            segments[i - 1] is! CanvasTextSegment)
+                    ? (segments[i] is! CanvasTextSegment &&
+                            segments[i - 1] is! CanvasTextSegment
+                        ? 8
+                        : 10)
+                    : S.s6,
+              ),
             switch (segments[i]) {
               CanvasTextSegment(:final text) => MarkdownBody(
                   data: text,

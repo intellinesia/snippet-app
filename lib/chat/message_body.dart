@@ -599,7 +599,17 @@ class ChatMessageBody extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (var i = 0; i < segments.length; i++) ...[
-            if (i > 0) SizedBox(height: S.s6),
+            if (i > 0)
+              SizedBox(
+                height: !kMobile &&
+                        (segments[i] is! _MarkdownSegment ||
+                            segments[i - 1] is! _MarkdownSegment)
+                    ? (segments[i] is! _MarkdownSegment &&
+                            segments[i - 1] is! _MarkdownSegment
+                        ? 8
+                        : 10)
+                    : S.s6,
+              ),
             switch (segments[i]) {
               _MarkdownSegment(:final text) => MarkdownBody(
                   data: unwrapCodedLinks(markdown?.call(text) ?? text),

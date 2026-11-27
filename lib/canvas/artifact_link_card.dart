@@ -143,11 +143,23 @@ class _ArtifactLinkCardState extends State<ArtifactLinkCard> {
       if (label.isNotEmpty) label,
       if (rev != null && rev > 0) 'rev $rev',
     ].join(' · ');
+    final rawAuthor = card?.author?.trim() ?? '';
+    final isPathAuthor = rawAuthor.startsWith('/') || rawAuthor.startsWith('~');
     final by = [
-      if (card?.author != null)
-        'By ${card!.author == 'user' ? 'You' : card.author}',
+      if (rawAuthor.isNotEmpty && !isPathAuthor)
+        'By ${rawAuthor == 'user' ? 'You' : rawAuthor}',
       if (card?.updatedAt != null) formatCanvasRelativeTime(card!.updatedAt!),
     ].join(', ');
+    final subline = [
+      if (_loading)
+        'Loading'
+      else if (_missing)
+        'No longer available'
+      else ...[
+        if (meta.isNotEmpty) meta,
+        if (!kMobile && by.isNotEmpty) by,
+      ],
+    ].join(' · ');
     return Semantics(
       button: true,
       label: 'Open ${label.isEmpty ? 'artifact' : label.toLowerCase()} $title',
@@ -156,13 +168,13 @@ class _ArtifactLinkCardState extends State<ArtifactLinkCard> {
         heightFactor: 1,
         child: ConstrainedBox(
           constraints:
-              BoxConstraints(maxWidth: kMobile ? double.infinity : 400),
+              BoxConstraints(maxWidth: kMobile ? double.infinity : 460),
           child: Container(
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               // Phone board: a flat surface2 card, no outline.
               color: kMobile ? AppColors.surface2 : AppColors.surface1,
-              borderRadius: BorderRadius.circular(kMobile ? 18 : 9),
+              borderRadius: BorderRadius.circular(kMobile ? 18 : 8),
               border: kMobile ? null : Border.all(color: AppColors.border),
             ),
             child: Material(
@@ -170,14 +182,17 @@ class _ArtifactLinkCardState extends State<ArtifactLinkCard> {
               child: InkWell(
                 onTap: card == null ? null : _open,
                 child: Padding(
-                  padding: EdgeInsets.all(S.s8),
+                  padding: kMobile
+                      ? EdgeInsets.all(S.s8)
+                      : const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 8),
                   child: LayoutBuilder(builder: (context, box) {
                     final compact = box.maxWidth < 300;
                     return Row(
                       children: [
                         if (!compact) ...[
                           _thumb(card),
-                          SizedBox(width: S.s12),
+                          SizedBox(width: kMobile ? S.s12 : 10),
                         ],
                         Expanded(
                           child: Column(
@@ -193,20 +208,18 @@ class _ArtifactLinkCardState extends State<ArtifactLinkCard> {
                                       color: kMobile
                                           ? AppColors.fg1
                                           : PaneRow.labelOn)),
-                              SizedBox(height: S.s2),
-                              Text(
-                                  _loading
-                                      ? 'Loading'
-                                      : _missing
-                                          ? 'No longer available'
-                                          : meta,
-                                  maxLines: 1,
-                                  style: sans(12,
-                                      height: 1.35,
-                                      color: kMobile
-                                          ? AppColors.fg3
-                                          : AppColors.fg4)),
-                              if (by.isNotEmpty)
+                              if (subline.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(subline,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: sans(kMobile ? 12 : 11.5,
+                                        height: 1.35,
+                                        color: kMobile
+                                            ? AppColors.fg3
+                                            : AppColors.fg3)),
+                              ],
+                              if (kMobile && by.isNotEmpty)
                                 Text(by,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -257,12 +270,15 @@ class _ArtifactLinkCardState extends State<ArtifactLinkCard> {
   Widget _thumb(ArtifactCard? card) {
     final url = card?.thumbUrl;
     final daemon = _daemon;
-    final box = BorderRadius.circular(10);
+    final box = BorderRadius.circular(kMobile ? 10 : 7);
     Widget fallback() => Container(
-          width: 72,
-          height: 72,
-          decoration:
-              BoxDecoration(color: AppColors.surface1, borderRadius: box),
+          width: kMobile ? 72 : 36,
+          height: kMobile ? 72 : 36,
+          decoration: BoxDecoration(
+            color: kMobile ? AppColors.surface1 : AppColors.surface2,
+            borderRadius: box,
+            border: kMobile ? null : Border.all(color: AppColors.border),
+          ),
           alignment: Alignment.center,
           child: AppIcon(
             switch (card?.kind) {
@@ -272,16 +288,16 @@ class _ArtifactLinkCardState extends State<ArtifactLinkCard> {
               'document' => 'file-text',
               _ => 'file',
             },
-            size: 22,
-            color: AppColors.fg3,
+            size: kMobile ? 22 : 16,
+            color: kMobile ? AppColors.fg3 : AppColors.fg2,
           ),
         );
     if (url == null || daemon == null) return fallback();
     return ClipRRect(
       borderRadius: box,
       child: SizedBox(
-        width: 96,
-        height: 72,
+        width: kMobile ? 96 : 48,
+        height: kMobile ? 72 : 38,
         child: Image(
           image: ResizeImage(daemon.canvasImage(url), width: 256),
           fit: BoxFit.cover,
