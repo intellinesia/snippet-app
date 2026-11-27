@@ -1015,6 +1015,7 @@ class ArtifactViewer extends StatefulWidget {
     required this.id,
     this.version,
     this.onClose,
+    this.headerActions = const [],
   });
 
   final DaemonClient client;
@@ -1022,6 +1023,9 @@ class ArtifactViewer extends StatefulWidget {
   final String id;
   final int? version;
   final VoidCallback? onClose;
+
+  /// Extra header buttons before Close, e.g. the list page's expand toggle.
+  final List<Widget> headerActions;
 
   @override
   State<ArtifactViewer> createState() => _ArtifactViewerState();
@@ -1330,6 +1334,7 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
               tooltip: 'More',
               onTap: () => _more(anchor)),
         ),
+        ...widget.headerActions,
         if (widget.onClose != null)
           IconBtn('x',
               size: 28, iconSize: 13, tooltip: 'Close', onTap: widget.onClose),

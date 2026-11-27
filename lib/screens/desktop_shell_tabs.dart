@@ -615,15 +615,24 @@ extension _DesktopShellTabsExt on _DesktopShellState {
       return -1;
     }
     if (_tabs.any((x) => x.groupSessionKey == t.key)) return -1;
-    // Place pages (Sessions, Agents) are where you open things from; keep them.
-    final req = t.readout?.request?.id;
-    if (req == 'all-sessions' || req == 'all-agents') return -1;
+    // Place pages are where you open things from; keep them.
+    if (_isPlaceTab(t)) return -1;
     return i;
+  }
+
+  /// Home, Sessions, Tasks, Artifacts, Agents and PRs: destinations that
+  /// always get their own tab and are never replaced.
+  bool _isPlaceTab(_ShellTab t) {
+    if (t.isHome || t.isBoard || t.isPrs) return true;
+    final purpose = t.readout?.request?.purpose;
+    return purpose == ShellPanelPurpose.sessions ||
+        purpose == ShellPanelPurpose.agents ||
+        purpose == ShellPanelPurpose.artifacts;
   }
 
   /// Puts [tab] in the active tab's place, else appends it. Returns its index.
   int _placeTab(_ShellTab tab) {
-    final r = _replaceableIndex();
+    final r = _isPlaceTab(tab) ? -1 : _replaceableIndex();
     if (r < 0) {
       _tabs.add(tab);
       return _tabs.length - 1;

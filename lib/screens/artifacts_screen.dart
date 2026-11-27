@@ -15,6 +15,9 @@ import '../panel.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../empty_art.dart' show EmptyArtKind;
+import 'artifact_viewer.dart' show ArtifactViewer;
+import 'tasks/task_common.dart' show TaskEmptyNote;
 
 /// Opens the one Artifacts list: a main-area shell tab on desktop, a page on
 /// phone.
@@ -53,6 +56,10 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
   String _query = '';
   String? _kind;
   bool _creating = false;
+  bool _searchOpen = false;
+  // Desktop: the previewed artifact, and whether its pane takes the width.
+  ArtifactCard? _selected;
+  bool _expanded = false;
   Timer? _poll;
   int _loadSeq = 0;
 
@@ -295,52 +302,150 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
             ),
           ));
     if (kMobile) return _phone(shown, searchW, chipsW);
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ToastAvoid(
-                child: Container(
-              height: PaneRow.height,
-              padding: const EdgeInsets.fromLTRB(10, 0, 8, 0),
-              decoration: BoxDecoration(
-                  border:
-                      Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline))),
-              child: Row(children: [
-                if (Navigator.of(context).canPop()) ...[
-                  IconBtn('chevron-left',
-                      size: 28,
-                      iconSize: 13,
-                      tooltip: 'Back',
-                      onTap: () => Navigator.of(context).maybePop()),
-                  const SizedBox(width: 2),
-                ],
-                AppIcon('layers', size: PaneRow.icon, color: AppColors.fg3),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text('Artifacts',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(PaneRow.label,
-                          weight: W.label, color: PaneRow.labelOn)),
-                ),
-                IconBtn('plus',
-                    size: 28,
-                    iconSize: 13,
-                    tooltip: 'New canvas',
-                    onTap: _creating ? null : _newCanvas),
-              ]),
-            )),
-            searchW,
-            chipsW,
-            Expanded(child: _body(shown)),
-          ],
-        ),
-      ),
+    return _desktop(shown, searchW, chipsW);
+  }
+
+  /// Desktop: the Tasks layout. A header strip and compact rows on the left,
+  /// the selected artifact on the right; expand gives the preview the width.
+  Widget _desktop(List<ArtifactCard> shown, Widget searchW, Widget chipsW) {
+    final total = _all?.length ?? 0;
+    final master = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ToastAvoid(
+            child: Container(
+          height: PaneRow.height,
+          padding: const EdgeInsets.fromLTRB(16, 0, 12, 0),
+          decoration: BoxDecoration(
+              border: Border(
+                  bottom: BorderSide(
+                      color: AppColors.paneLine, width: AppColors.hairline))),
+          child: Row(children: [
+            if (Navigator.of(context).canPop()) ...[
+              IconBtn('chevron-left',
+                  size: 28,
+                  iconSize: 13,
+                  tooltip: 'Back',
+                  onTap: () => Navigator.of(context).maybePop()),
+              const SizedBox(width: 2),
+            ],
+            Text('Artifacts',
+                style: sans(13.5, weight: W.label, color: PaneRow.labelOn)),
+            if (total > 0) ...[
+              const SizedBox(width: 8),
+              Text('$total',
+                  style: sans(12.5, color: AppColors.fg3, tabular: true)),
+            ],
+            const Spacer(),
+            IconBtn('search',
+                size: 28,
+                iconSize: 13,
+                active: _searchOpen,
+                tooltip: 'Search artifacts',
+                onTap: () => setState(() {
+                      _searchOpen = !_searchOpen;
+                      if (!_searchOpen) _query = '';
+                    })),
+            const SizedBox(width: 4),
+            HeaderAction('New canvas', onTap: _creating ? null : _newCanvas),
+          ]),
+        )),
+        if (_searchOpen) searchW else const SizedBox(height: 8),
+        chipsW,
+        Expanded(child: _body(shown)),
+      ],
+    );
+    final sel = _selected;
+    final Widget detail;
+    if (sel == null) {
+      detail = const TaskEmptyNote(
+          title: 'Select an artifact', art: EmptyArtKind.search);
+    } else {
+      final expand = IconBtn(_expanded ? 'minimize' : 'expand',
+          size: 28,
+          iconSize: 13,
+          tooltip: _expanded ? 'Show the list' : 'Expand',
+          onTap: () => setState(() => _expanded = !_expanded));
+      final doc = sel.documentRef;
+      detail = sel.isCanvas || doc == null
+          ? _canvasPreview(sel, expand)
+          : ArtifactViewer(
+              key: ValueKey('artifact-preview-${sel.id}'),
+              client: widget.client,
+              session: doc.session,
+              id: doc.id,
+              headerActions: [expand],
+              onClose: () => setState(() {
+                _selected = null;
+                _expanded = false;
+              }),
+            );
+    }
+    return ColoredBox(
+      color: AppColors.bg,
+      child: LayoutBuilder(builder: (context, box) {
+        final detailW = (box.maxWidth * 0.42).clamp(360.0, 560.0).toDouble();
+        final wide = _expanded && sel != null;
+        return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          if (!wide) Expanded(child: master),
+          if (!wide)
+            Container(width: AppColors.hairline, color: AppColors.paneLine),
+          if (wide)
+            Expanded(child: detail)
+          else
+            SizedBox(width: detailW, child: detail),
+        ]);
+      }),
     );
   }
+
+  Widget _canvasPreview(ArtifactCard c, Widget expand) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            height: PaneRow.height,
+            padding: const EdgeInsets.fromLTRB(16, 0, 8, 0),
+            decoration: BoxDecoration(
+                border: Border(
+                    bottom: BorderSide(
+                        color: AppColors.paneLine,
+                        width: AppColors.hairline))),
+            child: Row(children: [
+              Expanded(
+                child: Text(c.displayTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13, weight: W.label, color: AppColors.fg1)),
+              ),
+              expand,
+              IconBtn('x',
+                  size: 28,
+                  iconSize: 13,
+                  tooltip: 'Close',
+                  onTap: () => setState(() {
+                        _selected = null;
+                        _expanded = false;
+                      })),
+            ]),
+          ),
+          Expanded(
+            child: Center(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                AppIcon('grid', size: 22, color: AppColors.fg4),
+                const SizedBox(height: 10),
+                Text('${c.kindLabel}  ·  r${c.rev}',
+                    style: sans(12, color: AppColors.fg3)),
+                const SizedBox(height: 14),
+                Btn('Open canvas',
+                    small: true,
+                    variant: BtnVariant.surface,
+                    onTap: () =>
+                        openArtifactCard(context, widget.client, c)),
+              ]),
+            ),
+          ),
+        ],
+      );
 
   /// Phone: the tab-root pattern, a pinned bar over a list that starts with
   /// the 28/500 title, search and filter chips.
@@ -465,7 +570,78 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
     return ListView.builder(
       padding: EdgeInsets.fromLTRB(S.s8, S.s4, S.s8, S.s24),
       itemCount: shown.length,
-      itemBuilder: (_, i) => _row(shown[i]),
+      itemBuilder: (_, i) => kMobile ? _row(shown[i]) : _deskRow(shown[i]),
+    );
+  }
+
+  /// Desktop: one line per artifact, as the task rows. A tap previews it on
+  /// the right; a double tap opens it in its own tab.
+  Widget _deskRow(ArtifactCard c) {
+    final on = _selected?.id == c.id;
+    final author = c.author?.trim() ?? '';
+    // Some producers record a file path as the author; that is not a who.
+    final who = author == 'user'
+        ? 'You'
+        : (author.contains('/') ? '' : author);
+    final meta = [c.kindLabel, if (who.isNotEmpty) who].join('  ·  ');
+    return Semantics(
+      button: true,
+      selected: on,
+      label: 'Preview ${c.kindLabel.toLowerCase()} ${c.displayTitle}',
+      excludeSemantics: true,
+      child: Material(
+        color: on ? PaneRow.plate : Colors.transparent,
+        borderRadius: BorderRadius.circular(PaneRow.radius),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(PaneRow.radius),
+          hoverColor: AppColors.hoverPlate,
+          onTap: () => setState(() => _selected = c),
+          onDoubleTap: () => openArtifactCard(context, widget.client, c),
+          child: SizedBox(
+            height: 32,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(children: [
+                AppIcon(
+                    switch (c.kind) {
+                      'canvas' => 'grid',
+                      'image' => 'image',
+                      'pdf' => 'pdf',
+                      'document' => 'file-text',
+                      _ => 'file',
+                    },
+                    size: 14,
+                    color: AppColors.fg3),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(c.displayTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(13, color: AppColors.fg1)),
+                ),
+                const SizedBox(width: 12),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 170),
+                  child: Text(meta,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12, color: AppColors.fg3)),
+                ),
+                SizedBox(
+                  width: 44,
+                  child: Text(
+                      c.updatedAt == null
+                          ? ''
+                          : formatCanvasRelativeTime(c.updatedAt!),
+                      maxLines: 1,
+                      textAlign: TextAlign.right,
+                      style: sans(11.5, color: AppColors.fg3, tabular: true)),
+                ),
+              ]),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
