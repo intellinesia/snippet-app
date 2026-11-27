@@ -1677,54 +1677,103 @@ class TaskResultCard extends StatelessWidget {
         : () => _openSession(context, sessionId, title);
     final plain = plainPreview(summary);
     if (!kMobile) {
-      final blocked = _s('status').toLowerCase() == 'blocked';
+      final statusKey = _s('status').toLowerCase();
+      final blocked = statusKey == 'blocked';
+      final (badgeBg, badgeFg) = switch (statusKey) {
+        'done' => (
+            AppColors.diffAddFg.withValues(alpha: 0.13),
+            AppColors.diffAddFg,
+          ),
+        'blocked' => (AppColors.run.withValues(alpha: 0.13), AppColors.run),
+        'failed' => (
+            AppColors.danger.withValues(alpha: 0.13),
+            AppColors.danger,
+          ),
+        _ => (AppColors.surface2, AppColors.fg3),
+      };
       return Material(
-        color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(R.lg),
+        color: AppColors.surface1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: BorderSide(color: AppColors.border),
+        ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: tap,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(children: [
-                  AppIcon(icon, size: 16, color: color),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(13,
-                                weight: FontWeight.w600, color: AppColors.fg1)),
-                        const SizedBox(height: 2),
-                        Text(
-                            date.isEmpty
-                                ? statusLabel
-                                : '$statusLabel \u00b7 $date',
-                            style: sans(12, color: AppColors.fg3)),
-                      ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: AppColors.border)),
+                ),
+                child: Row(children: [
+                  Container(
+                    width: 18,
+                    height: 18,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: badgeBg,
+                      borderRadius: BorderRadius.circular(5),
                     ),
+                    child: AppIcon(icon, size: 11, color: badgeFg),
                   ),
-                  if (sessionId.isNotEmpty)
-                    AppIcon('chevron-right', size: 14, color: AppColors.fg3),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: badgeBg,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(statusLabel,
+                        style: sans(11,
+                            height: 15 / 11,
+                            weight: FontWeight.w500,
+                            color: badgeFg)),
+                  ),
+                  const Spacer(),
+                  if (date.isNotEmpty)
+                    Text(date,
+                        style: sans(11.5,
+                            height: 15 / 11.5, color: AppColors.fg4)),
+                  if (sessionId.isNotEmpty) ...[
+                    const SizedBox(width: 6),
+                    AppIcon('chevron-right', size: 13, color: AppColors.fg3),
+                  ],
                 ]),
-                if (plain.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(plain,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: blocked
-                          ? mono(12, color: AppColors.fg2)
-                          : sans(13, height: 1.45, color: AppColors.fg2)),
-                ],
-              ],
-            ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 9, 12, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(13,
+                            height: 18 / 13,
+                            weight: FontWeight.w500,
+                            color: AppColors.fg1)),
+                    if (plain.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(plain,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: blocked
+                              ? codeMono(11.5,
+                                  height: 17 / 11.5, color: AppColors.fg2)
+                              : sans(12,
+                                  height: 17 / 12, color: AppColors.fg2)),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       );

@@ -196,6 +196,8 @@ class _ThreadCard extends StatelessWidget {
           ),
         _ => (AppColors.surface2, AppColors.fg3),
       };
+      final hasContent =
+          head.isNotEmpty || body.trim().isNotEmpty || foot.isNotEmpty;
       return Container(
         width: double.infinity,
         margin: EdgeInsets.symmetric(vertical: S.s4),
@@ -205,13 +207,19 @@ class _ThreadCard extends StatelessWidget {
           border: Border.all(color: AppColors.border),
         ),
         clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 9, 12, 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(children: [
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: hasContent
+                  ? BoxDecoration(
+                      border:
+                          Border(bottom: BorderSide(color: AppColors.border)),
+                    )
+                  : null,
+              child: Row(children: [
                 lead,
                 const SizedBox(width: 8),
                 Flexible(
@@ -242,35 +250,44 @@ class _ThreadCard extends StatelessWidget {
                 if (reference != null && reference!.isNotEmpty) ...[
                   const Spacer(),
                   Text(reference!,
-                      style: codeMono(11, height: 15 / 11, color: AppColors.fg4)),
+                      style:
+                          codeMono(11, height: 15 / 11, color: AppColors.fg4)),
                 ],
               ]),
-              if (head.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(head,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(13,
-                          height: 18 / 13,
-                          weight: FontWeight.w500,
-                          color: AppColors.fg1)),
+            ),
+            if (hasContent)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 9, 12, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (head.isNotEmpty)
+                      Text(head,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(13,
+                              height: 18 / 13,
+                              weight: FontWeight.w500,
+                              color: AppColors.fg1)),
+                    if (body.trim().isNotEmpty)
+                      Padding(
+                        padding: EdgeInsets.only(top: head.isEmpty ? 0 : 3),
+                        child: _PreviewBody(body: body),
+                      ),
+                    if (foot.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(foot,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style:
+                                sans(11.5, height: 1.35, color: AppColors.fg3)),
+                      ),
+                  ],
                 ),
-              if (body.trim().isNotEmpty)
-                Padding(
-                  padding: EdgeInsets.only(top: head.isEmpty ? 6 : 3),
-                  child: _PreviewBody(body: body),
-                ),
-              if (foot.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(foot,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(11.5, height: 1.35, color: AppColors.fg3)),
-                ),
-            ],
-          ),
+              ),
+          ],
         ),
       );
     }
@@ -978,6 +995,7 @@ class AgentMessageCard extends StatelessWidget {
         label: outbound ? (me.isEmpty ? 'To $them' : '$me to $them') : them,
         body: body,
         outbound: outbound,
+        time: time,
       );
     });
   }
@@ -1116,6 +1134,218 @@ class _LaneMessageCardState extends State<LaneMessageCard> {
     }
     final time = formatEventTime(told ? widget.replyAt : newest!.at);
 
+    final text = sans(kMobile ? 13 : 12.5,
+        height: kMobile ? 20 / 13 : 18 / 12.5,
+        color: kMobile ? AppColors.fg3 : AppColors.fg2);
+    Widget noteBody(LaneNote n, {required bool open}) => open
+        ? CardMarkdownBody(body: n.body.trim(), collapsible: false)
+        : Text(_plain(n.body),
+            maxLines: 3, overflow: TextOverflow.ellipsis, style: text);
+
+    if (!kMobile) {
+      final statusBg = widget.waiting
+          ? AppColors.run.withValues(alpha: 0.12)
+          : AppColors.surface2;
+      final statusFg = widget.waiting ? AppColors.run : AppColors.fg3;
+      final bodyChildren = <Widget>[];
+      if (earlier.isNotEmpty) {
+        bodyChildren.add(Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: TapDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => setState(() => _earlier = !_earlier),
+            child: Row(children: [
+              AppIcon(_earlier ? 'chevron-down' : 'chevron-right',
+                  size: 12, color: AppColors.fg3),
+              const SizedBox(width: 5),
+              Text(
+                  _earlier
+                      ? 'Hide ${earlier.length} earlier'
+                      : '${earlier.length} earlier',
+                  style: sans(11.5,
+                      height: 16 / 11.5,
+                      weight: FontWeight.w500,
+                      color: AppColors.fg3)),
+            ]),
+          ),
+        ));
+        if (_earlier) {
+          for (final n in earlier) {
+            final t = formatEventTime(n.at);
+            bodyChildren.add(Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: noteBody(n, open: _open)),
+                    if (t != null) ...[
+                      const SizedBox(width: 8),
+                      Text(t,
+                          style: sans(11.5, height: 18 / 11.5, color: faint)),
+                    ],
+                  ]),
+            ));
+          }
+        }
+      }
+      if (newest != null) {
+        bodyChildren.add(noteBody(newest, open: _open));
+      }
+      if (reply.isNotEmpty) {
+        final me = widget.meId?.trim() ?? '';
+        bodyChildren.add(AgentNamesBuilder(builder: (context, names) {
+          final given = widget.meName?.trim() ?? '';
+          final name = given.isNotEmpty
+              ? given
+              : (me.isEmpty ? 'You' : agentDisplayName(me, names));
+          final small = sans(12, height: 17 / 12, color: AppColors.fg2);
+          final body = told
+              ? (_open
+                  ? CardMarkdownBody(body: reply, collapsible: false)
+                  : Text(_plain(reply),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: text))
+              : (_open
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                          Text(name,
+                              style: small.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.fg1)),
+                          const SizedBox(height: 2),
+                          CardMarkdownBody(body: reply, collapsible: false),
+                        ])
+                  : Text.rich(
+                      TextSpan(style: small, children: [
+                        TextSpan(
+                            text: '$name  ',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.fg1)),
+                        TextSpan(text: _plain(reply)),
+                      ]),
+                      maxLines: 4,
+                      overflow: TextOverflow.ellipsis));
+          if (told) return body;
+          return Container(
+            margin: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: body,
+          );
+        }));
+      }
+
+      return Container(
+        width: double.infinity,
+        margin: EdgeInsets.symmetric(vertical: S.s4),
+        decoration: BoxDecoration(
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: widget.waiting
+                ? AppColors.run.withValues(alpha: 0.45)
+                : AppColors.border,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: TapDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => setState(() => _open = !_open),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: AppColors.border)),
+                ),
+                child: Row(children: [
+                  AppIcon(laneGlyph(widget.laneTitle),
+                      size: 13,
+                      color: widget.waiting ? AppColors.run : AppColors.fg2),
+                  const SizedBox(width: 8),
+                  if (told) ...[
+                    Text('Told',
+                        style:
+                            sans(12, height: 16 / 12, color: AppColors.fg3)),
+                    const SizedBox(width: 5),
+                  ],
+                  Flexible(
+                    child: Text(widget.laneTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(12.5,
+                            height: 16 / 12.5,
+                            weight: FontWeight.w500,
+                            color: AppColors.fg1)),
+                  ),
+                  if (status.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: statusBg,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(status,
+                          style: sans(11,
+                              height: 15 / 11,
+                              weight: FontWeight.w500,
+                              color: statusFg)),
+                    ),
+                  ],
+                  const Spacer(),
+                  if (time != null && !widget.waiting) ...[
+                    Text(time,
+                        style: sans(11.5, height: 15 / 11.5, color: faint)),
+                    const SizedBox(width: 6),
+                  ],
+                  AppIcon(_open ? 'chevron-down' : 'chevron-right',
+                      size: 12, color: AppColors.fg4),
+                ]),
+              ),
+              if (bodyChildren.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 9, 12, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: bodyChildren,
+                  ),
+                ),
+              if (widget.waiting && widget.onOpenLane != null)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: AppColors.border)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      AskButton('Open lane',
+                          variant: AskButtonVariant.secondary,
+                          onTap: widget.onOpenLane!),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final header = Row(children: [
       Expanded(
         child: Row(children: [
@@ -1147,12 +1377,6 @@ class _LaneMessageCardState extends State<LaneMessageCard> {
         Text(time, style: sans(12, color: faint)),
       ],
     ]);
-
-    final text = sans(13, height: 20 / 13, color: AppColors.fg3);
-    Widget noteBody(LaneNote n, {required bool open}) => open
-        ? CardMarkdownBody(body: n.body.trim(), collapsible: false)
-        : Text(_plain(n.body),
-            maxLines: 3, overflow: TextOverflow.ellipsis, style: text);
 
     final children = <Widget>[header];
     if (earlier.isNotEmpty) {
@@ -1305,15 +1529,82 @@ class _AgentBubble extends StatelessWidget {
       {required this.id,
       required this.label,
       required this.body,
-      required this.outbound});
+      required this.outbound,
+      this.time});
 
   final String id;
   final String label;
   final String body;
   final bool outbound;
+  final String? time;
 
   @override
   Widget build(BuildContext context) {
+    if (!kMobile) {
+      return Container(
+        width: double.infinity,
+        margin: EdgeInsets.symmetric(vertical: S.s4),
+        decoration: BoxDecoration(
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.border),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: AppColors.border)),
+              ),
+              child: Row(children: [
+                if (id.isNotEmpty)
+                  AgentMochi(id, size: 16)
+                else
+                  AppIcon(outbound ? 'send' : 'message',
+                      size: 13, color: AppColors.fg2),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12,
+                          height: 16 / 12,
+                          weight: FontWeight.w500,
+                          color: AppColors.fg2)),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface2,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(outbound ? 'Sent' : 'Message',
+                      style: sans(11,
+                          height: 15 / 11,
+                          weight: FontWeight.w500,
+                          color: AppColors.fg3)),
+                ),
+                if (time != null && time!.isNotEmpty) ...[
+                  const Spacer(),
+                  Text(time!,
+                      style:
+                          sans(11.5, height: 15 / 11.5, color: AppColors.fg4)),
+                ],
+              ]),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 9, 12, 10),
+              child: CardMarkdownBody(body: body, collapsible: true),
+            ),
+          ],
+        ),
+      );
+    }
     final radius = BorderRadius.only(
       topLeft: Radius.circular(R.of(18)),
       topRight: Radius.circular(R.of(18)),
@@ -1468,6 +1759,7 @@ class _AmbientTurnCardState extends State<AmbientTurnCard> {
                     : const EdgeInsets.fromLTRB(11, 7, 11, 7),
                 decoration: BoxDecoration(
                   color: AppColors.surface2,
+                  border: kMobile ? null : Border.all(color: AppColors.border),
                   borderRadius: kMobile
                       ? BorderRadius.only(
                           topLeft: Radius.circular(R.of(20)),
@@ -1475,7 +1767,7 @@ class _AmbientTurnCardState extends State<AmbientTurnCard> {
                           bottomLeft: Radius.circular(R.of(20)),
                           bottomRight: Radius.circular(R.sm),
                         )
-                      : BorderRadius.circular(R.of(8)),
+                      : BorderRadius.circular(8),
                 ),
                 child: SelectionArea(
                   child: Text(
