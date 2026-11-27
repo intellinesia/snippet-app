@@ -716,7 +716,11 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           ? null
           : KeyedSubtree(
               key: ValueKey('side-${tab.key}'),
-              child: side(context, () => _closePaneTab(tab)));
+              // The panel reads its hide toggle from the request scope.
+              child: ShellRequestScope(
+                  request: request,
+                  child: Builder(
+                      builder: (c) => side(c, () => _closePaneTab(tab)))));
     }
     if (tab == null || (tab.sessionId == null && agent == null)) return null;
     if (_panelHidden) return null;
