@@ -434,8 +434,9 @@ class MobileBackBar extends StatelessWidget {
             SizedBox(width: S.s8),
             Flexible(child: text),
           ]);
-    return SizedBox(
-      height: 60,
+    // A floor, not a fixed height: large text grows the bar.
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 60),
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: M.gutter),
         child: Row(children: [
@@ -462,7 +463,7 @@ class MobileBackBar extends StatelessWidget {
                         behavior: HitTestBehavior.opaque,
                         onTap: onTitleTap,
                         child: Container(
-                          height: 44,
+                          constraints: const BoxConstraints(minHeight: 44),
                           padding: EdgeInsets.only(right: S.s8),
                           alignment: Alignment.center,
                           child: IntrinsicWidth(child: label),

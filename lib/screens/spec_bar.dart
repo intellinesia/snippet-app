@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../platform.dart';
 import '../tap_detector.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'mobile_chrome.dart';
 
 /// Spec A SH-10 bar B: back 48 x 48 at x0, 16/500 title at x56, optional
 /// 12/400 fg3 subtitle, trailing 48 x 48 actions, hairline under. Min height,
@@ -20,7 +22,20 @@ class SpecBar extends StatelessWidget {
   final VoidCallback? onBack;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    // Phone pages share the board header: glass back, centred title.
+    if (kMobile) {
+      return MobileBackBar(
+          title: title,
+          subtitle: subtitle,
+          trailing: actions,
+          keepBack: true,
+          onBack: onBack ?? () => Navigator.of(context).maybePop());
+    }
+    return _desk(context);
+  }
+
+  Widget _desk(BuildContext context) => Container(
         constraints: const BoxConstraints(minHeight: 52),
         decoration: BoxDecoration(
             color: AppColors.bg,
