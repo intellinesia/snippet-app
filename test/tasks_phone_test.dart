@@ -116,12 +116,10 @@ void main() {
         expect(chips[0].left, 16);
         expect(chips[1].left - chips[0].right, 4);
         expect(chips[2].left - chips[1].right, 4);
-        // New task split button beside the large title, menu holds Board view
+        // New task button beside the large title
         final plus = tester.getRect(find.bySemanticsLabel('New task'));
-        final menu = tester.getRect(find.bySemanticsLabel('Task options'));
         expect(plus.height, 40);
-        expect(menu.right, w - 16);
-        expect(menu.left - plus.right, 2);
+        expect(plus.right, w - 16);
         expect(plus.bottom, lessThanOrEqualTo(chips[0].top));
         // rows sit in the segmented list (16 inset on Android)
         final cards = find.byType(PhoneTaskCard);
@@ -322,7 +320,7 @@ void main() {
     expect(find.byType(PhoneTasksRoot), findsOneWidget);
     expect(find.byType(QuietTasksScreen), findsNothing);
     expect(find.bySemanticsLabel(RegExp('^All, ')), findsOneWidget);
-    expect(find.bySemanticsLabel('Task options'), findsOneWidget);
+    expect(find.bySemanticsLabel('New task'), findsOneWidget);
     expect(find.byKey(const ValueKey('group-Needs you')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

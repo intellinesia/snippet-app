@@ -363,7 +363,9 @@ class MkSplitButton extends StatelessWidget {
     final inner = Radius.circular(kAndroidLook ? 4 : 6);
     Widget part(Widget child, BorderRadius r, VoidCallback? tap, String sem,
             EdgeInsets pad) =>
+        // container: alone it would otherwise merge into the title row.
         Semantics(
+          container: true,
           button: true,
           label: sem,
           excludeSemantics: true,
