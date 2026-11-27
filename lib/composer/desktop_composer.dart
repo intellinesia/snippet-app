@@ -208,30 +208,44 @@ class DeskActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color fill;
+    final Color hoverFill;
     final Color ink;
-    if (icon == 'arrow-up' || icon == 'mic' || icon == 'stop') {
-      fill = AppColors.accent;
-      // Ink its blue action black; a dark accent (quiet-light) needs its own ink.
-      ink = AppColors.accent.computeLuminance() > 0.18
-          ? const Color(0xFF000000)
-          : AppColors.accentFg;
+    BorderSide? border;
+    final enabled = onTap != null && (icon == 'mic' || on || soft || danger);
+    if (icon == 'arrow-up') {
+      fill = AppColors.fg1;
+      hoverFill = AppColors.fg1.withValues(alpha: 0.86);
+      ink = AppColors.bg;
+    } else if (icon == 'stop') {
+      fill = AppColors.surface2;
+      hoverFill = AppColors.surface3;
+      ink = AppColors.fg1;
+      border = BorderSide(color: AppColors.border2);
+    } else if (icon == 'mic') {
+      fill = AppColors.surface2;
+      hoverFill = AppColors.surface3;
+      ink = enabled ? AppColors.fg2 : AppColors.fg4;
+      border = BorderSide(color: AppColors.border);
     } else if (on || soft || danger) {
       fill = AppColors.surface3;
+      hoverFill = AppColors.surface3.withValues(alpha: 0.85);
       ink = AppColors.fg1;
     } else {
       fill = AppColors.surface3;
+      hoverFill = AppColors.surface3;
       ink = AppColors.fg3;
     }
     return DeskButton(
-      size: 26,
-      radius: R.of(7),
+      size: 28,
+      radius: 14,
       fill: fill,
-      hoverFill: on || soft || danger ? fill.withValues(alpha: 0.85) : fill,
+      hoverFill: enabled ? hoverFill : fill,
+      border: border,
       tooltip: tooltip,
-      onTap: on || soft || danger ? onTap : null,
+      onTap: enabled ? onTap : null,
       child: busy
-          ? Spinner(size: 14, color: ink)
-          : AppIcon(icon, size: icon == 'stop' ? 13 : 15, color: ink),
+          ? Spinner(size: 13, color: ink)
+          : AppIcon(icon, size: icon == 'stop' ? 12 : 14, color: ink),
     );
   }
 }

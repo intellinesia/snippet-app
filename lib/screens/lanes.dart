@@ -580,16 +580,22 @@ void openLaneView(BuildContext context, LaneInfo lane,
   final daemon = client ?? DaemonScope.maybeOf(context);
   final live = liveLanes ?? () => [lane];
   final transcript = lane.transcript;
-  Widget screen() => !kMobile &&
+  Widget screen([VoidCallback? onClose]) => !kMobile &&
           daemon != null &&
           transcript != null &&
           transcript.isNotEmpty
-      ? LaneTranscriptScreen(client: daemon, laneId: lane.id, liveLanes: live)
+      ? LaneTranscriptScreen(
+          client: daemon,
+          laneId: lane.id,
+          liveLanes: live,
+          onClose: onClose,
+        )
       : LaneDetailScreen(
           laneId: lane.id,
           liveLanes: live,
           client: daemon,
           sessionId: sessionId,
+          onClose: onClose,
         );
   if (!kMobile &&
       ShellPanelRoot.of(context) == null &&
@@ -599,7 +605,7 @@ void openLaneView(BuildContext context, LaneInfo lane,
         purpose: ShellPanelPurpose.lanes,
         panelId: lane.id,
         originClient: daemon,
-        builder: (_, __) => screen());
+        builder: (_, close) => screen(close));
     return;
   }
   Navigator.of(context).push(AppPageRoute<void>(builder: (_) => screen()));
@@ -1047,12 +1053,14 @@ class LaneDetailScreen extends StatefulWidget {
   final List<LaneInfo> Function() liveLanes;
   final DaemonClient? client;
   final String? sessionId;
+  final VoidCallback? onClose;
   const LaneDetailScreen(
       {super.key,
       required this.laneId,
       required this.liveLanes,
       this.client,
-      this.sessionId});
+      this.sessionId,
+      this.onClose});
 
   @override
   State<LaneDetailScreen> createState() => _LaneDetailScreenState();
@@ -1133,7 +1141,7 @@ class _LaneDetailScreenState extends State<LaneDetailScreen> {
                 title: 'Lane details',
                 titleSize: 14,
                 compact: true,
-                onBack: () => Navigator.of(context).pop()),
+                onBack: widget.onClose ?? () => Navigator.of(context).maybePop()),
             Expanded(
                 child: lane == null
                     ? const EmptyState(
@@ -1160,27 +1168,92 @@ class LaneTranscriptScreen extends StatelessWidget {
   final DaemonClient client;
   final String laneId;
   final List<LaneInfo> Function() liveLanes;
-  const LaneTranscriptScreen(
-      {super.key,
-      required this.client,
-      required this.laneId,
-      required this.liveLanes});
+  final VoidCallback? onClose;
+  const LaneTranscriptScreen({
+    super.key,
+    required this.client,
+    required this.laneId,
+    required this.liveLanes,
+    this.onClose,
+  });
 
   @override
   Widget build(BuildContext context) {
     final lane = liveLanes().where((l) => l.id == laneId).firstOrNull;
     final transcript = lane?.transcript;
     if (lane == null || transcript == null || transcript.isEmpty) {
-      return LaneDetailScreen(laneId: laneId, liveLanes: liveLanes);
+      return LaneDetailScreen(
+        laneId: laneId,
+        liveLanes: liveLanes,
+        onClose: onClose,
+      );
     }
-    return SessionScreen(
+    final session = SessionScreen(
       client: client,
       sessionId: transcript,
       title: lane.title,
       readOnly: true,
       acceptDrops: false,
       live: true,
-      embedded: ShellPanelScope.maybeOf(context) != null,
+      embedded: !kMobile || ShellPanelScope.maybeOf(context) != null,
+    );
+    if (kMobile) return session;
+    final goBack = onClose ?? () => Navigator.of(context).maybePop();
+    final title = lane.title.trim().isEmpty ? 'Lane' : lane.title.trim();
+    return ColoredBox(
+      color: AppColors.bg,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            height: 44,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: AppColors.bg,
+              border: Border(bottom: BorderSide(color: AppColors.line)),
+            ),
+            child: Row(children: [
+              Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(6),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: goBack,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 5, 8, 5),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      AppIcon('arrow-left', size: 13, color: AppColors.fg2),
+                      const SizedBox(width: 6),
+                      Text('Back',
+                          style: sans(12.5,
+                              weight: FontWeight.w500, color: AppColors.fg2)),
+                    ]),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: Text('/', style: sans(12.5, color: AppColors.fg4)),
+              ),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(13, weight: FontWeight.w600, color: AppColors.fg1),
+                ),
+              ),
+              if (onClose != null)
+                IconBtn('x',
+                    size: 28,
+                    iconSize: 14,
+                    tooltip: 'Close lane',
+                    onTap: onClose!),
+            ]),
+          ),
+          Expanded(child: session),
+        ],
+      ),
     );
   }
 }
