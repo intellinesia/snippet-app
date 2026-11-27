@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../file_icons.dart';
@@ -95,19 +97,27 @@ class FileChangesList extends StatelessWidget {
       if (edits > 0) '$edits edit${edits == 1 ? '' : 's'}',
     ].join(' \u00b7 ');
     // Desktop reads name and folder on one line, as the drawer mockup does.
+    // Phone board: the whole path in mono, trimmed from the start.
     final text = kMobile
         ? Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(15, color: AppColors.fg1)),
-              if (sub.isNotEmpty)
-                Text(sub,
+              LayoutBuilder(builder: (_, box) {
+                // Mono advance is about 0.6em; keep the tail (the file name).
+                final fit = math.max(8, (box.maxWidth / (13.5 * 0.6)).floor());
+                return Text(
+                    path.length > fit
+                        ? '\u2026${path.substring(path.length - fit + 1)}'
+                        : path,
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(12, color: AppColors.fg4)),
+                    softWrap: false,
+                    overflow: TextOverflow.clip,
+                    style: mono(13.5, color: AppColors.fg1));
+              }),
+              if (edits > 0)
+                Text('$edits edit${edits == 1 ? '' : 's'}',
+                    maxLines: 1,
+                    style: sans(12, height: 1.4, color: AppColors.fg4)),
             ],
           )
         : Row(children: [
@@ -132,16 +142,19 @@ class FileChangesList extends StatelessWidget {
             ? EdgeInsets.fromLTRB(S.s12, S.of(10), S.s16, S.of(10))
             : EdgeInsets.fromLTRB(S.s8, S.s2, S.s12, S.s2),
         child: Row(children: [
-          Container(
-            width: kMobile ? 32 : 22,
-            height: kMobile ? 32 : 22,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColors.surface3,
-              borderRadius: BorderRadius.circular(R.sm),
+          if (kMobile)
+            SizedBox(width: 22, child: FileGlyph(name, size: 16))
+          else
+            Container(
+              width: 22,
+              height: 22,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.surface3,
+                borderRadius: BorderRadius.circular(R.sm),
+              ),
+              child: FileGlyph(name, size: 13),
             ),
-            child: FileGlyph(name, size: kMobile ? 16 : 13),
-          ),
           SizedBox(width: kMobile ? S.s12 : S.s8),
           Expanded(child: text),
           SizedBox(width: S.s8),
@@ -151,13 +164,14 @@ class FileChangesList extends StatelessWidget {
     );
   }
 
-  Widget _delta(int add, int del) =>
-      Row(mainAxisSize: MainAxisSize.min, children: [
-        Text('+$add', style: mono(kMobile ? 13 : 12, color: AppColors.ok)),
-        SizedBox(width: S.s6),
-        Text('\u2212$del',
-            style: mono(kMobile ? 13 : 12, color: AppColors.danger)),
-      ]);
+  Widget _delta(int add, int del) => kMobile
+      ? mkDelta(add, del)
+      : Row(mainAxisSize: MainAxisSize.min, children: [
+          Text('+$add', style: mono(kMobile ? 13 : 12, color: AppColors.ok)),
+          SizedBox(width: S.s6),
+          Text('\u2212$del',
+              style: mono(kMobile ? 13 : 12, color: AppColors.danger)),
+        ]);
 
   @override
   Widget build(BuildContext context) {
@@ -169,7 +183,9 @@ class FileChangesList extends StatelessWidget {
               path: c.path,
               edits: _edits(c.path),
               trailing: c.kind == FileChangeKind.deleted
-                  ? Text('deleted', style: sans(13, color: AppColors.danger))
+                  ? Text('deleted',
+                      style: sans(13,
+                          color: kMobile ? AppColors.fg3 : AppColors.danger))
                   : _delta(c.added, c.removed),
               onTap: () => Navigator.of(context).push(
                     AppPageRoute<void>(
@@ -188,6 +204,11 @@ class FileChangesList extends StatelessWidget {
 }
 
 /// "File changes · N" and its list, for hosts that show it beside other content.
+/// Phone delta: quiet mono, zero sides left out (board "+3 -1", "+4").
+Widget mkDelta(int add, int del) =>
+    Text([if (add > 0) '+$add', if (del > 0) '-$del'].join(' '),
+        style: mono(13, color: AppColors.fg3));
+
 class FileChangesSection extends StatelessWidget {
   const FileChangesSection(
       {super.key, required this.steps, this.shell = const [], this.onOpenFile});
@@ -221,19 +242,32 @@ class FileChangesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final total = fileChanges(steps).length + shell.length;
+    final changes = fileChanges(steps);
+    final total = changes.length + shell.length;
+    final add = changes.fold<int>(0, (n, c) => n + c.added) +
+        shell.fold<int>(0, (n, c) => n + c.add);
+    final del = changes.fold<int>(0, (n, c) => n + c.removed) +
+        shell.fold<int>(0, (n, c) => n + c.del);
+    final count = [
+      '$total file${total == 1 ? '' : 's'}',
+      if (add > 0) '+$add',
+      if (del > 0) '-$del',
+    ].join(' ');
     return Scaffold(
       backgroundColor: AppColors.paneBg,
       body: SafeArea(
         child:
             Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           MobileBackBar(
-            title: 'File changes',
+            title: kMobile ? 'Changes' : 'File changes',
             trailing: [
               Padding(
                 padding: EdgeInsets.only(right: S.s4),
-                child: Text('$total file${total == 1 ? '' : 's'}',
-                    style: sans(12, color: AppColors.fg3)),
+                child: Text(
+                    kMobile ? count : '$total file${total == 1 ? '' : 's'}',
+                    style: kMobile
+                        ? mono(12.5, color: AppColors.fg3)
+                        : sans(12, color: AppColors.fg3)),
               ),
             ],
           ),
@@ -322,7 +356,9 @@ class FileChangeDetail extends StatelessWidget {
             ? Color.lerp(AppColors.bg, Colors.black, 0.35)
             : AppColors.tint1,
         borderRadius: BorderRadius.circular(R.of(14)),
-        border: Border.all(color: AppColors.fg1.withValues(alpha: 0.07)),
+        border: kMobile
+            ? null
+            : Border.all(color: AppColors.fg1.withValues(alpha: 0.07)),
       ),
       clipBehavior: Clip.antiAlias,
       child: Padding(

@@ -222,26 +222,29 @@ class _TurnChangesCardState extends State<TurnChangesCard> {
             ? 'Reverted $total ${total == 1 ? 'file' : 'files'}'
             : '$total ${total == 1 ? 'file' : 'files'} changed';
     final names = files.take(3).map((f) => f.path.split('/').last).join(', ');
-    final fileLine = [
-      names,
-      if (total > 3) '+${total - 3}'
-    ].where((x) => x.isNotEmpty).join(' ');
+    final fileLine = [names, if (total > 3) '+${total - 3}']
+        .where((x) => x.isNotEmpty)
+        .join(' ');
 
     Widget action(String label, double width, VoidCallback? onTap) {
       return TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Container(
-          width: width,
-          height: 36,
+          // Board pill: s3, no outline, inside a 44 target.
+          height: 44,
           alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: AppColors.surface2,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: AppColors.line),
+          child: Container(
+            height: 36,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.surface3,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Text(label,
+                style: sans(14, weight: W.label, color: AppColors.fg1)),
           ),
-          child: Text(label,
-              style: sans(12.5, weight: W.label, color: AppColors.fg1)),
         ),
       );
     }
@@ -256,7 +259,8 @@ class _TurnChangesCardState extends State<TurnChangesCard> {
             borderRadius: BorderRadius.circular(6),
           ),
           clipBehavior: Clip.antiAlias,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             TapDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => setState(() => _open = !_open),
@@ -273,7 +277,8 @@ class _TurnChangesCardState extends State<TurnChangesCard> {
                             ? Spinner(size: 13, color: AppColors.fg2)
                             : AppIcon(reverted ? 'check' : 'file-diff',
                                 size: 14,
-                                color: reverted ? AppColors.fg3 : AppColors.fg2),
+                                color:
+                                    reverted ? AppColors.fg3 : AppColors.fg2),
                       ),
                     ),
                     const SizedBox(width: 7),
@@ -325,14 +330,15 @@ class _TurnChangesCardState extends State<TurnChangesCard> {
                     height: 32,
                     child: Align(
                       alignment: Alignment.centerLeft,
-                      child: Text('$hidden more ${hidden == 1 ? 'file' : 'files'}',
+                      child: Text(
+                          '$hidden more ${hidden == 1 ? 'file' : 'files'}',
                           style: sans(12, color: AppColors.fg3)),
                     ),
                   ),
                 ),
               Container(
-                height: 48,
-                padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+                height: 52,
+                padding: const EdgeInsets.fromLTRB(10, 4, 6, 4),
                 decoration: BoxDecoration(
                     border: Border(top: BorderSide(color: AppColors.line))),
                 child: Row(children: [
