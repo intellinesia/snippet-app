@@ -1751,7 +1751,7 @@ class SessionShortcutTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(kMobile ? 18 : R.of(7)),
         child: SizedBox(
           width: 64,
           child: Padding(

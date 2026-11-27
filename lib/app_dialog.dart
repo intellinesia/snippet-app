@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'platform.dart';
 import 'package:flutter/semantics.dart';
 
 import 'theme.dart';
@@ -205,7 +206,7 @@ class AppDialogCard extends StatelessWidget {
     Theme.of(context);
     return Material(
       color: AppColors.surface1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kMobile ? 16 : R.lg)),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(

@@ -237,7 +237,7 @@ class _FilterChip extends StatelessWidget {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: selected ? AppColors.surface2 : AppColors.surface1,
-                borderRadius: BorderRadius.circular(13),
+                borderRadius: BorderRadius.circular(R.of(6)),
               ),
               child: Text(label,
                   style: sans(11,
@@ -306,7 +306,7 @@ class _SessionInboxRowState extends State<SessionInboxRow> {
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(R.of(6)),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         if (needs) ...[

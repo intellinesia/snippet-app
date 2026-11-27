@@ -1233,9 +1233,9 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
                         color: widget.recentFolders[i] == _here
                             ? AppColors.surface3
                             : AppColors.surface2,
-                        borderRadius: BorderRadius.circular(22),
+                        borderRadius: BorderRadius.circular(kMobile ? 22 : R.of(7)),
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(22),
+                          borderRadius: BorderRadius.circular(kMobile ? 22 : R.of(7)),
                           splashFactory: NoSplash.splashFactory,
                           onTap: _busy == null
                               ? () => _go(widget.recentFolders[i])

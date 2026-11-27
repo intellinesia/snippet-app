@@ -1301,14 +1301,20 @@ class R {
   static ThemeShapeTokens get _shape => ThemeManager.instance.resolved.shape;
   static double get _scale => math.max(0.0, _shape.radiusScale);
 
-  static double get xs => _shape.radii.xs * _scale;
-  static double get sm => _shape.radii.sm * _scale;
-  static double get chip => _shape.radii.chip * _scale;
-  static double get md => _shape.radii.md * _scale;
-  static double get card => _shape.radii.card * _scale;
-  static double get lg => _shape.radii.lg * _scale;
+  // Desktop follows Capy's tighter ladder; phone radii read as toys at pointer
+  // scale. A theme can still go smaller, never rounder.
+  static double _cap(double v, double desk) => kMobile ? v : math.min(v, desk);
+
+  static double get xs => _cap(_shape.radii.xs, 4) * _scale;
+  static double get sm => _cap(_shape.radii.sm, 6) * _scale;
+  static double get chip => _cap(_shape.radii.chip, 6) * _scale;
+  static double get md => _cap(_shape.radii.md, 7) * _scale;
+  static double get card => _cap(_shape.radii.card, 10) * _scale;
+  static double get lg => _cap(_shape.radii.lg, 12) * _scale;
   static double get sheetTop => _shape.radii.sheetTop * _scale;
-  static double get pill => _shape.radii.pill;
+  // Desktop buttons and chips are rounded rectangles; dots and meters under
+  // 14 px tall still come out round.
+  static double get pill => _cap(_shape.radii.pill, 7 * _scale);
 
   /// An off-scale radius that still follows the theme's radius scale.
   static double of(double v) => v * _scale;

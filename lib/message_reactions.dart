@@ -406,7 +406,7 @@ class _ReactionChip extends StatelessWidget {
       label: '${group.name} ${group.count}',
       button: true,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(kMobile ? 16 : R.of(6)),
         onTap: onTap,
         onLongPress: onLongPress,
         onSecondaryTap: onLongPress,
@@ -416,7 +416,7 @@ class _ReactionChip extends StatelessWidget {
           padding: EdgeInsets.only(left: agent == null ? 10 : 4, right: 10),
           decoration: BoxDecoration(
             color: AppColors.surface3,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(kMobile ? 16 : R.of(6)),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             if (agent != null) ...[

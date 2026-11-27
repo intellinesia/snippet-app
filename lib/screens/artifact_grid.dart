@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../platform.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../api.dart';
@@ -480,7 +481,7 @@ class _ArtifactCollectionState extends State<ArtifactCollection> {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: on ? AppColors.fg1 : AppColors.surface2,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(kMobile ? 16 : R.of(6)),
               border: Border.all(color: on ? AppColors.fg1 : AppColors.line),
             ),
             child: Text.rich(
@@ -693,7 +694,7 @@ class _ArtifactCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
             decoration: BoxDecoration(
               color: AppColors.surface2,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(kMobile ? 20 : R.card),
               border: Border.all(color: AppColors.line),
             ),
             child: Column(

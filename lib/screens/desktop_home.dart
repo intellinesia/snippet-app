@@ -945,8 +945,8 @@ class _StartComposerState extends State<_StartComposer> {
             ),
             const SizedBox(width: 6),
             _HoverFillButton(
-              size: 28,
-              radius: 14,
+              size: 26,
+              radius: R.of(7),
               tooltip: 'Start session',
               fill: AppColors.accentFill,
               hoverFill: AppColors.accentFill.withValues(alpha: 0.86),

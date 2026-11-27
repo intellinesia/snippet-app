@@ -1194,7 +1194,7 @@ class DesktopPullRequestCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 6.5),
                 decoration: BoxDecoration(
                   color: AppColors.surface3,
-                  borderRadius: BorderRadius.circular(11),
+                  borderRadius: BorderRadius.circular(R.of(6)),
                 ),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   AppIcon('pull-request', size: 11, color: AppColors.fg1),

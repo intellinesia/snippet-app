@@ -1234,7 +1234,7 @@ class _DeskComposerRunningLineState extends State<DeskComposerRunningLine> {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: AppColors.surface2,
-                borderRadius: BorderRadius.circular(11),
+                borderRadius: BorderRadius.circular(R.of(6)),
               ),
               child: Text(
                 widget.queued == 1 ? '1 queued' : '${widget.queued} queued',

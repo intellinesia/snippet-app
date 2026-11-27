@@ -1241,11 +1241,19 @@ class _PillChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
         color: selected ? AppColors.surface3 : AppColors.surface1,
-        shape: StadiumBorder(
-            side: BorderSide(
-                color: selected ? AppColors.accent : AppColors.line)),
+        shape: kMobile
+            ? StadiumBorder(
+                side: BorderSide(
+                    color: selected ? AppColors.accent : AppColors.line))
+            : RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(R.of(6)),
+                side: BorderSide(
+                    color: selected ? AppColors.accent : AppColors.line)),
         child: InkWell(
-          customBorder: const StadiumBorder(),
+          customBorder: kMobile
+              ? const StadiumBorder()
+              : RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(R.of(6))),
           onTap: onTap,
           child: Container(
             height: kMobile ? 30 : 26,

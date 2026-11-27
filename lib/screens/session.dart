@@ -2028,11 +2028,17 @@ class _SessionScreenState extends State<SessionScreen>
                                                           child: Material(
                                                             color: AppColors
                                                                 .surface3,
-                                                            shape:
-                                                                const StadiumBorder(),
+                                                            shape: kMobile
+                                                                ? const StadiumBorder()
+                                                                : RoundedRectangleBorder(
+                                                                    borderRadius:
+                                                                        BorderRadius.circular(R.of(7))),
                                                             child: InkWell(
-                                                              customBorder:
-                                                                  const StadiumBorder(),
+                                                              customBorder: kMobile
+                                                                  ? const StadiumBorder()
+                                                                  : RoundedRectangleBorder(
+                                                                      borderRadius:
+                                                                          BorderRadius.circular(R.of(7))),
                                                               onTap: () {
                                                                 _stickToBottom =
                                                                     true;

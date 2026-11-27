@@ -237,7 +237,7 @@ class _Chip extends StatelessWidget {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: selected ? AppColors.surface3 : AppColors.surface2,
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(R.of(7)),
             ),
             child: Text(label,
                 style: sans(12,

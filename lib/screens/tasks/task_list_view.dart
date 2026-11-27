@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../platform.dart';
 import 'package:flutter/services.dart';
 
 import '../../api.dart';
@@ -376,7 +377,7 @@ class _TaskListViewState extends State<TaskListView> {
             height: 24,
             padding: const EdgeInsets.only(left: 10, right: 4),
             decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(kMobile ? 12 : R.of(6)),
                 border: Border.all(color: taskHairline)),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Text(label, style: sans(12, color: AppColors.fg2)),
