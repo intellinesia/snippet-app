@@ -829,11 +829,13 @@ class DaemonClient {
     String sessionId, {
     String? checkpoint,
     int? eventIndex,
+    String? title,
   }) async {
     final body = <String, dynamic>{
       'session': sessionId,
       if (checkpoint != null && checkpoint.isNotEmpty) 'checkpoint': checkpoint,
       if (eventIndex != null) 'event_index': eventIndex,
+      if (title != null && title.trim().isNotEmpty) 'title': title.trim(),
     };
     final r = await _post(_uri('/session/fork'),
         headers: _json, body: jsonEncode(body), timeout: _long);
@@ -1485,8 +1487,8 @@ class DaemonClient {
 
   /// Authenticated PNG thumbnail loader for canvas cards, reusing the same
   /// [TimedNetworkImage] pipeline as [artifactImage].
-  ImageProvider canvasImage(String thumbUrl, {int? rev}) =>
-      TimedNetworkImage(canvasAssetUri(thumbUrl, rev: rev).toString(), _imageBytes);
+  ImageProvider canvasImage(String thumbUrl, {int? rev}) => TimedNetworkImage(
+      canvasAssetUri(thumbUrl, rev: rev).toString(), _imageBytes);
 
   /// GET /memory/scopes — every memory repo on the machine.
   Future<List<MemoryScope>> memoryScopes() async {
@@ -1562,8 +1564,7 @@ class DaemonClient {
     final r = await _get(_uri('/lead/overview'));
     if (r.statusCode != 200) throw _err('lead overview', r);
     _remember('lead-overview', r.body);
-    return LeadOverview.fromJson(
-        jsonDecode(r.body) as Map<String, dynamic>);
+    return LeadOverview.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
 
   void _remember(String name, String body) =>
@@ -1878,8 +1879,7 @@ class DaemonClient {
 
   /// GET /wakes/{id}/script.
   Future<String> agentWatchScript(String agentId, String watchId) async {
-    final r =
-        await _get(_uri('/wakes/${Uri.encodeComponent(watchId)}/script'));
+    final r = await _get(_uri('/wakes/${Uri.encodeComponent(watchId)}/script'));
     if (r.statusCode != 200) throw _err('read agent watch script', r);
     final body = jsonDecode(r.body) as Map<String, dynamic>;
     return body['script'] as String? ?? '';
@@ -2529,7 +2529,8 @@ class DaemonClient {
       'brief': prompt,
       'schedule': schedule,
     };
-    final r = await _post(_uri('/wakes'), headers: _json, body: jsonEncode(body));
+    final r =
+        await _post(_uri('/wakes'), headers: _json, body: jsonEncode(body));
     if (r.statusCode != 200) throw _err('create recurring job', r);
     _invalidateRecurring();
     return RecurringJob.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
@@ -2598,8 +2599,7 @@ class DaemonClient {
 
   Future<Map<String, dynamic>> getCanvas({String? canvasId}) async {
     // lite=1 drops each frame's inlined html; an older daemon ignores it.
-    final r = await _get(
-        _uri('/canvas', _canvasQuery(canvasId, {'lite': '1'})),
+    final r = await _get(_uri('/canvas', _canvasQuery(canvasId, {'lite': '1'})),
         timeout: const Duration(seconds: 60));
     if (r.statusCode != 200) throw _err('load canvas', r);
     return decodeCanvasBody(r.body);

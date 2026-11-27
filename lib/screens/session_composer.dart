@@ -650,8 +650,8 @@ extension _SessionScreenComposerExt on _SessionScreenState {
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Text('${(f * 100).round()}% context',
-                style: sans(12, height: 16 / 12, color: AppColors.fg3,
-                    tabular: true)),
+                style: sans(12,
+                    height: 16 / 12, color: AppColors.fg3, tabular: true)),
             const SizedBox(width: 7),
             ClipRRect(
               borderRadius: BorderRadius.circular(2),
@@ -1082,7 +1082,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
           ],
         );
       case 'fork':
-        final events = _state?.events.length ?? 0;
+        final events = _transcriptStart + (_state?.events.length ?? 0);
         return Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1097,9 +1097,10 @@ extension _SessionScreenComposerExt on _SessionScreenState {
               child: SessionForkPanel(
                 fromLabel: 'the latest message',
                 total: events > 0 ? events : null,
-                onChoose: (_) {
+                latest: true,
+                onChoose: (_, title) {
                   _tray.close();
-                  _forkFromLatest();
+                  _forkFromLatest(name: title);
                 },
               ),
             ),
@@ -1188,14 +1189,13 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     );
   }
 
-  // Mirrors _confirmFork(null): with no checkpoint both choices cut at the
-  // latest message, so the choice does not change the request.
-  Future<void> _forkFromLatest() async {
-    final events = _state?.events.length ?? 0;
+  // Mirrors _confirmFork(null). No event index: the daemon forks the full
+  // conversation, not the paged window this screen holds.
+  Future<void> _forkFromLatest({String? name}) async {
     try {
       final result = await widget.client.forkSession(
         widget.sessionId,
-        eventIndex: events > 0 ? events - 1 : null,
+        title: name,
       );
       final id = result['id']?.toString() ?? '';
       final title = result['title']?.toString() ?? 'fork';

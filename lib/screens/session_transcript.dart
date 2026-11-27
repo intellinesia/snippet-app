@@ -306,11 +306,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
             } else {
               final name = _s(e['tool_name']);
               if (_isMetaTool(name) || _isSpeakTool(name)) break;
-              addToolRow(
-                  toolRow(abs,
-                      tool: name,
-                      result: e['result']),
-                  abs);
+              addToolRow(toolRow(abs, tool: name, result: e['result']), abs);
             }
           }
         case 'user_input':
@@ -503,7 +499,8 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                       ? QuietAside(text: reply)
                       : kMobile && isDedicatedLeadSession(widget.sessionId)
                           ? Padding(
-                              padding: EdgeInsets.symmetric(horizontal: M.gutter),
+                              padding:
+                                  EdgeInsets.symmetric(horizontal: M.gutter),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -632,13 +629,13 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
               ? '${firstLine.substring(0, 89)}\u2026'
               : firstLine;
           // Only the latest stop still needs the user; older ones were got past.
-          final latest = !events
-              .skip(idx + 1)
-              .any((x) => const {'user_input', 'assistant_text', 'tool_call'}
-                  .contains(x['kind']));
-          final who = (_meAgentName ?? '').trim().isEmpty
-              ? 'The agent'
-              : _meAgentName!;
+          final latest = !events.skip(idx + 1).any((x) => const {
+                'user_input',
+                'assistant_text',
+                'tool_call'
+              }.contains(x['kind']));
+          final who =
+              (_meAgentName ?? '').trim().isEmpty ? 'The agent' : _meAgentName!;
           addEvent(
               key,
               Builder(
@@ -658,8 +655,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                         ),
                       )
                     : QuietRecoveredLine(
-                        summary: 'Model error, then carried on',
-                        detail: msg),
+                        summary: 'Model error, then carried on', detail: msg),
               ));
         case 'profile_switched':
           endTools(key);
@@ -911,11 +907,8 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
       final delegations = [
         for (final s in knownSessions.values)
           if (s.ownerAgentId == 'lead' && s.workerAgentId != null && !s.settled)
-            Delegation(
-                s.workerAgentId!,
-                agentDisplayName(s.workerAgentId!),
-                s.title,
-                sessionBusy(s) ? 'Working' : 'Done'),
+            Delegation(s.workerAgentId!, agentDisplayName(s.workerAgentId!),
+                s.title, sessionBusy(s) ? 'Working' : 'Done'),
       ];
       if (delegations.isNotEmpty) {
         out.add(Padding(
@@ -1030,7 +1023,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
 
   bool _isMetaTool(String raw) {
     final n = toolBaseName(raw);
-    return         n == 'ask_user' ||
+    return n == 'ask_user' ||
         n == 'delegate_task' ||
         n == 'cancel_delegated_task' ||
         n == 'monitor' ||
@@ -1321,27 +1314,30 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
   Future<void> _confirmFork(Checkpoint? c, {bool sheet = false}) async {
     final label =
         c == null ? 'the latest message' : (c.label.isEmpty ? c.id : c.label);
-    final events = _state?.events.length ?? 0;
-    final fromHere = await showForkSheet(
+    // The loaded events are a paged window; count from the window start.
+    final events = _transcriptStart + (_state?.events.length ?? 0);
+    final choice = await showForkSheet(
       context,
       fromLabel: label,
       totalMessages: events > 0 ? events : null,
       origin: c == null ? lastChipOrigin : null,
+      latest: c == null,
     );
     lastChipOrigin = null;
-    if (fromHere == null || !mounted) return;
+    if (choice == null || !mounted) return;
     if (sheet) Navigator.pop(context);
-    await _forkFrom(fromHere ? c : null);
+    await _forkFrom(choice.fromHere ? c : null, name: choice.title);
   }
 
-  /// Fork at [cut], or at the latest message when null, and open the fork.
-  Future<void> _forkFrom(Checkpoint? cut) async {
-    final events = _state?.events.length ?? 0;
+  /// Fork at [cut], or the whole conversation when null, and open the fork.
+  Future<void> _forkFrom(Checkpoint? cut, {String? name}) async {
     try {
+      // No event index: the daemon forks the full conversation, not the
+      // paged window this screen happens to hold.
       final result = await widget.client.forkSession(
         widget.sessionId,
         checkpoint: cut?.id,
-        eventIndex: cut == null && events > 0 ? events - 1 : null,
+        title: name,
       );
       final id = result['id']?.toString() ?? '';
       final title = result['title']?.toString() ?? 'fork';

@@ -13,7 +13,7 @@ import '../tap_detector.dart';
 
 // Re-exported so the session part files reach them through this one import.
 export '../morph_sheet.dart' show globalRectOf, lastChipOrigin;
-export 'session_fork.dart' show showForkSheet, SessionForkPanel;
+export 'session_fork.dart' show ForkChoice, showForkSheet, SessionForkPanel;
 
 /// "Hand off to" picker as a sheet or dialog body: [SessionHandOffPanel]
 /// that closes its route once the hand-off lands.

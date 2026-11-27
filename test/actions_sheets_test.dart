@@ -71,7 +71,8 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('danger toast with action holds 8s and swipes up away', (tester) async {
+  testWidgets('danger toast with action holds 8s and swipes up away',
+      (tester) async {
     final ctx = await _pump(tester);
     toast(ctx, 'Busy', danger: true, actionLabel: 'Retry', onAction: () {});
     await tester.pump(const Duration(seconds: 7));
@@ -84,24 +85,21 @@ void main() {
 
   testWidgets('fork sheet returns the chosen value', (tester) async {
     final ctx = await _pump(tester);
-    bool? result = true;
+    ForkChoice? result;
     var done = false;
-    showForkSheet(ctx, fromLabel: 'Build 7', totalMessages: 160)
-        .then((v) {
+    showForkSheet(ctx, fromLabel: 'Build 7', totalMessages: 160).then((v) {
       result = v;
       done = true;
     });
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('Keeps everything up to "Build 7"'), findsOneWidget);
-    expect(find.text('All 160 messages'), findsOneWidget);
-    await tester.tap(find.text('Full history'));
-    await tester.pump();
-    await tester.tap(find.text('Fork'));
+    await tester.enterText(find.byType(TextField), 'Retry');
+    await tester.tap(find.text('Fork from the start instead'));
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pump(const Duration(milliseconds: 400));
     expect(done, isTrue);
-    expect(result, false);
+    expect(result?.fromHere, false);
+    expect(result?.title, 'Retry');
     debugDefaultTargetPlatformOverride = null;
   });
 

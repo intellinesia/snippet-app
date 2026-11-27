@@ -6,16 +6,22 @@ import '../theme.dart';
 import '../tap_detector.dart';
 import '../widgets.dart';
 
-/// "Fork this conversation" sheet. Resolves true for "From this message",
-/// false for "Full history", null when dismissed. [origin] is the tapped
-/// chip's global rect (see `globalRectOf`) so the sheet grows out of it.
-Future<bool?> showForkSheet(
+/// The user's fork choice: [fromHere] is true for "From this message", false
+/// for the full history; [title] is the optional name typed for the fork.
+typedef ForkChoice = ({bool fromHere, String title});
+
+/// "Fork this conversation" sheet; null when dismissed. [latest] means the
+/// cut is the latest message, so only one Fork button is offered. [origin]
+/// is the tapped chip's global rect (see `globalRectOf`) so the sheet grows
+/// out of it.
+Future<ForkChoice?> showForkSheet(
   BuildContext context, {
   required String fromLabel,
   int? totalMessages,
   Rect? origin,
+  bool latest = false,
 }) =>
-    showMorphSheet<bool>(
+    showMorphSheet<ForkChoice>(
       context,
       title: 'Fork this conversation',
       subtitle:
@@ -24,17 +30,25 @@ Future<bool?> showForkSheet(
       builder: (ctx) => SessionForkPanel(
           fromLabel: fromLabel,
           total: totalMessages,
-          onChoose: (fromHere) => Navigator.of(ctx).pop(fromHere)),
+          latest: latest,
+          onChoose: (fromHere, title) =>
+              Navigator.of(ctx).pop((fromHere: fromHere, title: title))),
     );
 
-/// The two fork choices and the Fork button, embeddable in a sheet or the
-/// phone composer tray. [onChoose] gets true for "From this message".
+/// The fork choices and title field, embeddable in a sheet or the phone
+/// composer tray. [onChoose] gets true for "From this message" and the typed
+/// title. With [latest] both choices are the same cut, so one Fork button.
 class SessionForkPanel extends StatefulWidget {
   const SessionForkPanel(
-      {super.key, required this.fromLabel, this.total, required this.onChoose});
+      {super.key,
+      required this.fromLabel,
+      this.total,
+      this.latest = false,
+      required this.onChoose});
   final String fromLabel;
   final int? total;
-  final ValueChanged<bool> onChoose;
+  final bool latest;
+  final void Function(bool fromHere, String title) onChoose;
   @override
   State<SessionForkPanel> createState() => _SessionForkPanelState();
 }
@@ -47,6 +61,8 @@ class _SessionForkPanelState extends State<SessionForkPanel> {
     _title.dispose();
     super.dispose();
   }
+
+  void _choose(bool fromHere) => widget.onChoose(fromHere, _title.text);
 
   @override
   Widget build(BuildContext context) {
@@ -88,12 +104,14 @@ class _SessionForkPanelState extends State<SessionForkPanel> {
         const SizedBox(height: 12),
         if (!kMobile)
           Row(children: [
-            Btn('Fork', small: true, onTap: () => widget.onChoose(true)),
-            const SizedBox(width: 8),
-            Btn('Fork from the start instead',
-                small: true,
-                variant: BtnVariant.ghost,
-                onTap: () => widget.onChoose(false)),
+            Btn('Fork', small: true, onTap: () => _choose(true)),
+            if (!widget.latest) ...[
+              const SizedBox(width: 8),
+              Btn('Fork from the start instead',
+                  small: true,
+                  variant: BtnVariant.ghost,
+                  onTap: () => _choose(false)),
+            ],
           ])
         else ...[
           Semantics(
@@ -102,7 +120,7 @@ class _SessionForkPanelState extends State<SessionForkPanel> {
             child: ExcludeSemantics(
               child: TapDetector(
                 behavior: HitTestBehavior.opaque,
-                onTap: () => widget.onChoose(true),
+                onTap: () => _choose(true),
                 child: Container(
                   constraints: const BoxConstraints(minHeight: 48),
                   alignment: Alignment.center,
@@ -116,22 +134,23 @@ class _SessionForkPanelState extends State<SessionForkPanel> {
               ),
             ),
           ),
-          Semantics(
-            button: true,
-            label: 'Fork from the start instead',
-            child: ExcludeSemantics(
-              child: TapDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => widget.onChoose(false),
-                child: Container(
-                  constraints: const BoxConstraints(minHeight: 48),
-                  alignment: Alignment.center,
-                  child: Text('Fork from the start instead',
-                      style: sans(15, color: AppColors.fg2)),
+          if (!widget.latest)
+            Semantics(
+              button: true,
+              label: 'Fork from the start instead',
+              child: ExcludeSemantics(
+                child: TapDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _choose(false),
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 48),
+                    alignment: Alignment.center,
+                    child: Text('Fork from the start instead',
+                        style: sans(15, color: AppColors.fg2)),
+                  ),
                 ),
               ),
             ),
-          ),
         ],
       ],
     );

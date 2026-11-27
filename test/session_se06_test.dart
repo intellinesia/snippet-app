@@ -81,15 +81,34 @@ void main() {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: SessionForkPanel(
                     fromLabel: 'Keep going with the wake wiring please ' * 4,
-                    onChoose: (v) => chose = v))));
+                    onChoose: (v, _) => chose = v))));
         expect(t.takeException(), isNull);
         final fork = t.getRect(find.bySemanticsLabel('Fork'));
         expect(fork.width, w - 32);
         expect(fork.height, greaterThanOrEqualTo(48));
-        expect(t.getRect(find.bySemanticsLabel('Fork from the start instead')).height,
+        expect(
+            t
+                .getRect(find.bySemanticsLabel('Fork from the start instead'))
+                .height,
             greaterThanOrEqualTo(48));
         await t.tap(find.text('Fork from the start instead'));
         expect(chose, false);
+      });
+      testWidgets('fork from latest offers one button w=$w s=$s', (t) async {
+        t.view.devicePixelRatio = 1;
+        t.view.physicalSize = Size(w, 852);
+        addTearDown(t.view.reset);
+        String? title;
+        await t.pumpWidget(_wrap(
+            s,
+            SessionForkPanel(
+                fromLabel: 'the latest message',
+                latest: true,
+                onChoose: (_, v) => title = v)));
+        expect(find.text('Fork from the start instead'), findsNothing);
+        await t.enterText(find.byType(TextField), 'Tray retry');
+        await t.tap(find.text('Fork'));
+        expect(title, 'Tray retry');
       });
     }
   }
