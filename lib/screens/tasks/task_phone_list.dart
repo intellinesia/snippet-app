@@ -9,7 +9,6 @@ import '../../mobile_kit.dart';
 import '../../mochi.dart';
 import '../mobile_home/collapsing_root.dart';
 import 'task_phone.dart';
-import 'task_phone_board.dart';
 
 enum TaskScope { all, mine, agents }
 
@@ -57,7 +56,6 @@ const kDoneVisible = 5;
 class _PhoneTasksRootState extends State<PhoneTasksRoot> {
   TaskScope _scope = TaskScope.all;
   bool _doneOpen = false;
-  bool _board = false;
   bool _searching = false;
   final _q = TextEditingController();
 
@@ -170,24 +168,6 @@ class _PhoneTasksRootState extends State<PhoneTasksRoot> {
       }
     }
 
-    if (_board) {
-      final trailing = [
-        ...widget.actions,
-        BarIcon('list', 'List view', () => setState(() => _board = false),
-            toggled: true),
-        BarIcon('plus', 'New task', widget.onNew),
-      ];
-      return PhoneTaskBoard(
-        title: widget.title,
-        tasks: [for (final t in all) t],
-        sessions: widget.sessions,
-        agentNames: widget.agentNames,
-        onOpen: widget.onOpen,
-        leading: widget.leading,
-        actions: trailing,
-        stateBody: widget.stateBody,
-      );
-    }
     return CollapsingRoot(
       title: widget.title,
       leading: widget.leading,
@@ -235,27 +215,10 @@ class _PhoneTasksRootState extends State<PhoneTasksRoot> {
               label: 'New task',
               icon: 'plus',
               onTap: widget.onNew,
-              onMenu: _menu,
-              menuLabel: 'Task options',
             ),
           ),
         ]),
       );
-
-  void _menu() {
-    showMkSheet<void>(context,
-        title: widget.title,
-        builder: (ctx) => Column(mainAxisSize: MainAxisSize.min, children: [
-              MkSheetTile(
-                icon: 'kanban',
-                label: 'Board view',
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  setState(() => _board = true);
-                },
-              ),
-            ]));
-  }
 
   // Only Completed carries a count on the board.
   Widget _label(String t, int n) => KeyedSubtree(
