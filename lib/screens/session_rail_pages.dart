@@ -144,7 +144,8 @@ extension _RailPages on _SessionRailState {
       decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: AppColors.paneLine))),
       child: Row(children: [
-        Flexible(
+        // Expanded, not Flexible + Spacer: those split the free width.
+        Expanded(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -179,7 +180,6 @@ extension _RailPages on _SessionRailState {
             ]),
           ),
         ),
-        const Spacer(),
         IconBtn(sessionRailWide.value ? 'minimize-2' : 'maximize-2',
             size: 28,
             iconSize: 14,

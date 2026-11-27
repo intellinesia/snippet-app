@@ -197,24 +197,27 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
                 child: Row(children: [
                   SizedBox(width: 14, child: Center(child: _icon())),
                   const SizedBox(width: 7),
+                  // The marker rides right after the label, not at the far
+                  // edge where it would float between tabs.
                   Expanded(
-                    child: Text(
-                      _label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(PaneRow.label,
-                          weight: W.body,
-                          color: active ? PaneRow.labelOn : PaneRow.labelOff),
-                    ),
+                    child: Row(children: [
+                      Flexible(
+                        child: Text(
+                          _label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(PaneRow.label,
+                              weight: W.body,
+                              color:
+                                  active ? PaneRow.labelOn : PaneRow.labelOff),
+                        ),
+                      ),
+                      if (marker != null) ...[
+                        const SizedBox(width: 6),
+                        marker,
+                      ],
+                    ]),
                   ),
-                  if (marker != null) ...[
-                    const SizedBox(width: 2),
-                    SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: Center(child: marker),
-                    ),
-                  ],
                   if (closable)
                     Opacity(
                       opacity: showClose ? 1 : 0,

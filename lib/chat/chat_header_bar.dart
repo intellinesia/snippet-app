@@ -42,8 +42,7 @@ class ChatHeaderBar extends StatelessWidget {
     final avatar = agentIds.length > 1
         ? AgentCluster(ids: agentIds, size: 16)
         : ClipOval(
-            child: AgentMochi(
-                agentIds.isEmpty ? 'snippet' : agentIds.first,
+            child: AgentMochi(agentIds.isEmpty ? 'snippet' : agentIds.first,
                 size: 16),
           );
     return Container(
@@ -54,37 +53,44 @@ class ChatHeaderBar extends StatelessWidget {
         border: Border(bottom: BorderSide(color: AppColors.paneLine)),
       ),
       child: Row(children: [
-        Flexible(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 320),
-            child: Container(
-              key: const ValueKey('chat-header-pill'),
-              height: PaneRow.pill,
-              padding: const EdgeInsets.fromLTRB(9, 0, 11, 0),
-              decoration: BoxDecoration(
-                color: PaneRow.plate,
-                borderRadius: BorderRadius.circular(PaneRow.radius),
-              ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                avatar,
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(PaneRow.label, color: PaneRow.labelOn)),
+        // The tabs take the free width themselves; a loose Flexible beside a
+        // Spacer would leave half of it empty past the actions.
+        Expanded(
+          child: Row(children: [
+            Flexible(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 320),
+                child: Container(
+                  key: const ValueKey('chat-header-pill'),
+                  height: PaneRow.pill,
+                  padding: const EdgeInsets.fromLTRB(9, 0, 11, 0),
+                  decoration: BoxDecoration(
+                    color: PaneRow.plate,
+                    borderRadius: BorderRadius.circular(PaneRow.radius),
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    avatar,
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(PaneRow.label, color: PaneRow.labelOn)),
+                    ),
+                  ]),
                 ),
-              ]),
+              ),
             ),
-          ),
+            for (final w in tabs) ...[
+              const SizedBox(width: 4),
+              Flexible(
+                  child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 180),
+                      child: w)),
+            ],
+            for (final w in leading) ...[const SizedBox(width: 4), w],
+          ]),
         ),
-        for (final w in tabs) ...[
-          const SizedBox(width: 4),
-          Flexible(child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 180), child: w)),
-        ],
-        for (final w in leading) ...[const SizedBox(width: 4), w],
-        const Spacer(),
         if (subtitle.isNotEmpty)
           Flexible(
             flex: 0,

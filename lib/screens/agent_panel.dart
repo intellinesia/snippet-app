@@ -332,7 +332,8 @@ class AgentSidePanel extends StatelessWidget {
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: AppColors.paneLine))),
         child: Row(children: [
-          Flexible(
+          // Expanded, not Flexible + Spacer: those split the free width.
+          Expanded(
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -364,7 +365,6 @@ class AgentSidePanel extends StatelessWidget {
               ]),
             ),
           ),
-          const Spacer(),
           if (onHide != null)
             IconBtn('sidebar',
                 size: 28, iconSize: 14, tooltip: 'Hide panel', onTap: onHide),
