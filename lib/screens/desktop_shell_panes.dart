@@ -969,8 +969,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             label: 'Files and changes',
             onTap: () => page('changes')),
         PaneAddEntry(
-            icon: 'activity', label: 'Activity', onTap: () => page('jobs')),
-        PaneAddEntry(
             icon: 'history',
             label: 'Checkpoints',
             meta: count(cps),
@@ -1015,8 +1013,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             onTap: () => page('changes')),
         PaneAddEntry(
             icon: 'folder', label: 'Files', onTap: () => page('files')),
-        PaneAddEntry(
-            icon: 'activity', label: 'Activity', onTap: () => page('jobs')),
         PaneAddEntry(
             icon: 'history',
             label: 'Checkpoints',

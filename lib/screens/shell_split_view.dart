@@ -493,14 +493,20 @@ class _ShellSplitViewState extends State<ShellSplitView>
     final radius = widget.sidebarHidden
         ? BorderRadius.zero
         : BorderRadius.only(topLeft: Radius.circular(R.of(9)));
+    // The outline paints over the panes: a page with its own opaque fill
+    // would otherwise hide it.
     return DecoratedBox(
       key: const ValueKey('shell-panes'),
+      position: DecorationPosition.foreground,
       decoration: BoxDecoration(
-        color: AppColors.panelFill,
         borderRadius: radius,
         border: Border.all(color: AppColors.paneLine, width: AppColors.hairline),
       ),
-      child: ClipRRect(borderRadius: radius, child: child),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+            color: AppColors.panelFill, borderRadius: radius),
+        child: ClipRRect(borderRadius: radius, child: child),
+      ),
     );
   }
 }

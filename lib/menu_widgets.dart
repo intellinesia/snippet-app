@@ -374,8 +374,12 @@ Future<T?> showAppMenu<T>(
   var effMin = (point != null && minWidth == 260)
       ? 200.0
       : (minWidth == 260 ? 280.0 : minWidth);
-  // A menu is never narrower than the control it drops from.
-  if (point == null && anchor != null && control.width > effMin) {
+  // A menu is never narrower than the control it drops from, unless that
+  // "control" is a whole pane passed as a fallback anchor.
+  if (point == null &&
+      anchor != null &&
+      control.width > effMin &&
+      control.width <= 480) {
     effMin = control.width;
   }
   var effMax = (point != null && maxWidth == 340)

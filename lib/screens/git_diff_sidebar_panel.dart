@@ -372,7 +372,8 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
   }
 
   Widget _changedHeader() => Padding(
-        padding: EdgeInsets.fromLTRB(S.of(18), S.of(18), S.of(14), S.s6),
+        // Lines up with the file rows' text.
+        padding: const EdgeInsets.fromLTRB(18, 12, 12, 4),
         child: Row(children: [
           Expanded(
             child: Text('CHANGED',
@@ -409,15 +410,15 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
           opacity: onTap == null ? 0.45 : 1,
           child: Material(
             color: AppColors.tint2,
-            shape: const CircleBorder(),
+            borderRadius: BorderRadius.circular(PaneRow.radius),
             child: InkWell(
-              customBorder: const CircleBorder(),
+              borderRadius: BorderRadius.circular(PaneRow.radius),
               onTap: onTap,
               child: SizedBox(
-                width: 32,
-                height: 32,
+                width: 28,
+                height: 28,
                 child: Center(
-                    child: AppIcon(icon, size: 14, color: AppColors.fg2)),
+                    child: AppIcon(icon, size: 13, color: AppColors.fg2)),
               ),
             ),
           ),
@@ -433,13 +434,13 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
         opacity: disabled ? 0.45 : 1,
         child: Material(
           color: light ? AppColors.fg1 : AppColors.tint2,
-          borderRadius: BorderRadius.circular(R.of(16)),
+          borderRadius: BorderRadius.circular(PaneRow.radius),
           child: InkWell(
-            borderRadius: BorderRadius.circular(R.of(16)),
+            borderRadius: BorderRadius.circular(PaneRow.radius),
             onTap: disabled ? null : onTap,
             child: Container(
-              height: 32,
-              padding: EdgeInsets.symmetric(horizontal: S.of(14)),
+              height: 28,
+              padding: EdgeInsets.symmetric(horizontal: S.of(10)),
               alignment: Alignment.center,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 if (icon != null) ...[
@@ -447,7 +448,7 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
                   SizedBox(width: S.s6),
                 ],
                 Text(label,
-                    style: sans(13,
+                    style: sans(12.5,
                         weight: light ? FontWeight.w500 : W.body,
                         color: light ? AppColors.bg : AppColors.fg2)),
               ]),
@@ -457,16 +458,18 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
       );
 
   Widget _commitBox(int count) => Padding(
-        padding: EdgeInsets.fromLTRB(S.s12, S.s6, S.s12, S.s8),
+        padding: EdgeInsets.fromLTRB(S.s8, S.s4, S.s8, S.s4),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Container(
             decoration: BoxDecoration(
               color: kMobile ? AppColors.tint1 : Grouped.card,
-              borderRadius: BorderRadius.circular(kMobile ? R.lg : R.of(9)),
+              borderRadius: BorderRadius.circular(kMobile ? R.lg : 8),
               border: Border.all(
                   color: kMobile ? AppColors.line : Grouped.cardBorder),
             ),
-            padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.s8),
+            padding: kMobile
+                ? EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.s8)
+                : const EdgeInsets.fromLTRB(10, 8, 10, 6),
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -495,7 +498,7 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
                   Text('⌘↵ to commit', style: sans(12, color: AppColors.fg4)),
                 ]),
           ),
-          SizedBox(height: S.of(10)),
+          SizedBox(height: kMobile ? S.of(10) : 6),
           if (!kMobile)
             LayoutBuilder(builder: (context, box) => Row(children: [
               Expanded(

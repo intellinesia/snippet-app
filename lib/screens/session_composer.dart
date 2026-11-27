@@ -979,7 +979,9 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       trailing: kMobile && !_showsQuickActions && ownModel ? _modelChip : null,
       deskModel: ownModel
           ? Row(mainAxisSize: MainAxisSize.min, children: [
+              // Keyed so panel actions (Usage > Switch) anchor to the chip.
               Builder(
+                key: _modelChipKey,
                 builder: (chipCtx) => DeskModelChip(
                   icon: _modelProvider == null
                       ? 'cpu'

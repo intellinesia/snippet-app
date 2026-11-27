@@ -772,16 +772,10 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   void _openWakes() {
     final name = _title.trim().isEmpty ? widget.sessionId : _title.trim();
     if (!kMobile) {
-      presentScreen(context,
-          style: PanelStyle.drawer,
-          purpose: ShellPanelPurpose.wakes,
-          panelId: widget.sessionId,
-          originClient: widget.client,
-          originSessionId: widget.sessionId,
-          builder: (_, close) => SingleChildScrollView(
-              padding: EdgeInsets.all(S.s12),
-              child: AgentWakePanel(
-                  client: widget.client, owner: widget.sessionId, name: name)));
+      // Wakes are a tab in the session panel, not a panel of their own.
+      sessionRailPageRequest.value = 'wakes';
+      if (sessionRailCollapsed.value) setSessionRailCollapsed(false);
+      sessionRailFloating.value = true;
       return;
     }
     showAgentWakeSettings(context,

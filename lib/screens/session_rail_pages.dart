@@ -214,7 +214,6 @@ extension _RailPages on _SessionRailState {
         if (widget.onChanges != null)
           e('changes', 'file-diff', 'Diffs', meta: count(files)),
         if (widget.onFiles != null) e('files', 'folder', 'Files'),
-        e('jobs', 'activity', 'Activity'),
         e('checkpoints', 'history', 'Checkpoints', meta: count(cps)),
         e('memory', 'book-marked', 'Memory'),
         e('usage', 'gauge', 'Usage'),
@@ -853,7 +852,8 @@ extension _RailPages on _SessionRailState {
       case 'files':
         // The list lives in the column; one file still opens wide in the pane.
         final ws = (s?.workspace ?? '').trim();
-        final h = (_bodyH - 52).clamp(240.0, 4000.0);
+        final docked = !kMobile && !widget.floating;
+        final h = (_bodyH - (docked ? 8 : 52)).clamp(240.0, 4000.0);
         return [
           _subHeader(_page == 'changes' ? 'Diffs' : 'Files'),
           SizedBox(
@@ -1101,6 +1101,20 @@ extension _RailPages on _SessionRailState {
   }
 
   List<Widget> _wakesPage() {
+    // On desktop the tab holds the full editor, so a wake never opens a
+    // panel of its own.
+    if (!kMobile) {
+      final t = (widget.state?.title ?? '').trim();
+      return [
+        _subHeader('Wakes'),
+        AgentWakePanel(
+          client: widget.client,
+          owner: widget.sessionId,
+          name: t.isEmpty ? widget.sessionId : t,
+          onChanged: _load,
+        ),
+      ];
+    }
     final list = [..._wakes]..sort((a, b) {
         if (a.enabled != b.enabled) return a.enabled ? -1 : 1;
         return a.nextRunAt.compareTo(b.nextRunAt);

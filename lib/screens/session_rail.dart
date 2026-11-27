@@ -23,6 +23,7 @@ import '../chat/mc_panel_sections.dart' show mcNeeds, McNeedsYou;
 import 'agent_records.dart' show AgentInboxView, AgentBoardView;
 import '../tap_detector.dart';
 import 'pane_add_menu.dart' show showPaneAddMenu, PaneAddEntry, PanePill;
+import 'agent_wake_panel.dart' show AgentWakePanel;
 
 part 'session_rail_pages.dart';
 
@@ -532,14 +533,23 @@ class _SessionRailState extends State<SessionRail> {
                     _railTabs(),
                     Expanded(
                       child: LayoutBuilder(
-                        builder: (_, box) => Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                          child: Align(
-                            alignment: Alignment.topCenter,
-                            child: _card(box.maxHeight - 14,
-                                width: outer == null ? null : outer - 33),
-                          ),
-                        ),
+                        builder: (_, box) {
+                          // Diffs and Files carry their own row insets.
+                          final list = _page == 'changes' || _page == 'files';
+                          final pad = list
+                              ? const EdgeInsets.fromLTRB(0, 4, 0, 0)
+                              : const EdgeInsets.fromLTRB(16, 14, 16, 0);
+                          return Padding(
+                            padding: pad,
+                            child: Align(
+                              alignment: Alignment.topCenter,
+                              child: _card(box.maxHeight - pad.top,
+                                  width: outer == null
+                                      ? null
+                                      : outer - 1 - pad.horizontal),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ],
