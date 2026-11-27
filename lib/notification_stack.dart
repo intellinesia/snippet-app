@@ -47,10 +47,17 @@ class NotificationStack extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             for (final (i, p) in shown.indexed) ...[
-              if (i > 0) const SizedBox(height: gap),
+              if (i > 0) SizedBox(height: kMobile ? gap : 6),
               BannerArrival(key: ObjectKey(p), child: cardBuilder(p)),
             ],
-            if (items.length > maxVisible) ...[
+            if (items.length > maxVisible && !kMobile) ...[
+              const SizedBox(height: 4),
+              Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                _FooterAction('+${items.length - maxVisible}', onShowAll),
+                Text('\u00b7', style: sans(11.5, color: AppColors.fg4)),
+                _FooterAction('Clear', onClearAll),
+              ]),
+            ] else if (items.length > maxVisible) ...[
               const SizedBox(height: gap),
               Row(children: [
                 _FooterAction('Show all ${items.length}', onShowAll),
@@ -84,12 +91,16 @@ class _FooterAction extends StatelessWidget {
         hoverColor: AppColors.surface3,
         child: ConstrainedBox(
           constraints: BoxConstraints(
-              minHeight: compact ? 28 : 48, minWidth: compact ? 24 : 48),
-          child: Center(
-            widthFactor: 1,
-            child: Text(label,
-                style: sans(compact ? 12 : 13,
-                    weight: W.label, color: AppColors.fg2)),
+              minHeight: compact ? 24 : 48, minWidth: compact ? 24 : 48),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 0),
+            child: Center(
+              widthFactor: 1,
+              child: Text(label,
+                  style: compact
+                      ? sans(11.5, color: AppColors.fg4)
+                      : sans(13, weight: W.label, color: AppColors.fg2)),
+            ),
           ),
         ),
       ),

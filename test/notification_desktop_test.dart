@@ -60,35 +60,14 @@ void _seedStack() {
 Finder _btn(String label) =>
     find.ancestor(of: find.text(label), matching: find.byType(InkWell)).first;
 
-void _expectLockedNeedsYou(WidgetTester t, Finder within, double fontSize) {
-  final label = find.descendant(of: within, matching: find.text('Needs you'));
-  expect(label, findsOneWidget);
-  final text = t.widget<Text>(label);
-  expect(text.style?.color, AppColors.fg2);
-  expect(text.style?.fontSize, fontSize);
-  expect(text.style?.fontWeight, FontWeight.w500);
-  expect(
-      find.descendant(
-          of: within,
-          matching:
-              find.byWidgetPredicate((w) => w is AppIcon && w.name == 'hand')),
-      findsNothing);
-  final dot = find.descendant(
-      of: within,
-      matching: find.byWidgetPredicate((w) =>
-          w is Container &&
-          w.decoration is BoxDecoration &&
-          (w.decoration as BoxDecoration).color == AppColors.run &&
-          (w.decoration as BoxDecoration).shape == BoxShape.circle));
-  expect(dot, findsOneWidget);
-  expect(t.getSize(dot), const Size(6, 6));
-  expect(
-      find.descendant(
-          of: within,
-          matching: find.byWidgetPredicate(
-              (w) => w is Text && w.style?.color == AppColors.run)),
-      findsNothing);
-}
+Finder _badge(Finder within, Color color) => find.descendant(
+    of: within,
+    matching: find.byWidgetPredicate((w) =>
+        w is Container &&
+        w.decoration is BoxDecoration &&
+        (w.decoration as BoxDecoration).color == color &&
+        (w.decoration as BoxDecoration).border != null &&
+        (w.decoration as BoxDecoration).shape == BoxShape.circle));
 
 Future<void> _pumpCard(WidgetTester t, Map<String, dynamic> payload,
     {Future<bool> Function(Map<String, dynamic>, QuickAction)? send}) async {
@@ -140,51 +119,50 @@ void main() {
   });
 
   testWidgets(
-      'NT-01 desktop stack: width, anchor, cap, footer and locked needs-you',
+      'NT-01 desktop slim toasts: width, anchor, cap, quiet footer, auto-open',
       (t) async {
     _seedStack();
     await _pumpHost(t);
     await t.pumpAndSettle();
 
-    final cards = find.byType(NotificationBanner);
-    expect(cards, findsNWidgets(3));
-    final first = t.getRect(cards.at(0));
-    final second = t.getRect(cards.at(1));
-    expect(first.width, 360);
-    expect(first.left, 1440 - 24 - 360);
-    expect(first.top, kShellTabStripHeight + TopZone.gap);
-    expect(second.top, closeTo(first.bottom + 8, .01));
+    // The newest actionable needs-you item opens with its actions.
+    final open = find.byType(NotificationMessageCard);
+    expect(open, findsOneWidget);
+    expect(find.text('Approve'), findsOneWidget);
+    expect(find.text('Deny'), findsOneWidget);
+    expect(find.text('Needs you'), findsOneWidget);
+    expect(_badge(open, AppColors.run), findsOneWidget);
+
+    final pills = find.byType(NotificationBanner);
+    expect(pills, findsNWidgets(2));
+    final top = t.getRect(open);
+    final pill = t.getRect(pills.at(0));
+    expect(top.width, 360);
+    expect(top.left, 1440 - 24 - 360);
+    expect(top.top, kShellTabStripHeight + TopZone.gap);
+    expect(pill.height, 40);
+    expect(pill.top, closeTo(top.bottom + 6, .01));
 
     final material = t.widget<Material>(find
-        .descendant(of: cards.first, matching: find.byType(Material))
+        .descendant(of: pills.first, matching: find.byType(Material))
         .first);
     expect(material.color, AppColors.surface2);
-    expect(material.borderRadius, BorderRadius.circular(12));
-    _expectLockedNeedsYou(t, cards.first, 11.5);
-
-    final infoIcons = find.descendant(
-        of: cards.at(1),
-        matching: find.byWidgetPredicate(
-            (w) => w is AppIcon && w.size == 20 && w.color == AppColors.fg2));
-    expect(infoIcons, findsOneWidget);
+    expect((material.shape as RoundedRectangleBorder).borderRadius,
+        BorderRadius.circular(20));
     expect(
         find.descendant(
-            of: cards.at(1),
+            of: pills.first,
             matching: find.byWidgetPredicate((w) =>
                 (w is AppIcon && w.color == AppColors.run) ||
                 (w is Text && w.style?.color == AppColors.run))),
         findsNothing,
-        reason: 'information banners are neutral');
+        reason: 'information toasts are neutral');
 
-    for (final label in ['Show all 5', 'Dismiss all']) {
+    for (final label in ['+2', 'Clear']) {
       expect(find.text(label), findsOneWidget);
-      final target = find
-          .ancestor(of: find.text(label), matching: find.byType(ConstrainedBox))
-          .first;
-      expect(t.getSize(target).height, 28);
       final text = t.widget<Text>(find.text(label));
-      expect(text.style?.fontSize, 12);
-      expect(text.style?.color, AppColors.fg2);
+      expect(text.style?.fontSize, 11.5);
+      expect(text.style?.color, AppColors.fg4);
     }
     expect(t.takeException(), isNull);
     await t.pumpWidget(const SizedBox());
@@ -252,30 +230,30 @@ void main() {
     final material = t.widget<Material>(
         find.descendant(of: card, matching: find.byType(Material)).first);
     expect(material.color, AppColors.surface2);
-    expect(material.borderRadius, BorderRadius.circular(14));
-    _expectLockedNeedsYou(t, card, 12);
+    expect((material.shape as RoundedRectangleBorder).borderRadius,
+        BorderRadius.circular(12));
+    expect(find.text('Needs you'), findsOneWidget);
+    expect(find.byKey(const ValueKey('reply-field')), findsNothing);
 
-    final field = find.byKey(const ValueKey('reply-field'));
-    expect(t.getSize(field).height, 36);
-    final fieldBox = t.widget<Container>(field);
-    final decoration = fieldBox.decoration as BoxDecoration;
-    expect(decoration.color, AppColors.surface1);
-    expect(decoration.borderRadius, BorderRadius.circular(8));
-
-    for (final label in ['Open', 'Approve']) {
-      expect(t.getSize(_btn(label)).height, 28);
+    for (final label in ['Open', 'Approve', 'Deny']) {
+      expect(t.getSize(_btn(label)).height, 26);
       final text = t.widget<Text>(find.text(label));
       expect(text.style?.fontSize, 12);
       expect(text.style?.fontWeight, FontWeight.w500);
     }
-    final openMaterial = t.widget<Material>(find
-        .ancestor(of: find.text('Open'), matching: find.byType(Material))
-        .first);
-    final approveMaterial = t.widget<Material>(find
-        .ancestor(of: find.text('Approve'), matching: find.byType(Material))
-        .first);
-    expect(openMaterial.color, AppColors.surface3);
-    expect(approveMaterial.color, AppColors.fg1);
+    Color fill(String label) => t
+        .widget<Material>(find
+            .ancestor(of: find.text(label), matching: find.byType(Material))
+            .first)
+        .color!;
+    expect(fill('Approve'), AppColors.fg1);
+    expect(fill('Deny'), AppColors.surface3);
+    expect(fill('Open'), Colors.transparent);
+    // Approve and Deny lead; Open trails on the right.
+    expect(t.getRect(_btn('Deny')).left,
+        greaterThan(t.getRect(_btn('Approve')).right));
+    expect(
+        t.getRect(_btn('Open')).right, closeTo(t.getRect(card).right - 10, 1));
 
     await t.tap(find.text('Approve'));
     await t.pump();
@@ -297,12 +275,12 @@ void main() {
       return Completer<bool>().future;
     });
     expect(find.text('Approve'), findsNothing);
-    expect(find.text('Reply'), findsOneWidget);
+    expect(find.byKey(const ValueKey('reply-field')), findsOneWidget);
     expect(find.byTooltip('Send'), findsNothing);
     await t.enterText(find.byType(TextField), 'yes, checking now');
     await t.pump();
     expect(find.byTooltip('Send'), findsOneWidget);
-    expect(t.getSize(find.byTooltip('Send')).height, 28);
+    expect(t.getSize(find.byTooltip('Send')).height, 26);
     await t.tap(find.byTooltip('Send'));
     await t.pump();
     final reply = sent.single as QuickReply;
@@ -332,7 +310,7 @@ void main() {
       return Completer<bool>().future;
     });
     for (final label in ['main', 'release']) {
-      expect(t.getSize(_btn(label)).height, 28);
+      expect(t.getSize(_btn(label)).height, 26);
     }
     await t.tap(find.text('main'));
     await t.pump();

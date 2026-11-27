@@ -59,6 +59,7 @@ class NotificationMessageCard extends StatefulWidget {
     this.initiallyExpanded = true,
     this.embedded = false,
     this.lifted = false,
+    this.autoOpened = false,
   });
 
   final Map<String, dynamic> payload;
@@ -70,6 +71,10 @@ class NotificationMessageCard extends StatefulWidget {
   final bool initiallyExpanded;
   final bool embedded;
   final bool lifted;
+
+  /// Opened by the stack rather than a tap: no focus steal, no timer hold,
+  /// and the reply field waits for Reply.
+  final bool autoOpened;
 
   @override
   State<NotificationMessageCard> createState() =>
@@ -88,6 +93,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
     super.initState();
     _focus.addListener(() => widget.onHold(_focus.hasFocus));
     _text.addListener(() => setState(() {}));
+    if (widget.autoOpened) return;
     widget.onHold(true);
     if (cardActionFor(widget.payload) != CardAction.approval) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -438,86 +444,74 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
   @override
   Widget build(BuildContext context) {
     Theme.of(context);
-    final compact = !kMobile;
+    return kMobile ? _buildPhone(context) : _buildDesk(context);
+  }
+
+  /// Desktop open toast: the slim pill grown into a radius 12 card with the
+  /// full body and 26 high actions; Approve and Deny lead, Open trails.
+  Widget _buildDesk(BuildContext context) {
     final p = widget.payload;
     final title = '${p['title'] ?? ''}'.trim();
     final name = title.isEmpty ? 'Snippet' : title;
+    final short = notificationShortName(name);
+    final context0 = notificationContext(name);
     final attention = p['attention'];
     final label = attention is Map ? '${attention['label'] ?? ''}'.trim() : '';
     var body = notificationBody(p);
     if (body.isEmpty) body = label;
     final action = cardActionFor(p);
-    if (!compact) return _buildPhone(context);
-    final needs = notificationKind(p) == 'waiting';
+    final kind = notificationKind(p);
+    final needs = kind == 'waiting';
     final busy = _state == _Send.sending;
     final choices = action == CardAction.answer
         ? answerChoices(attention)
         : const <(String, String)>[];
-    final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
-    final stacked = scale >= 1.75;
     final mq = MediaQuery.of(context);
     final tight = mq.size.height <= 640 || mq.viewInsets.bottom > 0;
     final maxLines = tight ? 2 : 4;
-    final controlH = compact ? 28.0 : 36.0;
-    final labelSize = compact ? 12.0 : 12.5;
-    final needsMark = compact
-        ? const NeedsYouMark(fontSize: 12)
-        : Row(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-              width: 6,
-              height: 6,
-              decoration:
-                  BoxDecoration(color: AppColors.run, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 6),
-            Text('Needs you',
-                style: sans(13, weight: FontWeight.w500, color: AppColors.fg2)),
-          ]);
+    final canReply = action == CardAction.answer || action == CardAction.reply;
+    final showField =
+        canReply && choices.isEmpty && (!widget.autoOpened || _replyExpanded);
 
     final header = Row(children: [
-      Container(
-        width: compact ? 36 : 20,
-        height: compact ? 36 : 20,
-        decoration: BoxDecoration(
-            color: AppColors.surface2,
-            borderRadius: BorderRadius.circular(compact ? 18 : 10)),
-        clipBehavior: Clip.antiAlias,
-        child: AgentMochi('${p['agent_id'] ?? 'snippet'}',
-            size: compact ? 36 : 20),
-      ),
-      const SizedBox(width: 10),
+      ToastAvatar(payload: p, kind: kind),
+      const SizedBox(width: 9),
       Expanded(
-        child: Wrap(
-          crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: 8,
-          children: [
-            Text(name,
+        child: Row(children: [
+          Flexible(
+            child: Text(short,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: sans(compact ? 14 : 13,
-                    weight: W.label, color: AppColors.fg1)),
-            if (needs) needsMark,
+                style: sans(12.5, weight: W.label, color: AppColors.fg1)),
+          ),
+          if (context0.isNotEmpty) ...[
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(context0,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(12, color: AppColors.fg4)),
+            ),
           ],
-        ),
+          if (needs && context0.isEmpty) ...[
+            const SizedBox(width: 8),
+            const NeedsYouMark(fontSize: 11.5),
+          ],
+        ]),
       ),
       const SizedBox(width: 8),
       Text(notificationAgo(p['created_at']),
-          style: sans(compact ? 11 : 12, color: AppColors.fg2)),
+          style: sans(11.5, color: AppColors.fg4)),
     ]);
 
+    final style = sans(12.5, height: 18 / 12.5, color: AppColors.fg1);
     final more = LayoutBuilder(builder: (context, constraints) {
-      final style = compact
-          ? sans(13, height: 19 / 13, color: AppColors.fg1)
-          : sans(15, height: 21 / 15, color: AppColors.fg1);
-      final width = constraints.hasBoundedWidth
-          ? constraints.maxWidth
-          : MediaQuery.sizeOf(context).width - 32 - 24;
       final painter = TextPainter(
         text: TextSpan(text: body, style: style),
         textDirection: TextDirection.ltr,
         textScaler: MediaQuery.textScalerOf(context),
         maxLines: maxLines,
-      )..layout(maxWidth: width);
+      )..layout(maxWidth: constraints.maxWidth);
       final over = painter.didExceedMaxLines;
       painter.dispose();
       return Column(
@@ -531,36 +525,35 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
           if (over)
             InkWell(
               onTap: widget.onOpen,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                    minHeight: compact ? 28 : 48, minWidth: compact ? 24 : 48),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  widthFactor: 1,
-                  child: Text('More',
-                      style: sans(compact ? 12 : 13,
-                          weight: W.label, color: AppColors.fg2)),
-                ),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text('More',
+                    style: sans(12, weight: W.label, color: AppColors.fg2)),
               ),
             ),
         ],
       );
     });
 
-    Widget button(String text, VoidCallback? onTap, {required bool primary}) {
+    Widget button(String text, VoidCallback? onTap,
+        {bool primary = false, bool quiet = false}) {
       final disabled = onTap == null;
       final fill = disabled
           ? AppColors.surface3
           : primary
               ? AppColors.fg1
-              : compact
-                  ? AppColors.surface3
-                  : AppColors.surface2;
+              : quiet
+                  ? Colors.transparent
+                  : AppColors.surface3;
       final fg = disabled
-          ? AppColors.fg2
+          ? AppColors.fg3
           : primary
               ? AppColors.bg
-              : AppColors.fg1;
+              : quiet
+                  ? AppColors.fg2
+                  : AppColors.fg1;
+      final shape =
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(6));
       return Semantics(
         button: true,
         enabled: !disabled,
@@ -569,210 +562,164 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
         onTap: onTap,
         child: Material(
           color: fill,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(compact ? 6 : 8),
-            side: primary || compact || disabled
-                ? BorderSide.none
-                : BorderSide(color: AppColors.border),
-          ),
+          shape: shape,
           child: InkWell(
             onTap: onTap,
-            customBorder: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(compact ? 6 : 8)),
+            customBorder: shape,
             child: Container(
-              constraints: BoxConstraints(
-                  minHeight: controlH, minWidth: compact ? 0 : 48),
-              padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 8),
-              alignment: Alignment.center,
-              child: Text(text,
-                  textAlign: TextAlign.center,
-                  style: sans(labelSize, weight: W.label, color: fg)),
+              height: 26,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Center(
+                  widthFactor: 1,
+                  child:
+                      Text(text, style: sans(12, weight: W.label, color: fg))),
             ),
           ),
         ),
       );
     }
 
-    final hint = 'Reply to $name...';
     final canSend = !busy && _text.text.trim().isNotEmpty;
-    final hasText = _text.text.trim().isNotEmpty;
-    final fieldH = compact ? 36.0 : 48.0;
-    final innerH = compact ? 36.0 : 44.0;
-    final sendTarget = compact ? 28.0 : 48.0;
-    final sendInset = compact ? 4.0 : 0.0;
-    final field = SizedBox(
-      height: fieldH,
-      child: Stack(children: [
-        Positioned(
-          left: 0,
-          right: 0,
-          top: compact ? 0 : 2,
-          height: innerH,
-          child: Container(
-            key: const ValueKey('reply-field'),
-            padding: EdgeInsets.only(
-                left: compact ? 12 : 16,
-                right: hasText ? (compact ? 40 : 48) : (compact ? 12 : 16)),
-            decoration: BoxDecoration(
-                color: AppColors.surface1,
-                borderRadius: BorderRadius.circular(compact ? 8 : 22)),
-            alignment: Alignment.centerLeft,
-            child: TextField(
-              controller: _text,
-              focusNode: _focus,
-              enabled: !busy,
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _submitText(action),
-              style: sans(compact ? 13 : 14, color: AppColors.fg1),
-              decoration: InputDecoration(
-                isCollapsed: true,
-                border: InputBorder.none,
-                hintText: action == CardAction.answer ? 'Answer...' : hint,
-                hintStyle: sans(compact ? 13 : 14, color: AppColors.fg3),
-              ),
+    final field = Container(
+      key: const ValueKey('reply-field'),
+      height: 32,
+      padding: const EdgeInsets.only(left: 10, right: 3),
+      decoration: BoxDecoration(
+          color: AppColors.surface1, borderRadius: BorderRadius.circular(8)),
+      child: Row(children: [
+        Expanded(
+          child: TextField(
+            controller: _text,
+            focusNode: _focus,
+            enabled: !busy,
+            textInputAction: TextInputAction.send,
+            onSubmitted: (_) => _submitText(action),
+            style: sans(12.5, color: AppColors.fg1),
+            decoration: InputDecoration(
+              isCollapsed: true,
+              border: InputBorder.none,
+              hintText: action == CardAction.answer
+                  ? 'Answer...'
+                  : 'Reply to $short...',
+              hintStyle: sans(12.5, color: AppColors.fg3),
             ),
           ),
         ),
-        if (hasText)
-          Positioned(
-            right: sendInset,
-            top: sendInset,
-            width: sendTarget,
-            height: sendTarget,
-            child: IconButton(
-              tooltip: 'Send',
-              padding: EdgeInsets.zero,
-              constraints: BoxConstraints.tightFor(
-                  width: sendTarget, height: sendTarget),
-              onPressed: canSend ? () => _submitText(action) : null,
-              icon: Container(
-                width: compact ? 28 : 36,
-                height: compact ? 28 : 36,
-                decoration: BoxDecoration(
-                    color: canSend ? AppColors.fg1 : AppColors.surface3,
-                    borderRadius: compact ? BorderRadius.circular(6) : null,
-                    shape: compact ? BoxShape.rectangle : BoxShape.circle),
-                child: Center(
-                    child: AppIcon('arrow-up',
-                        size: compact ? 13 : 16,
-                        color: canSend ? AppColors.bg : AppColors.fg4)),
-              ),
+        if (_text.text.trim().isNotEmpty)
+          IconButton(
+            tooltip: 'Send',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+            onPressed: canSend ? () => _submitText(action) : null,
+            icon: Container(
+              width: 26,
+              height: 26,
+              decoration: BoxDecoration(
+                  color: canSend ? AppColors.fg1 : AppColors.surface3,
+                  borderRadius: BorderRadius.circular(6)),
+              child: Center(
+                  child: AppIcon('arrow-up',
+                      size: 12, color: canSend ? AppColors.bg : AppColors.fg4)),
             ),
           ),
       ]),
     );
 
-    final canAct = action != CardAction.none;
-    final canReply = action == CardAction.approval ||
-        action == CardAction.answer ||
-        action == CardAction.reply;
-    final primary = action == CardAction.approval
-        ? button(
+    final lead = <Widget>[
+      if (action == CardAction.approval) ...[
+        button(
             busy ? 'Approving...' : 'Approve',
             busy
                 ? null
                 : () => _send(const QuickApprove(via: 'notification'),
                     'Approving...', 'Approved'),
-            primary: true)
-        : canReply
-            ? button('Reply', busy ? null : _focus.requestFocus, primary: true)
-            : null;
-    final open = button('Open', widget.onOpen, primary: false);
-
-    final Widget actions;
-    if (choices.isNotEmpty) {
-      if (compact) {
-        actions = Wrap(spacing: 8, runSpacing: 8, children: [
-          for (final (i, c) in choices.indexed)
-            button(
-                c.$1,
-                busy
-                    ? null
-                    : () => _send(
-                        QuickAnswer(answerText(attention, choiceAnswer(c)),
-                            via: 'notification'),
-                        'Sending...',
-                        'Sent'),
-                primary: i == 0),
-          open,
-        ]);
-      } else {
-        actions = Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final (i, c) in choices.indexed) ...[
-              if (i > 0) const SizedBox(height: 8),
-              button(
-                  c.$1,
-                  busy
-                      ? null
-                      : () => _send(
-                          QuickAnswer(answerText(attention, choiceAnswer(c)),
-                              via: 'notification'),
-                          'Sending...',
-                          'Sent'),
-                  primary: i == 0),
-            ],
-            const SizedBox(height: 8),
-            open,
-          ],
-        );
-      }
-    } else if (!canAct || primary == null) {
-      actions = open;
-    } else if (!compact && stacked) {
-      actions = Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [primary, const SizedBox(height: 8), open],
-      );
-    } else if (compact) {
-      actions = Row(mainAxisSize: MainAxisSize.min, children: [
-        open,
-        const SizedBox(width: 8),
-        primary,
-      ]);
-    } else {
-      actions = Row(children: [
-        Expanded(child: open),
-        const SizedBox(width: 8),
-        Expanded(child: primary),
-      ]);
-    }
+            primary: true),
+        button(
+            'Deny',
+            busy
+                ? null
+                : () => _send(const QuickDeny(via: 'notification'),
+                    'Denying...', 'Denied')),
+      ],
+      for (final (i, c) in choices.indexed)
+        button(
+            c.$1,
+            busy
+                ? null
+                : () => _send(
+                    QuickAnswer(answerText(attention, choiceAnswer(c)),
+                        via: 'notification'),
+                    'Sending...',
+                    'Sent'),
+            primary: i == 0),
+      if (canReply && choices.isEmpty && !showField)
+        button('Reply', () {
+          setState(() => _replyExpanded = true);
+          widget.onHold(true);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _focus.requestFocus();
+          });
+        }, primary: true),
+    ];
+    final actions =
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Expanded(child: Wrap(spacing: 6, runSpacing: 6, children: lead)),
+      const SizedBox(width: 6),
+      button('Open', widget.onOpen, quiet: true),
+    ]);
 
     return Semantics(
       container: true,
-      label: '$name, ${needs ? 'needs you' : 'message'}, $body',
-      child: Material(
-        color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(compact ? 14 : 8),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              header,
-              if (body.isNotEmpty)
-                Padding(padding: const EdgeInsets.only(top: 8), child: more),
-              if (canReply && choices.isEmpty)
+      label: '$short, ${needs ? 'needs you' : 'message'}, $body',
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12), boxShadow: toastShadow),
+        child: Material(
+          color: AppColors.surface2,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                  color: AppColors.fg1.withValues(alpha: 0.09), width: 0.8)),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(9, 9, 10, 10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                header,
                 Padding(
-                    padding: EdgeInsets.only(top: compact ? 8 : 6),
-                    child: field),
-              Padding(
-                  padding: EdgeInsets.only(top: compact ? 10 : 12),
-                  child: actions),
-              if (_state == _Send.failed)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text('Could not send. Try again.',
-                      style: sans(12, color: AppColors.fg2)),
+                  padding: const EdgeInsets.only(left: 33),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (body.isNotEmpty)
+                        Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: more),
+                      if (showField)
+                        Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: field),
+                      Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: actions),
+                      if (_state == _Send.failed)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text('Could not send. Try again.',
+                              style: sans(12, color: AppColors.fg2)),
+                        ),
+                    ],
+                  ),
                 ),
-              if (busy)
-                Semantics(
-                    liveRegion: true,
-                    label: _sending,
-                    child: const SizedBox.shrink()),
-            ],
+                if (busy)
+                  Semantics(
+                      liveRegion: true,
+                      label: _sending,
+                      child: const SizedBox.shrink()),
+              ],
+            ),
           ),
         ),
       ),

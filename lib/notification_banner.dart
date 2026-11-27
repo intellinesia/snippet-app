@@ -143,6 +143,9 @@ class NotificationBanner extends StatelessWidget {
             ? informationTitle(payload)
             : rawName;
     final state = needs ? 'needs you' : (failed ? 'failed' : 'update');
+    if (compact) {
+      return _slim(context, needs: needs, body: body, ago: ago, state: state);
+    }
     final amber = AppColors.run;
     final leadingSize = compact ? 28.0 : 32.0;
 
@@ -259,6 +262,148 @@ class NotificationBanner extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  /// Desktop slim toast: a 40 high one-line pill, avatar with a state badge,
+  /// short name, body and time.
+  Widget _slim(BuildContext context,
+      {required bool needs,
+      required String body,
+      required String ago,
+      required String state}) {
+    final kind = notificationKind(payload);
+    final raw = '${payload['title'] ?? ''}'.trim();
+    final short = notificationShortName(
+        raw.isEmpty ? (needs ? 'Snippet' : informationTitle(payload)) : raw);
+    final line = body.isNotEmpty
+        ? body.replaceAll(RegExp(r'\s+'), ' ')
+        : (needs ? 'Needs you' : informationTitle(payload));
+    return Semantics(
+      container: true,
+      label: '$short, $state, $body, $ago',
+      onTap: onTap,
+      onDismiss: onDismiss,
+      customSemanticsActions: {
+        if (onDismiss != null)
+          const CustomSemanticsAction(label: 'Dismiss'): onDismiss!,
+        if (onApprove != null)
+          const CustomSemanticsAction(label: 'Approve'): onApprove!,
+      },
+      excludeSemantics: true,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20), boxShadow: toastShadow),
+        child: Material(
+          color: AppColors.surface2,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(
+                  color: AppColors.fg1.withValues(alpha: 0.09), width: 0.8)),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: SizedBox(
+              height: 40,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 9, right: 14),
+                child: Row(children: [
+                  ToastAvatar(payload: payload, kind: kind),
+                  const SizedBox(width: 9),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 120),
+                    child: Text(short,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style:
+                            sans(12.5, weight: W.label, color: AppColors.fg1)),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(line,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(12.5, color: AppColors.fg2)),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(ago, style: sans(11.5, color: AppColors.fg4)),
+                ]),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The name before any " | context" suffix the daemon appends.
+String notificationShortName(String title) {
+  final i = title.indexOf(' | ');
+  return (i > 0 ? title.substring(0, i) : title).trim();
+}
+
+/// The context after " | ", if any.
+String notificationContext(String title) {
+  final i = title.indexOf(' | ');
+  return i > 0 ? title.substring(i + 3).trim() : '';
+}
+
+/// Soft lift for desktop toasts: one wide ambient shadow, one contact shadow.
+const toastShadow = [
+  BoxShadow(color: Color(0x73000000), blurRadius: 24, offset: Offset(0, 10)),
+  BoxShadow(color: Color(0x40000000), blurRadius: 4, offset: Offset(0, 1)),
+];
+
+/// 22 agent avatar with a 14 state badge: amber for needs-you, a check or
+/// cross for done and failed, none for plain messages.
+class ToastAvatar extends StatelessWidget {
+  const ToastAvatar({super.key, required this.payload, required this.kind});
+  final Map<String, dynamic> payload;
+  final String kind;
+
+  @override
+  Widget build(BuildContext context) {
+    final needs = kind == 'waiting';
+    final failed = const {'error', 'failed'}.contains(kind);
+    final done =
+        const {'done', 'completed'}.contains(kind) || kind.contains('merge');
+    final glyph = failed
+        ? 'x'
+        : done
+            ? informationGlyph(payload)
+            : null;
+    return SizedBox(
+      width: 24,
+      height: 24,
+      child: Stack(clipBehavior: Clip.none, children: [
+        Container(
+          width: 22,
+          height: 22,
+          decoration:
+              BoxDecoration(color: AppColors.surface3, shape: BoxShape.circle),
+          clipBehavior: Clip.antiAlias,
+          child: AgentMochi('${payload['agent_id'] ?? 'snippet'}', size: 22),
+        ),
+        if (needs || glyph != null)
+          Positioned(
+            right: -3,
+            bottom: -3,
+            child: Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: needs ? AppColors.run : AppColors.surface3,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.surface2, width: 2),
+              ),
+              child: glyph == null
+                  ? null
+                  : Center(
+                      child: AppIcon(glyph, size: 7, color: AppColors.fg1)),
+            ),
+          ),
+      ]),
     );
   }
 }

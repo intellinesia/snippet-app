@@ -41,6 +41,7 @@ class _NotificationPopoversState extends State<NotificationPopovers>
   bool _cardHold = false;
   bool _background = false;
   Map<String, dynamic>? _expandedPayload;
+  Map<String, dynamic>? _autoOpen;
   late final OverlayEntry _contentEntry;
 
   bool get _held => _pointer || _cardHold || _background;
@@ -244,10 +245,12 @@ class _NotificationPopoversState extends State<NotificationPopovers>
   }
 
   Widget _card(Map<String, dynamic> payload, bool reducedMotion) {
-    if (identical(payload, _expandedPayload)) {
+    final auto = identical(payload, _autoOpen);
+    if (identical(payload, _expandedPayload) || auto) {
       return NotificationMessageCard(
         key: ObjectKey(payload),
         payload: payload,
+        autoOpened: auto,
         onOpen: () => _remove(payload, open: true, feedback: true),
         onDismiss: () => _remove(payload, feedback: true),
         onHold: (hold) => _setHold(card: hold),
@@ -300,6 +303,14 @@ class _NotificationPopoversState extends State<NotificationPopovers>
       return drop;
     });
     final items = _ordered;
+    // Desktop opens the newest actionable needs-you toast so its buttons show.
+    _autoOpen = kMobile || _expandedPayload != null
+        ? null
+        : items.take(NotificationStack.maxVisible).where((p) {
+            if (!needsYou(p)) return false;
+            final a = cardActionFor(p);
+            return a == CardAction.approval || a == CardAction.answer;
+          }).firstOrNull;
     final call = callTracker.state.value;
     final reducedMotion = reduceMotion(context);
     final banner = call != null
