@@ -329,8 +329,11 @@ class _SettingsDialogState extends State<SettingsDialog> {
                   ],
                 ),
                 child: Material(
-                  color: AppColors.surface2,
-                  borderRadius: BorderRadius.circular(12),
+                  color: AppColors.surface1,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: AppColors.border2),
+                  ),
                   clipBehavior: Clip.antiAlias,
                   child: FocusTraversalGroup(
                     policy: OrderedTraversalPolicy(),
@@ -367,13 +370,13 @@ class _SettingsDialogState extends State<SettingsDialog> {
             constraints: const BoxConstraints(minHeight: 28),
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: _searchFocus.hasFocus
-                    ? AppColors.surface3
-                    : AppColors.surface2,
-                borderRadius: BorderRadius.circular(8),
-                border: _searchFocus.hasFocus
-                    ? Border.all(color: AppColors.fg2, width: 1.5)
-                    : null,
+                color: AppColors.surface1,
+                borderRadius: BorderRadius.circular(7),
+                border: Border.all(
+                  color: _searchFocus.hasFocus
+                      ? AppColors.border2
+                      : AppColors.border,
+                ),
               ),
               child: Row(children: [
                 const SizedBox(width: 8),
@@ -500,7 +503,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
     return Container(
       key: const Key('settings-list'),
       width: width,
-      color: AppColors.surface1,
+      decoration: BoxDecoration(
+        color: AppColors.bg,
+        border: Border(right: BorderSide(color: AppColors.border)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

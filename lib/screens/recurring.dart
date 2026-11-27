@@ -859,6 +859,8 @@ class RecurringScreenState extends State<RecurringScreen>
               for (final j in jobs)
                 SettingsTableRowData(
                   key: ValueKey('recurring-${j.id}'),
+                  leading:
+                      AppIcon('scheduled', size: 13.5, color: AppColors.fg3),
                   cells: [
                     j.title.isEmpty ? j.id : j.title,
                     _enabled(j) ? j.scheduleLabel : 'Paused',

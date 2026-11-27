@@ -16,6 +16,7 @@ class SettingsColumnSpec {
 class SettingsTableRowData {
   const SettingsTableRowData({
     required this.cells,
+    this.leading,
     this.onTap,
     this.tag,
     this.trailing,
@@ -23,6 +24,7 @@ class SettingsTableRowData {
     this.monoFirst = false,
   });
   final List<String> cells;
+  final Widget? leading;
   final VoidCallback? onTap;
   final Widget? tag;
 
@@ -109,7 +111,7 @@ class SettingsTable extends StatelessWidget {
 
   Widget _row(SettingsTableRowData r) {
     final content = ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 32),
+      constraints: const BoxConstraints(minHeight: 38),
       child: Row(children: [
         for (var i = 0; i < columns.length; i++)
           Expanded(
@@ -117,6 +119,10 @@ class SettingsTable extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.only(left: i == 0 ? 0 : S.s8, right: S.s8),
               child: Row(children: [
+                if (i == 0 && r.leading != null) ...[
+                  r.leading!,
+                  const SizedBox(width: 8),
+                ],
                 Flexible(
                   child: Text(
                     i < r.cells.length ? r.cells[i] : '',

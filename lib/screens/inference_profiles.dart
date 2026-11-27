@@ -519,6 +519,7 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
             rows: [
               for (final p in profiles)
                 SettingsTableRowData(
+                  leading: ProviderLogo(p.provider, size: 16),
                   cells: [p.name, p.provider, p.model],
                   tag: !p.usable
                       ? const WarnChip()

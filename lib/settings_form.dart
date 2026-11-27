@@ -29,8 +29,8 @@ abstract final class Grouped {
   static const double gutter = 12;
   static double get rowMin => _phone ? _ph(64, 56) : 48;
   static double get rowMinTwoLine => _phone ? _ph(76, 66) : 56;
-  static double get padX => _phone ? 16 : 14;
-  static double get padY => _phone ? _ph(10, 8) : 9;
+  static double get padX => _phone ? 16 : 0;
+  static double get padY => _phone ? _ph(10, 8) : 10;
   static double get icon => _phone ? _ph(22, 20) : 16;
   static double get iconGap => _phone ? _ph(14, 12) : 12;
   static const double chevron = 16;
@@ -106,8 +106,8 @@ abstract final class Grouped {
       sans(valueSize, color: color ?? muted);
   static TextStyle labelStyle() => _phone
       ? sans(labelSize, height: 20 / labelSize, color: label)
-      : sans(12.5,
-          weight: FontWeight.w500, height: 18 / 12.5, color: AppColors.fg2);
+      : sans(13,
+          weight: FontWeight.w500, height: 18 / 13, color: AppColors.fg1);
 
   /// Desktop group card: one bordered surface, rows split by hairlines.
   static Color get card => AppColors.fg1.withValues(alpha: 0.028);
@@ -136,18 +136,15 @@ class SettingsIcon extends StatelessWidget {
     final c = color ?? Grouped.iconColor;
     final data = iconData;
     if (!kMobile) {
-      // Desktop list rows lead with a small tile, as in the device lists.
-      return Container(
-        width: 28,
-        height: 28,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: AppColors.fg1.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(R.of(7)),
+      // Bare icon in a clean 20px column — no nested box inside the settings surface.
+      return SizedBox(
+        width: 20,
+        height: 20,
+        child: Center(
+          child: data != null
+              ? Icon(data, size: 15, color: c)
+              : AppIcon(name!, size: 15, color: c),
         ),
-        child: data != null
-            ? Icon(data, size: 15, color: c)
-            : AppIcon(name!, size: 15, color: c),
       );
     }
     return SizedBox(
@@ -170,7 +167,7 @@ class SettingsLeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final box = kMobile ? Grouped.icon + 2 : 28.0;
+    final box = kMobile ? Grouped.icon + 2 : 20.0;
     return SizedBox(
       width: box,
       height: box,
@@ -250,35 +247,47 @@ class GroupedTiles extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final n = children.length;
-    {
-      // Quiet: one raised surface per group with hairlines between rows; on
-      // the phone no border, the tone alone separates it.
-      final radius =
-          BorderRadius.circular(kMobile ? R.of(14) : Grouped.radiusEnd);
-      return Container(
-        decoration: BoxDecoration(
-          color: color ?? (kMobile ? AppColors.surface1 : Grouped.card),
-          borderRadius: radius,
-          border: kMobile ? null : Border.all(color: Grouped.cardBorder),
-        ),
-        child: ClipRRect(
-          borderRadius: radius,
-          child: Material(
-            type: MaterialType.transparency,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (var i = 0; i < n; i++) ...[
-                  if (i > 0) Container(height: 1, color: Grouped.hairline),
-                  children[i],
-                ],
-              ],
-            ),
-          ),
+    if (!kMobile) {
+      // Flat editorial rows directly on the Settings surface: no card inside card.
+      return Material(
+        type: MaterialType.transparency,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(height: 1, color: AppColors.border),
+            for (var i = 0; i < n; i++) ...[
+              if (i > 0) Container(height: 1, color: AppColors.border),
+              children[i],
+            ],
+            Container(height: 1, color: AppColors.border),
+          ],
         ),
       );
     }
+    final radius = BorderRadius.circular(R.of(14));
+    return Container(
+      decoration: BoxDecoration(
+        color: color ?? AppColors.surface1,
+        borderRadius: radius,
+      ),
+      child: ClipRRect(
+        borderRadius: radius,
+        child: Material(
+          type: MaterialType.transparency,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < n; i++) ...[
+                if (i > 0) Container(height: 1, color: Grouped.hairline),
+                children[i],
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

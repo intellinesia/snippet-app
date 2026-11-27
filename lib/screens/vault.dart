@@ -361,6 +361,7 @@ class VaultScreenState extends State<VaultScreen> {
               for (final n in names)
                 SettingsTableRowData(
                   key: ValueKey('secret-$n'),
+                  leading: AppIcon('lock', size: 13.5, color: AppColors.fg3),
                   cells: [n],
                   monoFirst: true,
                   trailing: Semantics(
