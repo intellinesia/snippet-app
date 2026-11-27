@@ -23,6 +23,14 @@ BoxDecoration _cardDecoration(
       border: Border.all(color: hairline ? AppColors.line : Colors.transparent),
     );
 
+String deskEffortLabel(String effort) => switch (effort) {
+      'low' => 'Low',
+      'medium' => 'Medium',
+      'high' => 'High',
+      'xhigh' => 'X-High',
+      _ => effort,
+    };
+
 /// A 28-high hit target whose visible chip is the locked 26-high tonal plate.
 class DeskTonalChip extends StatefulWidget {
   const DeskTonalChip({
@@ -360,8 +368,8 @@ class DeskMachineLine extends StatelessWidget {
         if (meta.online) ...[
           const SizedBox(width: 7),
           Container(
-            width: 6,
-            height: 6,
+            width: 5,
+            height: 5,
             decoration:
                 BoxDecoration(shape: BoxShape.circle, color: AppColors.ok),
           ),
@@ -416,6 +424,8 @@ class DeskComposerCard extends StatelessWidget {
   static TextStyle get fieldStyle =>
       sans(13, height: 19 / 13, color: AppColors.fg1);
 
+  static Color get hintColor => AppColors.fg4.withValues(alpha: 0.5);
+
   static InputDecoration decoration(String hint) => InputDecoration(
         isCollapsed: true,
         contentPadding: EdgeInsets.zero,
@@ -424,13 +434,13 @@ class DeskComposerCard extends StatelessWidget {
         hintMaxLines: 1,
         // Capy's placeholder sits far back, near the card's edge tone.
         hintStyle: fieldStyle.copyWith(
-            color: AppColors.fg4, overflow: TextOverflow.ellipsis),
+            color: hintColor, overflow: TextOverflow.ellipsis),
       );
 
   @override
   Widget build(BuildContext context) {
     Widget card(bool focused) => Container(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
           decoration: _cardDecoration(
               focus: focused || highlight, hairline: true, radius: 10),
           child: Column(
@@ -443,7 +453,7 @@ class DeskComposerCard extends StatelessWidget {
                   child: Align(alignment: Alignment.centerLeft, child: banner),
                 ),
               _desktopComposerField(field),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               SizedBox(
                 height: 28,
                 child: Row(children: [
@@ -517,7 +527,7 @@ class DeskModelChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 4),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           if ((icon ?? '').isNotEmpty) ...[
-            AppIcon(icon!, size: 12, color: AppColors.fg3),
+            AppIcon(icon!, size: 12, color: AppColors.accent),
             const SizedBox(width: 5),
           ],
           ConstrainedBox(
@@ -1237,7 +1247,7 @@ class _DeskComposerRunningLineState extends State<DeskComposerRunningLine> {
   }
 }
 
-/// Frame 09 running state: "<agent> running 12s" in the control row.
+/// Frame 09 running state: `<agent> running 12s` in the control row.
 class DeskRunningLabel extends StatefulWidget {
   const DeskRunningLabel({super.key, required this.name, this.startedAt});
 

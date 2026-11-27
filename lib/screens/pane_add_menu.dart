@@ -100,7 +100,7 @@ Future<void> showPaneAddMenu(
   fn?.call();
 }
 
-/// A 26 px filled square on the pane row, the "+" beside the chips.
+/// A bare 28 px button on the pane row, the "+" beside the chips.
 class StripSquareButton extends StatefulWidget {
   const StripSquareButton(
       {super.key, required this.icon, required this.tooltip, this.onTap});
@@ -126,19 +126,16 @@ class _StripSquareButtonState extends State<StripSquareButton> {
           child: TapDetector(
             onTap: widget.onTap,
             child: Container(
-              width: 26,
-              height: 26,
+              width: 28,
+              height: 28,
               margin: EdgeInsets.symmetric(horizontal: S.s2),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: _hover
-                    ? Color.alphaBlend(
-                        AppColors.fg1.withValues(alpha: 0.06), AppColors.surface3)
-                    : AppColors.surface3,
+                color: _hover ? AppColors.hoverPlate : Colors.transparent,
                 borderRadius: BorderRadius.circular(R.of(7)),
               ),
               child: AppIcon(widget.icon,
-                  size: 14, color: _hover ? AppColors.fg1 : AppColors.fg2),
+                  size: 12, color: _hover ? AppColors.fg1 : AppColors.fg3),
             ),
           ),
         ),
@@ -154,17 +151,17 @@ class StripChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        height: 26,
+        height: PaneRow.pill,
         margin: EdgeInsets.symmetric(horizontal: S.s2),
         padding: EdgeInsets.fromLTRB(S.of(9), 0, S.of(10), 0),
         decoration: BoxDecoration(
-          color: AppColors.surface3,
-          borderRadius: BorderRadius.circular(R.of(7)),
+          color: PaneRow.plate,
+          borderRadius: BorderRadius.circular(PaneRow.radius),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          AppIcon(icon, size: 12, color: AppColors.fg1),
+          AppIcon(icon, size: PaneRow.icon, color: AppColors.fg2),
           SizedBox(width: S.s6),
-          Text(label, style: sans(12, color: AppColors.fg1)),
+          Text(label, style: sans(PaneRow.label, color: PaneRow.labelOn)),
         ]),
       );
 }
@@ -200,16 +197,15 @@ class _PanePillState extends State<PanePill> {
   Widget build(BuildContext context) => MouseRegion(
         onEnter: (_) => setState(() => _hover = true),
         onExit: (_) => setState(() => _hover = false),
-        cursor: widget.onTap == null
-            ? MouseCursor.defer
-            : SystemMouseCursors.click,
+        cursor:
+            widget.onTap == null ? MouseCursor.defer : SystemMouseCursors.click,
         child: TapDetector(
           behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
           child: Container(
             height: PaneRow.pill,
-            padding: EdgeInsets.fromLTRB(
-                10, 0, widget.onClose == null ? 12 : 4, 0),
+            padding:
+                EdgeInsets.fromLTRB(10, 0, widget.onClose == null ? 12 : 4, 0),
             decoration: BoxDecoration(
               color: widget.active
                   ? PaneRow.plate
@@ -224,7 +220,7 @@ class _PanePillState extends State<PanePill> {
                       size: PaneRow.icon,
                       color: widget.active
                           ? AppColors.fg2
-                          : PaneRow.labelOff),
+                          : Color.lerp(AppColors.fg3, AppColors.fg4, 0.2)!),
               const SizedBox(width: 8),
               Flexible(
                 child: Text(widget.label,
@@ -233,7 +229,7 @@ class _PanePillState extends State<PanePill> {
                     style: sans(PaneRow.label,
                         color: widget.active
                             ? PaneRow.labelOn
-                            : PaneRow.labelOff)),
+                            : Color.lerp(AppColors.fg3, AppColors.fg4, 0.2)!)),
               ),
               if (widget.onClose != null) ...[
                 const SizedBox(width: 2),

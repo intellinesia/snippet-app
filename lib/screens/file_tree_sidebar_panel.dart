@@ -594,7 +594,7 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
           padding: EdgeInsets.only(
               left: kSidebarContentInset +
                   kNavPadH +
-                  (depth + S.of(1)) * kTreeIndentStep,
+                  (depth + 1) * kTreeIndentStep,
               right: kSidebarContentInset,
               top: S.s2,
               bottom: S.s6),
@@ -727,7 +727,8 @@ extension on FileTreeRow {
           borderRadius: BorderRadius.circular(R.sm),
           child: Container(
             height: 26,
-            padding: EdgeInsets.only(left: S.of(6.0) + depth * S.of(14), right: S.s8),
+            padding: EdgeInsets.only(
+                left: S.of(6.0) + depth * kTreeIndentStep, right: S.s8),
             child: Row(children: [
               SizedBox(
                 width: 12,

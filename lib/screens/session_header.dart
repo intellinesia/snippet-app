@@ -49,28 +49,30 @@ class SessionChatHeader extends StatelessWidget {
         child: Row(children: [
           AgentMochi(agentId, size: 22),
           const SizedBox(width: 10),
-          Flexible(
-            flex: 100,
-            child: onTitleTap == null
-                ? name
-                : TapDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: onTitleTap,
-                    child: name),
-          ),
-          const SizedBox(width: 10),
-          SessionStatusPill(status: status, startedAt: startedAt),
-          if ((sub ?? '').isNotEmpty) ...[
-            const SizedBox(width: 8),
-            Flexible(
-              flex: 0,
-              child: Text(sub!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(12, color: AppColors.fg4)),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const NeverScrollableScrollPhysics(),
+              child: Row(children: [
+                if (onTitleTap == null)
+                  name
+                else
+                  TapDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: onTitleTap,
+                      child: name),
+                const SizedBox(width: 10),
+                SessionStatusPill(status: status, startedAt: startedAt),
+                if ((sub ?? '').isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Text(sub!,
+                      maxLines: 1,
+                      softWrap: false,
+                      style: sans(12, color: AppColors.fg4)),
+                ],
+              ]),
             ),
-          ],
-          const Spacer(),
+          ),
           if (actions != null) actions!,
         ]),
       ),

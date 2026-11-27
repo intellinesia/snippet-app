@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../ambient_loop.dart';
+import '../chat/agent_cluster.dart';
 import '../api.dart';
 import '../clock.dart';
 import '../crew_status.dart';
@@ -20,6 +21,7 @@ import '../settings_form.dart' show Grouped;
 import 'agent_wake_panel.dart';
 import 'agent_appearance.dart';
 import 'agent_profile_panel.dart';
+import 'sidebar_tiles.dart';
 
 /// Which section of the phone's Agents page an agent belongs to.
 enum AgentGroup { needsYou, working, recent }
@@ -543,7 +545,7 @@ class _AgentCardState extends State<AgentCard> {
         _actions(null);
       },
       onSecondaryTapUp: (d) => _actions(d.globalPosition),
-      avatar: AgentMochi(agent.id, size: 28),
+      avatar: AgentMochi(agent.id, size: kMobile ? 28 : 22),
       working: running,
       name: name,
       pinned: _isPinned,
@@ -558,6 +560,7 @@ class _AgentCardState extends State<AgentCard> {
       expanded: widget.expanded,
       expandable: widget.expandable,
       onToggleExpansion: widget.onToggleExpansion,
+      compact: !kMobile,
     );
   }
 }
@@ -572,8 +575,8 @@ enum AgentRowStatusKind {
   idle,
 }
 
-/// Desktop sidebar row for an agent or Lead: a 28 px portrait, name and time,
-/// and one status line at a 40 px pitch.
+/// Desktop sidebar row for an agent or Lead: a 22 px portrait, name and time
+/// at Capy's 32 px pitch.
 class AgentRowShell extends StatefulWidget {
   const AgentRowShell({
     super.key,
@@ -595,6 +598,7 @@ class AgentRowShell extends StatefulWidget {
     this.onLongPress,
     this.onSecondaryTapUp,
     this.wideAvatar = false,
+    this.compact = true,
     this.tint,
     this.avatarFor,
     this.statusKind,
@@ -617,6 +621,9 @@ class AgentRowShell extends StatefulWidget {
   /// Draws the avatar unplated in a 36x22 box spilling past the 28 px slot,
   /// so a group's side-by-side faces stay full size while names line up.
   final bool wideAvatar;
+
+  /// Desktop Agents-list rows are one line at Capy's 32 pt pitch.
+  final bool compact;
   final String name;
   final String preview;
   final String time;
@@ -723,24 +730,27 @@ class _AgentRowShellState extends State<AgentRowShell> {
     final fill = focused
         ? AppColors.sidebarFocus
         : widget.selected
-            ? AppColors.sidebarPlate
+            ? sidebarSelectedPlate()
             : _hover
                 ? AppColors.hoverPlate
                 : Colors.transparent;
     final still = reduceMotion(context);
     final kind = _kind;
     final offline = kind == AgentRowStatusKind.offline;
+    final compact = widget.compact;
     // Capy's sidebar: titles a step below white, metadata well back.
-    final nameColor = offline
-        ? AppColors.fg3
-        : (kMobile || widget.unread
-            ? AppColors.fg1
-            : Color.lerp(AppColors.fg1, AppColors.fg2, 0.3)!);
-    final metaInk = kMobile ? AppColors.fg3 : AppColors.fg4;
+    final nameColor = offline ? AppColors.fg3 : sidebarTitleInk();
+    final metaInk = sidebarMetaInk();
     final statusStyle = sans(12,
         height: 15 / 12, color: widget.unread ? AppColors.fg2 : metaInk);
 
     Widget avatar = widget.avatar;
+    if (compact && avatar is AgentMochi && avatar.size != 22) {
+      avatar = AgentMochi(avatar.agentId,
+          size: 22, state: avatar.state, badge: avatar.badge);
+    } else if (compact && avatar is AgentCluster && avatar.size != 22) {
+      avatar = AgentCluster(ids: avatar.ids, size: 22, count: avatar.count);
+    }
     if (avatar is AgentMochi) avatar = ClipOval(child: avatar);
     if (offline) {
       avatar = ColorFiltered(
@@ -789,84 +799,95 @@ class _AgentRowShellState extends State<AgentRowShell> {
         ),
       );
     }
+    final titleLine = SizedBox(
+      height: compact ? 22 : 16,
+      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        Expanded(
+          child: Text(widget.name,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+              style: sans(13.5,
+                  weight: widget.unread ? FontWeight.w600 : FontWeight.w500,
+                  height: compact ? 18 / 13.5 : 16 / 13.5,
+                  color: nameColor)),
+        ),
+        if (compact && widget.unread) ...[
+          const SizedBox(width: 6),
+          Container(
+            key: const ValueKey('agent-unread'),
+            width: 6,
+            height: 6,
+            decoration:
+                BoxDecoration(color: AppColors.fg1, shape: BoxShape.circle),
+          ),
+        ],
+        if (widget.time.isNotEmpty) ...[
+          const SizedBox(width: 8),
+          Text(widget.time,
+              maxLines: 1,
+              style: sans(11.5,
+                  height: 16 / 11.5, color: metaInk, tabular: true)),
+        ],
+        if (widget.expandable) ...[
+          const SizedBox(width: 2),
+          GestureDetector(
+            key: const ValueKey('agent-expansion-toggle'),
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.onToggleExpansion,
+            child: SizedBox(
+              width: 20,
+              height: 16,
+              child: Center(
+                child: AppIcon(
+                  widget.expanded ? 'chevron-down' : 'chevron-right',
+                  size: 12,
+                  color: AppColors.fg3,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ]),
+    );
     final row = AnimatedContainer(
       duration: still ? Duration.zero : const Duration(milliseconds: 150),
       curve: const Cubic(0.23, 1, 0.32, 1),
       clipBehavior: Clip.antiAlias,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+      padding: EdgeInsets.symmetric(
+          horizontal: 8, vertical: compact ? 4 : 7),
       decoration:
           BoxDecoration(color: fill, borderRadius: BorderRadius.circular(8)),
       child: Stack(children: [
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SizedBox.square(
-            dimension: 28,
-            child: Stack(clipBehavior: Clip.none, children: [
-              Positioned.fill(child: avatar),
-              if (mark != null) Positioned(right: -1, bottom: -1, child: mark),
-            ]),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              SizedBox(
-                height: 16,
-                child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: Text(widget.name,
-                            maxLines: 1,
-                            softWrap: false,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(13,
-                                weight: widget.unread
-                                    ? FontWeight.w600
-                                    : FontWeight.w500,
-                                height: 16 / 13,
-                                color: nameColor)),
-                      ),
-                      if (widget.time.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        Text(widget.time,
-                            maxLines: 1,
-                            style: sans(11.5,
-                                height: 16 / 11.5,
-                                color: metaInk,
-                                tabular: true)),
-                      ],
-                      if (widget.expandable) ...[
-                        const SizedBox(width: 2),
-                        GestureDetector(
-                          key: const ValueKey('agent-expansion-toggle'),
-                          behavior: HitTestBehavior.opaque,
-                          onTap: widget.onToggleExpansion,
-                          child: SizedBox(
-                            width: 20,
-                            height: 16,
-                            child: Center(
-                              child: AppIcon(
-                                widget.expanded
-                                    ? 'chevron-down'
-                                    : 'chevron-right',
-                                size: 12,
-                                color: AppColors.fg2,
-                              ),
-                            ),
-                          ),
+        Row(
+            crossAxisAlignment: compact
+                ? CrossAxisAlignment.center
+                : CrossAxisAlignment.start,
+            children: [
+              SizedBox.square(
+                dimension: compact ? 22 : 28,
+                child: Stack(clipBehavior: Clip.none, children: [
+                  Positioned.fill(child: avatar),
+                  if (mark != null)
+                    Positioned(right: -1, bottom: -1, child: mark),
+                ]),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: compact
+                    ? titleLine
+                    : Column(mainAxisSize: MainAxisSize.min, children: [
+                        titleLine,
+                        const SizedBox(height: 3),
+                        SizedBox(
+                          height: 15,
+                          child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: statusChildren),
                         ),
-                      ],
-                    ]),
-              ),
-              const SizedBox(height: 3),
-              SizedBox(
-                height: 15,
-                child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: statusChildren),
+                      ]),
               ),
             ]),
-          ),
-        ]),
         if (focused)
           Positioned(
             left: 0,

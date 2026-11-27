@@ -185,10 +185,15 @@ class NotificationBanner extends StatelessWidget {
 
     final head = needs
         ? Row(children: [
-            Flexible(child: nameText),
-            const SizedBox(width: 6),
-            needsMark,
-            if (!big) ...[const Spacer(), timeText],
+            // The marker rides after the title; the time keeps the right edge.
+            Expanded(
+              child: Row(children: [
+                Flexible(child: nameText),
+                const SizedBox(width: 6),
+                needsMark,
+              ]),
+            ),
+            if (!big) ...[const SizedBox(width: 8), timeText],
           ])
         : Row(children: [
             Expanded(child: nameText),

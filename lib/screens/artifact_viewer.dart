@@ -327,12 +327,13 @@ class _ArtifactRowState extends State<ArtifactRow> {
         sub: _meta,
         trailing: GroupedCardHeader.chevron(),
         onTap: () => _open(context),
+        quietInk: !kMobile,
       );
 
   Widget _compact(BuildContext context, {String? text}) {
     final plain =
         plainPreview((text ?? '').trim().isNotEmpty ? text! : widget.caption);
-    return GroupedCard(segments: [
+    return GroupedCard(quiet: true, segments: [
       _header(context),
       if (plain.isNotEmpty)
         GroupedCardBody(text: plain, onTap: () => _open(context)),
@@ -356,12 +357,12 @@ class _ArtifactRowState extends State<ArtifactRow> {
         if (snap.connectionState != ConnectionState.done) {
           if (!isImage) {
             if (widget.caption.trim().isNotEmpty) return _compact(context);
-            return GroupedCard(segments: [
+            return GroupedCard(quiet: true, segments: [
               _header(context),
               const LoadingInline(label: 'Loading preview…'),
             ]);
           }
-          return GroupedCard(segments: [
+          return GroupedCard(quiet: true, segments: [
             _header(context),
             TapDetector(
               onTap: () => _open(context),
@@ -381,7 +382,7 @@ class _ArtifactRowState extends State<ArtifactRow> {
             message: 'Couldn’t load preview',
             onRetry: _retryPreview,
           );
-          return GroupedCard(segments: [
+          return GroupedCard(quiet: true, segments: [
             _header(context),
             if (isImage)
               SizedBox(height: 150, width: double.infinity, child: fail)
@@ -392,7 +393,7 @@ class _ArtifactRowState extends State<ArtifactRow> {
         final d = snap.data;
         if (d == null) return _compact(context);
         if (d.uri == null) return _compact(context, text: d.text);
-        return GroupedCard(segments: [
+        return GroupedCard(quiet: true, segments: [
           _header(context),
           TapDetector(
             onTap: () => _open(context),

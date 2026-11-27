@@ -189,8 +189,9 @@ class DesktopFileChip extends StatelessWidget {
       constraints: const BoxConstraints(maxWidth: 320),
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(6),
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(7),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -201,12 +202,12 @@ class DesktopFileChip extends StatelessWidget {
             child: Text(name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: sans(12.5, height: 1, color: AppColors.fg1)),
+                style: sans(12.5, height: 1, color: PaneRow.labelOn)),
           ),
           if (sizeLabel.isNotEmpty) ...[
             const SizedBox(width: 8),
             Text(sizeLabel,
-                maxLines: 1, style: sans(11, height: 1, color: AppColors.fg2)),
+                maxLines: 1, style: sans(11, height: 1, color: AppColors.fg4)),
           ],
           if (trailing != null) ...[const SizedBox(width: 4), trailing!],
         ],
@@ -219,7 +220,7 @@ class DesktopFileChip extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(7),
           child: child,
         ),
       ),

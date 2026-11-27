@@ -47,7 +47,7 @@ class ChatHeaderBar extends StatelessWidget {
           );
     return Container(
       key: const ValueKey('chat-header-bar'),
-      constraints: BoxConstraints(minHeight: height),
+      height: height,
       padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: AppColors.paneLine)),
@@ -92,28 +92,25 @@ class ChatHeaderBar extends StatelessWidget {
           ]),
         ),
         if (subtitle.isNotEmpty)
-          Flexible(
-            flex: 0,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 360),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                if (live) ...[
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                        color: AppColors.ok, shape: BoxShape.circle),
-                  ),
-                  const SizedBox(width: 7),
-                ],
-                Flexible(
-                  child: Text(subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(12, color: AppColors.fg3)),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 360),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              if (live) ...[
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                      color: AppColors.ok, shape: BoxShape.circle),
                 ),
-              ]),
-            ),
+                const SizedBox(width: 7),
+              ],
+              Flexible(
+                child: Text(subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(12, color: AppColors.fg3)),
+              ),
+            ]),
           ),
         for (var i = 0; i < actions.length; i++) ...[
           SizedBox(width: i == 0 ? 8 : 2),

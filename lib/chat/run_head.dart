@@ -19,11 +19,11 @@ const double kPostBodyInset = 40;
 /// Desktop: your bubble is at most this wide (MSG-01).
 const double kUserBubbleMax = 360;
 
-/// Desktop chat body: 13/400 on a 19 line.
+/// Desktop chat body: 13/400 on a 19 line, a step below white.
 TextStyle deskBody({Color? color}) =>
-    sans(13, height: 19 / 13, color: color ?? AppColors.fg1);
+    sans(13, height: 19 / 13, color: color ?? AppColors.fg2);
 
-/// Desktop: your message sits in an s2 bubble (radius 12, pad 12, max 360);
+/// Desktop: your message sits in a quiet bubble (radius 8, pad 12×8, max 360);
 /// agent prose has no bubble.
 class SoftBubble extends StatelessWidget {
   const SoftBubble({
@@ -51,7 +51,10 @@ class SoftBubble extends StatelessWidget {
         child: child,
       );
     }
-    final fill = selected ? AppColors.surface3 : AppColors.surface2;
+    // Capy's one-line bubble is #1A: a quarter step from s2 towards s3.
+    final fill = selected
+        ? AppColors.surface3
+        : Color.lerp(AppColors.surface2, AppColors.surface3, 0.25)!;
     return LayoutBuilder(builder: (_, box) {
       final cap = box.maxWidth.isFinite
           ? (box.maxWidth - 36).clamp(0.0, kUserBubbleMax).toDouble()

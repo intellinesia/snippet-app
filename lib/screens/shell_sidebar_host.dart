@@ -139,6 +139,16 @@ class ShellSidebarHost extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final panel = _panel(context);
+    // Sidebar lays the footer tools into its own icon row; other panels get it below.
+    if (!kMobile && desktopFooter != null && panel is! Sidebar) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Expanded(child: panel),
+        SizedBox(
+          height: 44,
+          child: Align(alignment: Alignment.centerRight, child: desktopFooter),
+        ),
+      ]);
+    }
     final tool = kMobile &&
         (effectiveSection == ShellSection.terminal ||
             effectiveSection == ShellSection.git ||

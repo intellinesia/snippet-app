@@ -328,7 +328,7 @@ class AgentSidePanel extends StatelessWidget {
   Widget _tabRow(BuildContext context, RightTab? reading) => Container(
         key: const ValueKey('agent-panel-tabs'),
         height: PaneRow.height,
-        padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
+        padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: AppColors.paneLine))),
         child: Row(children: [

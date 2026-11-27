@@ -19,7 +19,7 @@ extension _RailPages on _SessionRailState {
           height: 28,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: AppColors.surface2,
+            color: Color.lerp(AppColors.surface2, AppColors.surface3, 0.75),
             borderRadius: BorderRadius.circular(R.of(6)),
           ),
           child: leading ?? AppIcon(icon, size: 15, color: AppColors.fg3),
@@ -140,7 +140,7 @@ extension _RailPages on _SessionRailState {
     return Container(
       key: const ValueKey('rail-tabs'),
       height: PaneRow.height,
-      padding: const EdgeInsets.fromLTRB(6, 0, 6, 0),
+      padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
       decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: AppColors.paneLine))),
       child: Row(children: [
@@ -302,8 +302,6 @@ extension _RailPages on _SessionRailState {
     }
     final nFiles = gitFiles.isNotEmpty ? gitFiles.length : fallbackFiles.length;
     final steps = _activitySteps(s);
-    final lanes = [...?s?.lanes];
-    final running = lanes.where((l) => l.running).length;
     final ws = (s?.workspace ?? '').trim();
     final wsLabel = ws.isEmpty ? '' : lastPathSegment(ws, ifEmpty: ws);
 
@@ -341,22 +339,28 @@ extension _RailPages on _SessionRailState {
             onTap: () => _go('files')),
       if (w.onShell != null) _navRow('terminal', 'Shell', onTap: w.onShell!),
     ];
-    final pills = <Widget>[
-      if (lanes.isNotEmpty)
-        _OpenPill(
-            icon: 'git-branch',
-            label: running > 0 ? 'Lanes $running' : 'Lanes',
-            onTap: () => _go('lanes')),
-      _OpenPill(
-          icon: 'history',
-          label: 'Checkpoints',
-          onTap: () => _go('checkpoints')),
-      _OpenPill(
-          icon: 'book-marked', label: 'Memory', onTap: () => _go('memory')),
-    ];
+    final landingTop = ((_bodyH - 360) / 2).clamp(44.0, 270.0).toDouble();
 
     return [
       head,
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 320),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              SizedBox(height: landingTop),
+              const Center(child: PanelEmptyArt()),
+              const SizedBox(height: 42),
+              for (var i = 0; i < cards.length; i++) ...[
+                if (i > 0) const SizedBox(height: 10),
+                cards[i],
+              ],
+            ]),
+          ),
+        ),
+      ),
+      const SizedBox(height: 28),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4),
         child: Column(
@@ -404,13 +408,6 @@ extension _RailPages on _SessionRailState {
                     style: sans(12.5, height: 1.35, color: AppColors.fg2)),
               ),
             ],
-            _capyHead('Open'),
-            for (var i = 0; i < cards.length; i++) ...[
-              if (i > 0) const SizedBox(height: 10),
-              cards[i],
-            ],
-            const SizedBox(height: 10),
-            Wrap(spacing: 6, runSpacing: 6, children: pills),
           ],
         ),
       ),
@@ -421,7 +418,7 @@ extension _RailPages on _SessionRailState {
   Widget _capyHead(String title,
           {String? meta, (int, int)? adds, VoidCallback? onTap}) =>
       Padding(
-        padding: const EdgeInsets.only(top: 22, bottom: 8),
+        padding: const EdgeInsets.only(top: 16, bottom: 8),
         child: TapDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
@@ -637,7 +634,7 @@ extension _RailPages on _SessionRailState {
       // Docked, the page's pill in the panel row names it.
       ? const SizedBox(height: 2)
       : Container(
-        height: 40,
+        height: 44,
         padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
         child: Row(children: [
           IconBtn('chevron-left',
@@ -694,7 +691,7 @@ extension _RailPages on _SessionRailState {
         return [
           _subHeader('Lanes', meta: '${lanes.length}'),
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+            padding: const EdgeInsets.only(top: 10),
             child: Container(
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
@@ -1031,7 +1028,7 @@ extension _RailPages on _SessionRailState {
     final r = Radius.circular(R.of(13));
     final sm = Radius.circular(R.of(5));
     return Padding(
-      padding: EdgeInsets.fromLTRB(12, first ? 10 : 2, 12, 0),
+      padding: EdgeInsets.only(top: first ? 10 : 2),
       child: Material(
         color: armed ? AppColors.surface3 : Grouped.row,
         borderRadius:
@@ -1115,7 +1112,7 @@ extension _RailPages on _SessionRailState {
     return [
       _subHeader('Wakes', meta: list.isEmpty ? null : '${list.length}'),
       Padding(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+        padding: const EdgeInsets.only(top: 10),
         child: Container(
           padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
           decoration: BoxDecoration(
@@ -1168,7 +1165,7 @@ extension _RailPages on _SessionRailState {
             first: f, last: l, onTap: widget.onWakes),
       ]),
       Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        padding: const EdgeInsets.fromLTRB(4, 8, 4, 12),
         child: Text(
             'Wakes run in this session with its history. A wake that finds nothing to do ends quietly.',
             style: sans(11.5, height: 1.45, color: AppColors.fg4)),
@@ -1177,7 +1174,7 @@ extension _RailPages on _SessionRailState {
   }
 
   Widget _groupLabel(String t) => Padding(
-        padding: const EdgeInsets.fromLTRB(18, 12, 18, 6),
+        padding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
         child: Text(t, style: sans(12, color: AppColors.fg3)),
       );
 
@@ -1214,7 +1211,7 @@ extension _RailPages on _SessionRailState {
   }
 
   Widget _wakeRow(WakeSchedule w, bool first, bool last) => Padding(
-        padding: EdgeInsets.fromLTRB(12, first ? 0 : 2, 12, 0),
+        padding: EdgeInsets.only(top: first ? 0 : 2),
         child: Material(
           color: Grouped.row,
           borderRadius: _rowRadius(first, last),
@@ -1288,7 +1285,7 @@ extension _RailPages on _SessionRailState {
         _wakeSched.text.trim().isNotEmpty &&
         !_wakeSaving;
     return Padding(
-      padding: EdgeInsets.fromLTRB(12, first ? 0 : 2, 12, 0),
+      padding: EdgeInsets.only(top: first ? 0 : 2),
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
         decoration: BoxDecoration(

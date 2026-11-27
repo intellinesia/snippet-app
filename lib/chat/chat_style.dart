@@ -110,9 +110,12 @@ TextStyle chatText({required bool mine, BuildContext? context}) =>
     sans(kMobile ? ChatColors.fontSize : 13,
         height: kMobile ? 1.3 : 19 / 13,
         color: mine
-            ? (context != null
-                ? ChatColors.sentTextIn(context)
-                : ChatColors.sentText)
+            // Capy keeps even the user's bubble ink well below white.
+            ? (kMobile
+                ? (context != null
+                    ? ChatColors.sentTextIn(context)
+                    : ChatColors.sentText)
+                : AppColors.fg2)
             // Capy keeps agent prose a step below white on the dark desk.
             : (kMobile
                 ? AppColors.fg1
@@ -226,7 +229,9 @@ class ChatBubble extends StatelessWidget {
     final fill = color ??
         (kMobile
             ? (mine ? AppColors.surface2 : AppColors.surface1)
-            : (mine ? AppColors.surface2 : ChatColors.received));
+            : (mine
+                ? Color.lerp(AppColors.surface2, AppColors.surface3, 0.25)!
+                : ChatColors.received));
     final h = kMobile ? 12.0 : 11.0;
     final v = kMobile ? 11.0 : 6.0;
     final tailPad = kMobile ? 0.0 : _tailW;

@@ -1733,6 +1733,7 @@ class _DesktopShellState extends State<DesktopShell>
 
   Widget _sidebar({VoidCallback? onAfterPick, bool topInset = true}) =>
       ShellSidebarHost(
+        desktopFooter: kMobile ? null : _sidebarFooter(),
         effectiveSection: _effectiveSection,
         shells: _shells.shells,
         focusShellId: _shells.focusId,

@@ -260,14 +260,14 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
             ],
             if (widget.sub.isNotEmpty) ...[
               Text('  ·  ', style: sans(12, color: AppColors.fg4)),
-              Flexible(
+              Expanded(
                 child: Text(widget.sub,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: sans(12, color: AppColors.fg3)),
               ),
-            ],
-            const Spacer(),
+            ] else
+              const Spacer(),
             ClipOval(child: AgentMochi(widget.agentId, size: 18)),
             if (hasMenu)
               Builder(
@@ -454,7 +454,7 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
     ];
     if (cells.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 22, 14, 0),
+      padding: const EdgeInsets.fromLTRB(14, 16, 14, 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Text('Open',
             style: sans(12.5,
@@ -847,7 +847,7 @@ class _SectionState extends State<_Section> {
   Widget _desktop() {
     final open = _isOpen;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 22, 14, 0),
+      padding: const EdgeInsets.fromLTRB(14, 16, 14, 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         TapDetector(
           behavior: HitTestBehavior.opaque,

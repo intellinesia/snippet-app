@@ -41,7 +41,7 @@ void main() {
     final title = tester.widget<Text>(find.text('Agents'));
     expect(title.style?.fontSize, 13);
     expect(title.style?.fontWeight, W.label);
-    expect(title.style?.color, Color.lerp(AppColors.fg1, AppColors.fg2, 0.3));
+    expect(title.style?.color, sidebarTitleInk());
     final action = tester.widget<AppIcon>(
         find.byWidgetPredicate((w) => w is AppIcon && w.name == 'search'));
     expect(action.size, 14);
@@ -51,7 +51,7 @@ void main() {
     expect(find.text('7'), findsOneWidget);
     final count = tester.widget<Text>(find.text('7'));
     expect(count.style?.fontSize, 11.5);
-    expect(count.style?.color, AppColors.fg3);
+    expect(count.style?.color, sidebarMetaInk());
     // Reset inside the body: the binding checks debug vars before tear-down.
     debugDefaultTargetPlatformOverride = null;
   });

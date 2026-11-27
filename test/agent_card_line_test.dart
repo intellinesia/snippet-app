@@ -185,6 +185,7 @@ void main() {
           child: SizedBox(
             width: 224,
             child: AgentRowShell(
+              compact: false,
               avatar: const SizedBox.square(
                   key: ValueKey('test-avatar'), dimension: 28),
               name: 'Sashy',
@@ -226,7 +227,7 @@ void main() {
   });
 
   testWidgets(
-      'desktop working rows keep the last message and mark the avatar live',
+      'desktop working rows stay one compact line and mark the avatar live',
       (t) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     final a = _agent(
@@ -254,7 +255,7 @@ void main() {
     await t.pump();
 
     expect(find.text('Quiet Build QA'), findsNothing);
-    expect(find.text('Old direct message'), findsOneWidget);
+    expect(find.text('Old direct message'), findsNothing);
     expect(find.byType(Spinner), findsNothing);
     expect(find.byKey(const ValueKey('agent-live-dot')), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;

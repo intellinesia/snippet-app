@@ -4,6 +4,23 @@ import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
+// Capy's dark sidebar keeps labels near B6 and the selected plate at 0D.
+Color sidebarTitleInk() {
+  if (!kMobile && currentTheme.name == 'quiet') {
+    return const Color(0xFFB6B6B6);
+  }
+  return AppColors.fg2;
+}
+
+Color sidebarSelectedPlate() {
+  if (!kMobile && currentTheme.name == 'quiet') {
+    return const Color(0xFF0D0D0D);
+  }
+  return AppColors.sidebarPlate;
+}
+
+Color sidebarMetaInk() => kMobile ? AppColors.fg3 : AppColors.fg4;
+
 /// Tells section headers whether the pointer is over the sidebar, so their
 /// action buttons only appear then.
 class SidebarHoverScope extends StatefulWidget {
@@ -100,7 +117,7 @@ class SidebarSectionHeader extends StatelessWidget {
     if (!kMobile) {
       final toggle = onToggle;
       return Padding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 6, 0),
+        padding: const EdgeInsets.fromLTRB(12, 11, 6, 0),
         child: SizedBox(
           height: 30,
           child: Row(children: [
@@ -119,14 +136,12 @@ class SidebarSectionHeader extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: sans(13,
-                              weight: W.label,
-                              color: Color.lerp(
-                                  AppColors.fg1, AppColors.fg2, 0.3))),
+                              weight: W.label, color: sidebarTitleInk())),
                     ),
                     // Capy shows no count; it stays as a hint once collapsed.
                     if (count != null && collapsed) ...[
                       const SizedBox(width: 6),
-                      Text('$count', style: sans(11.5, color: AppColors.fg3)),
+                      Text('$count', style: sans(11.5, color: sidebarMetaInk())),
                     ],
                   ]),
                 ),

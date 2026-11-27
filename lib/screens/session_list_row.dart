@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../motion.dart' show WorkingBars;
@@ -10,6 +12,7 @@ import '../settled_sessions.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'shell_nav.dart';
+import 'sidebar_tiles.dart';
 import '../tap_detector.dart';
 
 /// "12.9k" style count: whole numbers to 9,999, then one decimal, then none.
@@ -642,20 +645,20 @@ class SessionListRow extends StatelessWidget {
       // down the list; the bouncing agent already reads as working.
       final folder =
           s.projectFolder.trim().isEmpty ? '' : projectLabel(s);
-      final metaStyle = sans(12, color: AppColors.fg3);
-      Widget metaField(String icon, String text) => text.isEmpty
-          ? const SizedBox.shrink()
-          : Row(mainAxisSize: MainAxisSize.min, children: [
-              AppIcon(icon, size: 12, color: AppColors.fg3),
-              const SizedBox(width: 4),
-              Flexible(
-                child: Text(text,
-                    maxLines: 1,
-                    softWrap: false,
-                    overflow: TextOverflow.ellipsis,
-                    style: metaStyle),
-              ),
-            ]);
+      final metaStyle = sans(12, color: sidebarMetaInk());
+      Widget metaField(String icon, String text, {bool flexible = true}) {
+        if (text.isEmpty) return const SizedBox.shrink();
+        final label = Text(text,
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.ellipsis,
+            style: metaStyle);
+        return Row(mainAxisSize: MainAxisSize.min, children: [
+          AppIcon(icon, size: 12, color: sidebarMetaInk()),
+          const SizedBox(width: 4),
+          flexible ? Flexible(child: label) : label,
+        ]);
+      }
       // Natural width of an icon + text field, to share space by priority.
       double fieldWidth(String text) => text.isEmpty
           ? 0
@@ -685,12 +688,8 @@ class SessionListRow extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               // The reference's 14px regular title, grey until selected.
-              style: sans(14,
-                  color: dim
-                      ? AppColors.fg3
-                      : (selected || hover)
-                          ? AppColors.fg1
-                          : AppColors.fg2));
+              style: sans(13.5,
+                  color: dim ? AppColors.fg3 : sidebarTitleInk()));
       final machineName = (machine ?? '').trim();
       final showMeta = renameField == null &&
           (provider != null ||
@@ -729,7 +728,8 @@ class SessionListRow extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.fade,
                         softWrap: false,
-                        style: sans(12, color: timeColor, tabular: true)),
+                        style:
+                            sans(12, color: sidebarMetaInk(), tabular: true)),
               ),
               if (hover && !selecting)
                 Row(mainAxisSize: MainAxisSize.min, children: [
@@ -756,19 +756,28 @@ class SessionListRow extends StatelessWidget {
                     machineName.isEmpty ? 0.0 : 8 + fieldWidth(machineName);
                 final lead = provider == null ? 0.0 : 18.0;
                 final gap = folder.isNotEmpty && branch.isNotEmpty ? 8.0 : 0.0;
-                final avail = box.maxWidth - machineW - lead - gap;
+                final avail =
+                    math.max(0.0, box.maxWidth - machineW - lead - gap);
                 final branchNat = fieldWidth(branch);
                 final folderNat = fieldWidth(folder);
-                final branchW = branchNat <= avail - 40 || folder.isEmpty
-                    ? branchNat.clamp(0.0, avail)
-                    : (avail - folderNat).clamp(40.0, branchNat);
-                final folderW = (avail - branchW).clamp(0.0, folderNat);
+                var branchW = math.min(branchNat, avail);
+                var folderW = math.min(folderNat, avail);
+                if (branch.isNotEmpty && folder.isNotEmpty) {
+                  final minBranch = math.min(40.0, branchNat);
+                  if (avail <= minBranch) {
+                    branchW = avail;
+                    folderW = 0.0;
+                  } else {
+                    folderW = math.min(folderNat, avail - minBranch);
+                    branchW = math.min(branchNat, avail - folderW);
+                  }
+                }
                 return Row(children: [
                   if (provider != null) ...[
                     SizedBox(
                       width: 12,
                       child: ProviderLogo(provider,
-                          size: 12, color: AppColors.fg3),
+                          size: 12, color: sidebarMetaInk()),
                     ),
                     const SizedBox(width: 6),
                   ],
@@ -783,7 +792,7 @@ class SessionListRow extends StatelessWidget {
                     const SizedBox(width: 8),
                     // Desktop pins the machine to the row's right edge.
                     if (!kMobile) const Spacer(),
-                    metaField('laptop', machineName),
+                    metaField('laptop', machineName, flexible: false),
                   ],
                 ]);
               }),
@@ -900,8 +909,8 @@ class SessionListRow extends StatelessWidget {
             builder: (hover) => HoverSurface(
                   selected: selecting ? checked : selected,
                   radius: R.of(8),
-                  selectedColor: AppColors.surface3,
-                  hoverColor: AppColors.fg1.withValues(alpha: 0.07),
+                  selectedColor: sidebarSelectedPlate(),
+                  hoverColor: AppColors.hoverPlate,
                   onTap: onTap,
                   onLongPress: onLongPress == null ? null : longPress,
                   onSecondaryTapDown: onSecondaryTapDown,

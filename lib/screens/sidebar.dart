@@ -1211,6 +1211,30 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         onNewSession: widget.onOpenHome);
   }
 
+  Widget _accountFooterButton() {
+    final label = widget.active?.label.trim() ?? '';
+    final initial = label.isEmpty ? 'S' : label[0].toUpperCase();
+    return Tooltip(
+      message: label.isEmpty ? 'Account' : label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onOpenSettings,
+        child: Container(
+          width: 24,
+          height: 24,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: const Color(0xFF5E4237),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(initial,
+              style: sans(12.5,
+                  weight: FontWeight.w600, color: Colors.white)),
+        ),
+      ),
+    );
+  }
+
   /// Home sits above the agents.
   Widget _desktopNav() => ValueListenableBuilder<String>(
         valueListenable: activeShellPlace,
@@ -1486,15 +1510,25 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           child: _withSidebarKeyboard(body),
         ),
       ),
-      // Capy footer: places and tools as one quiet row of icons.
+      // Capy footer: the account anchor, then places and tools in one row.
       SizedBox(
         height: 44,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 0, 0, 0),
-          // The shell pins its footer tools over the right end of this row.
+          padding: const EdgeInsets.fromLTRB(12, 0, 0, 0),
           child: Row(children: [
-            if (hasClient) _desktopNav(),
-            const Spacer(),
+            if (hasClient) _accountFooterButton(),
+            if (hasClient)
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  // At the narrowest sidebar the places scroll rather than overflow.
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    reverse: true,
+                    child: _desktopNav(),
+                  ),
+                ),
+              ),
             if (widget.desktopFooter != null) widget.desktopFooter!,
           ]),
         ),

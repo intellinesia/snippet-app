@@ -502,6 +502,18 @@ class _SystemNoticeLineState extends State<SystemNoticeLine> {
 
   Widget _desk() {
     final interactive = notice.detail.isNotEmpty || notice.rows.isNotEmpty;
+    // Capy's finished compaction checkpoint is only a dim centred label.
+    if (notice.kind == 'compacted') {
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: S.s12),
+        child: Center(
+          child: Text('Context compacted',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(11.5, color: AppColors.fg4)),
+        ),
+      );
+    }
     final line = ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 28),
       child: Padding(

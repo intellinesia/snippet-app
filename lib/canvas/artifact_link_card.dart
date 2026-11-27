@@ -161,7 +161,7 @@ class _ArtifactLinkCardState extends State<ArtifactLinkCard> {
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               color: AppColors.surface1,
-              borderRadius: BorderRadius.circular(kMobile ? R.of(14) : 8),
+              borderRadius: BorderRadius.circular(kMobile ? R.of(14) : 9),
               border: Border.all(color: AppColors.border),
             ),
             child: Material(
@@ -189,7 +189,9 @@ class _ArtifactLinkCardState extends State<ArtifactLinkCard> {
                                   style: sans(kMobile ? 14 : 13,
                                       weight: W.label,
                                       height: 1.3,
-                                      color: AppColors.fg1)),
+                                      color: kMobile
+                                          ? AppColors.fg1
+                                          : PaneRow.labelOn)),
                               SizedBox(height: S.s2),
                               Text(
                                   _loading
@@ -199,7 +201,10 @@ class _ArtifactLinkCardState extends State<ArtifactLinkCard> {
                                           : meta,
                                   maxLines: 1,
                                   style: sans(12,
-                                      height: 1.35, color: AppColors.fg3)),
+                                      height: 1.35,
+                                      color: kMobile
+                                          ? AppColors.fg3
+                                          : AppColors.fg4)),
                               if (by.isNotEmpty)
                                 Text(by,
                                     maxLines: 1,

@@ -15,6 +15,105 @@ import 'pull_request_detail.dart' show PrSidebarList;
 import 'shell_nav.dart';
 import '../pull_refresh.dart';
 
+/// Capy's quiet empty-panel mascot, redrawn as vector shapes so it can scale.
+class PanelEmptyArt extends StatelessWidget {
+  const PanelEmptyArt({super.key, this.width = 95, this.height = 96});
+
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+        size: Size(width, height),
+        painter: const _PanelEmptyArtPainter(),
+      );
+}
+
+class _PanelEmptyArtPainter extends CustomPainter {
+  const _PanelEmptyArtPainter();
+
+  static const _bright = Color(0xFF4D4D4D);
+  static const _dark = Color(0xFF262626);
+  static const _void = Color(0xFF070707);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.scale(size.width / 95, size.height / 96);
+    final bright = Paint()..color = _bright;
+    final dark = Paint()..color = _dark;
+    final voidInk = Paint()..color = _void;
+
+    final leftSail = Path()
+      ..moveTo(45, 13)
+      ..cubicTo(40, 27, 36, 43, 32, 58)
+      ..lineTo(45, 58)
+      ..close();
+    final rightSail = Path()
+      ..moveTo(52, 13)
+      ..cubicTo(58, 29, 67, 45, 82, 62)
+      ..lineTo(52, 62)
+      ..close();
+    canvas.drawPath(leftSail, bright);
+    canvas.drawPath(rightSail, bright);
+
+    final seam = Paint()
+      ..color = _dark
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(const Offset(37, 43), const Offset(45, 43), seam);
+    canvas.drawLine(const Offset(53, 40), const Offset(66, 38), seam);
+    canvas.drawLine(const Offset(53, 52), const Offset(75, 50), seam);
+
+    final capy = Path()
+      ..moveTo(17, 70)
+      ..lineTo(18, 58)
+      ..cubicTo(11, 57, 10, 48, 15, 43)
+      ..cubicTo(20, 37, 32, 38, 38, 44)
+      ..cubicTo(49, 44, 57, 53, 59, 66)
+      ..lineTo(59, 70)
+      ..close();
+    canvas.drawPath(capy, dark);
+    canvas.drawCircle(const Offset(34, 40), 3.2, dark);
+    canvas.drawCircle(const Offset(22, 47), 1.4, voidInk);
+
+    final mast = Paint()
+      ..color = _void
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.2
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(const Offset(48, 14), const Offset(48, 70), mast);
+    final flag = Path()
+      ..moveTo(51, 11)
+      ..lineTo(58, 13)
+      ..lineTo(51, 16)
+      ..close();
+    canvas.drawPath(flag, dark);
+
+    final hull = Path()
+      ..moveTo(12, 70)
+      ..lineTo(82, 66)
+      ..cubicTo(80, 75, 76, 82, 68, 84)
+      ..cubicTo(58, 88, 49, 85, 39, 86)
+      ..cubicTo(27, 91, 17, 87, 14, 78)
+      ..close();
+    canvas.drawPath(hull, bright);
+    final grain = Paint()
+      ..color = _dark
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(const Offset(17, 77), const Offset(65, 74), grain);
+    canvas.drawLine(const Offset(66, 70), const Offset(79, 68), grain);
+    canvas.drawCircle(const Offset(26, 78), 5, grain);
+    canvas.drawLine(const Offset(18, 88), const Offset(31, 86), grain);
+    canvas.drawLine(const Offset(61, 88), const Offset(75, 86), grain);
+  }
+
+  @override
+  bool shouldRepaint(_PanelEmptyArtPainter old) => false;
+}
+
 /// Git Diff sidebar panel.
 ///
 /// Layout follows the measured reference: a 32px branch row directly under the
@@ -62,7 +161,6 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
   bool _loading = true;
   String? _error;
   bool _initing = false;
-  DateTime _lastUpdated = DateTime.now();
   Swr<GitStatus>? _git;
   bool _branchBusy = false;
 
@@ -122,7 +220,6 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
       final data = git.data;
       if (data != null && !identical(data, _status)) {
         _status = data;
-        _lastUpdated = DateTime.now();
       }
       _loading = git.loading;
       _error = data == null && git.error != null ? '${git.error}' : null;
@@ -813,14 +910,15 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            AppIcon('check-check', size: 22, color: AppColors.fg4),
+            const PanelEmptyArt(width: 72, height: 56),
             const SizedBox(height: 12),
             Text('No local changes',
                 style: sans(12.5, weight: W.label, color: AppColors.fg3)),
             const SizedBox(height: 4),
-            Text('The working tree is clean · ${_timeAgo(_lastUpdated)}',
+            Text('The working tree is clean',
                 textAlign: TextAlign.center,
-                style: sans(12, color: AppColors.fg4)),
+                style: sans(12,
+                    color: Color.lerp(AppColors.fg4, AppColors.panelBg, 0.4))),
           ]),
         ),
       );
@@ -858,10 +956,4 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
         ]),
       );
 
-  String _timeAgo(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inSeconds < 45) return 'just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    return '${diff.inHours}h ago';
-  }
 }

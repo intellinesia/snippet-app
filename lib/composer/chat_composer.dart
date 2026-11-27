@@ -10,10 +10,9 @@ import '../theme.dart';
 import 'composer_card.dart';
 import 'voice_note.dart';
 
-/// Desktop transcript column; the composer card sits 12 outside it each side.
-// Capy fills the pane less a 15 pt inset; 840 matches it at the reference size.
+/// Desktop transcript column; the composer card uses the same measure.
 const double kChatMeasure = 840;
-const double kDesktopComposerWidth = kChatMeasure + 24;
+const double kDesktopComposerWidth = kChatMeasure;
 
 /// The one composer for session chats, agent threads and group threads, on
 /// phone and desktop: field, attach, voice note, send and stop, docked with
@@ -207,8 +206,8 @@ class ChatComposer extends StatelessWidget {
           DeskIconButton('plus',
               tooltip: 'Attach',
               onTap: onAttach,
-              iconSize: 15,
-              color: AppColors.fg2),
+              iconSize: 12,
+              color: AppColors.fg3),
       model: deskModel,
       cold: deskCold,
       hint: deskHint?.call(),

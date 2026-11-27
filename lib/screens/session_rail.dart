@@ -9,7 +9,7 @@ import '../tool_activity.dart';
 import 'file_changes.dart' show sessionChangeSteps;
 import 'desk_memory.dart' show DeskMemoryView;
 import 'file_tree_sidebar_panel.dart' show FileTreeSidebarPanel;
-import 'git_diff_sidebar_panel.dart' show GitDiffSidebarPanel;
+import 'git_diff_sidebar_panel.dart' show GitDiffSidebarPanel, PanelEmptyArt;
 import 'lanes.dart' show openLaneView;
 import '../mochi.dart' show AgentMochi;
 import '../platform.dart';
@@ -1863,34 +1863,4 @@ class _RailResizeHandleState extends State<_RailResizeHandle> {
       ),
     );
   }
-}
-
-/// One quick way into another panel tab, on the Overview.
-class _OpenPill extends StatelessWidget {
-  const _OpenPill(
-      {required this.icon, required this.label, required this.onTap});
-
-  final String icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(R.of(7)),
-        child: Container(
-          height: 28,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: BoxDecoration(
-            color: AppColors.surface1,
-            borderRadius: BorderRadius.circular(R.of(7)),
-            border: Border.all(color: AppColors.paneLine),
-          ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            AppIcon(icon, size: 13, color: AppColors.fg3),
-            const SizedBox(width: 6),
-            Text(label, style: sans(12, color: AppColors.fg2)),
-          ]),
-        ),
-      );
 }

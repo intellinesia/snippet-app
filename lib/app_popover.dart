@@ -45,7 +45,8 @@ class AppPopoverSurface extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(borderRadius: radius, boxShadow: overlayShadow),
       child: Material(
-        color: AppColors.surface2,
+        // Capy's menu fill is its #15 plate, one step below surface2.
+        color: kMobile ? AppColors.surface2 : PaneRow.tabPlate,
         shape: RoundedRectangleBorder(
             borderRadius: radius,
             side: BorderSide(color: AppColors.panelOutline)),
@@ -366,10 +367,20 @@ class _PopoverMenuState<T> extends State<_PopoverMenu<T>> {
             for (final e in widget.items) e,
           ]));
     }
+    PopupMenuItem<T>? leadingHeading;
+    if (!kMobile && _hasSearch && widget.items.isNotEmpty) {
+      final first = widget.items.first;
+      if (first is PopupMenuItem<T> &&
+          !first.enabled &&
+          (first.child is AppMenuHeading || first.child is Text)) {
+        leadingHeading = first;
+      }
+    }
     final children = <Widget>[];
     var firstGroup = true;
     for (var i = 0; i < shown.length; i++) {
       final e = shown[i];
+      if (leadingHeading != null && identical(e, leadingHeading)) continue;
       if (e is PopupMenuDivider) {
         children.add(Container(
             height: 1,
@@ -441,6 +452,11 @@ class _PopoverMenuState<T> extends State<_PopoverMenu<T>> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (_hasSearch && !kMobile) ...[
+              if (leadingHeading != null)
+                Padding(
+                  padding: EdgeInsets.fromLTRB(S.s8, S.s4, S.s8, 0),
+                  child: leadingHeading.child,
+                ),
               // Capy: a bare query line over a full-width hairline.
               SizedBox(
                 height: 30,
@@ -462,7 +478,7 @@ class _PopoverMenuState<T> extends State<_PopoverMenu<T>> {
               ),
               Container(
                   height: 1,
-                  margin: const EdgeInsets.only(bottom: 4),
+                  margin: EdgeInsets.only(bottom: S.s4),
                   color: Color.lerp(
                       AppColors.line, AppColors.lineStrong, 0.5)),
             ],

@@ -1367,7 +1367,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   }
 
   Widget _bodyList() {
-    final topPad = _noChrome ? 12.0 : (_deskHead ? 8.0 : StageBar.height);
+    final topPad = _noChrome ? 12.0 : (_deskHead ? 20.0 : StageBar.height);
     if (_loading) {
       return Column(children: [
         if (_deskHead && _showHead)

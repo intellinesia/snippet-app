@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../api.dart';
+import '../composer/desktop_composer.dart';
 import '../desktop_pick.dart';
 import '../mochi.dart';
 import '../platform.dart';
@@ -306,8 +307,9 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
         await widget.onStart(folder, mode, profile, text);
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() => _startError = '$e'.replaceFirst('Exception: ', ''));
+      }
     } finally {
       if (mounted) setState(() => _starting = false);
     }
@@ -500,24 +502,13 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
         ),
       );
 
-  Widget _sendButton(bool canSend) => Material(
-        color: canSend ? AppColors.accentFill : AppColors.surface3,
-        borderRadius: BorderRadius.circular(R.of(8)),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(R.of(8)),
-          onTap: canSend ? _start : null,
-          child: SizedBox(
-            width: 30,
-            height: 30,
-            child: Center(
-              child: _starting
-                  ? const Spinner(size: 14)
-                  : AppIcon('arrow-up',
-                      size: 15,
-                      color: canSend ? AppColors.accentFg : AppColors.fg3),
-            ),
-          ),
-        ),
+  Widget _sendButton(bool canSend) => DeskActionButton(
+        // The draft has no voice input, so the empty state stays a quiet send.
+        icon: 'arrow-up',
+        tooltip: 'Start session',
+        busy: _starting,
+        on: canSend || _starting,
+        onTap: canSend ? _start : null,
       );
 
   Widget _field(String label, Widget child) => Column(
@@ -660,7 +651,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
           border: InputBorder.none,
           hintText: 'Ask, build, or type / for commands',
           hintStyle: sans(sheet ? 16 : 13.5,
-              color: sheet ? AppColors.fg3 : AppColors.fg4),
+              color: sheet ? AppColors.fg3 : DeskComposerCard.hintColor),
         ),
       );
 
@@ -729,25 +720,30 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
     final text = _starting
         ? (where.isEmpty ? 'Starting' : 'Starting on $where')
         : (where.isEmpty ? 'Choose a folder to start' : where);
-    return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-      if (_starting) ...[
-        const Spinner(size: 11),
-        const SizedBox(width: 6),
-      ] else ...[
-        AgentMochi(_agentId, size: 14),
-        const SizedBox(width: 6),
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (_starting) ...[
+          const Spinner(size: 11),
+          const SizedBox(width: 6),
+        ] else ...[
+          AgentMochi(_agentId, size: 14),
+          const SizedBox(width: 6),
+        ],
+        Text(_agentName, style: sans(12, color: AppColors.fg2)),
+        const SizedBox(width: 10),
+        AppIcon('folder', size: 12, color: AppColors.fg4),
+        const SizedBox(width: 5),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 260),
+          child: Text(text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(12, color: AppColors.fg3)),
+        ),
       ],
-      Text(_agentName, style: sans(12, color: AppColors.fg2)),
-      const SizedBox(width: 10),
-      AppIcon('folder', size: 12, color: AppColors.fg4),
-      const SizedBox(width: 5),
-      Flexible(
-        child: Text(text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: sans(12, color: AppColors.fg3)),
-      ),
-    ]);
+    );
   }
 
   /// While the session opens, the message shows as sent and waits for the agent.
@@ -801,10 +797,10 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                       if (!_starting)
                         Container(
                           padding: EdgeInsets.fromLTRB(
-                              S.of(16), S.of(14), S.of(10), S.s8),
+                              S.of(16), S.of(14), S.of(6), S.s8),
                           decoration: BoxDecoration(
                             color: AppColors.surface1,
-                            borderRadius: BorderRadius.circular(R.of(10)),
+                            borderRadius: BorderRadius.circular(R.of(8)),
                             border: Border.all(color: AppColors.line),
                           ),
                           child: Column(
@@ -817,10 +813,19 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                                 },
                                 child: _messageBox(false),
                               ),
-                              SizedBox(height: S.s8),
+                              SizedBox(height: S.s16),
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
+                                  if (widget.onStartWithFiles != null) ...[
+                                    DeskIconButton('plus',
+                                        size: 28,
+                                        iconSize: 12,
+                                        color: AppColors.fg3,
+                                        tooltip: 'Add context',
+                                        onTap: _addFiles),
+                                    SizedBox(width: S.s4),
+                                  ],
                                   Expanded(
                                     child: Wrap(
                                       spacing: S.s4,
@@ -841,8 +846,12 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                                         ),
                                         if (current != null)
                                           Builder(
-                                            builder: (a) => _chip(
-                                                null, current.name,
+                                            builder: (a) => DeskModelChip(
+                                                icon:
+                                                    'provider:${current.provider}',
+                                                label: current.name,
+                                                effort: deskEffortLabel(
+                                                    current.reasoningEffort),
                                                 onTap: () => _pickProfile(a)),
                                           ),
                                         Builder(
@@ -858,12 +867,6 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                                       ],
                                     ),
                                   ),
-                                  if (widget.onStartWithFiles != null)
-                                    IconBtn('paperclip',
-                                        size: 28,
-                                        iconSize: 15,
-                                        tooltip: 'Add context',
-                                        onTap: _addFiles),
                                   SizedBox(width: S.s4),
                                   _sendButton(canSend),
                                 ],

@@ -19,29 +19,54 @@ BorderRadius groupedSegmentRadius({required bool first, required bool last}) {
 /// A chat card as grouped segments, 2px apart: pass the segments in order and
 /// the first and last round at the group ends.
 class GroupedCard extends StatelessWidget {
-  const GroupedCard({super.key, required this.segments});
+  const GroupedCard({super.key, required this.segments, this.quiet = false});
   final List<Widget> segments;
 
+  /// Capy's chat card: one dim plate with hairlines, not separate heavy tiles.
+  final bool quiet;
+
   @override
-  Widget build(BuildContext context) => Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (var i = 0; i < segments.length; i++)
-            Padding(
-              padding: EdgeInsets.only(top: i == 0 ? 0 : Grouped.gap),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Grouped.row,
-                  borderRadius: groupedSegmentRadius(
-                      first: i == 0, last: i == segments.length - 1),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: segments[i],
-              ),
-            ),
-        ],
+  Widget build(BuildContext context) {
+    if (quiet && !kMobile) {
+      return Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(R.of(9)),
+          border: Border.all(color: AppColors.border),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < segments.length; i++) ...[
+              if (i > 0) Container(height: 1, color: AppColors.paneLine),
+              segments[i],
+            ],
+          ],
+        ),
       );
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < segments.length; i++)
+          Padding(
+            padding: EdgeInsets.only(top: i == 0 ? 0 : Grouped.gap),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Grouped.row,
+                borderRadius: groupedSegmentRadius(
+                    first: i == 0, last: i == segments.length - 1),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: segments[i],
+            ),
+          ),
+      ],
+    );
+  }
 }
 
 /// The header segment: leading line icon, title, sub line, trailing state.
@@ -56,6 +81,7 @@ class GroupedCardHeader extends StatelessWidget {
     this.iconColor,
     this.trailing,
     this.onTap,
+    this.quietInk = false,
   });
 
   final String icon;
@@ -68,6 +94,9 @@ class GroupedCardHeader extends StatelessWidget {
   final Color? iconColor;
   final Widget? trailing;
   final VoidCallback? onTap;
+
+  /// Low-contrast file metadata in Capy's quiet desktop cards.
+  final bool quietInk;
 
   static Widget chevron() =>
       AppIcon('chevron-right', size: Grouped.chevron, color: AppColors.fg3);
@@ -92,7 +121,9 @@ class GroupedCardHeader extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: sans(kMobile ? 16 : 13,
                       height: kMobile ? 22 / 16 : 18 / 13,
-                      color: AppColors.fg1)),
+                      color: quietInk && !kMobile
+                          ? PaneRow.labelOn
+                          : AppColors.fg1)),
               if (sub.isNotEmpty || subLead.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
@@ -109,9 +140,13 @@ class GroupedCardHeader extends StatelessWidget {
                       ]),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(kMobile ? 14 : 13,
-                          height: kMobile ? 20 / 14 : 18 / 13,
-                          color: AppColors.fg3)),
+                      style: sans(kMobile ? 14 : (quietInk ? 12 : 13),
+                          height: kMobile
+                              ? 20 / 14
+                              : (quietInk ? 16 / 12 : 18 / 13),
+                          color: quietInk && !kMobile
+                              ? AppColors.fg4
+                              : AppColors.fg3)),
                 ),
             ],
           ),

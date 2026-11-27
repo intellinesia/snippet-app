@@ -196,7 +196,8 @@ class _SharedArtifactLineState extends State<SharedArtifactLine> {
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: AppColors.surface1,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(color: AppColors.border),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Container(
@@ -221,12 +222,12 @@ class _SharedArtifactLineState extends State<SharedArtifactLine> {
                       style: sans(13,
                           weight: FontWeight.w500,
                           height: 18 / 13,
-                          color: AppColors.fg1)),
+                          color: PaneRow.labelOn)),
                   if (meta.isNotEmpty)
                     Text(meta,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: sans(12, height: 17 / 12, color: AppColors.fg3)),
+                        style: sans(12, height: 16 / 12, color: AppColors.fg4)),
                 ],
               ),
             ),

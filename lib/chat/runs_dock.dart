@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../mochi.dart';
 import '../motion_routes.dart';
+import '../platform.dart';
 import '../tap_detector.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -46,35 +47,74 @@ class RunsDock extends StatelessWidget {
               color: AppColors.surface1,
               borderRadius: BorderRadius.circular(10)),
           child: Row(children: [
-            // Static ring: it never animates, so reduced motion needs no case.
-            SizedBox(
-              width: 16,
-              height: 16,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.fg2, width: 2)),
+            if (kMobile) ...[
+              // Static ring: it never animates, so reduced motion needs no case.
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.fg2, width: 2)),
+                ),
               ),
-            ),
-            const SizedBox(width: 10),
-            Flexible(
-              child: Text('${working.length} working',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(13, weight: W.label, color: AppColors.fg1)),
-            ),
-            const SizedBox(width: 12),
-            SizedBox(
-              height: 22,
-              width: 22.0 + (working.take(3).length - 1).clamp(0, 2) * 14,
-              child: Stack(children: [
-                for (var i = 0; i < working.take(3).length; i++)
-                  Positioned(
-                      left: i * 14.0,
-                      child: AgentMochi(working[i].agentId, size: 22)),
-              ]),
-            ),
-            const Spacer(),
+              const SizedBox(width: 10),
+              Flexible(
+                child: Text('${working.length} working',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13, weight: W.label, color: AppColors.fg1)),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                height: 22,
+                width: 22.0 + (working.take(3).length - 1).clamp(0, 2) * 14,
+                child: Stack(children: [
+                  for (var i = 0; i < working.take(3).length; i++)
+                    Positioned(
+                        left: i * 14.0,
+                        child: AgentMochi(working[i].agentId, size: 22)),
+                ]),
+              ),
+              const Spacer(),
+            ] else
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: Row(children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border:
+                                Border.all(color: AppColors.fg2, width: 2)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text('${working.length} working',
+                        maxLines: 1,
+                        softWrap: false,
+                        style:
+                            sans(13, weight: W.label, color: AppColors.fg1)),
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      height: 22,
+                      width: 22.0 +
+                          (working.take(3).length - 1).clamp(0, 2) * 14,
+                      child: Stack(children: [
+                        for (var i = 0; i < working.take(3).length; i++)
+                          Positioned(
+                              left: i * 14.0,
+                              child:
+                                  AgentMochi(working[i].agentId, size: 22)),
+                      ]),
+                    ),
+                  ]),
+                ),
+              ),
             if (failed > 0 && MediaQuery.textScalerOf(context).scale(10) < 15)
               FailedPill(failed, compact: true, onTap: onOpen),
           ]),

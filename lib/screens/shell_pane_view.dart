@@ -258,7 +258,7 @@ class ReadoutChip extends StatelessWidget {
                 compact ? 8 : S.s12, 0, compact ? 4 : S.s8, 0),
             decoration: BoxDecoration(
               color: active
-                  ? AppColors.surface2
+                  ? (compact ? PaneRow.plate : AppColors.surface2)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(compact ? PaneRow.radius : R.card),
             ),
@@ -267,7 +267,9 @@ class ReadoutChip extends StatelessWidget {
                 children: [
                   AppIcon(tab.icon,
                       size: 14,
-                      color: active ? AppColors.fg1 : AppColors.fg3),
+                      color: active
+                          ? (compact ? PaneRow.labelOn : AppColors.fg1)
+                          : AppColors.fg3),
                   SizedBox(width: S.s8),
                   Flexible(
                     fit: compact ? FlexFit.loose : FlexFit.tight,
@@ -276,7 +278,9 @@ class ReadoutChip extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(compact ? PaneRow.label : 13,
-                          color: active ? AppColors.fg1 : PaneRow.labelOff),
+                          color: active
+                              ? (compact ? PaneRow.labelOn : AppColors.fg1)
+                              : PaneRow.labelOff),
                     ),
                   ),
                   if (pinned)
@@ -372,7 +376,7 @@ class PaneTabChip extends StatelessWidget {
                 compact ? 8 : S.s12, 0, compact ? 4 : S.s8, 0),
             decoration: BoxDecoration(
               color: active
-                  ? AppColors.surface2
+                  ? (compact ? PaneRow.plate : AppColors.surface2)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(compact ? PaneRow.radius : R.card),
             ),
@@ -396,7 +400,9 @@ class PaneTabChip extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(compact ? PaneRow.label : 13,
-                          color: active ? AppColors.fg1 : PaneRow.labelOff),
+                          color: active
+                              ? (compact ? PaneRow.labelOn : AppColors.fg1)
+                              : PaneRow.labelOff),
                     ),
                   ),
                   if (canDismiss) ...[

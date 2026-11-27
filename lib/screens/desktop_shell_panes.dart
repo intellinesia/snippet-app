@@ -45,19 +45,21 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     }
     if (t.isReadout) {
       final origin = t.readoutOrigin;
-      return _withChatHeader(t, Container(
-        key: ValueKey('body-${t.key}'),
-        color: kMobile ? AppColors.pageBg : Colors.transparent,
-        child: _rightTabBody(
-          t.readout!,
-          origin == null ? null : _macSessionStatuses[origin]?.state,
-          origin == null ? null : _macSessionControls[origin],
-          deskTrailing: null,
-          onDeskInfo: t.readout!.isAgent ? _showAgentInfo : null,
-          // The XO-03 header carries the agent; no pinned head inside.
-          onAgentAction: null,
-        ),
-      ));
+      return _withChatHeader(
+          t,
+          Container(
+            key: ValueKey('body-${t.key}'),
+            color: kMobile ? AppColors.pageBg : Colors.transparent,
+            child: _rightTabBody(
+              t.readout!,
+              origin == null ? null : _macSessionStatuses[origin]?.state,
+              origin == null ? null : _macSessionControls[origin],
+              deskTrailing: null,
+              onDeskInfo: t.readout!.isAgent ? _showAgentInfo : null,
+              // The XO-03 header carries the agent; no pinned head inside.
+              onAgentAction: null,
+            ),
+          ));
     }
     if (t.isDraft) {
       return NewSessionDraft(
@@ -157,57 +159,67 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     final info = _sessions?.where((x) => x.id == t.sessionId).firstOrNull;
     // Capy's line under the composer: machine, project and branch.
     return DeskComposerMeta(
-      machine: _active?.label ?? '',
-      project: lastPathSegment(info?.folder ?? t.workspacePath),
-      branch: (info?.branch ?? '').trim(),
-      online: _sessionsError == null,
-      child: LayoutBuilder(builder: (context, box) => SessionScreen(
-      chatHeader: kMobile ? null : _chatHeaderFor(t, box.maxWidth),
-      onTogglePanel: null,
-      onDeskInfo: t.isLead ? _showAgentInfo : null,
-      deskActions: primary
-          ? () => Row(mainAxisSize: MainAxisSize.min, children: _headerTools(t))
-          : null,
-      key: ValueKey('body-${t.key}'),
-      client: t.client,
-      sessionId: t.sessionId!,
-      title: t.title,
-      profile: t.profile,
-      embedded: true,
-      inboundShare: primary ? t.inboundShare : null,
-      onShareConsumed: !primary || t.inboundShare == null
-          ? null
-          : () => _setState(() => t.inboundShare = null),
-      acceptDrops: primary,
-      live: visible,
-      mobileActive: !kMobile ||
-          (_appForeground && !_mobileChatsOpen && _mobileHome.isSessionsHome),
-      onTitle: (title) => _onSessionTitle(t.sessionId!, title),
-      onDeleted: primary ? () => _onSessionDeleted(t.sessionId!) : null,
-      onMenu: kMobile ? _showMobileChats : null,
-      mobileTopBar: kMobile && t.isLead
-          ? (openActions) => _mobileMissionBar(onActions: openActions)
-          : null,
-      onOpenFileTab: (path, name) =>
-          _openFileTab(t.client, t.instanceUrl, path, name),
-      onOpenToolBatch: null,
-      onOpenSession: _openSessionView,
-      onMacStatus: (state, running) =>
-          _setMacSessionStatus(t.key, state, running),
-      onMacControls: !kMobile
-          ? (stop, performAction) =>
-              _setMacSessionControls(t.key, stop, performAction)
-          : null,
-      onGithubReady: !kMobile ? (ok) => _setGithubReady(t.key, ok) : null,
-      onShowPullRequests: !kMobile ? _openPrsTab : null,
-      onTerminalHost:
-          !kMobile ? (host, open) => _setTerminalHost(t.key, host, open) : null,
-      onOpenRightPanel: null,
-      onOpenWorkspace: !kMobile ? _openActiveWorkspace : null,
-      onOpenDiffTab: !kMobile
-          ? (f) => _openDiffTab(t.client, t.instanceUrl, t.sessionId!, f)
-          : null,
-    )));
+        machine: _active?.label ?? '',
+        project: lastPathSegment(info?.folder ?? t.workspacePath),
+        branch: (info?.branch ?? '').trim(),
+        online: _sessionsError == null,
+        child: LayoutBuilder(
+            builder: (context, box) => SessionScreen(
+                  chatHeader: kMobile ? null : _chatHeaderFor(t, box.maxWidth),
+                  onTogglePanel: null,
+                  onDeskInfo: t.isLead ? _showAgentInfo : null,
+                  deskActions: primary
+                      ? () => Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: _headerTools(t))
+                      : null,
+                  key: ValueKey('body-${t.key}'),
+                  client: t.client,
+                  sessionId: t.sessionId!,
+                  title: t.title,
+                  profile: t.profile,
+                  embedded: true,
+                  inboundShare: primary ? t.inboundShare : null,
+                  onShareConsumed: !primary || t.inboundShare == null
+                      ? null
+                      : () => _setState(() => t.inboundShare = null),
+                  acceptDrops: primary,
+                  live: visible,
+                  mobileActive: !kMobile ||
+                      (_appForeground &&
+                          !_mobileChatsOpen &&
+                          _mobileHome.isSessionsHome),
+                  onTitle: (title) => _onSessionTitle(t.sessionId!, title),
+                  onDeleted:
+                      primary ? () => _onSessionDeleted(t.sessionId!) : null,
+                  onMenu: kMobile ? _showMobileChats : null,
+                  mobileTopBar: kMobile && t.isLead
+                      ? (openActions) =>
+                          _mobileMissionBar(onActions: openActions)
+                      : null,
+                  onOpenFileTab: (path, name) =>
+                      _openFileTab(t.client, t.instanceUrl, path, name),
+                  onOpenToolBatch: null,
+                  onOpenSession: _openSessionView,
+                  onMacStatus: (state, running) =>
+                      _setMacSessionStatus(t.key, state, running),
+                  onMacControls: !kMobile
+                      ? (stop, performAction) =>
+                          _setMacSessionControls(t.key, stop, performAction)
+                      : null,
+                  onGithubReady:
+                      !kMobile ? (ok) => _setGithubReady(t.key, ok) : null,
+                  onShowPullRequests: !kMobile ? _openPrsTab : null,
+                  onTerminalHost: !kMobile
+                      ? (host, open) => _setTerminalHost(t.key, host, open)
+                      : null,
+                  onOpenRightPanel: null,
+                  onOpenWorkspace: !kMobile ? _openActiveWorkspace : null,
+                  onOpenDiffTab: !kMobile
+                      ? (f) =>
+                          _openDiffTab(t.client, t.instanceUrl, t.sessionId!, f)
+                      : null,
+                )));
   }
 
   /// Desktop chat tabs (Lead, session, agent, group) sit under the XO-03
@@ -277,7 +289,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           if (s.displayAgentId == agent.id) s
       ];
       return ChatHeaderBar(
-      tabs: _paneTabsFor(t),
+        tabs: _paneTabsFor(t),
         agentIds: [agent.id],
         title: name,
         // State, model and sessions live in the panel's Overview; the row
@@ -286,7 +298,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           Builder(
             builder: (ctx) => IconBtn('plus',
                 size: 28,
-                iconSize: 14,
+                iconSize: 12,
                 tooltip: 'Open a tab',
                 onTap: () => _showAgentAddMenu(ctx, agent.id, sessions)),
           ),
@@ -314,7 +326,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
               id,
       ];
       return ChatHeaderBar(
-      tabs: _paneTabsFor(t),
+        tabs: _paneTabsFor(t),
         agentIds: ids,
         title: (request.title ?? '').trim().isEmpty ? 'Group' : request.title!,
         subtitle: names.isEmpty ? '' : '${names.join(', ')} and you',
@@ -322,7 +334,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           Builder(
             builder: (ctx) => IconBtn('plus',
                 size: 28,
-                iconSize: 14,
+                iconSize: 12,
                 tooltip: 'Open a tab',
                 onTap: () => _showAgentAddMenu(ctx, null, const [])),
           ),
@@ -360,14 +372,13 @@ extension _DesktopShellPanesExt on _DesktopShellState {
 
   /// Chat or the agent's desk work, toggled from the header rather than a
   /// permanent switch in the window bar.
-  Widget _workViewButton(String agentId) =>
-      ValueListenableBuilder<Set<String>>(
+  Widget _workViewButton(String agentId) => ValueListenableBuilder<Set<String>>(
         valueListenable: agentWorkView,
         builder: (_, work, __) {
           final on = work.contains(agentId);
           return IconBtn('layers',
               size: 28,
-              iconSize: 14,
+              iconSize: 12,
               active: on,
               tooltip: on ? 'Back to chat' : 'Show desk work',
               onTap: () => setAgentWorkView(agentId, !on));
@@ -377,14 +388,15 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   /// The agent, Lead or group panel: opened only from the chat header.
   Widget _panelButton(String icon, String what) => IconBtn(icon,
       size: 28,
-      iconSize: 14,
+      iconSize: 12,
       active: !_panelHidden,
       tooltip: _panelHidden ? 'Show $what' : 'Hide $what',
       onTap: _togglePanel);
 
   /// The session panel: docked when the pane is wide enough, else floating.
   Widget _sessionPanelButton(double width) => ListenableBuilder(
-        listenable: Listenable.merge([sessionRailCollapsed, sessionRailFloating]),
+        listenable:
+            Listenable.merge([sessionRailCollapsed, sessionRailFloating]),
         builder: (_, __) {
           final docked = width >= kSessionRailMinColumn;
           final on =
@@ -393,7 +405,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           if (docked && on) return const SizedBox.shrink();
           return IconBtn('sidebar',
               size: 28,
-              iconSize: 14,
+              iconSize: 12,
               active: on,
               tooltip: on ? 'Hide session panel' : 'Show session panel',
               onTap: () {
@@ -590,16 +602,15 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           client: _client,
           sessionId: _activeTab?.sessionId,
           child: KeyedSubtree(
-            key: _panelScopeKey,
-            child: Swap(
-            stateKey: _effectiveSection,
-            fill: true,
-            child: _sidebar(topInset: topInset),
-          )),
+              key: _panelScopeKey,
+              child: Swap(
+                stateKey: _effectiveSection,
+                fill: true,
+                child: _sidebar(topInset: topInset),
+              )),
         ),
         sidebarTop: _sidebarTop(),
         mainHeader: kMobile ? _macWindowBar() : _tabStripBand(),
-        sidebarFooter: kMobile ? null : _sidebarFooter(),
         tabOwnsStrip: _ownsPaneRow,
         leftStripAfter: _sessionStripAdd(),
         leftStripTrailing: _sessionStripTools(),
@@ -960,7 +971,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
                 : sessionRailFloating.value;
             final toggle = IconBtn('sidebar',
                 size: 28,
-                iconSize: 15,
+                iconSize: 12,
                 active: on,
                 tooltip: on ? 'Hide panel' : 'Show panel', onTap: () {
               if (docked) {
@@ -976,7 +987,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
               // Full strip height so the divider meets the panel's below.
               height: double.infinity,
               decoration: BoxDecoration(
-                  border: Border(left: BorderSide(color: AppColors.line))),
+                  border: Border(left: BorderSide(color: AppColors.paneLine))),
               padding: EdgeInsets.only(left: S.s6, right: S.s6),
               child: Row(children: [
                 Builder(
@@ -1043,6 +1054,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       sessionRailPageRequest.value = p;
       if (sessionRailCollapsed.value) setSessionRailCollapsed(false);
     }
+
     showPaneAddMenu(
       ctx,
       title: t.title,
@@ -1394,10 +1406,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   }
 
   Widget _sidebarFooterRow(bool needsYou) {
-    // Capy has no status bar: needs-you, usage and hosts sit here as icons,
-    // the rarer tools behind the more menu.
-    final hostsOnline =
-        _instances.where((i) => _health[i.url] ?? i.url == _active?.url).length;
     final down = _client != null && _sessionsError != null;
     final need = _mcAttentionCount;
     return Padding(
@@ -1427,25 +1435,13 @@ extension _DesktopShellPanesExt on _DesktopShellState {
               ),
             ),
           ),
-        if (_client != null)
-          Builder(
-            builder: (ctx) => _FooterBtn(
-                icon: 'gauge',
-                tooltip: 'Usage',
-                onTap: () => showUsagePopover(ctx, _client!)),
-          ),
-        _FooterBtn(
-            icon: 'server',
-            dot: down
-                ? AppColors.danger
-                : (_sessionsError == null ? AppColors.ok : AppColors.run),
-            tooltip: down
-                ? 'Agent offline, retry'
-                : '$hostsOnline of ${_instances.length} '
-                    '${_instances.length == 1 ? 'host' : 'hosts'} online',
-            onTap: down
-                ? _loadSessions
-                : () => _openShellSettings(SettingsPage.general)),
+        // Capy keeps six quiet icons; the host only shows when it needs action.
+        if (down)
+          _FooterBtn(
+              icon: 'server',
+              dot: AppColors.danger,
+              tooltip: 'Agent offline, retry',
+              onTap: _loadSessions),
         _FooterBtn(
             icon: 'settings',
             tooltip: kMacOS ? 'Settings  Cmd ,' : 'Settings  Ctrl ,',
@@ -1461,13 +1457,23 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   }
 
   Future<void> _footerMore(BuildContext anchor) async {
+    final hostsOnline =
+        _instances.where((i) => _health[i.url] ?? i.url == _active?.url).length;
     final runningTab = _openRunningSessionTab;
     final pick = await showAppMenu<String>(
       context,
       anchor: anchor,
       items: [
         if (_client != null)
-          appMenuItem(value: 'terminal', icon: 'terminal', label: 'New terminal'),
+          appMenuItem(value: 'usagePop', icon: 'gauge', label: 'Usage'),
+        appMenuItem(
+            value: 'hosts',
+            icon: 'server',
+            label: '$hostsOnline of ${_instances.length} '
+                '${_instances.length == 1 ? 'host' : 'hosts'} online'),
+        if (_client != null)
+          appMenuItem(
+              value: 'terminal', icon: 'terminal', label: 'New terminal'),
         if (runningTab != null)
           appMenuItem(
               value: 'locate', icon: 'scan', label: 'Locate running session'),
@@ -1484,6 +1490,12 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     );
     if (!mounted || pick == null) return;
     switch (pick) {
+      case 'usagePop':
+        if (anchor.mounted && _client != null) {
+          showUsagePopover(anchor, _client!);
+        }
+      case 'hosts':
+        _openShellSettings(SettingsPage.general);
       case 'terminal':
         _newGlobalShell();
       case 'locate':

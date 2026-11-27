@@ -93,7 +93,11 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
   Widget _icon() {
     final t = widget.tab;
     final active = widget.isActive;
-    final color = active ? AppColors.fg1 : AppColors.fg3;
+    final color = kMobile
+        ? (active ? AppColors.fg1 : AppColors.fg3)
+        : active
+            ? PaneRow.labelOn
+            : Color.lerp(AppColors.fg3, AppColors.fg4, 0.2)!;
     final groupIds = tabGroupAgentIds(t);
     final hasProvider =
         widget.provider != null && providerLogoAsset(widget.provider) != null;
@@ -208,8 +212,12 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
                           overflow: TextOverflow.ellipsis,
                           style: sans(PaneRow.label,
                               weight: W.body,
-                              color:
-                                  active ? PaneRow.labelOn : PaneRow.labelOff),
+                              color: kMobile
+                                  ? (active ? AppColors.fg1 : AppColors.fg3)
+                                  : active
+                                      ? PaneRow.labelOn
+                                      : Color.lerp(
+                                          AppColors.fg3, AppColors.fg4, 0.2)!),
                         ),
                       ),
                       if (marker != null) ...[
@@ -303,7 +311,9 @@ class MainTabsStrip extends StatefulWidget {
 }
 
 class _MainTabsStripState extends State<MainTabsStrip> {
-  static const _gap = 2.0;
+  static const _regularWidth = 224.0;
+  static double get _gap => kMobile ? 2.0 : 6.0;
+  static double get _fallbackWidth => kMobile ? 168.0 : _regularWidth;
   final _moreKey = GlobalKey();
   // Tabs closed but still shrinking out, with the slot they held.
   final _leaving = <String, (ShellTab, int)>{};
@@ -373,6 +383,7 @@ class _MainTabsStripState extends State<MainTabsStrip> {
   }
 
   double _tabWidth(BuildContext context, ShellTab t) {
+    if (!kMobile && !t.isHome && !t.isLead) return _regularWidth;
     final title = t.isHome
         ? 'Home'
         : t.isLead
@@ -384,7 +395,9 @@ class _MainTabsStripState extends State<MainTabsStrip> {
       textDirection: TextDirection.ltr,
       textScaler: MediaQuery.textScalerOf(context),
     )..layout();
-    return (painter.width + 62).clamp(112.0, 210.0).toDouble();
+    return (painter.width + 62)
+        .clamp(112.0, kMobile ? 210.0 : 160.0)
+        .toDouble();
   }
 
   @override
@@ -394,44 +407,44 @@ class _MainTabsStripState extends State<MainTabsStrip> {
       ..sort((a, b) => fixedRank(a).compareTo(fixedRank(b)));
     final rest = widget.tabs.where((t) => !t.isLead && !t.isHome).toList();
     return LayoutBuilder(builder: (context, box) {
-      const plusW = 28.0 + _gap;
-      const moreW = 40.0 + _gap;
+      final plusW = 28.0 + _gap;
+      final moreW = 40.0 + _gap;
       final naturalWidths = <String, double>{
         for (final t in widget.tabs) t.key: _tabWidth(context, t),
       };
       final fixedW = fixed.fold<double>(
-          0, (sum, t) => sum + (naturalWidths[t.key] ?? 168) + _gap);
+          0, (sum, t) => sum + (naturalWidths[t.key] ?? _fallbackWidth) + _gap);
       final room = box.maxWidth - fixedW - plusW - 6;
 
       double naturalTotal() => rest.fold<double>(
-          0, (sum, t) => sum + (naturalWidths[t.key] ?? 168) + _gap);
+          0, (sum, t) => sum + (naturalWidths[t.key] ?? _fallbackWidth) + _gap);
 
       Map<String, double> widthsFor(double available) {
         final natural = naturalTotal();
         if (rest.isEmpty || natural <= available) return naturalWidths;
         final widthSum = rest.fold<double>(
-            0, (sum, t) => sum + (naturalWidths[t.key] ?? 168));
+            0, (sum, t) => sum + (naturalWidths[t.key] ?? _fallbackWidth));
         final gapSum = rest.length * _gap;
         final scale = ((available - gapSum) / widthSum).clamp(0.0, 1.0);
         return {
           ...naturalWidths,
           for (final t in rest)
-            t.key: ((naturalWidths[t.key] ?? 168) * scale)
-                .clamp(112.0, naturalWidths[t.key] ?? 168)
+            t.key: ((naturalWidths[t.key] ?? _fallbackWidth) * scale)
+                .clamp(112.0, naturalWidths[t.key] ?? _fallbackWidth)
                 .toDouble(),
         };
       }
 
       var displayWidths = widthsFor(room);
       var displayTotal = rest.fold<double>(
-          0, (sum, t) => sum + (displayWidths[t.key] ?? 168) + _gap);
+          0, (sum, t) => sum + (displayWidths[t.key] ?? _fallbackWidth) + _gap);
       final reserveOverflow = displayTotal > room;
       if (reserveOverflow) {
         displayWidths = widthsFor(room - moreW);
-        displayTotal = rest.fold<double>(
-            0, (sum, t) => sum + (displayWidths[t.key] ?? 168) + _gap);
+        displayTotal = rest.fold<double>(0,
+            (sum, t) => sum + (displayWidths[t.key] ?? _fallbackWidth) + _gap);
       }
-      double widthOf(ShellTab t) => displayWidths[t.key] ?? 168;
+      double widthOf(ShellTab t) => displayWidths[t.key] ?? _fallbackWidth;
 
       List<ShellTab> visible = [];
       List<ShellTab> hidden = [];
@@ -470,7 +483,7 @@ class _MainTabsStripState extends State<MainTabsStrip> {
             if (mounted) setState(() => _leaving.remove(t.key));
           },
           child: Padding(
-            padding: const EdgeInsets.only(right: _gap),
+            padding: EdgeInsets.only(right: _gap),
             child: Align(
               alignment: Alignment.centerLeft,
               child: TopWorkspaceTabChip(
@@ -513,7 +526,7 @@ class _MainTabsStripState extends State<MainTabsStrip> {
               ...shown,
               if (overflow)
                 Padding(
-                  padding: const EdgeInsets.only(right: _gap),
+                  padding: EdgeInsets.only(right: _gap),
                   child: _MoreButton(
                     key: _moreKey,
                     count: hidden.length,
