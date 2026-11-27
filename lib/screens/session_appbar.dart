@@ -387,7 +387,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         client: widget.client, session: widget.sessionId, status: status);
   }
 
-  void _openDeliverables() {
+  void _openDeliverables({String? initialArtifactId}) {
     final files = <({String path, String caption})>[
       for (final e in _state?.events ?? const <Map<String, dynamic>>[])
         if (e['kind'] == 'file_presented')
@@ -403,14 +403,15 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
                 client: widget.client,
                 session: widget.sessionId,
                 files: files,
+                initialSelectedId: initialArtifactId,
                 onOpenFileTab: widget.onOpenFileTab,
                 onClose: close,
               ));
       return;
     }
     presentScreen(context,
-        style: PanelStyle.drawer,
-        maxWidth: 560,
+        style: PanelStyle.dialog,
+        maxWidth: 1120,
         purpose: ShellPanelPurpose.deliverables,
         originClient: widget.client,
         originSessionId: widget.sessionId,
@@ -418,6 +419,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
               client: widget.client,
               session: widget.sessionId,
               files: files,
+              initialSelectedId: initialArtifactId,
               onOpenFileTab: widget.onOpenFileTab,
               onClose: close,
             ));
@@ -1322,6 +1324,8 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       onFork: mc || widget.readOnly ? null : () => _confirmFork(null),
       onCompact: _confirmCompact,
       onDeliverables: mc ? null : _openDeliverables,
+      onOpenArtifact:
+          mc ? null : (id) => _openDeliverables(initialArtifactId: id),
       onRecurring: _openRecurring,
       onDelete: mc || widget.readOnly || _inboxAgentId(widget.sessionId) != null
           ? null

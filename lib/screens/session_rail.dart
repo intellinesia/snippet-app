@@ -144,6 +144,7 @@ class SessionRail extends StatefulWidget {
     this.onFork,
     this.onCompact,
     this.onDeliverables,
+    this.onOpenArtifact,
     this.onRecurring,
     this.onDelete,
     this.onAnswer,
@@ -203,6 +204,7 @@ class SessionRail extends StatefulWidget {
   final VoidCallback? onFork;
   final VoidCallback? onCompact;
   final VoidCallback? onDeliverables;
+  final void Function(String artifactId)? onOpenArtifact;
   final VoidCallback? onRecurring;
   final VoidCallback? onDelete;
 

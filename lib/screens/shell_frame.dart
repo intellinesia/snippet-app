@@ -77,21 +77,11 @@ class ShellTitleRow extends StatelessWidget {
 
   Widget _full(double width) => Row(
         children: [
-          // "Snippet" starts after the window-control gutter; the toggle follows.
           SizedBox(
-              width: reserveWindowControls ? kShellWindowControlsWidth : 16),
-          SizedBox(
-            // Shrinks first when the column is dragged narrow.
-            width: (width -
-                    (reserveWindowControls ? kShellWindowControlsWidth : 16) -
-                    3 * 28 -
-                    6)
-                .clamp(0.0, reserveWindowControls ? 116.0 : 122.0),
-            // The brand sits in the sidebar's own row below.
-            child: const SizedBox.shrink(),
-          ),
-          _toggle(),
+              width: reserveWindowControls ? kShellWindowControlsWidth : 10),
           const Spacer(),
+          _toggle(),
+          const SizedBox(width: 2),
           ShellFrameButton(
             icon: 'chevron-left',
             tooltip: 'Back',

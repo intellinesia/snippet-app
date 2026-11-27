@@ -621,7 +621,9 @@ extension _RailPages on _SessionRailState {
     final meta = n > 1 ? '$kind, $n versions' : kind;
     return TapDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: widget.onDeliverables,
+      onTap: () => widget.onOpenArtifact != null
+          ? widget.onOpenArtifact!(a.id)
+          : widget.onDeliverables?.call(),
       child: Padding(
         padding: const EdgeInsets.only(bottom: 14),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [

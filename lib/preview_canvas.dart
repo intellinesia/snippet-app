@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import 'api.dart';
 import 'media_views.dart' show baseName;
+import 'platform.dart';
 import 'screens/file_viewer.dart' show downloadRemoteFile;
 import 'tap_detector.dart';
 import 'theme.dart';
@@ -180,17 +181,14 @@ class _PreviewCanvasState extends State<_PreviewCanvas> {
     );
   }
 
-  /// Blurred app, a dim wash and a faint dot grid. A click on it closes.
+  /// Clean dimmed backdrop behind the image. A click on it closes.
   Widget _ground() => TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: _close,
         child: ClipRect(
           child: BackdropFilter(
-            filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-            child: CustomPaint(
-              foregroundPainter: _DotGrid(AppColors.fg1.withValues(alpha: 0.06)),
-              child: ColoredBox(color: AppColors.bg.withValues(alpha: 0.84)),
-            ),
+            filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+            child: ColoredBox(color: AppColors.bg.withValues(alpha: 0.90)),
           ),
         ),
       );
@@ -209,7 +207,7 @@ class _PreviewCanvasState extends State<_PreviewCanvas> {
         behavior: HitTestBehavior.opaque,
         onTap: _close,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(88, 76, 88, 96),
+          padding: const EdgeInsets.fromLTRB(56, 64, 56, 36),
           child: Center(
             child: GestureDetector(
               onTap: () {},
@@ -280,64 +278,45 @@ class _PreviewCanvasState extends State<_PreviewCanvas> {
     final name = baseName(_path);
     return [
       Positioned(
-        left: 20,
-        top: 18,
-        child: _Pill(children: [
-          AppIcon('image', size: 13, color: AppColors.fg3),
-          const SizedBox(width: 8),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Text(name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sans(12.5, weight: W.label, color: AppColors.fg1)),
-          ),
-          if (_many) ...[
-            const SizedBox(width: 10),
-            Text('${_index + 1} of ${widget.images.length}',
-                style: sans(12, color: AppColors.fg3, tabular: true)),
-          ],
-        ]),
-      ),
-      Positioned(
-        right: 20,
-        top: 18,
-        child: _Round('x', tooltip: 'Close (Esc)', onTap: _close),
-      ),
-      if (_many) ...[
-        Positioned(
-          left: 20,
-          top: 0,
-          bottom: 0,
-          child: Center(
-              child: _Round('chevron-left',
-                  tooltip: 'Previous', onTap: () => _go(-1))),
-        ),
-        Positioned(
-          right: 20,
-          top: 0,
-          bottom: 0,
-          child: Center(
-              child: _Round('chevron-right',
-                  tooltip: 'Next', onTap: () => _go(1))),
-        ),
-      ],
-      Positioned(
         left: 0,
         right: 0,
-        bottom: 22,
-        child: Center(
-          child: _Pill(padding: 4, children: [
+        top: 0,
+        child: Container(
+          height: 44,
+          padding: EdgeInsets.fromLTRB(kMacOS ? 84 : 16, 0, 12, 0),
+          decoration: BoxDecoration(
+            color: AppColors.surface1.withValues(alpha: 0.94),
+            border: Border(bottom: BorderSide(color: AppColors.border)),
+          ),
+          child: Row(children: [
+            AppIcon('image', size: 14, color: AppColors.fg3),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Row(children: [
+                Flexible(
+                  child: Text(name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12.5, weight: W.label, color: AppColors.fg1)),
+                ),
+                if (_many) ...[
+                  const SizedBox(width: 10),
+                  Text('${_index + 1} of ${widget.images.length}',
+                      style: sans(11.5, color: AppColors.fg3, tabular: true)),
+                ],
+              ]),
+            ),
+            const SizedBox(width: 12),
             _Tool('minus',
                 tooltip: 'Zoom out', onTap: () => _zoomTo(_scale / 1.25)),
             SizedBox(
-              width: 52,
+              width: 46,
               child: TapDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: _fit,
                 child: Text('${(_scale * 100).round()}%',
                     textAlign: TextAlign.center,
-                    style: sans(12, color: AppColors.fg2, tabular: true)),
+                    style: sans(11.5, color: AppColors.fg2, tabular: true)),
               ),
             ),
             _Tool('plus',
@@ -346,9 +325,29 @@ class _PreviewCanvasState extends State<_PreviewCanvas> {
             const _Rule(),
             _Tool('copy', tooltip: 'Copy path', onTap: _copyPath),
             _Tool('download', tooltip: 'Download', onTap: _download),
+            const _Rule(),
+            _Tool('x', tooltip: 'Close (Esc)', onTap: _close),
           ]),
         ),
       ),
+      if (_many) ...[
+        Positioned(
+          left: 16,
+          top: 44,
+          bottom: 0,
+          child: Center(
+              child: _Round('chevron-left',
+                  tooltip: 'Previous', onTap: () => _go(-1))),
+        ),
+        Positioned(
+          right: 16,
+          top: 44,
+          bottom: 0,
+          child: Center(
+              child: _Round('chevron-right',
+                  tooltip: 'Next', onTap: () => _go(1))),
+        ),
+      ],
     ];
   }
 }

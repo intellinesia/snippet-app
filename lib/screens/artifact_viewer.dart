@@ -1771,6 +1771,7 @@ class SessionDeliverables extends StatefulWidget {
     required this.client,
     required this.session,
     required this.files,
+    this.initialSelectedId,
     this.onOpenFileTab,
     this.onClose,
   });
@@ -1778,6 +1779,7 @@ class SessionDeliverables extends StatefulWidget {
   final DaemonClient client;
   final String session;
   final List<({String path, String caption})> files;
+  final String? initialSelectedId;
   final void Function(String path, String name)? onOpenFileTab;
   final VoidCallback? onClose;
 
@@ -1788,7 +1790,7 @@ class SessionDeliverables extends StatefulWidget {
 class _SessionDeliverablesState extends State<SessionDeliverables> {
   List<ArtifactInfo>? _artifacts;
   String? _error;
-  String? _selected;
+  late String? _selected = widget.initialSelectedId;
   bool _dismissed = false;
   Timer? _poll;
   int _loadSeq = 0;
@@ -1972,13 +1974,19 @@ class _SessionDeliverablesState extends State<SessionDeliverables> {
                               )
                             : _quietEmpty())
                         : !kMobile
-                            ? ArtifactGrid(
-                                client: widget.client,
-                                session: widget.session,
-                                artifacts: artifacts,
-                                files: files,
-                                onOpenFileTab: widget.onOpenFileTab,
-                                showHeader: ShellPanelRoot.inPanel(context),
+                            ? LayoutBuilder(
+                                builder: (context, box) =>
+                                    box.maxWidth >= 720 && artifacts.isNotEmpty
+                                        ? _split(artifacts, files, box.maxWidth)
+                                        : ArtifactGrid(
+                                            client: widget.client,
+                                            session: widget.session,
+                                            artifacts: artifacts,
+                                            files: files,
+                                            onOpenFileTab: widget.onOpenFileTab,
+                                            showHeader:
+                                                ShellPanelRoot.inPanel(context),
+                                          ),
                               )
                             : ArtifactCollection(
                                 client: widget.client,
