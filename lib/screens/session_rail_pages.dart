@@ -290,13 +290,20 @@ extension _RailPages on _SessionRailState {
         ? fileChanges(sessionChangeSteps(s?.events ?? const []))
         : const <FileChange>[];
     var adds = 0, dels = 0;
-    for (final f in gitFiles) {
-      if (_lineCounts['${f.path}|${f.staged}|${f.unstaged}'] case (
-            final a,
-            final r
-          )) {
-        adds += a;
-        dels += r;
+    if (gitFiles.isNotEmpty) {
+      for (final f in gitFiles) {
+        if (_lineCounts['${f.path}|${f.staged}|${f.unstaged}'] case (
+              final a,
+              final r
+            )) {
+          adds += a;
+          dels += r;
+        }
+      }
+    } else {
+      for (final f in fallbackFiles) {
+        adds += f.added;
+        dels += f.removed;
       }
     }
     final nFiles = gitFiles.isNotEmpty ? gitFiles.length : fallbackFiles.length;
@@ -317,11 +324,13 @@ extension _RailPages on _SessionRailState {
                     overflow: TextOverflow.ellipsis,
                     style: mono(12, color: AppColors.fg1)),
               ),
-              if (counts case (final a, final r)) ...[
+              if (counts case (final a, final r) when a > 0 || r > 0) ...[
                 const SizedBox(width: 8),
-                Text('+$a', style: mono(12, color: AppColors.ok)),
-                const SizedBox(width: 6),
-                Text('−$r', style: mono(12, color: AppColors.danger)),
+                if (a > 0)
+                  Text('+$a', style: mono(11.5, color: AppColors.diffAddFg)),
+                if (a > 0 && r > 0) const SizedBox(width: 6),
+                if (r > 0)
+                  Text('−$r', style: mono(11.5, color: AppColors.diffDelFg)),
               ],
             ]),
           ),
@@ -395,7 +404,9 @@ extension _RailPages on _SessionRailState {
                         : _go('changes'))
             else if (fallbackFiles.isNotEmpty)
               for (final f in fallbackFiles.take(6))
-                fileRow(f.path, onTap: () => _go('changes'))
+                fileRow(f.path,
+                    counts: (f.added, f.removed),
+                    onTap: () => _go('changes'))
             else
               Text('No changes yet.', style: sans(12, color: AppColors.fg3)),
             if (_artifacts.isNotEmpty) ...[
@@ -440,12 +451,15 @@ extension _RailPages on _SessionRailState {
             ),
             if (meta != null)
               Text(meta, style: sans(12, color: AppColors.fg3, tabular: true)),
-            if (adds case (final a, final r)) ...[
-              const SizedBox(width: 6),
-              Text('+$a', style: sans(12, color: AppColors.ok, tabular: true)),
-              const SizedBox(width: 4),
-              Text('−$r',
-                  style: sans(12, color: AppColors.danger, tabular: true)),
+            if (adds case (final a, final r) when a > 0 || r > 0) ...[
+              const SizedBox(width: 8),
+              if (a > 0)
+                Text('+$a',
+                    style: mono(11.5, color: AppColors.diffAddFg)),
+              if (a > 0 && r > 0) const SizedBox(width: 5),
+              if (r > 0)
+                Text('−$r',
+                    style: mono(11.5, color: AppColors.diffDelFg)),
             ],
           ]),
         ),

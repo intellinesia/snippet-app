@@ -282,7 +282,7 @@ class _SessionRailState extends State<SessionRail> {
     final git = _git;
     if (git == null || !git.ok) return;
     final sessionId = widget.sessionId;
-    for (final f in git.files.take(5)) {
+    for (final f in git.files.take(6)) {
       final key = '${f.path}|${f.staged}|${f.unstaged}';
       if (_lineCounts.containsKey(key)) continue;
       try {
