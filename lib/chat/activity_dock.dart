@@ -23,20 +23,6 @@ class DockRun {
 bool stepFailedOut(ToolStep s) =>
     !s.running && (s.failed || verifyOutputFailed(s));
 
-/// Quiet rule: failures count only when the run ends on one; a failure a
-/// later step got past is already behind us.
-int runFailures(Iterable<ToolStep> steps) {
-  final done = steps.where((s) => !s.running).toList();
-  if (done.isNotEmpty && !stepFailedOut(done.last)) return 0;
-  return steps.where(stepFailedOut).length;
-}
-
-/// Index of the first failed step, so a tap on "1 failed" lands on it.
-int? firstFailure(List<ToolStep> steps) {
-  final i = steps.indexWhere(stepFailedOut);
-  return i < 0 ? null : i;
-}
-
 class RunRing extends StatelessWidget {
   const RunRing({
     super.key,
@@ -92,45 +78,6 @@ class _RingPainter extends CustomPainter {
       old.stroke != stroke;
 }
 
-class FailedPill extends StatelessWidget {
-  const FailedPill(this.count, {super.key, this.onTap, this.compact = false});
-  final int count;
-  final bool compact;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) => TapDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        // 44pt transparent hit area around the 24/28pt visual.
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
-          child: Center(
-            widthFactor: 1,
-            heightFactor: 1,
-            child: Container(
-              constraints: BoxConstraints(minHeight: compact ? 24 : 28),
-              padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 12),
-              decoration: BoxDecoration(
-                  color: AppColors.surface3,
-                  borderRadius: BorderRadius.circular(compact ? 12 : 14)),
-              child: Center(
-                widthFactor: 1,
-                heightFactor: 1,
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  AppIcon('x', size: compact ? 16 : 14, color: AppColors.fg1),
-                  const SizedBox(width: 6),
-                  Text('$count failed',
-                      style: sans(compact ? 11.5 : 14,
-                          weight: W.label, color: AppColors.fg1)),
-                ]),
-              ),
-            ),
-          ),
-        ),
-      );
-}
-
 /// The live capsule: the agent's mascot hopping, the current step, its clock.
 class ActivityDock extends StatefulWidget {
   const ActivityDock({
@@ -173,27 +120,22 @@ class _ActivityDockState extends State<ActivityDock> {
     final steps = widget.run.batch.steps;
     if (steps.isEmpty) return const SizedBox.shrink();
     final live = steps.where((s) => s.running).toList();
-    final failed = runFailures(steps);
     final elapsed = DateTime.now().difference(widget.run.startedAt);
     final clock = formatWorkDuration(
         Duration(seconds: elapsed.inSeconds < 0 ? 0 : elapsed.inSeconds));
     final step = live.isNotEmpty ? liveStepText(live.last) : '';
     if (!kMobile) {
-      // XO-01: a floating 28pt s2 pill. It reads its state in words and never
-      // becomes a bar; failure uses x + fg1, not a colour flood.
+      // XO-01: a floating 28pt s2 pill. Failed steps along the way are routine
+      // and never change its state.
       final agent = widget.agentId.isEmpty ? 'Agent' : widget.agentId;
-      final label = failed > 0
-          ? '$failed failed: $agent'
-          : step.isEmpty
-              ? '$agent running $clock'
-              : '$agent running $clock';
+      final label = '$agent running $clock';
       return Semantics(
         button: true,
-        label: failed > 0 ? label : 'Running, $step',
+        label: 'Running, $step',
         excludeSemantics: true,
         child: TapDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: () => widget.onOpen(failed > 0 ? firstFailure(steps) : null),
+          onTap: () => widget.onOpen(null),
           child: Container(
             height: 28,
             padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -205,19 +147,13 @@ class _ActivityDockState extends State<ActivityDock> {
               SizedBox(
                 width: 14,
                 height: 14,
-                child: Center(
-                  child: failed > 0
-                      ? AppIcon('x', size: 13, color: AppColors.fg1)
-                      : Spinner(size: 12, color: AppColors.fg1),
-                ),
+                child: Center(child: Spinner(size: 12, color: AppColors.fg2)),
               ),
               const SizedBox(width: 7),
               Text(label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(12.5,
-                      color: failed > 0 ? AppColors.fg1 : AppColors.fg2,
-                      tabular: true)),
+                  style: sans(12.5, color: AppColors.fg2, tabular: true)),
             ]),
           ),
         ),
@@ -226,16 +162,14 @@ class _ActivityDockState extends State<ActivityDock> {
     // XO-03: a floating surface-2 pill, sized to its content rather than a
     // transcript-width bar. It reads state in words and never uses amber/red.
     final agent = widget.agentId.isEmpty ? 'Agent' : widget.agentId;
-    final label = failed > 0
-        ? '$failed failed: $agent'
-        : '$agent running $clock';
+    final label = '$agent running $clock';
     return Semantics(
       button: true,
-      label: failed > 0 ? label : 'Running, $step',
+      label: 'Running, $step',
       excludeSemantics: true,
       child: TapDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () => widget.onOpen(failed > 0 ? firstFailure(steps) : null),
+        onTap: () => widget.onOpen(null),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 236),
           child: Container(
@@ -249,20 +183,14 @@ class _ActivityDockState extends State<ActivityDock> {
               SizedBox(
                 width: 14,
                 height: 14,
-                child: Center(
-                  child: failed > 0
-                      ? AppIcon('x', size: 13, color: AppColors.fg1)
-                      : Spinner(size: 12, color: AppColors.fg1),
-                ),
+                child: Center(child: Spinner(size: 12, color: AppColors.fg2)),
               ),
               const SizedBox(width: 7),
               Flexible(
                 child: Text(label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(12.5,
-                        color: failed > 0 ? AppColors.fg1 : AppColors.fg2,
-                        tabular: true)),
+                    style: sans(12.5, color: AppColors.fg2, tabular: true)),
               ),
               const SizedBox(width: 6),
               AppIcon('chevron-right', size: 14, color: AppColors.fg3),
@@ -293,8 +221,6 @@ class ActivityPill extends StatelessWidget {
   Widget build(BuildContext context) {
     Theme.of(context);
     final t = took ?? stepsDuration(steps);
-    var failed = runFailures(steps);
-    if (failed == 0 && steps.any((x) => !x.running && x.failed)) failed = 1;
     if (!kMobile) {
       return TapDetector(
         behavior: HitTestBehavior.opaque,
@@ -307,8 +233,7 @@ class ActivityPill extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            AppIcon(failed > 0 ? 'x' : 'check',
-                size: 13, color: failed > 0 ? AppColors.fg1 : AppColors.fg3),
+            AppIcon('check', size: 13, color: AppColors.fg3),
             const SizedBox(width: 7),
             Flexible(
               child: Text(describeWork(steps).text,
@@ -320,10 +245,6 @@ class ActivityPill extends StatelessWidget {
               const SizedBox(width: 8),
               Text(formatWorkDuration(t),
                   style: mono(11, color: AppColors.fg3)),
-            ],
-            if (failed > 0) ...[
-              const SizedBox(width: 8),
-              Text('$failed failed', style: sans(12, color: AppColors.fg1)),
             ],
           ]),
         ),
@@ -338,8 +259,7 @@ class ActivityPill extends StatelessWidget {
         decoration: BoxDecoration(
             color: AppColors.surface1, borderRadius: BorderRadius.circular(10)),
         child: Row(children: [
-          AppIcon(failed > 0 ? 'alert-triangle' : 'terminal',
-              size: 16, color: failed > 0 ? AppColors.fg1 : AppColors.fg2),
+          AppIcon('terminal', size: 16, color: AppColors.fg2),
           const SizedBox(width: 10),
           Expanded(
             child: Text(describeWork(steps).text,
@@ -351,11 +271,6 @@ class ActivityPill extends StatelessWidget {
             const SizedBox(width: 10),
             Text(formatWorkDuration(t),
                 style: sans(12, color: AppColors.fg3, tabular: true)),
-          ],
-          if (failed > 0) ...[
-            const SizedBox(width: 10),
-            FailedPill(failed,
-                compact: true, onTap: () => onOpen(firstFailure(steps))),
           ],
           const SizedBox(width: 6),
           AppIcon('chevron-right', size: 16, color: AppColors.fg3),

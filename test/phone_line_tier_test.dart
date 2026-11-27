@@ -22,7 +22,7 @@ Widget _host(Widget child) => MaterialApp(
 void main() {
   setUp(() => debugDefaultTargetPlatformOverride = TargetPlatform.android);
 
-  testWidgets('phone work line is a flat 48pt line and reports a failure',
+  testWidgets('phone work line is a flat 48pt line and keeps failures quiet',
       (t) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     await t.pumpWidget(_host(WorkLine(
@@ -32,12 +32,12 @@ void main() {
         onTap: () {},
         took: const Duration(seconds: 42))));
     expect(find.textContaining('Worked for 42s'), findsOneWidget);
-    expect(find.textContaining('failed', findRichText: true), findsOneWidget);
+    expect(find.textContaining('failed', findRichText: true), findsNothing);
     expect(t.getSize(find.byType(WorkLine)).height, 48);
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('collapsed activity pill shows the failure state', (t) async {
+  testWidgets('collapsed activity pill does not call out failures', (t) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     var opened = false;
     await t.pumpWidget(_host(ActivityPill(
@@ -45,7 +45,7 @@ void main() {
         agentId: 'snippet',
         took: const Duration(seconds: 42),
         onOpen: (_) => opened = true)));
-    expect(find.textContaining('failed'), findsOneWidget);
+    expect(find.textContaining('failed'), findsNothing);
     await t.tap(find.byType(ActivityPill));
     expect(opened, isTrue);
     debugDefaultTargetPlatformOverride = null;

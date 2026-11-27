@@ -52,9 +52,7 @@ List<InlineSpan> workSpans(WorkSummary w, TextStyle base) {
   if (outcome != null) {
     spans.add(TextSpan(
         text: ' $outcome',
-        style: base.copyWith(
-            color: w.failed ? AppColors.fg1 : AppColors.fg2,
-            fontWeight: w.failed ? W.label : null)));
+        style: base.copyWith(color: AppColors.fg2)));
   }
   return spans;
 }
@@ -128,26 +126,6 @@ class _SpinnerPainter extends CustomPainter {
       old.head != head || old.track != track;
 }
 
-/// The phrase for a failing step: "3 tests failed" for a test run, else its chip.
-String? _failureNote(List<ToolStep> steps) {
-  // Quiet rule: only a run that ends on a failure reports it.
-  final finished = steps.where((s) => !s.running).toList();
-  if (finished.isNotEmpty &&
-      !(finished.last.failed || verifyOutputFailed(finished.last))) {
-    return null;
-  }
-  for (final s in steps) {
-    if (!(s.failed || verifyOutputFailed(s))) continue;
-    final text = stepChip(s)?.text ?? 'failed';
-    final count = RegExp(r'(\d+) failed').firstMatch(text)?.group(1);
-    if (count != null && stepCommand(s)?.kind == CommandKind.test) {
-      return '$count ${count == '1' ? 'test' : 'tests'} failed';
-    }
-    return text;
-  }
-  return null;
-}
-
 /// The fold line of a finished run of tool calls: "Worked for 38s", flush
 /// left with the text, then any failure note; tap to open.
 /// Open, a thin rule runs out to the right. Running, it names the live step.
@@ -187,12 +165,6 @@ class WorkLine extends StatelessWidget {
           text: took != null
               ? 'Worked for ${formatWorkDuration(took)}'
               : 'Worked');
-      final note = _failureNote(steps);
-      if (note != null) {
-        spans.add(TextSpan(
-            text: ' · $note',
-            style: style.copyWith(color: AppColors.fg1, fontWeight: W.label)));
-      }
     }
     Widget rule() => Expanded(
           child: open
@@ -455,11 +427,9 @@ class _DenseToolRowState extends State<DenseToolRow> {
 
   bool get _isCommand => toolBaseName(widget.tool) == 'bash';
 
-  // A failed step, and a command still running, start open until the reader
-  // says otherwise.
-  bool get _autoOpen =>
-      stepChip(_step)?.tone == StepChipTone.danger ||
-      (_isCommand && widget.pending);
+  // A command still running starts open; a failed one stays folded like any
+  // other step.
+  bool get _autoOpen => _isCommand && widget.pending;
 
   bool get _open => !_touched && _autoOpen ? true : (widget.open ?? _localOpen);
 
@@ -637,18 +607,12 @@ class _TerminalBlockState extends State<TerminalBlock> {
             for (var i = 0; i < outShown.length; i++)
               TextSpan(children: [
                 if (i > 0) const TextSpan(text: '\n'),
-                ansiOutputSpan(
-                    outShown[i],
-                    errorLineMarker.hasMatch(outShown[i])
-                        ? base.copyWith(
-                            color: AppColors.fg1, fontWeight: W.label)
-                        : base),
+                ansiOutputSpan(outShown[i], base),
               ]),
             for (var i = 0; i < errShown.length; i++)
               TextSpan(children: [
                 if (outShown.isNotEmpty || i > 0) const TextSpan(text: '\n'),
-                ansiOutputSpan(errShown[i],
-                    base.copyWith(color: AppColors.fg1, fontWeight: W.label)),
+                ansiOutputSpan(errShown[i], base),
               ]),
           ]));
     final exit = step.exitCode;
@@ -778,7 +742,7 @@ class _TerminalBlockState extends State<TerminalBlock> {
                     ),
                     child: Text(badge.$1,
                         style: sans(11,
-                            color: badge.$2 ? AppColors.fg1 : AppColors.fg2,
+                            color: AppColors.fg3,
                             tabular: true)),
                   ),
                 if (kMobile) ...[

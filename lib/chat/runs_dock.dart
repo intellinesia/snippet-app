@@ -6,7 +6,6 @@ import '../platform.dart';
 import '../tap_detector.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import 'activity_dock.dart' show FailedPill;
 
 /// One agent's run as the phone dock and sheet show it.
 class RunLine {
@@ -31,10 +30,9 @@ class RunsDock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final working = runs.where((r) => r.state == 'Working').toList();
-    final failed = runs.where((r) => r.failed).length;
     return Semantics(
       button: true,
-      label: '${working.length} working${failed > 0 ? ', $failed failed' : ''}',
+      label: '${working.length} working',
       excludeSemantics: true,
       child: TapDetector(
         behavior: HitTestBehavior.opaque,
@@ -115,8 +113,6 @@ class RunsDock extends StatelessWidget {
                   ]),
                 ),
               ),
-            if (failed > 0 && MediaQuery.textScalerOf(context).scale(10) < 15)
-              FailedPill(failed, compact: true, onTap: onOpen),
           ]),
         ),
       ),

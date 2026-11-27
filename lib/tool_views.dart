@@ -608,9 +608,7 @@ List<Widget> _bashView(Map? a, Map? d, {required bool running, String? error}) {
       final comment = l.trimLeft().startsWith('#');
       line(
           l,
-          errorLineMarker.hasMatch(l)
-              ? (kMobile ? AppColors.danger : AppColors.fg1)
-              : comment
+          comment
                   ? AppColors.fg3
                   : (kMobile ? AppColors.fg2 : AppColors.fg1));
     }
@@ -618,7 +616,7 @@ List<Widget> _bashView(Map? a, Map? d, {required bool running, String? error}) {
   if (stderr.isNotEmpty) {
     if (stdout.isNotEmpty) spans.add(const TextSpan(text: '\n'));
     for (final l in stderr.split('\n')) {
-      line(l, kMobile ? AppColors.danger : AppColors.fg1);
+      line(l, kMobile ? AppColors.fg2 : AppColors.fg1);
     }
   }
   final command = cmdSpans.isEmpty

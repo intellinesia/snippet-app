@@ -365,7 +365,7 @@ enum _Tone { neutral, ok, bad, run }
 
 (Color bg, Color fg) _toneColors(_Tone t) => switch (t) {
       _Tone.ok => (AppColors.okBg, AppColors.ok),
-      _Tone.bad => (AppColors.surface3, AppColors.fg1),
+      _Tone.bad => (AppColors.surface3, AppColors.fg2),
       _Tone.run => (AppColors.surface3, AppColors.fg2),
       _Tone.neutral => (AppColors.surface3, AppColors.fg2),
     };
@@ -520,7 +520,7 @@ class _StepRow extends StatelessWidget {
           style: sans(13.5,
               color: switch (chip.tone) {
                 StepChipTone.ok => AppColors.ok,
-                StepChipTone.danger => AppColors.fg1,
+                StepChipTone.danger => AppColors.fg3,
                 StepChipTone.neutral => AppColors.fg3,
               },
               tabular: true));
@@ -634,8 +634,7 @@ class _GroupRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final live = steps.any((s) => s.running);
-    final failed = steps.any(stepFailedOut);
-    final tone = live ? _Tone.run : (failed ? _Tone.bad : _Tone.neutral);
+    final tone = live ? _Tone.run : _Tone.neutral;
     String title;
     String sub;
     Widget? meta;
@@ -668,7 +667,6 @@ class _GroupRow extends StatelessWidget {
       ].join(', ');
     }
     if (!kMobile) {
-      final bad = failed;
       return TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
@@ -683,9 +681,7 @@ class _GroupRow extends StatelessWidget {
                 child: Center(
                   child: live
                       ? Spinner(size: 13, color: AppColors.fg2)
-                      : AppIcon(bad ? 'x' : 'check',
-                          size: bad ? 14 : 13,
-                          color: bad ? AppColors.fg1 : AppColors.fg3),
+                      : AppIcon('check', size: 13, color: AppColors.fg3),
                 ),
               ),
               const SizedBox(width: 8),
@@ -696,7 +692,7 @@ class _GroupRow extends StatelessWidget {
                         text: title,
                         style: TextStyle(
                             color:
-                                live || bad ? AppColors.fg1 : AppColors.fg2)),
+                                live ? AppColors.fg1 : AppColors.fg2)),
                     if (sub.isNotEmpty)
                       TextSpan(
                           text: ' $sub',

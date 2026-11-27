@@ -222,7 +222,6 @@ class _LedgerLineState extends State<LedgerLine> {
   Widget build(BuildContext context) {
     Theme.of(context);
     final phrases = ledgerPhrases(widget.steps);
-    final bad = widget.steps.any(_stepFailed);
     final took = widget.took ?? stepsDuration(widget.steps);
     final base = sans(kMobile ? 13 : 12,
         height: kMobile ? 1.45 : 17 / 12,
@@ -284,9 +283,8 @@ class _LedgerLineState extends State<LedgerLine> {
                         width: 14,
                         height: 14,
                         child: Center(
-                          child: AppIcon(bad ? 'x' : 'check',
-                              size: bad ? 14 : 13,
-                              color: bad ? AppColors.fg1 : AppColors.fg3),
+                          child:
+                              AppIcon('check', size: 13, color: AppColors.fg3),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -377,9 +375,8 @@ class _LedgerLineState extends State<LedgerLine> {
                 child: Padding(
                   padding: const EdgeInsets.only(right: 8),
                   // Line tier: one fg2 icon, never a colour face or a red mark.
-                  child: AppIcon(bad ? 'alert-triangle' : 'terminal',
-                      size: kMobile ? 16 : 14,
-                      color: bad ? AppColors.fg1 : AppColors.fg2),
+                  child: AppIcon('terminal',
+                      size: kMobile ? 16 : 14, color: AppColors.fg2),
                 ),
               ),
               Expanded(
@@ -508,11 +505,6 @@ class _PhraseTargetState extends State<_PhraseTarget> {
                   decoration: TextDecoration.none,
                 ),
               ),
-              if (p.failNote != null)
-                TextSpan(
-                    text: ' ${p.failNote}',
-                    style: widget.style.copyWith(
-                        color: AppColors.fg1, fontWeight: FontWeight.w500)),
             ])),
           ),
         ),
@@ -575,14 +567,14 @@ class _PopRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 6),
         child: Row(children: [
           AppIcon(_iconFor(_kindOf(step).$1),
-              size: 13, color: bad ? AppColors.fg1 : AppColors.fg3),
+              size: 13, color: AppColors.fg3),
           const SizedBox(width: 8),
           Flexible(
             child: Text(target.isEmpty ? liveStepText(step) : target,
                 maxLines: 1,
                 softWrap: false,
                 overflow: TextOverflow.ellipsis,
-                style: mono(11.5, color: bad ? AppColors.fg1 : AppColors.fg1)),
+                style: mono(11.5, color: bad ? AppColors.fg2 : AppColors.fg1)),
           ),
           if (meta != null) ...[
             const SizedBox(width: 12),

@@ -40,7 +40,7 @@ class ToolCallRow extends StatelessWidget {
       return Spinner(size: 13, color: AppColors.fg2);
     }
     if (failed(step)) {
-      return AppIcon('x', size: 14, color: AppColors.fg1);
+      return AppIcon('x', size: 13, color: AppColors.fg3);
     }
     if (step.result != null) {
       return AppIcon('check', size: 13, color: AppColors.fg3);
@@ -70,9 +70,8 @@ class ToolCallRow extends StatelessWidget {
 
   static InlineSpan titleSpan(ToolStep step) {
     final running = step.running;
-    final bad = failed(step);
     final (verb, object) = toolSentenceParts(step, running: running);
-    final verbColor = running || bad ? AppColors.fg1 : AppColors.fg2;
+    final verbColor = running ? AppColors.fg1 : AppColors.fg2;
     return TextSpan(children: [
       TextSpan(text: verb, style: TextStyle(color: verbColor)),
       if (object.isNotEmpty)
@@ -80,8 +79,8 @@ class ToolCallRow extends StatelessWidget {
           text: ' $object',
           style: _monoSubject(step)
               ? mono(kMobile ? 12.5 : 12,
-                  color: kMobile || running || bad ? AppColors.fg1 : AppColors.fg2)
-              : TextStyle(color: running || bad ? AppColors.fg1 : AppColors.fg2),
+                  color: kMobile || running ? AppColors.fg1 : AppColors.fg2)
+              : TextStyle(color: running ? AppColors.fg1 : AppColors.fg2),
         ),
     ]);
   }
@@ -239,7 +238,6 @@ class ToolCallSubRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bad = ToolCallRow.failed(step);
     final duration = stepDuration(step);
     return TapDetector(
       behavior: HitTestBehavior.opaque,
@@ -270,7 +268,7 @@ class ToolCallSubRow extends StatelessWidget {
                 toolCallResultLine(step),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: sans(11.5, color: bad ? AppColors.fg1 : AppColors.fg3),
+                style: sans(11.5, color: AppColors.fg3),
               ),
             ),
             if (duration != null) ...[
@@ -366,7 +364,6 @@ class _ToolCallGroupState extends State<ToolCallGroup> {
     final steps = widget.steps;
     if (steps.isEmpty) return const SizedBox.shrink();
     final running = steps.any((s) => s.running);
-    final bad = steps.any(ToolCallRow.failed);
     final took = stepsDuration(steps);
     // ToolCallRow derives its title from one step; a group paints the same
     // geometry directly so the summary can describe every step.
@@ -384,9 +381,7 @@ class _ToolCallGroupState extends State<ToolCallGroup> {
               child: Center(
                 child: running
                     ? Spinner(size: 13, color: AppColors.fg2)
-                    : AppIcon(bad ? 'x' : 'check',
-                        size: bad ? 14 : 13,
-                        color: bad ? AppColors.fg1 : AppColors.fg3),
+                    : AppIcon('check', size: 13, color: AppColors.fg3),
               ),
             ),
             const SizedBox(width: 8),
@@ -396,7 +391,7 @@ class _ToolCallGroupState extends State<ToolCallGroup> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: sans(12,
-                    color: running || bad ? AppColors.fg1 : AppColors.fg2),
+                    color: running ? AppColors.fg1 : AppColors.fg2),
               ),
             ),
             if (took != null) ...[
