@@ -336,55 +336,6 @@ final _quietLight = _palette(
   diffDelBg: const Color(0xFFF7E7E5),
 );
 
-// High contrast: pure black or white, a 6E6E6A or 5C5C57 line, same layout.
-final _hcDark = _palette(
-  name: 'hc-dark',
-  label: 'High contrast dark',
-  bg: const Color(0xFF000000),
-  surface1: const Color(0xFF121212),
-  surface2: const Color(0xFF1E1E1E),
-  surface3: const Color(0xFF2E2E2E),
-  border: const Color(0xFF6E6E6A),
-  border2: const Color(0xFF8A8A86),
-  accent: const Color(0xFFFFFFFF),
-  accentFg: const Color(0xFF000000),
-  fg1: const Color(0xFFFFFFFF),
-  fg2: const Color(0xFFE6E6E2),
-  fg3: const Color(0xFFCFCFCA),
-  fg4: const Color(0xFFA3A39E),
-  ok: const Color(0xFFFFFFFF),
-  run: const Color(0xFFFFC24D),
-  danger: const Color(0xFFFFA49C),
-  diffAddFg: const Color(0xFFA6E3B8),
-  diffDelFg: const Color(0xFFFFA49C),
-  diffAddBg: const Color(0xFF0E1F14),
-  diffDelBg: const Color(0xFF24100E),
-);
-
-final _hcLight = _palette(
-  name: 'hc-light',
-  label: 'High contrast light',
-  bg: const Color(0xFFFFFFFF),
-  surface1: const Color(0xFFFFFFFF),
-  surface2: const Color(0xFFEBEBE6),
-  surface3: const Color(0xFFD9D9D3),
-  border: const Color(0xFF5C5C57),
-  border2: const Color(0xFF3B3B38),
-  accent: const Color(0xFF000000),
-  accentFg: const Color(0xFFFFFFFF),
-  fg1: const Color(0xFF000000),
-  fg2: const Color(0xFF1F1F1D),
-  fg3: const Color(0xFF383835),
-  fg4: const Color(0xFF5C5C57),
-  ok: const Color(0xFF000000),
-  run: const Color(0xFF6B4300),
-  danger: const Color(0xFF8A1C14),
-  diffAddFg: const Color(0xFF1F5A35),
-  diffDelFg: const Color(0xFF8A1C14),
-  diffAddBg: const Color(0xFFE3F2E7),
-  diffDelBg: const Color(0xFFFBE3E0),
-);
-
 // Ink: near-black monochrome with a rationed indigo accent (Linear).
 final _ink = _palette(
   name: 'ink',
@@ -527,8 +478,8 @@ final _oled = _palette(
   runBg: const Color(0xFF2F291C),
 );
 
-/// Ten presets: the Quiet pair, six flat design palettes, then the
-/// high-contrast pair last. System is a mode, not a palette.
+/// Eight presets: the Quiet pair, then six flat design palettes. System is a
+/// mode, not a palette.
 final List<ThemePreset> allPresets = [
   _quiet,
   _quietLight,
@@ -538,8 +489,6 @@ final List<ThemePreset> allPresets = [
   _paper,
   _graphite,
   _oled,
-  _hcDark,
-  _hcLight,
 ];
 
 /// Each palette's counterpart across the brightness axis.
@@ -552,9 +501,10 @@ const Map<String, String> themePairs = {
   'paper': 'graphite',
   'graphite': 'paper',
   'oled': 'mist',
-  'hc-dark': 'hc-light',
-  'hc-light': 'hc-dark',
 };
+
+/// Palettes that no longer ship; a saved one falls back to Quiet.
+const _retiredThemes = {'white', 'hc-dark', 'hc-light'};
 
 // Interim: Ink/Mist default pending the user's decision.
 const String systemDark = 'quiet';
@@ -957,7 +907,7 @@ class ThemeManager extends ChangeNotifier {
         if (decoded is Map<String, dynamic>) {
           final cached =
               ResolvedTheme.fromJson(decoded, fallbackPreset: _quiet);
-          if (cached.id != 'white') {
+          if (!_retiredThemes.contains(cached.id)) {
             _resolved = cached;
             _activeId = cached.id;
             notifyListeners();
@@ -979,7 +929,8 @@ class ThemeManager extends ChangeNotifier {
 
   // Local only until the daemon theme store ships; the cache is what init restores.
   Future<void> _commit(ResolvedTheme next) async {
-    final safe = next.id == 'white' ? ResolvedTheme.fromPreset(_quiet) : next;
+    final safe =
+        _retiredThemes.contains(next.id) ? ResolvedTheme.fromPreset(_quiet) : next;
     _resolved = safe;
     _activeId = safe.id;
     notifyListeners();

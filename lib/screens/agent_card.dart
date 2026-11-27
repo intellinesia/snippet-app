@@ -545,7 +545,7 @@ class _AgentCardState extends State<AgentCard> {
         _actions(null);
       },
       onSecondaryTapUp: (d) => _actions(d.globalPosition),
-      avatar: AgentMochi(agent.id, size: kMobile ? 28 : 22),
+      avatar: AgentMochi(agent.id, size: 28),
       working: running,
       name: name,
       pinned: _isPinned,
@@ -560,7 +560,6 @@ class _AgentCardState extends State<AgentCard> {
       expanded: widget.expanded,
       expandable: widget.expandable,
       onToggleExpansion: widget.onToggleExpansion,
-      compact: !kMobile,
     );
   }
 }
@@ -598,7 +597,7 @@ class AgentRowShell extends StatefulWidget {
     this.onLongPress,
     this.onSecondaryTapUp,
     this.wideAvatar = false,
-    this.compact = true,
+    this.compact = false,
     this.tint,
     this.avatarFor,
     this.statusKind,

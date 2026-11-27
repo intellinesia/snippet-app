@@ -33,8 +33,8 @@ void main() {
 
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  test('allPresets has ten entries in spec order', () {
-    expect(allPresets.length, 10);
+  test('allPresets has eight entries in spec order', () {
+    expect(allPresets.length, 8);
     expect(allPresets.map((p) => p.name).toList(), [
       'quiet',
       'quiet-light',
@@ -44,8 +44,6 @@ void main() {
       'paper',
       'graphite',
       'oled',
-      'hc-dark',
-      'hc-light',
     ]);
     expect(allPresets.map((p) => p.label).toList().sublist(2, 8),
         ['Ink', 'Mist', 'Slate Navy', 'Paper', 'Graphite', 'OLED']);

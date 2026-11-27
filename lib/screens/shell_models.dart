@@ -454,6 +454,15 @@ class RightTab {
           ShellPanelPurpose.changes => 'file-diff',
           ShellPanelPurpose.git => 'git-branch',
           ShellPanelPurpose.task || ShellPanelPurpose.tasks => 'task',
+          ShellPanelPurpose.agent => switch (request!.id.split(':').last) {
+              'inbox' => 'inbox',
+              'board' => 'kanban',
+              'memory' => 'book',
+              'wakes' => 'clock',
+              'reach' => 'send',
+              'model' => 'cpu',
+              _ => 'layers',
+            },
           _ => 'layers',
         }
       : tools != null

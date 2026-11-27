@@ -363,6 +363,26 @@ class _DesktopShellState extends State<DesktopShell>
         request.showSide = _showAgentInfo;
         request.toggleSide = _togglePanel;
       }
+      final root = _activeTab;
+      if (request.purpose == ShellPanelPurpose.agent &&
+          root != null &&
+          _activeAgent != null) {
+        // Agent pages are tabs in that agent's own panel, scoped to its tab.
+        final existing =
+            _rightTabs.where((t) => t.key == request.key).firstOrNull;
+        final tab = existing ??
+            _RightTab.request(request, originTabKey: root.key);
+        tab
+          ..originTabKey = root.key
+          ..pane = _Pane.right;
+        setState(() {
+          if (existing == null) _rightTabs.add(tab);
+          _rightCollapsed = false;
+          _agentPanelHidden = false;
+          _activeKey[_Pane.right] = tab.key;
+        });
+        return tab.request!.dismissed.future;
+      }
       _openReadoutTab(
           _RightTab.request(request, originTabKey: _activeTab?.key));
       return request.dismissed.future;
@@ -807,7 +827,11 @@ class _DesktopShellState extends State<DesktopShell>
     _recordTabHistory();
     final currentKey = _activeTab?.key;
     final stale = _rightTabs
-        .where((r) => r.originTabKey != null && r.originTabKey != currentKey)
+        .where((r) =>
+            r.originTabKey != null &&
+            r.originTabKey != currentKey &&
+            // Desktop keeps each screen's panel tabs until that screen closes.
+            (kMobile || !_tabs.any((t) => t.key == r.originTabKey)))
         .toList();
     if (stale.isNotEmpty) {
       for (final r in stale) {

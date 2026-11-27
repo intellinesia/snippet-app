@@ -379,8 +379,6 @@ class DeskMachineLine extends StatelessWidget {
                 BoxDecoration(shape: BoxShape.circle, color: AppColors.ok),
           ),
         ],
-        const SizedBox(width: 4),
-        AppIcon('chevron-up', size: 11, color: AppColors.fg4),
       ]),
     );
   }

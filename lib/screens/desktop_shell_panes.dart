@@ -627,7 +627,13 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         rightCollapsed: _rightCollapsed,
         leftTabs: _tabsIn(_Pane.left),
         rightTabs: _tabsIn(_Pane.right),
-        readouts: _rightTabs,
+        // Readouts belong to the screen that opened them; none carry over.
+        readouts: [
+          for (final r in _rightTabs)
+            if (r.originTabKey == _activeTab?.key ||
+                (kMobile && r.originTabKey == null))
+              r
+        ],
         activeKey: _activeKey,
         focusedPane: _focusedPane,
         statusForTab: _statusForTab,
@@ -760,7 +766,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     final tabReadouts = [
       for (final r in _rightTabs)
         if (r.pane == _Pane.right &&
-            (r.originTabKey == null || r.originTabKey == tab.key))
+            (r.originTabKey == tab.key ||
+                (kMobile && r.originTabKey == null)))
           r
     ];
     if (agent != null) {

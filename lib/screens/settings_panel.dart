@@ -2672,13 +2672,11 @@ class AppearanceScreen extends StatelessWidget {
         final tm = ThemeManager.instance;
         final effectiveClient = client;
 
-        // Five choices, no palette gallery: System, then the four palettes.
+        // Three choices, no palette gallery: System, then the Quiet pair.
         final themeRows = <(String, String, String?)>[
           ('System', 'Quiet light or dark, following this device', null),
           ('Quiet Light', 'Paper and graphite', 'quiet-light'),
           ('Quiet Dark', 'Warm graphite, grey, amber only for needs you', 'quiet'),
-          ('High contrast dark', 'Black, white text, a strong line', 'hc-dark'),
-          ('High contrast light', 'White, black text, a strong line', 'hc-light'),
         ];
         final paletteChildren = <Widget>[
           for (final (label, sub, id) in themeRows)
@@ -2749,8 +2747,6 @@ class AppearanceScreen extends StatelessWidget {
         final tiles = <(String, String)>[
           ('quiet', 'Quiet'),
           ('quiet-light', 'Quiet Light'),
-          ('hc-dark', 'High contrast'),
-          ('hc-light', 'High contrast light'),
         ];
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

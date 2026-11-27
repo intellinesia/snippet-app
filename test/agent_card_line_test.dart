@@ -227,7 +227,7 @@ void main() {
   });
 
   testWidgets(
-      'desktop working rows stay one compact line and mark the avatar live',
+      'desktop working rows preview the last message, not the running session',
       (t) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     final a = _agent(
@@ -255,7 +255,7 @@ void main() {
     await t.pump();
 
     expect(find.text('Quiet Build QA'), findsNothing);
-    expect(find.text('Old direct message'), findsNothing);
+    expect(find.text('Old direct message'), findsOneWidget);
     expect(find.byType(Spinner), findsNothing);
     expect(find.byKey(const ValueKey('agent-live-dot')), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;

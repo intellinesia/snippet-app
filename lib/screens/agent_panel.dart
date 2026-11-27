@@ -382,8 +382,8 @@ class AgentSidePanel extends StatelessWidget {
       ctx,
       title: agentName,
       views: [
-        e('inbox', 'inbox', 'Inbox'),
-        e('board', 'kanban', 'Board'),
+        if (!lead) e('inbox', 'inbox', 'Inbox'),
+        if (!lead) e('board', 'kanban', 'Board'),
         e('memory', 'book', 'Memory'),
         e('wakes', 'clock', 'Wakes'),
         if (!lead) e('reach', 'send', 'Reach'),
@@ -435,8 +435,11 @@ class AgentSidePanel extends StatelessWidget {
                       name: agentName,
                       agent: agent,
                       docked: true,
-                      onOpenInbox: () => onAction('inbox'),
-                      onOpenBoard: () => onAction('board'),
+                      // Lead has no inbox or board of its own.
+                      onOpenInbox:
+                          agentId == 'lead' ? null : () => onAction('inbox'),
+                      onOpenBoard:
+                          agentId == 'lead' ? null : () => onAction('board'),
                       onOpenDesk: () => onAction('desk'),
                       onOpenMemory: () => onAction('memory'),
                       onClose: onHide,
