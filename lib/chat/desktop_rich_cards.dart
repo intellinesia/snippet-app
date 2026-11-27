@@ -262,6 +262,7 @@ class DesktopVoiceNoteRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface1,
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -578,9 +579,11 @@ class _DesktopPastedTextCardState extends State<DesktopPastedTextCard> {
     final shown = lines.take(shownCount).join('\n');
     return Container(
       constraints: const BoxConstraints(maxWidth: 460),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: AppColors.surface1,
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -616,8 +619,9 @@ class _DesktopPastedTextCardState extends State<DesktopPastedTextCard> {
               width: double.infinity,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: AppColors.surface2,
+                color: AppColors.bg,
                 borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: AppColors.border),
               ),
               child: Text(shown,
                   maxLines: shownCount,
@@ -703,8 +707,9 @@ class DesktopLinkPreviewCard extends StatelessWidget {
             clipBehavior: Clip.antiAlias,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: AppColors.surface3,
+              color: AppColors.surface2,
               borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: AppColors.border),
             ),
             child: favicon == null
                 ? AppIcon('globe', size: 16, color: AppColors.fg2)
@@ -742,8 +747,12 @@ class DesktopLinkPreviewCard extends StatelessWidget {
         ]),
     };
     return Material(
-      color: AppColors.surface2,
-      borderRadius: BorderRadius.circular(8),
+      color: AppColors.surface1,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: AppColors.border),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
@@ -774,8 +783,9 @@ class DesktopDraftBlock extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: 460),
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: AppColors.surface2,
+          color: AppColors.surface1,
           borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.border),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -844,15 +854,17 @@ class _DesktopCodeBlockCardState extends State<DesktopCodeBlockCard> {
       width: double.infinity,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: AppColors.surface2,
+        color: AppColors.bg,
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(
+          Container(
             height: 28,
+            color: AppColors.surface1,
             child: Padding(
               padding: const EdgeInsets.only(left: 10, right: 2),
               child: Row(children: [
@@ -1038,8 +1050,12 @@ class _DesktopMarkdownDiffCardState extends State<DesktopMarkdownDiffCard> {
     );
     if (!_expanded) {
       return Material(
-        color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(8),
+        color: AppColors.surface1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: BorderSide(color: AppColors.border),
+        ),
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => setState(() => _expanded = true),
           borderRadius: BorderRadius.circular(8),
@@ -1060,8 +1076,9 @@ class _DesktopMarkdownDiffCardState extends State<DesktopMarkdownDiffCard> {
       width: double.infinity,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: AppColors.surface2,
+        color: AppColors.surface1,
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         header,
@@ -1237,6 +1254,7 @@ class DesktopPullRequestCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface1,
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(children: [
         AppIcon('pull-request', size: 15, color: AppColors.fg2),
@@ -1358,10 +1376,14 @@ class DesktopCommitCard extends StatelessWidget {
         )
       : Material(
         color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(6),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: BorderSide(color: AppColors.border),
+        ),
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onOpen,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(8),
           child: SizedBox(
             height: 32,
             child: Padding(
@@ -1418,6 +1440,7 @@ class _DesktopVoiceTranscriptCardState
         decoration: BoxDecoration(
           color: AppColors.surface1,
           borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.border),
         ),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           InkWell(

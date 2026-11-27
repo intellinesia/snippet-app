@@ -165,7 +165,10 @@ class PresentedFileCard extends StatelessWidget {
     final sub = caption.isNotEmpty ? caption : _kindLabel;
     return Material(
       color: AppColors.surface1,
-      borderRadius: BorderRadius.circular(7),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: AppColors.border),
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => _open(context),
@@ -224,10 +227,13 @@ class PresentedFileCard extends StatelessWidget {
   /// Desktop: one 30pt TC row in the tool rows' language, not a big card.
   Widget _deskRow(BuildContext context) {
     final meta = [_kindLabel, if (caption.isNotEmpty) caption].join(' · ');
-    final radius = BorderRadius.circular(7);
+    final radius = BorderRadius.circular(8);
     return Material(
       color: AppColors.surface1,
-      borderRadius: radius,
+      shape: RoundedRectangleBorder(
+        borderRadius: radius,
+        side: BorderSide(color: AppColors.border),
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => _open(context),
