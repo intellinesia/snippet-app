@@ -496,7 +496,7 @@ class _PrMarkdownComposerState extends State<PrMarkdownComposer> {
             ),
           ]),
         ),
-        Container(height: 1, color: kMobile ? AppColors.border : AppColors.paneLine),
+        Container(height: AppColors.hairline, color: kMobile ? AppColors.border : AppColors.paneLine),
         if (_preview)
           Container(
             constraints: BoxConstraints(minHeight: widget.minLines * 22.0 + 20),
@@ -524,7 +524,7 @@ class _PrMarkdownComposerState extends State<PrMarkdownComposer> {
             ),
           ),
         if (widget.footer != null) ...[
-          Container(height: 1, color: kMobile ? AppColors.border : AppColors.paneLine),
+          Container(height: AppColors.hairline, color: kMobile ? AppColors.border : AppColors.paneLine),
           Padding(padding: EdgeInsets.fromLTRB(S.s8, S.s6, S.s8, S.s6), child: widget.footer),
         ] else
           Padding(
@@ -2880,10 +2880,10 @@ class _PrThreadBoxState extends State<PrThreadBox>
           ),
         ),
         if (_open) ...[
-          Container(height: 1, color: kMobile ? AppColors.border : AppColors.paneLine),
+          Container(height: AppColors.hairline, color: kMobile ? AppColors.border : AppColors.paneLine),
           for (var i = 0; i < t.comments.length; i++) _comment(t.comments[i], first: i == 0),
           SizedBox(height: S.of(10)),
-          Container(height: 1, color: kMobile ? AppColors.border : AppColors.paneLine),
+          Container(height: AppColors.hairline, color: kMobile ? AppColors.border : AppColors.paneLine),
           if (_replying)
             Padding(
               padding: EdgeInsets.all(S.of(10)),

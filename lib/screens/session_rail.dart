@@ -525,7 +525,7 @@ class _SessionRailState extends State<SessionRail> {
             : Container(
                 width: outer,
                 decoration: BoxDecoration(
-                    border: Border(left: BorderSide(color: AppColors.paneSeam))),
+                    border: Border(left: BorderSide(color: AppColors.paneSeam, width: AppColors.hairline))),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -1751,7 +1751,7 @@ class _RailCardState extends State<_RailCard> {
                   ? AppColors.surface2
                   : AppColors.surface1,
               borderRadius: BorderRadius.circular(R.of(9)),
-              border: Border.all(color: AppColors.paneLine),
+              border: Border.all(color: AppColors.paneLine, width: AppColors.hairline),
             ),
             child: widget.child,
           ),

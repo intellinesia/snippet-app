@@ -51,7 +51,7 @@ class _GroupRailState extends State<GroupRail> {
     return Container(
       decoration: BoxDecoration(
           border:
-              Border(left: BorderSide(color: AppColors.paneLine))),
+              Border(left: BorderSide(color: AppColors.paneLine, width: AppColors.hairline))),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
         children: [

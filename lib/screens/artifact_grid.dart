@@ -239,7 +239,7 @@ class _ArtifactGridState extends State<ArtifactGrid> {
           height: PaneRow.height,
         padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
         decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: AppColors.paneLine))),
+            border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline))),
         child: Row(children: [
           AppIcon('layers', size: PaneRow.icon, color: AppColors.fg3),
           const SizedBox(width: 8),

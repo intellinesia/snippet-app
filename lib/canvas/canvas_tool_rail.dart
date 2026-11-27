@@ -32,7 +32,7 @@ class CanvasToolRail extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surface1,
           borderRadius: BorderRadius.circular(R.of(10)),
-          border: Border.all(color: AppColors.paneLine),
+          border: Border.all(color: AppColors.paneLine, width: AppColors.hairline),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

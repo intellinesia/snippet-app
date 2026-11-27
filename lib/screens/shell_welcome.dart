@@ -322,7 +322,7 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
           decoration: BoxDecoration(
             color: AppColors.bg,
             borderRadius: BorderRadius.circular(R.of(7)),
-            border: Border.all(color: AppColors.paneLine),
+            border: Border.all(color: AppColors.paneLine, width: AppColors.hairline),
           ),
           child: TextField(
             controller: _paste,
@@ -419,7 +419,7 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
                   decoration: BoxDecoration(
                     color: AppColors.surface1,
                     borderRadius: BorderRadius.circular(R.of(10)),
-                    border: Border.all(color: AppColors.paneLine),
+                    border: Border.all(color: AppColors.paneLine, width: AppColors.hairline),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -433,7 +433,7 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
                       _localControls(),
                       Padding(
                         padding: EdgeInsets.symmetric(vertical: S.s16),
-                        child: Container(height: 1, color: AppColors.paneLine),
+                        child: Container(height: AppColors.hairline, color: AppColors.paneLine),
                       ),
                       _sectionTitle('On another computer'),
                       _sectionBody('Already running Snippet on a server or '
@@ -646,7 +646,7 @@ class _CommandBox extends StatelessWidget {
           color: AppColors.bg,
           borderRadius: BorderRadius.circular(kMobile ? R.sm : R.of(7)),
           border:
-              Border.all(color: kMobile ? AppColors.border : AppColors.paneLine),
+              Border.all(color: kMobile ? AppColors.border : AppColors.paneLine, width: AppColors.hairline),
         ),
         child: Row(children: [
           Expanded(

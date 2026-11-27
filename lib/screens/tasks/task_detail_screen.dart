@@ -794,7 +794,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         decoration: BoxDecoration(
           color: kMobile ? color.withValues(alpha: 0.13) : Grouped.card,
           border:
-              kMobile ? null : Border.all(color: AppColors.paneLine),
+              kMobile ? null : Border.all(color: AppColors.paneLine, width: AppColors.hairline),
           borderRadius: BorderRadius.circular(R.of(5)),
         ),
         child: Text(label,

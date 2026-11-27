@@ -261,7 +261,7 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
         decoration: kMobile
             ? null
             : BoxDecoration(
-                border: Border(bottom: BorderSide(color: AppColors.paneLine))),
+                border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline))),
         child: Row(children: [
           _tabChip('changes', files.isEmpty ? 'Changes' : 'Changes  ${files.length}'),
           _tabChip('prs', 'Pull requests'),

@@ -144,7 +144,7 @@ class _FileToolbar extends StatelessWidget {
         decoration: kMobile
             ? null
             : BoxDecoration(
-                border: Border(bottom: BorderSide(color: AppColors.paneLine))),
+                border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline))),
         child: Row(children: [
           ...leading,
           const Spacer(),
@@ -1315,7 +1315,7 @@ class _HeaderButton extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10),
             decoration: BoxDecoration(
               color: AppColors.tint1,
-              border: Border.all(color: AppColors.paneLine),
+              border: Border.all(color: AppColors.paneLine, width: AppColors.hairline),
               borderRadius: BorderRadius.circular(PaneRow.radius),
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -1388,7 +1388,7 @@ class _FileHeaderBarState extends State<_FileHeaderBar> {
       height: PaneRow.height,
       padding: const EdgeInsets.fromLTRB(12, 0, 8, 0),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.paneLine)),
+        border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline)),
       ),
       child: Row(children: [
         ...leading,
@@ -1450,7 +1450,7 @@ class _FileStatusBar extends StatelessWidget {
           height: 28,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: AppColors.paneLine))),
+              border: Border(top: BorderSide(color: AppColors.paneLine, width: AppColors.hairline))),
           child: Row(children: [
             Text(language, style: t),
             const SizedBox(width: 16),

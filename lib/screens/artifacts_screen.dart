@@ -307,7 +307,7 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
               padding: const EdgeInsets.fromLTRB(10, 0, 8, 0),
               decoration: BoxDecoration(
                   border:
-                      Border(bottom: BorderSide(color: AppColors.paneLine))),
+                      Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline))),
               child: Row(children: [
                 if (Navigator.of(context).canPop()) ...[
                   IconBtn('chevron-left',

@@ -293,7 +293,7 @@ class _PrListPanelState extends State<PrListPanel> {
           height: PaneRow.height,
           padding: const EdgeInsets.fromLTRB(10, 0, 8, 0),
           decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: AppColors.paneLine))),
+              border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline))),
           child: Row(children: [
             AppIcon('pull-request', size: PaneRow.icon, color: AppColors.fg3),
             const SizedBox(width: 8),
@@ -509,7 +509,7 @@ class _DesktopPullRequestsState extends State<DesktopPullRequests> {
     final list = Container(
       decoration: BoxDecoration(
         color: AppColors.paneBg,
-        border: Border(right: BorderSide(color: AppColors.paneLine)),
+        border: Border(right: BorderSide(color: AppColors.paneLine, width: AppColors.hairline)),
       ),
       child: PrListPanel(
         client: widget.client,
@@ -753,7 +753,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
         height: PaneRow.height,
         padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
         decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: AppColors.paneLine))),
+            border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline))),
         child: Row(children: [
           if (widget.listHidden && widget.onToggleList != null) ...[
             IconBtn('sidebar',
@@ -823,7 +823,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
         height: PaneRow.height,
         padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
         decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: AppColors.paneLine))),
+            border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline))),
         child: LayoutBuilder(builder: (context, box) {
           final conversation = pr.timeline
               .where((e) => e.kind != PrEventKind.commit)
@@ -997,7 +997,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
             if (line)
               Positioned.fill(
                 child: Center(
-                    child: Container(width: 1, color: AppColors.paneLine)),
+                    child: Container(width: AppColors.hairline, color: AppColors.paneLine)),
               ),
             Padding(
               padding: EdgeInsets.only(top: S.s2),
@@ -1172,7 +1172,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
         ),
         child: Column(children: [
           for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0) Container(height: 1, color: AppColors.paneLine),
+            if (i > 0) Container(height: AppColors.hairline, color: AppColors.paneLine),
             rows[i],
           ],
         ]),

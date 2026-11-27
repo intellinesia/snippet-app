@@ -79,8 +79,7 @@ List<SessionInfo> recentHomeSessions(Iterable<SessionInfo> sessions) {
   return out;
 }
 
-/// Desktop Home: needs-you cards, a compact crew readout, recent sessions,
-/// and the pinned start composer.
+/// Desktop Home: who needs you, who is working, who is free, recent sessions.
 class DesktopHome extends StatefulWidget {
   const DesktopHome({
     super.key,
@@ -89,10 +88,7 @@ class DesktopHome extends StatefulWidget {
     required this.onOpenSession,
     required this.onOpenAgent,
     required this.onRefresh,
-    required this.onStart,
     required this.onOpenAllSessions,
-    this.profileLabel,
-    this.projectLabel,
   });
 
   final DaemonClient client;
@@ -100,10 +96,7 @@ class DesktopHome extends StatefulWidget {
   final void Function(SessionInfo s) onOpenSession;
   final void Function(CoordinationAgent a) onOpenAgent;
   final VoidCallback onRefresh;
-  final void Function(String text, {String? agentId, String? folder}) onStart;
   final VoidCallback onOpenAllSessions;
-  final String? profileLabel;
-  final String? projectLabel;
 
   @override
   State<DesktopHome> createState() => _DesktopHomeState();
@@ -137,7 +130,6 @@ class _DesktopHomeState extends State<DesktopHome> {
   List<CoordinationAgent> _agents = const [];
   final Set<String> _busy = {};
   List<GroupSummary> _groups = const [];
-  final FocusNode _composerFocus = FocusNode();
 
   @override
   void initState() {
@@ -148,12 +140,6 @@ class _DesktopHomeState extends State<DesktopHome> {
     widget.client.groups().then((g) {
       if (mounted) setState(() => _groups = g);
     }).catchError((_) {});
-  }
-
-  @override
-  void dispose() {
-    _composerFocus.dispose();
-    super.dispose();
   }
 
   /// Strips raw backticks, markdown links and internal UUIDs/ids from row subs.
@@ -206,22 +192,13 @@ class _DesktopHomeState extends State<DesktopHome> {
     return '${_weekdays[now.weekday - 1]} ${now.day} ${_months[now.month - 1]}';
   }
 
-  String? get _lastUsedFolder {
-    final sessions = (widget.sessions ?? const <SessionInfo>[]).toList()
-      ..sort((a, b) => b.lastActive.compareTo(a.lastActive));
-    for (final s in sessions) {
-      if (s.projectFolder.trim().isNotEmpty) return s.projectFolder;
-      if (s.folder.trim().isNotEmpty) return s.folder;
-    }
-    return null;
-  }
-
-  String get _projectChipLabel {
-    final explicit = widget.projectLabel?.trim();
-    if (explicit != null && explicit.isNotEmpty) return explicit;
-    final folder = _lastUsedFolder;
-    final base = folder == null ? '' : lastPathSegment(folder);
-    return base.isEmpty ? 'No project selected' : base;
+  String get _greeting {
+    final h = DateTime.now().hour;
+    return h < 12
+        ? 'Good morning'
+        : h < 18
+            ? 'Good afternoon'
+            : 'Good evening';
   }
 
   @override
@@ -232,99 +209,68 @@ class _DesktopHomeState extends State<DesktopHome> {
     final sections = deriveHomeSections(crew, _groups);
     final recent = recentHomeSessions(sessions);
     final empty = crew.isEmpty && recent.isEmpty;
+    final summary = [
+      if (sections.needsCount > 0) '${sections.needsCount} need you',
+      if (sections.working.isNotEmpty) '${sections.working.length} working',
+    ].join('  ·  ');
 
     return ColoredBox(
       color: AppColors.panelBg,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 34,
-              child: Row(children: [
-                Text('Home',
-                    style: sans(16, weight: W.label, color: AppColors.fg1)),
-                const Spacer(),
-                Text(_dateLabel, style: sans(12, color: AppColors.fg3)),
-              ]),
-            ),
-            Expanded(
-              child: empty
-                  ? _emptyState()
-                  : LayoutBuilder(builder: (context, constraints) {
-                      final recentCap = constraints.maxWidth < 850 ? 3 : 7;
-                      final shownRecent = recent.take(recentCap).toList();
-                      return ListView(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        children: [
-                          if (sections.needsCount > 0) ...[
-                            _sectionLabel('Needs you', sections.needsCount),
-                            for (final e in sections.needs) _needsCard(e),
-                            for (final g in sections.groupAsks)
-                              _groupNeedsCard(g,
-                                  sections.groupWaitingNames[g.id] ?? const []),
-                          ],
-                          if (sections.working.isNotEmpty) ...[
-                            _sectionLabel('Working', sections.working.length),
-                            for (final e in sections.working) _crewRow(e),
-                          ],
-                          if (sections.available.isNotEmpty) ...[
-                            _sectionLabel(
-                                'Available', sections.available.length),
-                            for (final e in sections.available) _crewRow(e),
-                          ],
-                          if (shownRecent.isNotEmpty) ...[
-                            _sectionLabel(
-                              'Recent sessions',
-                              recent.length,
-                              action: 'View all',
-                              onAction: widget.onOpenAllSessions,
-                            ),
-                            for (final s in shownRecent) _recentRow(s),
-                          ],
-                        ],
-                      );
-                    }),
-            ),
-            // Frame 01: the start composer is a 900 column, centred.
-            Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 900),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          // One reading column, the same measure as the chat.
+          constraints: const BoxConstraints(maxWidth: 840),
+          child: empty
+              ? _emptyState()
+              : ListView(
+                  padding: const EdgeInsets.fromLTRB(12, 40, 12, 32),
                   children: [
-                    _StartComposer(
-                      agents: _agents,
-                      folder: _lastUsedFolder,
-                      profileLabel: widget.profileLabel,
-                      focusNode: _composerFocus,
-                      onStart: widget.onStart,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(_greeting,
+                                style: sans(20,
+                                    weight: FontWeight.w600,
+                                    spacing: -0.2,
+                                    color: AppColors.fg1)),
+                            const SizedBox(height: 4),
+                            Text(
+                                summary.isEmpty
+                                    ? _dateLabel
+                                    : '$_dateLabel  ·  $summary',
+                                style: sans(12.5, color: AppColors.fg3)),
+                          ]),
                     ),
-                    const SizedBox(height: 2),
-                    SizedBox(
-                      height: 24,
-                      child: Row(children: [
-                        const SizedBox(width: 4),
-                        AppIcon('folder', size: 13, color: AppColors.fg3),
-                        const SizedBox(width: 7),
-                        Expanded(
-                          child: Text(
-                            _projectChipLabel,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(12, color: AppColors.fg3),
-                          ),
-                        ),
-                      ]),
-                    ),
+                    const SizedBox(height: 18),
+                    if (sections.needsCount > 0) ...[
+                      _sectionLabel('Needs you', sections.needsCount),
+                      for (final e in sections.needs) _needsCard(e),
+                      for (final g in sections.groupAsks)
+                        _groupNeedsCard(
+                            g, sections.groupWaitingNames[g.id] ?? const []),
+                    ],
+                    if (sections.working.isNotEmpty) ...[
+                      _sectionLabel('Working', sections.working.length),
+                      for (final e in sections.working) _crewRow(e),
+                    ],
+                    if (sections.available.isNotEmpty) ...[
+                      _sectionLabel('Available', sections.available.length),
+                      for (final e in sections.available) _crewRow(e),
+                    ],
+                    if (recent.isNotEmpty) ...[
+                      _sectionLabel(
+                        'Recent sessions',
+                        recent.length,
+                        action: 'View all',
+                        onAction: widget.onOpenAllSessions,
+                      ),
+                      for (final s in recent.take(6)) _recentRow(s),
+                    ],
                   ],
                 ),
-              ),
-            ),
-            const SizedBox(height: 12),
-          ],
         ),
       ),
     );
@@ -335,18 +281,8 @@ class _DesktopHomeState extends State<DesktopHome> {
           Text('No agents yet',
               style: sans(15, weight: W.label, color: AppColors.fg1)),
           const SizedBox(height: 6),
-          Text('Start a session below and an agent will pick it up.',
+          Text('Start a session from the sidebar and an agent will pick it up.',
               style: sans(13, color: AppColors.fg3)),
-          const SizedBox(height: 16),
-          _HoverFillButton(
-            width: 96,
-            height: 28,
-            fill: AppColors.surface3,
-            hoverFill: AppColors.hoverPlate,
-            onTap: _composerFocus.requestFocus,
-            child: Text('New session',
-                style: sans(12, weight: W.label, color: AppColors.fg1)),
-          ),
         ]),
       );
 
@@ -357,24 +293,22 @@ class _DesktopHomeState extends State<DesktopHome> {
     VoidCallback? onAction,
   }) =>
       Padding(
-        padding: const EdgeInsets.only(top: 20, bottom: 6),
+        padding: const EdgeInsets.fromLTRB(12, 14, 12, 4),
         child: SizedBox(
-          height: 24,
+          height: 22,
           child: Row(children: [
-            Text(label, style: sans(12, weight: W.label, color: AppColors.fg2)),
-            const SizedBox(width: 8),
-            Text('$count', style: sans(12, color: AppColors.fg3)),
+            Text('$label  $count',
+                style:
+                    sans(11.5, weight: FontWeight.w500, color: AppColors.fg3)),
             const Spacer(),
             if (action != null)
-              TapDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onAction,
-                child: SizedBox(
-                  height: 24,
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: Text(action, style: sans(12, color: AppColors.fg3)),
-                  ),
+              MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: TapDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onAction,
+                  child: Text(action,
+                      style: sans(11.5, color: AppColors.fg3)),
                 ),
               ),
           ]),
@@ -389,16 +323,22 @@ class _DesktopHomeState extends State<DesktopHome> {
     final open = s == null
         ? () => widget.onOpenAgent(e.agent)
         : () => widget.onOpenSession(s);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: _NeedsCard(
-        leading: AgentMochi(e.agent.id, size: 24),
-        name: e.agent.displayName,
-        question: question.isEmpty ? 'Needs your input' : question,
-        onOpen: open,
-        primaryLabel: approval ? 'Approve' : 'Answer',
-        primaryBusy: approval && busy,
-        onPrimary: approval ? () => _approve(e) : open,
+    return _HomeRow(
+      onTap: open,
+      leading: AgentMochi(e.agent.id, size: 24),
+      title: e.agent.displayName,
+      line: question.isEmpty ? 'Needs your input' : question,
+      mark: const _Dot(),
+      action: _HoverFillButton(
+        width: approval ? 72 : 64,
+        height: 26,
+        fill: AppColors.surface3,
+        hoverFill: AppColors.hoverPlate,
+        onTap: busy ? null : (approval ? () => _approve(e) : open),
+        child: busy
+            ? Spinner(size: 12, color: AppColors.fg1)
+            : Text(approval ? 'Approve' : 'Answer',
+                style: sans(12, weight: W.label, color: AppColors.fg1)),
       ),
     );
   }
@@ -407,16 +347,21 @@ class _DesktopHomeState extends State<DesktopHome> {
     final waiting = waitingNames.isEmpty
         ? 'Waiting on you'
         : 'Waiting on ${waitingNames.join(', ')}';
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: _NeedsCard(
-        leading: AgentCluster(ids: g.agentIds, size: 24),
-        name: g.title.trim().isEmpty ? 'Group' : g.title.trim(),
-        question: waiting,
-        onOpen: () => openGroupThread(context, client: widget.client, group: g),
-        primaryLabel: 'Answer',
-        onPrimary: () =>
-            openGroupThread(context, client: widget.client, group: g),
+    void open() => openGroupThread(context, client: widget.client, group: g);
+    return _HomeRow(
+      onTap: open,
+      leading: AgentCluster(ids: g.agentIds, size: 24),
+      title: g.title.trim().isEmpty ? 'Group' : g.title.trim(),
+      line: waiting,
+      mark: const _Dot(),
+      action: _HoverFillButton(
+        width: 64,
+        height: 26,
+        fill: AppColors.surface3,
+        hoverFill: AppColors.hoverPlate,
+        onTap: open,
+        child: Text('Answer',
+            style: sans(12, weight: W.label, color: AppColors.fg1)),
       ),
     );
   }
@@ -424,24 +369,22 @@ class _DesktopHomeState extends State<DesktopHome> {
   Widget _crewRow(CrewEntry e) {
     final a = e.agent;
     final n = e.sessions.length;
-    final when = e.lead == null ? '' : relativeTime(e.lead!.lastActive);
+    final working = e.state == CrewState.working;
     final status = e.state == CrewState.standingBy
         ? (!a.available
             ? 'Wakes when you send'
             : e.lead == null
                 ? 'Idle'
-                : 'Idle, last run: ${_sessionTitle(e.lead!)}')
+                : 'Idle  ·  last run: ${_sessionTitle(e.lead!)}')
         : _cleanSubtitle(e.line);
-    return _HomeLineRow(
+    final count = working && n > 1 ? '$n sessions  ·  ' : '';
+    return _HomeRow(
       onTap: () => widget.onOpenAgent(a),
-      leading: AgentMochi(a.id, size: 20),
+      leading: AgentMochi(a.id, size: 24),
       title: a.displayName,
-      status: status.isEmpty ? 'Standing by' : status,
-      running: e.state == CrewState.working,
-      meta: e.state == CrewState.working && n > 0
-          ? (n == 1 ? '1 session' : '$n sessions')
-          : hostOf(widget.client.baseUrl),
-      when: when,
+      line: '$count${status.isEmpty ? 'Standing by' : status}',
+      mark: working ? Spinner(size: 11, color: AppColors.fg3) : null,
+      when: e.lead == null ? '' : relativeTime(e.lead!.lastActive),
     );
   }
 
@@ -453,9 +396,10 @@ class _DesktopHomeState extends State<DesktopHome> {
   String _sessionAgentName(SessionInfo s) {
     if (isDedicatedLeadSession(s.id)) return 'Lead';
     final id = s.displayAgentId;
-    if (id == null || id == 'lead' || id == 'snippet') return 'Lead';
+    if (id == null || id == 'lead') return 'Lead';
+    // The default agent has its own name; never fold it into Lead.
     for (final a in _agents) {
-      if (a.id == id) return a.displayName;
+      if (a.id == id) return a.displayName.trim().isEmpty ? id : a.displayName;
     }
     return id;
   }
@@ -463,585 +407,127 @@ class _DesktopHomeState extends State<DesktopHome> {
   Widget _recentRow(SessionInfo s) {
     final folder = lastPathSegment(s.projectFolder,
         ifEmpty: lastPathSegment(s.folder, ifEmpty: ''));
-    return _RecentSessionRow(
+    final who = _sessionAgentName(s);
+    return _HomeRow(
       onTap: () => widget.onOpenSession(s),
-      agent: _sessionAgentName(s),
+      leading: AgentMochi(s.displayAgentId ?? 'lead', size: 24),
       title: _sessionTitle(s),
-      meta: folder,
+      line: folder.isEmpty ? who : '$who  ·  $folder',
       when: relativeTime(s.lastActive),
     );
   }
 }
 
-class _NeedsCard extends StatefulWidget {
-  const _NeedsCard({
-    required this.leading,
-    required this.name,
-    required this.question,
-    required this.onOpen,
-    required this.primaryLabel,
-    this.onPrimary,
-    this.primaryBusy = false,
-  });
-
-  final Widget leading;
-  final String name;
-  final String question;
-  final VoidCallback? onOpen;
-  final String primaryLabel;
-  final VoidCallback? onPrimary;
-  final bool primaryBusy;
+class _Dot extends StatelessWidget {
+  const _Dot();
 
   @override
-  State<_NeedsCard> createState() => _NeedsCardState();
+  Widget build(BuildContext context) => Container(
+        width: 7,
+        height: 7,
+        decoration:
+            BoxDecoration(color: AppColors.accent, shape: BoxShape.circle),
+      );
 }
 
-class _NeedsCardState extends State<_NeedsCard> {
-  bool _hover = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final open = widget.onOpen;
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: TapDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: open,
-        child: Container(
-          height: 40,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          decoration: BoxDecoration(
-            color: _hover ? AppColors.surface2 : AppColors.surface1,
-            borderRadius: BorderRadius.circular(R.of(8)),
-          ),
-          child: Row(children: [
-            SizedBox(width: 24, height: 24, child: widget.leading),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 110,
-              child: Text(
-                widget.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sans(13, weight: W.label, color: AppColors.fg1),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                widget.question,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sans(13, color: AppColors.fg2),
-              ),
-            ),
-            const SizedBox(width: 8),
-            const _NeedsYouMark(),
-            const SizedBox(width: 8),
-            _HoverFillButton(
-              width: 56,
-              height: 28,
-              fill: AppColors.surface3,
-              hoverFill: AppColors.hoverPlate,
-              onTap: open,
-              child: Text('Open',
-                  style: sans(12, weight: W.label, color: AppColors.fg1)),
-            ),
-            if (widget.primaryLabel.isNotEmpty) ...[
-              const SizedBox(width: 6),
-              _HoverFillButton(
-                width: 72,
-                height: 28,
-                fill: AppColors.surface3,
-                hoverFill: AppColors.hoverPlate,
-                onTap: widget.primaryBusy ? null : widget.onPrimary,
-                child: widget.primaryBusy
-                    ? Spinner(size: 12, color: AppColors.fg1)
-                    : Text(
-                        widget.primaryLabel,
-                        style: sans(12, weight: W.label, color: AppColors.fg1),
-                      ),
-              ),
-            ],
-          ]),
-        ),
-      ),
-    );
-  }
-}
-
-class _NeedsYouMark extends StatelessWidget {
-  const _NeedsYouMark();
-
-  @override
-  Widget build(BuildContext context) =>
-      Row(mainAxisSize: MainAxisSize.min, children: [
-        Container(
-          width: 6,
-          height: 6,
-          decoration:
-              BoxDecoration(color: AppColors.run, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 6),
-        Text('Needs you',
-            style: sans(12, weight: W.label, color: AppColors.fg2)),
-      ]);
-}
-
-class _HomeLineRow extends StatefulWidget {
-  const _HomeLineRow({
+/// Every Home row: avatar, a title over one quiet line, then a mark, an
+/// optional action and the age. Same shape as the Sessions page.
+class _HomeRow extends StatefulWidget {
+  const _HomeRow({
     required this.onTap,
     required this.leading,
     required this.title,
-    required this.status,
-    required this.running,
-    required this.when,
-    this.meta,
+    required this.line,
+    this.mark,
+    this.action,
+    this.when = '',
   });
 
   final VoidCallback onTap;
   final Widget leading;
   final String title;
-  final String status;
-  final bool running;
+  final String line;
+  final Widget? mark;
+  final Widget? action;
   final String when;
-  final String? meta;
 
   @override
-  State<_HomeLineRow> createState() => _HomeLineRowState();
+  State<_HomeRow> createState() => _HomeRowState();
 }
 
-class _HomeLineRowState extends State<_HomeLineRow> {
+class _HomeRowState extends State<_HomeRow> {
   bool _hover = false;
 
   @override
   Widget build(BuildContext context) => MouseRegion(
+        cursor: SystemMouseCursors.click,
         onEnter: (_) => setState(() => _hover = true),
         onExit: (_) => setState(() => _hover = false),
         child: TapDetector(
           behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
           child: Container(
-            height: 32,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            height: 54,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
               color: _hover ? AppColors.hoverPlate : Colors.transparent,
-              borderRadius: BorderRadius.circular(R.of(8)),
+              borderRadius: BorderRadius.circular(R.md),
             ),
             child: Row(children: [
-              SizedBox(width: 20, height: 20, child: widget.leading),
-              const SizedBox(width: 10),
-              SizedBox(
-                width: 150,
-                child: Text(
-                  widget.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(13, weight: W.label, color: AppColors.fg1),
-                ),
-              ),
+              SizedBox.square(dimension: 24, child: ClipOval(child: widget.leading)),
               const SizedBox(width: 12),
               Expanded(
-                child: Row(children: [
-                  if (widget.running) ...[
-                    Spinner(size: 12, color: AppColors.fg3),
-                    const SizedBox(width: 6),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(widget.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(13,
+                            weight: FontWeight.w500, color: AppColors.fg1)),
+                    const SizedBox(height: 3),
+                    Text(widget.line,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(12, color: AppColors.fg3)),
                   ],
-                  Flexible(
-                    child: Text(
-                      widget.status,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(13, color: AppColors.fg2),
-                    ),
-                  ),
-                ]),
-              ),
-              if ((widget.meta ?? '').isNotEmpty) ...[
-                const SizedBox(width: 8),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 120),
-                  child: Text(
-                    widget.meta!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.right,
-                    style: sans(12, color: AppColors.fg3),
-                  ),
-                ),
-              ],
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 36,
-                child: Text(
-                  widget.when,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.right,
-                  style: sans(12, color: AppColors.fg3),
                 ),
               ),
-            ]),
-          ),
-        ),
-      );
-}
-
-class _RecentSessionRow extends StatefulWidget {
-  const _RecentSessionRow({
-    required this.onTap,
-    required this.agent,
-    required this.title,
-    required this.meta,
-    required this.when,
-  });
-
-  final VoidCallback onTap;
-  final String agent;
-  final String title;
-  final String meta;
-  final String when;
-
-  @override
-  State<_RecentSessionRow> createState() => _RecentSessionRowState();
-}
-
-class _RecentSessionRowState extends State<_RecentSessionRow> {
-  bool _hover = false;
-
-  @override
-  Widget build(BuildContext context) => MouseRegion(
-        onEnter: (_) => setState(() => _hover = true),
-        onExit: (_) => setState(() => _hover = false),
-        child: TapDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: widget.onTap,
-          child: Container(
-            height: 27,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: _hover ? AppColors.hoverPlate : Colors.transparent,
-              borderRadius: BorderRadius.circular(R.of(8)),
-            ),
-            child: Row(children: [
-              SizedBox(
-                width: 120,
-                child: Text(
-                  widget.agent,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(12, color: AppColors.fg3),
-                ),
-              ),
-              const SizedBox(width: 64),
-              Expanded(
-                child: Text(
-                  widget.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(12.5, weight: W.label, color: AppColors.fg1),
-                ),
-              ),
-              if (widget.meta.isNotEmpty) ...[
-                const SizedBox(width: 8),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 170),
-                  child: Text(
-                    widget.meta,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.right,
-                    style: sans(11, color: AppColors.fg3),
-                  ),
-                ),
-              ],
               const SizedBox(width: 16),
-              SizedBox(
-                width: 40,
-                child: Text(
-                  widget.when,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.right,
-                  style: sans(11, color: AppColors.fg3),
-                ),
-              ),
+              if (widget.mark != null) ...[
+                widget.mark!,
+                const SizedBox(width: 10),
+              ],
+              if (widget.action != null) ...[
+                widget.action!,
+                if (widget.when.isNotEmpty) const SizedBox(width: 10),
+              ],
+              if (widget.when.isNotEmpty)
+                Text(widget.when,
+                    style: sans(11.5, color: AppColors.fg3, tabular: true)),
             ]),
           ),
         ),
       );
-}
-
-class _StartComposer extends StatefulWidget {
-  const _StartComposer({
-    required this.agents,
-    required this.folder,
-    required this.profileLabel,
-    required this.focusNode,
-    required this.onStart,
-  });
-
-  final List<CoordinationAgent> agents;
-  final String? folder;
-  final String? profileLabel;
-  final FocusNode focusNode;
-  final void Function(String text, {String? agentId, String? folder}) onStart;
-
-  @override
-  State<_StartComposer> createState() => _StartComposerState();
-}
-
-class _StartComposerState extends State<_StartComposer> {
-  final TextEditingController _controller = TextEditingController();
-  String? _selectedAgentId;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller.addListener(_textChanged);
-  }
-
-  @override
-  void dispose() {
-    _controller
-      ..removeListener(_textChanged)
-      ..dispose();
-    super.dispose();
-  }
-
-  void _textChanged() => setState(() {});
-
-  CoordinationAgent get _leadAgent {
-    for (final a in widget.agents) {
-      if (a.isLead) return a;
-    }
-    return CoordinationAgent.fromJson(<String, dynamic>{
-      'id': 'lead',
-      'display_name': 'Lead',
-      'kind': 'lead',
-    });
-  }
-
-  CoordinationAgent get _selectedAgent {
-    final id = _selectedAgentId;
-    if (id != null) {
-      for (final a in widget.agents) {
-        if (a.id == id) return a;
-      }
-    }
-    return _leadAgent;
-  }
-
-  List<CoordinationAgent> get _pickerAgents {
-    final lead = _leadAgent;
-    return [
-      lead,
-      for (final a in widget.agents)
-        if (a.id != lead.id && a.kind != 'group') a
-    ];
-  }
-
-  Future<void> _pickAgent(BuildContext anchor) async {
-    final selected = _selectedAgent;
-    final profile = widget.profileLabel?.trim();
-    final picked = await showAppMenu<String>(
-      context,
-      anchor: anchor,
-      minWidth: 220,
-      maxWidth: 300,
-      items: [
-        for (final a in _pickerAgents)
-          appMenuRow<String>(
-            value: a.id,
-            leading: AgentMochi(a.id, size: 16),
-            label: a.displayName,
-            description: a.isLead && profile != null && profile.isNotEmpty
-                ? profile
-                : null,
-            selected: a.id == selected.id,
-          ),
-      ],
-    );
-    if (picked != null && mounted) setState(() => _selectedAgentId = picked);
-  }
-
-  void _submit() {
-    final text = _controller.text.trim();
-    if (text.isEmpty) return;
-    widget.onStart(text, agentId: _selectedAgent.id, folder: widget.folder);
-    _controller.clear();
-    widget.focusNode.requestFocus();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final hasText = _controller.text.trim().isNotEmpty;
-    final agent = _selectedAgent;
-    return Container(
-      height: 76,
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-      decoration: BoxDecoration(
-        color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(R.of(12)),
-      ),
-      child: Column(children: [
-        SizedBox(
-          height: 20,
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: TextField(
-              controller: _controller,
-              focusNode: widget.focusNode,
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _submit(),
-              cursorColor: AppColors.fg1,
-              style: sans(13, color: AppColors.fg1),
-              decoration: InputDecoration(
-                isCollapsed: true,
-                border: InputBorder.none,
-                hintText:
-                    'Start a session: ask anything, @ to mention agents or files, / for commands',
-                hintStyle: sans(13, color: AppColors.fg3),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 28,
-          child: Row(children: [
-            _HoverFillButton(
-              size: 28,
-              tooltip: 'Attachments are not available in Home yet',
-              onTap: null,
-              child: AppIcon('plus', size: 14, color: AppColors.fg2),
-            ),
-            const SizedBox(width: 4),
-            Builder(builder: (anchor) {
-              final profile = widget.profileLabel?.trim();
-              return _AgentPickerChip(
-                agent: agent,
-                tooltip: profile == null || profile.isEmpty
-                    ? 'Choose agent'
-                    : 'Choose agent · $profile',
-                onTap: () => _pickAgent(anchor),
-              );
-            }),
-            const SizedBox(width: 8),
-            _HoverFillButton(
-              size: 28,
-              tooltip: 'Session options are not available in Home yet',
-              onTap: null,
-              child:
-                  AppIcon('sliders-horizontal', size: 14, color: AppColors.fg2),
-            ),
-            const Spacer(),
-            _HoverFillButton(
-              size: 28,
-              tooltip: 'Voice input is not available in Home yet',
-              onTap: null,
-              child: AppIcon('mic', size: 14, color: AppColors.fg2),
-            ),
-            const SizedBox(width: 6),
-            _HoverFillButton(
-              size: 26,
-              radius: R.of(7),
-              tooltip: 'Start session',
-              fill: AppColors.accentFill,
-              hoverFill: AppColors.accentFill.withValues(alpha: 0.86),
-              onTap: hasText ? _submit : null,
-              child: AppIcon(
-                'arrow-up',
-                size: 14,
-                color: AppColors.accentFg,
-              ),
-            ),
-          ]),
-        ),
-      ]),
-    );
-  }
-}
-
-class _AgentPickerChip extends StatefulWidget {
-  const _AgentPickerChip({
-    required this.agent,
-    required this.tooltip,
-    required this.onTap,
-  });
-
-  final CoordinationAgent agent;
-  final String tooltip;
-  final VoidCallback onTap;
-
-  @override
-  State<_AgentPickerChip> createState() => _AgentPickerChipState();
-}
-
-class _AgentPickerChipState extends State<_AgentPickerChip> {
-  bool _hover = false;
-
-  @override
-  Widget build(BuildContext context) {
-    Widget chip = MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: TapDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: widget.onTap,
-        child: Container(
-          width: 84,
-          height: 28,
-          padding: const EdgeInsets.symmetric(horizontal: 6),
-          decoration: BoxDecoration(
-            color: _hover ? AppColors.hoverPlate : AppColors.surface3,
-            borderRadius: BorderRadius.circular(R.of(6)),
-          ),
-          child: Row(children: [
-            AgentMochi(widget.agent.id, size: 16),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                widget.agent.displayName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sans(12, weight: W.label, color: AppColors.fg1),
-              ),
-            ),
-            AppIcon('chevron-down', size: 10, color: AppColors.fg2),
-          ]),
-        ),
-      ),
-    );
-    chip = Tooltip(message: widget.tooltip, child: chip);
-    return chip;
-  }
 }
 
 class _HoverFillButton extends StatefulWidget {
   const _HoverFillButton({
     required this.child,
     required this.onTap,
-    this.size,
     this.width,
     this.height,
-    this.radius,
     this.fill,
     this.hoverFill,
-    this.tooltip,
   });
 
   final Widget child;
   final VoidCallback? onTap;
-  final double? size;
   final double? width;
   final double? height;
-  final double? radius;
   final Color? fill;
   final Color? hoverFill;
-  final String? tooltip;
 
   @override
   State<_HoverFillButton> createState() => _HoverFillButtonState();
@@ -1054,7 +540,7 @@ class _HoverFillButtonState extends State<_HoverFillButton> {
   Widget build(BuildContext context) {
     final enabled = widget.onTap != null;
     final base = widget.fill ?? Colors.transparent;
-    Widget button = MouseRegion(
+    return MouseRegion(
       cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
       onEnter: enabled ? (_) => setState(() => _hover = true) : null,
       onExit: enabled ? (_) => setState(() => _hover = false) : null,
@@ -1062,22 +548,18 @@ class _HoverFillButtonState extends State<_HoverFillButton> {
         behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
         child: Container(
-          width: widget.size ?? widget.width,
-          height: widget.size ?? widget.height,
+          width: widget.width,
+          height: widget.height,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: enabled && _hover
                 ? (widget.hoverFill ?? widget.fill ?? AppColors.hoverPlate)
                 : base,
-            borderRadius: BorderRadius.circular(widget.radius ?? R.of(6)),
+            borderRadius: BorderRadius.circular(R.of(6)),
           ),
           child: widget.child,
         ),
       ),
     );
-    if (widget.tooltip != null) {
-      button = Tooltip(message: widget.tooltip!, child: button);
-    }
-    return button;
   }
 }

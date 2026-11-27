@@ -142,7 +142,7 @@ extension _RailPages on _SessionRailState {
       height: PaneRow.height,
       padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
       decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.paneLine))),
+          border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline))),
       child: Row(children: [
         // Expanded, not Flexible + Spacer: those split the free width.
         Expanded(

@@ -985,7 +985,6 @@ extension _SessionScreenComposerExt on _SessionScreenState {
           : null,
       deskHint: !kMobile && running
           ? () => DeskRunningLabel(
-                name: agent.isEmpty ? 'Agent' : agent,
                 startedAt: DateTime.tryParse(_state?.turnStartedAt ?? ''),
               )
           : null,

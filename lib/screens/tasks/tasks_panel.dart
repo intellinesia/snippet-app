@@ -548,7 +548,7 @@ class TasksPanelState extends State<TasksPanel> {
           height: PaneRow.height,
           padding: EdgeInsets.fromLTRB(S.s16, 0, S.s12, 0),
           decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: AppColors.paneLine))),
+              border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline))),
           child: Row(children: [
             Expanded(
               child: Text('Tasks',
@@ -612,7 +612,7 @@ class TasksPanelState extends State<TasksPanel> {
           final width = (box.maxWidth * 0.38).clamp(300.0, 380.0).toDouble();
           return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             SizedBox(width: width, child: master),
-            Container(width: 1, color: AppColors.paneLine),
+            Container(width: AppColors.hairline, color: AppColors.paneLine),
             Expanded(child: detail),
           ]);
         }),

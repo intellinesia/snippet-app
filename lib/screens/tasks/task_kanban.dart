@@ -260,7 +260,7 @@ class _TaskKanbanState extends State<TaskKanban> {
       height: PaneRow.height,
       padding: const EdgeInsets.fromLTRB(20, 0, 12, 0),
       decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.paneLine))),
+          border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline))),
       child: LayoutBuilder(builder: (context, box) {
         final searchWidth = (box.maxWidth * 0.28).clamp(140.0, 240.0);
         return Row(children: [

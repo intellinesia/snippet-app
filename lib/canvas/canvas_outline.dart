@@ -136,7 +136,7 @@ class _CanvasOutlineRailState extends State<CanvasOutlineRail> {
       width: kCanvasOutlineWidth,
       decoration: BoxDecoration(
         color: AppColors.surface1,
-        border: Border(right: BorderSide(color: AppColors.paneLine)),
+        border: Border(right: BorderSide(color: AppColors.paneLine, width: AppColors.hairline)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -145,7 +145,7 @@ class _CanvasOutlineRailState extends State<CanvasOutlineRail> {
             height: PaneRow.height,
             padding: EdgeInsets.fromLTRB(S.s12, 0, S.s4, 0),
             decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: AppColors.paneLine)),
+              border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline)),
             ),
             child: Row(
               children: [
@@ -174,7 +174,7 @@ class _CanvasOutlineRailState extends State<CanvasOutlineRail> {
             height: 32,
             padding: EdgeInsets.symmetric(horizontal: S.s12),
             decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: AppColors.paneLine)),
+              border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline)),
             ),
             child: Row(
               children: [

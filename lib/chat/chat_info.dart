@@ -1677,7 +1677,7 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
         height: PaneRow.height,
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: AppColors.paneLine))),
+            border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline))),
         child: Row(children: [
           Expanded(
             child: Align(

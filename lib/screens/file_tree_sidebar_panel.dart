@@ -477,7 +477,7 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
         height: PaneRow.height,
         padding: EdgeInsets.fromLTRB(S.of(18), 0, S.s8, 0),
         decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.paneLine)),
+          border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline)),
         ),
         child: Row(children: [
           if (widget.header != null)

@@ -472,7 +472,7 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
                 decoration: BoxDecoration(
                   color: AppColors.surface1,
                   borderRadius: BorderRadius.circular(R.of(7)),
-                  border: Border.all(color: AppColors.paneLine),
+                  border: Border.all(color: AppColors.paneLine, width: AppColors.hairline),
                 ),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   AppIcon(c.$1, size: 13, color: AppColors.fg3),

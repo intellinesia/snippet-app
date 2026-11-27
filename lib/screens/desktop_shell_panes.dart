@@ -28,7 +28,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   Widget _originTabBody(_ShellTab t,
       {required bool primary, required bool visible}) {
     if (t.isHome) {
-      final project = _lastUsedProjectFolder;
       return DesktopHome(
         key: ValueKey('body-${t.key}'),
         client: t.client,
@@ -36,11 +35,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         onOpenSession: (s) => _openSession(s.id, s.title, s.profile),
         onOpenAgent: _openRightAgent,
         onRefresh: _loadSessions,
-        onStart: _startHomeSession,
         onOpenAllSessions: SidebarState.showAllSessions,
-        profileLabel: _activeProfileName,
-        projectLabel:
-            project == null ? null : lastPathSegment(project, ifEmpty: project),
       );
     }
     if (t.isReadout) {
@@ -688,16 +683,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             : sessionRailOuterWidth(width),
       );
 
-  String? get _lastUsedProjectFolder {
-    final recent = (_sessions ?? const <SessionInfo>[]).toList()
-      ..sort((a, b) => b.lastActive.compareTo(a.lastActive));
-    for (final s in recent) {
-      if (s.projectFolder.trim().isNotEmpty) return s.projectFolder;
-      if (s.folder.trim().isNotEmpty) return s.folder;
-    }
-    return null;
-  }
-
   Future<void> _refreshUsage() async {
     if (kMobile) return;
     final c = _client;
@@ -977,7 +962,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
               // Full strip height so the divider meets the panel's below.
               height: double.infinity,
               decoration: BoxDecoration(
-                  border: Border(left: BorderSide(color: AppColors.paneSeam))),
+                  border: Border(left: BorderSide(color: AppColors.paneSeam, width: AppColors.hairline))),
               padding: EdgeInsets.only(left: S.s6, right: S.s6),
               child: Row(children: [
                 Builder(

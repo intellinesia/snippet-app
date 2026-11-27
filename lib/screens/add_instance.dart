@@ -129,7 +129,7 @@ class _AddMachineDialogState extends State<_AddMachineDialog> {
   BoxDecoration get _plate => BoxDecoration(
         color: AppColors.bg,
         borderRadius: BorderRadius.circular(R.of(7)),
-        border: Border.all(color: AppColors.paneLine),
+        border: Border.all(color: AppColors.paneLine, width: AppColors.hairline),
       );
 
   @override
@@ -152,7 +152,7 @@ class _AddMachineDialogState extends State<_AddMachineDialog> {
             padding: const EdgeInsets.fromLTRB(16, 14, 12, 16),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(R.of(10)),
-              border: Border.all(color: AppColors.paneLine),
+              border: Border.all(color: AppColors.paneLine, width: AppColors.hairline),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,

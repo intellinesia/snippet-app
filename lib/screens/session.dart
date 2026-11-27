@@ -390,7 +390,7 @@ class _SessionScreenState extends State<SessionScreen>
             color: AppColors.surface2,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(R.of(7)),
-              side: BorderSide(color: AppColors.paneSeam),
+              side: BorderSide(color: AppColors.paneSeam, width: AppColors.hairline),
             ),
             child: InkWell(
               borderRadius: BorderRadius.circular(R.of(7)),

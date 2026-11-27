@@ -40,7 +40,7 @@ class GroupedCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             for (var i = 0; i < segments.length; i++) ...[
-              if (i > 0) Container(height: 1, color: AppColors.paneLine),
+              if (i > 0) Container(height: AppColors.hairline, color: AppColors.paneLine),
               segments[i],
             ],
           ],

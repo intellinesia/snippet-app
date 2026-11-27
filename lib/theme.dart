@@ -1066,8 +1066,16 @@ class AppColors {
 
   /// Pane rows, pane dividers and the panel edge: keep these barely
   /// above the pane fill, fainter than card outlines.
+  /// One device pixel on desktop: seams and card edges stay soft on Retina.
+  static double get hairline {
+    if (kMobile) return 1;
+    final views = PlatformDispatcher.instance.views;
+    final dpr = views.isEmpty ? 1.0 : views.first.devicePixelRatio;
+    return 1 / math.max(1.0, dpr);
+  }
+
   static Color get paneLine => identical(currentTheme, _quietDesk)
-      ? const Color(0xFF121212)
+      ? const Color(0xFF1A1A1A)
       : _quietDeskLight
           ? const Color(0xFFEFEFEA)
           : currentTheme.border;
@@ -1075,7 +1083,7 @@ class AppColors {
   /// The seam between the chat and its side panel: clearly visible, unlike
   /// the in-pane hairlines.
   static Color get paneSeam => identical(currentTheme, _quietDesk)
-      ? const Color(0xFF222222)
+      ? const Color(0xFF1A1A1A)
       : _quietDeskLight
           ? const Color(0xFFE2E2DC)
           : currentTheme.border;

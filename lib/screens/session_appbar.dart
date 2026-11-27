@@ -590,7 +590,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.canvas,
-        border: Border(top: BorderSide(color: AppColors.paneLine)),
+        border: Border(top: BorderSide(color: AppColors.paneLine, width: AppColors.hairline)),
       ),
       child: Stack(children: [
         Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

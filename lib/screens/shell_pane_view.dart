@@ -495,7 +495,7 @@ class PaneStrip extends StatelessWidget {
       decoration: BoxDecoration(
         color: kMobile ? AppColors.pageCanvas : Colors.transparent,
         border:
-            kMobile ? null : Border(bottom: BorderSide(color: AppColors.paneLine)),
+            kMobile ? null : Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline)),
       ),
       child: LayoutBuilder(builder: (context, outer) {
         final list = _chips(count, compact);

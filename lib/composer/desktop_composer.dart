@@ -20,7 +20,9 @@ BoxDecoration _cardDecoration(
     BoxDecoration(
       color: AppColors.surface1,
       borderRadius: BorderRadius.circular(R.of(radius ?? _kCardRadius)),
-      border: Border.all(color: hairline ? AppColors.line : Colors.transparent),
+      border: Border.all(
+          color: hairline ? AppColors.line : Colors.transparent,
+          width: AppColors.hairline),
     );
 
 String deskEffortLabel(String effort) => switch (effort) {
@@ -1243,11 +1245,10 @@ class _DeskComposerRunningLineState extends State<DeskComposerRunningLine> {
   }
 }
 
-/// Frame 09 running state: `<agent> running 12s` in the control row.
+/// Running state in the control row: `Running 12s`. The header already names the agent.
 class DeskRunningLabel extends StatefulWidget {
-  const DeskRunningLabel({super.key, required this.name, this.startedAt});
+  const DeskRunningLabel({super.key, this.startedAt});
 
-  final String name;
   final DateTime? startedAt;
 
   @override
@@ -1274,7 +1275,7 @@ class _DeskRunningLabelState extends State<DeskRunningLabel> {
 
   @override
   Widget build(BuildContext context) => Text(
-        '${widget.name} running$_elapsed',
+        'Running$_elapsed',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: sans(11, color: AppColors.fg3, tabular: true),

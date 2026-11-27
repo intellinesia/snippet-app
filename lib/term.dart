@@ -495,7 +495,7 @@ class _SessionTermViewState extends State<SessionTermView> {
       padding: EdgeInsets.fromLTRB(desk ? S.s12 : S.s16, 0, S.s8, 0),
       decoration: desk
           ? BoxDecoration(
-              border: Border(bottom: BorderSide(color: AppColors.paneLine)))
+              border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline)))
           : null,
       child: Row(children: [
         Tooltip(

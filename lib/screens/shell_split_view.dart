@@ -498,7 +498,7 @@ class _ShellSplitViewState extends State<ShellSplitView>
       decoration: BoxDecoration(
         color: AppColors.panelFill,
         borderRadius: radius,
-        border: Border.all(color: AppColors.paneLine, width: 1),
+        border: Border.all(color: AppColors.paneLine, width: AppColors.hairline),
       ),
       child: ClipRRect(borderRadius: radius, child: child),
     );

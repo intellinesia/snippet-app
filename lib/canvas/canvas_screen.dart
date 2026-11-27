@@ -1189,7 +1189,7 @@ class _CanvasScreenState extends State<CanvasScreen>
         color: AppColors.surface1,
         borderRadius: BorderRadius.circular(kMobile ? R.md : R.of(10)),
         border:
-            Border.all(color: kMobile ? AppColors.border : AppColors.paneLine),
+            Border.all(color: kMobile ? AppColors.border : AppColors.paneLine, width: AppColors.hairline),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1654,7 +1654,7 @@ class _CanvasScreenState extends State<CanvasScreen>
         width: 40,
         decoration: BoxDecoration(
           color: AppColors.surface1,
-          border: Border(right: BorderSide(color: AppColors.paneLine)),
+          border: Border(right: BorderSide(color: AppColors.paneLine, width: AppColors.hairline)),
         ),
         alignment: Alignment.topCenter,
         padding: EdgeInsets.only(top: S.s8),
@@ -1856,7 +1856,7 @@ class _CanvasScreenState extends State<CanvasScreen>
       padding: EdgeInsets.symmetric(horizontal: S.of(10)),
       decoration: BoxDecoration(
         color: AppColors.bg,
-        border: Border(bottom: BorderSide(color: AppColors.paneLine)),
+        border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline)),
       ),
       child: Row(
         children: [

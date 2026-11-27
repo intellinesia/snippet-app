@@ -2423,7 +2423,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       decoration: BoxDecoration(
         color: kMobile ? AppColors.surface2 : AppColors.surface1,
         borderRadius: BorderRadius.circular(kMobile ? 10 : R.of(8)),
-        border: kMobile ? null : Border.all(color: AppColors.paneLine),
+        border: kMobile ? null : Border.all(color: AppColors.paneLine, width: AppColors.hairline),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

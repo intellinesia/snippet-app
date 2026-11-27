@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../components.dart' show Spinner;
+import '../composer/chat_composer.dart' show kChatMeasure;
 import '../menu_widgets.dart' show relativeTime;
 import '../mochi.dart';
 import '../models.dart';
@@ -105,57 +106,59 @@ class _SessionsInboxViewState extends State<SessionsInboxView> {
         (s) => isDedicatedLeadSession(s.id) || isInboxSessionRow(s));
     return ColoredBox(
       color: AppColors.bg,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(32, 16, 32, 0),
-          child: Row(children: [
-            Text('Sessions',
-                style: sans(17, weight: FontWeight.w500, color: AppColors.fg1)),
-            const Spacer(),
-            Text('Cross-agent inbox',
-                style: sans(12, color: AppColors.fg3)),
-          ]),
-        ),
-        if (empty)
-          Expanded(child: _empty())
-        else ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(32, 14, 32, 0),
-            child: Row(children: [
-              for (final (f, label) in const [
-                (SessionsFilter.all, 'All'),
-                (SessionsFilter.needsYou, 'Needs you'),
-                (SessionsFilter.running, 'Running'),
-                (SessionsFilter.mine, 'Mine'),
-              ]) ...[
-                _FilterChip(
-                    label: label,
-                    selected: _filter == f,
-                    onTap: () => setState(() => _filter = f)),
-                const SizedBox(width: 8),
-              ],
-            ]),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(32, 22, 32, 24),
-              children: [
-                if (list.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 40),
-                    child: Center(
-                      child: Text('Nothing here for this filter.',
-                          style: sans(12, color: AppColors.fg3)),
-                    ),
-                  ),
-                ..._section('Needs you', needs),
-                ..._section('Running', running),
-                ..._section('Recent', recent),
-              ],
+      child: empty
+          ? _empty()
+          : Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                // One reading column, the same measure as the chat.
+                constraints: const BoxConstraints(maxWidth: kChatMeasure),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 22, 24, 0),
+                        child: Row(children: [
+                          Text('Sessions',
+                              style: sans(15,
+                                  weight: FontWeight.w600,
+                                  color: AppColors.fg1)),
+                          const Spacer(),
+                          for (final (f, label) in const [
+                            (SessionsFilter.all, 'All'),
+                            (SessionsFilter.needsYou, 'Needs you'),
+                            (SessionsFilter.running, 'Running'),
+                            (SessionsFilter.mine, 'Mine'),
+                          ]) ...[
+                            const SizedBox(width: 2),
+                            _FilterChip(
+                                label: label,
+                                selected: _filter == f,
+                                onTap: () => setState(() => _filter = f)),
+                          ],
+                        ]),
+                      ),
+                      Expanded(
+                        child: ListView(
+                          padding: const EdgeInsets.fromLTRB(12, 14, 12, 24),
+                          children: [
+                            if (list.isEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 40),
+                                child: Center(
+                                  child: Text('Nothing here for this filter.',
+                                      style: sans(12, color: AppColors.fg3)),
+                                ),
+                              ),
+                            ..._section('Needs you', needs),
+                            ..._section('Running', running),
+                            ..._section('Recent', recent),
+                          ],
+                        ),
+                      ),
+                    ]),
+              ),
             ),
-          ),
-        ],
-      ]),
     );
   }
 
@@ -165,25 +168,17 @@ class _SessionsInboxViewState extends State<SessionsInboxView> {
     final rows = all.take(60);
     return [
       Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Row(children: [
-          Text(label,
-              style: sans(13, weight: FontWeight.w500, color: AppColors.fg2)),
-          const SizedBox(width: 6),
-          Text('${all.length}',
-              style: sans(12, color: AppColors.fg3, tabular: true)),
-        ]),
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+        child: Text('$label  ${all.length}',
+            style: sans(11.5, weight: FontWeight.w500, color: AppColors.fg3)),
       ),
       for (final s in rows)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: SessionInboxRow(
-            session: s,
-            agentName: _names[s.displayAgentId] ?? '',
-            onTap: () => widget.onOpen(s),
-          ),
+        SessionInboxRow(
+          session: s,
+          agentName: _names[s.displayAgentId] ?? '',
+          onTap: () => widget.onOpen(s),
         ),
-      const SizedBox(height: 12),
+      const SizedBox(height: 10),
     ];
   }
 
@@ -233,16 +228,16 @@ class _FilterChip extends StatelessWidget {
             onTap: onTap,
             child: Container(
               height: 26,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: selected ? AppColors.surface2 : AppColors.surface1,
+                color: selected ? AppColors.hoverPlate : Colors.transparent,
                 borderRadius: BorderRadius.circular(R.of(6)),
               ),
               child: Text(label,
-                  style: sans(11,
+                  style: sans(12,
                       weight: FontWeight.w500,
-                      color: selected ? AppColors.fg1 : AppColors.fg2)),
+                      color: selected ? AppColors.fg1 : AppColors.fg3)),
             ),
           ),
         ),
@@ -290,41 +285,19 @@ class _SessionInboxRowState extends State<SessionInboxRow> {
       .replaceFirst(RegExp(r'^\s*[#>]+\s*'), '')
       .trim();
 
-  Widget _state() {
+  /// Only live states earn a mark; idle and done rows stay quiet.
+  Widget? _mark() {
     final s = widget.session;
-    final needs = sessionNeedsYou(s);
-    final busy = !needs && sessionBusy(s);
-    final label = needs
-        ? 'Needs you'
-        : busy
-            ? 'Running'
-            : s.settled
-                ? 'Done'
-                : 'Idle';
-    return Container(
-      height: 24,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(R.of(6)),
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        if (needs) ...[
-          Container(
-            width: 6,
-            height: 6,
-            decoration:
-                BoxDecoration(color: AppColors.run, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 6),
-        ] else if (busy) ...[
-          Spinner(size: 10, color: AppColors.fg3),
-          const SizedBox(width: 6),
-        ],
-        Text(label,
-            style: sans(10.5, weight: FontWeight.w500, color: AppColors.fg2)),
-      ]),
-    );
+    if (sessionNeedsYou(s)) {
+      return Container(
+        key: const ValueKey('session-needs-dot'),
+        width: 7,
+        height: 7,
+        decoration: BoxDecoration(color: AppColors.accent, shape: BoxShape.circle),
+      );
+    }
+    if (sessionBusy(s)) return Spinner(size: 11, color: AppColors.fg3);
+    return null;
   }
 
   @override
@@ -334,7 +307,8 @@ class _SessionInboxRowState extends State<SessionInboxRow> {
     final who = widget.agentName.isNotEmpty
         ? widget.agentName
         : (s.agentManaged ? 'Agent' : 'You');
-    final name = sans(12.5, weight: FontWeight.w500, color: AppColors.fg1);
+    final summary = _summary;
+    final mark = _mark();
     return Semantics(
       button: true,
       label: '$who, $title',
@@ -346,48 +320,38 @@ class _SessionInboxRowState extends State<SessionInboxRow> {
           behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
           child: Container(
-            constraints: const BoxConstraints(minHeight: 62),
-            padding: const EdgeInsets.fromLTRB(12, 8, 16, 8),
+            height: 54,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              color: _hover ? AppColors.surface2 : AppColors.surface1,
-              borderRadius: BorderRadius.circular(10),
+              color: _hover ? AppColors.hoverPlate : Colors.transparent,
+              borderRadius: BorderRadius.circular(R.md),
             ),
             child: Row(children: [
               ClipOval(
-                  child: AgentMochi(s.displayAgentId ?? 'snippet', size: 30)),
+                  child: AgentMochi(s.displayAgentId ?? 'snippet', size: 24)),
               const SizedBox(width: 12),
-              SizedBox(
-                width: 294,
+              Expanded(
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(who,
-                        maxLines: 1, overflow: TextOverflow.ellipsis, style: name),
-                    const SizedBox(height: 2),
                     Text(title,
-                        maxLines: 1, overflow: TextOverflow.ellipsis, style: name),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(13,
+                            weight: FontWeight.w500, color: AppColors.fg1)),
+                    const SizedBox(height: 3),
+                    Text(summary.isEmpty ? who : '$who  ·  $summary',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(12, color: AppColors.fg3)),
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 19),
-                  child: Text(_summary,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(11.5, color: AppColors.fg3)),
-                ),
-              ),
               const SizedBox(width: 16),
-              _state(),
-              SizedBox(
-                width: 64,
-                child: Text(relativeTime(s.lastActive),
-                    textAlign: TextAlign.right,
-                    style: sans(11, color: AppColors.fg3, tabular: true)),
-              ),
+              if (mark != null) ...[mark, const SizedBox(width: 10)],
+              Text(relativeTime(s.lastActive),
+                  style: sans(11.5, color: AppColors.fg3, tabular: true)),
             ]),
           ),
         ),

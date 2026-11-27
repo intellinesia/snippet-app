@@ -310,7 +310,7 @@ class _TaskListViewState extends State<TaskListView> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         _top(),
         if (!_filter.isEmpty || _searching) _appliedBar(),
-        Container(height: 1, color: AppColors.paneLine),
+        Container(height: AppColors.hairline, color: AppColors.paneLine),
         Expanded(
           child: _feed.loading
               ? Center(child: Spinner(size: 20, color: AppColors.fg3))
@@ -329,7 +329,7 @@ class _TaskListViewState extends State<TaskListView> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Expanded(child: _list(groups)),
-                            Container(width: 1, color: AppColors.paneLine),
+                            Container(width: AppColors.hairline, color: AppColors.paneLine),
                             SizedBox(width: pane, child: _pane()),
                           ]);
                     }),
@@ -486,7 +486,7 @@ class _TaskListViewState extends State<TaskListView> {
         height: 44,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         decoration:
-            BoxDecoration(border: Border(top: BorderSide(color: AppColors.paneLine))),
+            BoxDecoration(border: Border(top: BorderSide(color: AppColors.paneLine, width: AppColors.hairline))),
         child: Row(children: [
           Text('${_checked.length} selected',
               style: sans(12.5, weight: W.label, color: AppColors.fg1)),
@@ -511,7 +511,7 @@ class _TaskListViewState extends State<TaskListView> {
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         decoration:
-            BoxDecoration(border: Border(top: BorderSide(color: AppColors.paneLine))),
+            BoxDecoration(border: Border(top: BorderSide(color: AppColors.paneLine, width: AppColors.hairline))),
         child: Text(
             'J / K move   Enter open   X select   S status   A assign   C new   / search',
             style: sans(11.5, color: AppColors.fg4)),
@@ -569,7 +569,7 @@ class _BarBtn extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surface1,
           borderRadius: BorderRadius.circular(PaneRow.radius),
-          border: Border.all(color: AppColors.paneLine),
+          border: Border.all(color: AppColors.paneLine, width: AppColors.hairline),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           Icon(icon, size: 12.5, color: fg),

@@ -46,7 +46,7 @@ class CanvasSidePanel extends StatelessWidget {
       width: kCanvasSidePanelWidth,
       decoration: BoxDecoration(
         color: AppColors.surface1,
-        border: Border(left: BorderSide(color: AppColors.paneLine)),
+        border: Border(left: BorderSide(color: AppColors.paneLine, width: AppColors.hairline)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -55,7 +55,7 @@ class CanvasSidePanel extends StatelessWidget {
             height: PaneRow.height,
             padding: EdgeInsets.symmetric(horizontal: S.s4),
             decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: AppColors.paneLine)),
+              border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline)),
             ),
             child: Row(
               children: [

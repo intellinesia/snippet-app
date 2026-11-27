@@ -50,7 +50,7 @@ class ChatHeaderBar extends StatelessWidget {
       height: height,
       padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.paneLine)),
+        border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline)),
       ),
       child: Row(children: [
         // The tabs take the free width themselves; a loose Flexible beside a

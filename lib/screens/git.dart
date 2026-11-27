@@ -274,7 +274,7 @@ class _GitScreenState extends State<GitScreen> {
           height: PaneRow.height,
           padding: EdgeInsets.fromLTRB(S.of(18), 0, S.s8, 0),
           decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: AppColors.paneLine)),
+            border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline)),
           ),
           child: Row(children: [
             Expanded(
@@ -1119,7 +1119,7 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
       height: PaneRow.height,
       padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.paneLine)),
+        border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline)),
       ),
       child: Row(children: [
         if (showBack) ...[

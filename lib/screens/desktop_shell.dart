@@ -268,7 +268,6 @@ class _DesktopShellState extends State<DesktopShell>
   double get _sidebarWidth =>
       _sidebarWidthPref ?? sidebarWidthFor(MediaQuery.sizeOf(context).width);
   List<ShellUsageItem> _usageItems = const [];
-  String? _activeProfileName;
 
   /// Secondary-pane width, dragged by its handle. Width-driven rather than a
   /// flex ratio because a flex ratio cannot be dragged and has no natural size.
@@ -518,13 +517,8 @@ class _DesktopShellState extends State<DesktopShell>
     try {
       final cfg = await c.getConfig();
       if (!mounted) return;
-      final configured = cfg.active?.trim() ?? '';
-      final active = configured.isNotEmpty
-          ? configured
-          : cfg.profiles.where((p) => p.active).firstOrNull?.name;
       setState(() {
         _tabProviders = {for (final p in cfg.profiles) p.name: p.provider};
-        _activeProfileName = active;
       });
     } catch (_) {
       _tabProvidersFor = null;
@@ -1430,37 +1424,6 @@ class _DesktopShellState extends State<DesktopShell>
           send: true,
         ));
     _loadSessions();
-  }
-
-  void _startHomeSession(String text, {String? agentId, String? folder}) {
-    final c = _client;
-    final trimmed = text.trim();
-    if (c == null || trimmed.isEmpty) return;
-    final recent = (_sessions ?? const <SessionInfo>[]).toList()
-      ..sort((a, b) => b.lastActive.compareTo(a.lastActive));
-    final lastUsed = recent
-        .map((s) => s.projectFolder.trim().isNotEmpty
-            ? s.projectFolder.trim()
-            : s.folder.trim())
-        .where((f) => f.isNotEmpty)
-        .firstOrNull;
-    final target = (folder ?? lastUsed ?? '').trim();
-    if (target.isEmpty) return;
-    unawaited(() async {
-      String? profile;
-      if (agentId != null && agentId.isNotEmpty) {
-        try {
-          final agents = await c.coordinationAgents();
-          profile = agents.where((a) => a.id == agentId).firstOrNull?.profile;
-        } catch (_) {}
-      }
-      var mode = WorkspaceMode.folder;
-      try {
-        final repo = await c.worktrees(target);
-        if (repo.repo != null) mode = WorkspaceMode.worktree;
-      } catch (_) {}
-      await _startSheet(c, target, mode, profile, trimmed, const []);
-    }());
   }
 
   void _showNewMenu(BuildContext anchor) {

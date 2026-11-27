@@ -1284,7 +1284,7 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
       height: PaneRow.height,
       padding: const EdgeInsets.fromLTRB(10, 0, 8, 0),
       decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.paneLine))),
+          border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline))),
       child: Row(children: [
         Expanded(
           // A canvas pane is narrow: below this only the title stays.
@@ -1806,7 +1806,7 @@ class _SessionDeliverablesState extends State<SessionDeliverables> {
       Container(
         width: listWidth,
         decoration: BoxDecoration(
-            border: Border(right: BorderSide(color: AppColors.paneLine))),
+            border: Border(right: BorderSide(color: AppColors.paneLine, width: AppColors.hairline))),
         child: ArtifactGrid(
           client: widget.client,
           session: widget.session,
@@ -1936,7 +1936,7 @@ class _SessionDeliverablesState extends State<SessionDeliverables> {
               padding: const EdgeInsets.fromLTRB(10, 0, 8, 0),
               decoration: BoxDecoration(
                   border:
-                      Border(bottom: BorderSide(color: AppColors.paneLine))),
+                      Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline))),
               child: Row(children: [
                 Expanded(
                   child: Text('Artifacts & files',
