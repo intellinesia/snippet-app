@@ -336,6 +336,86 @@ Widget _chatCardShell({
 }) {
   final cleanTitle = title?.trim() ?? '';
   final cleanBody = body?.trim() ?? '';
+  final hasBody = cleanTitle.isNotEmpty || cleanBody.isNotEmpty || child != null;
+  if (!kMobile) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: hasBody
+                ? BoxDecoration(
+                    border: Border(bottom: BorderSide(color: AppColors.border)),
+                  )
+                : null,
+            child: Row(
+              children: [
+                AppIcon(icon, size: 13, color: AppColors.fg2),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(12,
+                        height: 16 / 12,
+                        weight: FontWeight.w500,
+                        color: AppColors.fg2),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (hasBody)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (cleanTitle.isNotEmpty)
+                    Text(
+                      cleanTitle,
+                      style: sans(13,
+                          height: 18 / 13,
+                          weight: FontWeight.w500,
+                          color: AppColors.fg1),
+                    ),
+                  if (cleanBody.isNotEmpty) ...[
+                    if (cleanTitle.isNotEmpty) const SizedBox(height: 3),
+                    Text(
+                      cleanBody,
+                      style: sans(12, height: 17 / 12, color: AppColors.fg2),
+                    ),
+                  ],
+                  if (child != null) ...[
+                    const SizedBox(height: 10),
+                    child,
+                  ],
+                ],
+              ),
+            ),
+          if (footer != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: AppColors.border)),
+              ),
+              child: footer,
+            ),
+        ],
+      ),
+    );
+  }
   return Container(
     width: double.infinity,
     padding: EdgeInsets.all(kMobile ? 12 : S.of(14)),
@@ -604,6 +684,7 @@ Widget _approvalSegments({
     return Padding(
       padding: EdgeInsets.symmetric(vertical: S.s2),
       child: DesktopAskCard(
+        kindLabel: secrets.isNotEmpty ? 'Vault approval' : 'Approval',
         title: title,
         meta: from,
         payload: Column(
@@ -614,19 +695,8 @@ Widget _approvalSegments({
             if (secrets.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child: Wrap(spacing: 6, runSpacing: 4, children: [
-                  for (final name in secrets)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface3,
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                      child: Text(name,
-                          style: codeMono(11,
-                              height: 15 / 11, color: AppColors.fg2)),
-                    ),
+                child: Wrap(spacing: 6, runSpacing: 6, children: [
+                  for (final name in secrets) AskVaultChip(name),
                 ]),
               ),
             ...extra,
@@ -872,27 +942,41 @@ class _TaskThreadCardState extends State<_TaskThreadCard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (inReview)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _chatPill(
-                          label: kMobile ? 'Accept' : 'Approve',
-                          primary: true,
-                          disabled: _busy,
-                          onTap: () => _submitVerdict('approve'),
+                  !kMobile
+                      ? Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            AskButton('Send back',
+                                variant: AskButtonVariant.secondary,
+                                onTap: _busy ? null : _promptSendBack),
+                            const SizedBox(width: 6),
+                            AskButton('Approve',
+                                variant: AskButtonVariant.primary,
+                                busy: _busy,
+                                onTap: () => _submitVerdict('approve')),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            Expanded(
+                              child: _chatPill(
+                                label: 'Accept',
+                                primary: true,
+                                disabled: _busy,
+                                onTap: () => _submitVerdict('approve'),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _chatPill(
+                                label: 'Send back',
+                                primary: false,
+                                disabled: _busy,
+                                onTap: _promptSendBack,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _chatPill(
-                          label: 'Send back',
-                          primary: false,
-                          disabled: _busy,
-                          onTap: _promptSendBack,
-                        ),
-                      ),
-                    ],
-                  ),
                 if (_error != null) ...[
                   if (inReview) SizedBox(height: S.s6),
                   Text(
@@ -1308,6 +1392,7 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
       return Padding(
         padding: EdgeInsets.symmetric(vertical: S.s2),
         child: DesktopAskCard(
+          kindLabel: parsed.secrets.isNotEmpty ? 'Vault approval' : 'Approval',
           title: asked ?? (isCommand ? 'Run a command?' : title),
           meta: metaParts.join(' · '),
           payload: Column(
@@ -1323,24 +1408,13 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
                       top: parsed.shownCommand.isNotEmpty ? 8 : 0),
                   child: Text(
                       [reason, context_].where((x) => x.isNotEmpty).join('\n'),
-                      style: sans(12, height: 17 / 12, color: AppColors.fg2)),
+                      style: sans(12.5, height: 18 / 12.5, color: AppColors.fg3)),
                 ),
               if (parsed.secrets.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
-                  child: Wrap(spacing: 6, runSpacing: 4, children: [
-                    for (final name in parsed.secrets)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface3,
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        child: Text(name,
-                            style: codeMono(11,
-                                height: 15 / 11, color: AppColors.fg2)),
-                      ),
+                  child: Wrap(spacing: 6, runSpacing: 6, children: [
+                    for (final name in parsed.secrets) AskVaultChip(name),
                   ]),
                 ),
             ],

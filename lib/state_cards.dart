@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'chat/ask_kit.dart';
+import 'platform.dart';
 import 'theme.dart';
 import 'toast.dart';
 import 'widgets.dart';
@@ -29,6 +31,95 @@ class ToolErrorPanel extends StatelessWidget {
         height: 16 / 11.5,
         fontWeight: FontWeight.w400,
         color: AppColors.fg2);
+    if (!kMobile) {
+      return Container(
+        key: const ValueKey('tool-error-panel'),
+        margin: EdgeInsets.symmetric(vertical: S.s4),
+        decoration: BoxDecoration(
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.border),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: AppColors.border)),
+              ),
+              child: Row(children: [
+                AppIcon('x', size: 13, color: AppColors.danger),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12.5,
+                          weight: FontWeight.w500, color: AppColors.fg1)),
+                ),
+              ]),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Container(
+                key: const ValueKey('tool-error-output'),
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.bg,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: SelectableText(shown, style: mono),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: AppColors.border)),
+              ),
+              child: Row(children: [
+                if (more)
+                  AskButton('Show all',
+                      variant: AskButtonVariant.ghost,
+                      onTap: () => showModalBottomSheet<void>(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: AppColors.surface1,
+                            builder: (_) => SafeArea(
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                    maxHeight:
+                                        MediaQuery.sizeOf(context).height * 0.6),
+                                child: SingleChildScrollView(
+                                    padding: const EdgeInsets.all(16),
+                                    child: SelectableText(text, style: mono)),
+                              ),
+                            ),
+                          )),
+                const Spacer(),
+                AskButton('Copy error',
+                    variant: AskButtonVariant.secondary,
+                    onTap: () async {
+                      await Clipboard.setData(ClipboardData(text: text));
+                      if (context.mounted) toast(context, 'Copied');
+                    }),
+                if (onRetry != null) ...[
+                  const SizedBox(width: 6),
+                  AskButton('Retry',
+                      variant: AskButtonVariant.primary,
+                      icon: 'refresh',
+                      onTap: onRetry),
+                ],
+              ]),
+            ),
+          ],
+        ),
+      );
+    }
     final copy = _PanelButton('Copy error', primary: false, onTap: () async {
       await Clipboard.setData(ClipboardData(text: text));
       if (context.mounted) toast(context, 'Copied');

@@ -48,6 +48,7 @@ class _CallPromptCardState extends State<CallPromptCard> {
               : 'Taking notes')
           : widget.status.body;
       return DesktopAskCard(
+        kindLabel: tracking ? null : 'Incoming call',
         title: tracking ? body : widget.status.title,
         needsYou: !tracking,
         meta: tracking ? null : 'Call',
@@ -59,12 +60,12 @@ class _CallPromptCardState extends State<CallPromptCard> {
               Text(body,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(12, height: 17 / 12, color: AppColors.fg2)),
+                  style: sans(12.5, height: 18 / 12.5, color: AppColors.fg3)),
             if (_failed)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Row(children: [
-                  AskIcon('x', size: 12, color: AppColors.fg1),
+                  AskIcon('x', size: 12, color: AppColors.danger),
                   const SizedBox(width: 5),
                   Text('Could not reach Snippet. Try again.',
                       style: sans(12, height: 17 / 12, color: AppColors.fg1)),
@@ -79,13 +80,13 @@ class _CallPromptCardState extends State<CallPromptCard> {
                 busy: _busy,
                 onTap: () => _run(callActionStop))
           else ...[
+            AskButton('Decline',
+                variant: AskButtonVariant.secondary,
+                onTap: _busy ? null : () => _run(callActionIgnore)),
             AskButton('Accept',
                 variant: AskButtonVariant.primary,
                 busy: _busy,
                 onTap: () => _run(callActionTrack)),
-            AskButton('Decline',
-                variant: AskButtonVariant.secondary,
-                onTap: _busy ? null : () => _run(callActionIgnore)),
           ],
         ],
       );

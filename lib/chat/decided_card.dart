@@ -78,24 +78,49 @@ class DecidedCard extends StatelessWidget {
         kind == DecidedKind.expired;
     final titleColor = dim ? AppColors.fg3 : AppColors.fg1;
     if (!kMobile) {
-      final shownTitle =
-          title.trim().toLowerCase().startsWith(kind.label.toLowerCase())
-              ? title
-              : title.trim().isEmpty
-                  ? kind.label
-                  : '${kind.label} $title';
+      final cleanTitle = title.trim();
+      final startsWithVerb =
+          cleanTitle.toLowerCase().startsWith(kind.label.toLowerCase());
+      final verb = kind.label;
+      final rest = startsWithVerb
+          ? cleanTitle.substring(kind.label.length).trim()
+          : cleanTitle;
+      final (badgeBg, badgeFg) = switch (kind) {
+        DecidedKind.approved || DecidedKind.answered => (
+            AppColors.diffAddFg.withValues(alpha: 0.13),
+            AppColors.diffAddFg,
+          ),
+        DecidedKind.denied => (
+            AppColors.danger.withValues(alpha: 0.13),
+            AppColors.danger,
+          ),
+        DecidedKind.outdated ||
+        DecidedKind.skipped ||
+        DecidedKind.expired ||
+        DecidedKind.superseded => (
+            AppColors.surface2,
+            AppColors.fg3,
+          ),
+      };
       return Container(
         width: double.infinity,
         margin: EdgeInsets.symmetric(vertical: S.s2),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: AppColors.surface2,
-          borderRadius: BorderRadius.circular(10),
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.border),
         ),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: AppIcon(kind.icon, size: 14, color: AppColors.fg2),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+          Container(
+            width: 18,
+            height: 18,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: badgeBg,
+              borderRadius: BorderRadius.circular(5),
+            ),
+            child: AppIcon(kind.icon, size: 11, color: badgeFg),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -103,21 +128,38 @@ class DecidedCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(shownTitle,
-                    style: code
-                        ? codeMono(13,
-                            height: 19 / 13,
-                            weight: FontWeight.w500,
-                            color: AppColors.fg1)
-                        : sans(13,
-                            height: 19 / 13,
-                            weight: FontWeight.w500,
-                            color: AppColors.fg1)),
+                Text.rich(
+                  TextSpan(children: [
+                    TextSpan(
+                      text: verb,
+                      style: sans(12,
+                          height: 17 / 12,
+                          weight: FontWeight.w500,
+                          color: dim ? AppColors.fg3 : AppColors.fg2),
+                    ),
+                    if (rest.isNotEmpty) ...[
+                      const TextSpan(text: '  '),
+                      TextSpan(
+                        text: rest,
+                        style: code
+                            ? codeMono(11.5,
+                                height: 17 / 11.5, color: AppColors.fg3)
+                            : sans(12,
+                                height: 17 / 12, color: AppColors.fg3),
+                      ),
+                    ],
+                  ]),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 if (subtitle != null && subtitle!.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.only(top: 2),
+                    padding: const EdgeInsets.only(top: 1),
                     child: Text(subtitle!,
-                        style: sans(12, height: 17 / 12, color: AppColors.fg2)),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(11.5,
+                            height: 16 / 11.5, color: AppColors.fg3)),
                   ),
               ],
             ),

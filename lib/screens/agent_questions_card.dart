@@ -517,6 +517,7 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
               ? widget.event.body.trim()
               : '${qs.length} questions');
       return DesktopAskCard(
+        kindLabel: qs.length > 1 ? 'Questions · ${qs.length}' : 'Question',
         title: title,
         meta: _askMeta(),
         payload: Column(
@@ -688,15 +689,23 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
       case 'yes_no':
       case 'confirm':
         final choices = _choicesFor(q);
-        return Wrap(spacing: 8, runSpacing: 8, children: [
-          for (final c in choices)
-            AskChoicePill(
-              label: c.label,
-              selected: _single[key] == c.value,
-              disabled: !interactive,
-              onTap: () => _pick(i, c, false),
-            ),
-        ]);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var idx = 0; idx < choices.length; idx++) ...[
+              if (idx > 0) const SizedBox(height: 5),
+              AskChoiceRow(
+                label: choices[idx].label,
+                description: choices[idx].description,
+                recommended: choices[idx].recommended,
+                selected: _single[key] == choices[idx].value,
+                disabled: !interactive,
+                onTap: () => _pick(i, choices[idx], false),
+              ),
+            ],
+          ],
+        );
       case 'multi_choice':
         final choices = _choicesFor(q);
         final picked = _multi[key] ?? const <String>{};
@@ -707,13 +716,14 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
             for (final c in choices)
               AskCheckboxRow(
                 label: c.label,
+                description: c.description,
                 selected: picked.contains(c.value),
                 onTap: interactive ? () => _pick(i, c, true) : null,
               ),
             Padding(
-              padding: const EdgeInsets.only(left: 7, top: 3),
+              padding: const EdgeInsets.only(left: 2, top: 2),
               child: Text('${picked.length} of ${choices.length} selected',
-                  style: sans(11.5, height: 16 / 11.5, color: AppColors.fg2)),
+                  style: sans(11.5, height: 16 / 11.5, color: AppColors.fg3)),
             ),
           ],
         );

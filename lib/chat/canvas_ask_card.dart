@@ -429,6 +429,7 @@ class _CanvasAskCardState extends State<CanvasAskCard> {
     ].join(' · ');
     return DesktopAskCard(
       key: ValueKey('canvas-ask-${widget.ask['id'] ?? 'unknown'}'),
+      kindLabel: 'Canvas ask',
       needsYou: true,
       meta: meta,
       title: _prompt,

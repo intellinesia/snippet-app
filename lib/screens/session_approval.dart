@@ -73,6 +73,63 @@ class _QuestionRecord extends StatelessWidget {
     ];
     String shown(String? a) =>
         a == null || a.isEmpty ? 'Not answered' : _displayAnswer(a);
+    if (!kMobile) {
+      if (rows.length <= 1) {
+        final (q, a) = rows.isEmpty ? ('Question', null) : rows.first;
+        final skipped = a == 'user skipped the question' || answers.isEmpty;
+        return Padding(
+          padding: EdgeInsets.symmetric(vertical: S.s2),
+          child: DecidedCard(
+            kind: skipped ? DecidedKind.skipped : DecidedKind.answered,
+            title: q.isEmpty ? 'Question' : q,
+            subtitle: skipped ? null : '→ ${shown(a)}',
+          ),
+        );
+      }
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: S.s2),
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.border),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var i = 0; i < rows.length; i++) ...[
+                if (i > 0)
+                  Container(height: 1, color: AppColors.border),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(rows[i].$1,
+                          style: sans(12,
+                              height: 17 / 12,
+                              weight: FontWeight.w500,
+                              color: AppColors.fg2)),
+                      const SizedBox(height: 1),
+                      Text('→ ${shown(rows[i].$2)}',
+                          style: sans(11.5,
+                              height: 16 / 11.5,
+                              color: rows[i].$2 == null || rows[i].$2!.isEmpty
+                                  ? AppColors.fg4
+                                  : AppColors.fg3)),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
     if (rows.length <= 1) {
       final (q, a) = rows.isEmpty ? ('Question', null) : rows.first;
       return Padding(
@@ -278,6 +335,7 @@ class ApprovalBarState extends State<ApprovalBar> {
         if (total > 1) '$index of $total',
       ].join(' · ');
       return DesktopAskCard(
+        kindLabel: isVault ? 'Vault approval' : 'Approval',
         title: headline,
         meta: meta,
         payload: Column(
@@ -288,25 +346,14 @@ class ApprovalBarState extends State<ApprovalBar> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(reason,
-                    style: sans(12, height: 17 / 12, color: AppColors.fg2)),
+                    style: sans(12.5, height: 18 / 12.5, color: AppColors.fg3)),
               ),
             if (detail.isNotEmpty) AskCommandPlate(detail),
             if (isVault)
               Padding(
                 padding: EdgeInsets.only(top: detail.isEmpty ? 0 : 8),
-                child: Wrap(spacing: 6, runSpacing: 4, children: [
-                  for (final name in secrets)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface3,
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                      child: Text(name,
-                          style: codeMono(11,
-                              height: 15 / 11, color: AppColors.fg2)),
-                    ),
+                child: Wrap(spacing: 6, runSpacing: 6, children: [
+                  for (final name in secrets) AskVaultChip(name),
                 ]),
               ),
           ],
@@ -327,6 +374,7 @@ class ApprovalBarState extends State<ApprovalBar> {
           AskButton(_sent ? 'Approving' : 'Approve',
               variant: AskButtonVariant.primary,
               busy: _sent,
+              shortcut: '↵',
               onTap: () =>
                   _decide({'kind': _always ? _alwaysKind : 'approve'})),
         ],
@@ -779,28 +827,32 @@ class QuestionBarState extends State<QuestionBar> {
     final name = (widget.agentName ?? '').trim();
     final title =
         _review ? 'Check your answers' : q?['text']?.toString() ?? 'Question';
-    final meta = _review
-        ? 'Review'
-        : [
-            if (name.isNotEmpty) name,
-            if (total > 1) '${_step + 1} of $total',
-          ].join(' · ');
+    final kindLabel = _review
+        ? 'Review answers'
+        : total > 1
+            ? 'Question · ${_step + 1} of $total'
+            : 'Question';
+    final meta = name;
 
     Widget reviewRows() => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
             for (var i = 0; i < _questions.length; i++) ...[
-              if (i > 0) const SizedBox(height: 6),
+              if (i > 0) const SizedBox(height: 5),
               Material(
-                color: AppColors.surface1,
-                borderRadius: BorderRadius.circular(6),
+                color: AppColors.surface2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(7),
+                  side: BorderSide(color: AppColors.border),
+                ),
+                clipBehavior: Clip.antiAlias,
                 child: InkWell(
                   onTap: _sent ? null : () => _goTo(i),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(7),
                   child: Padding(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     child: Row(children: [
                       Expanded(
                         child: Column(
@@ -813,15 +865,17 @@ class QuestionBarState extends State<QuestionBar> {
                             Text(_answerFor(_questions[i]),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: sans(12,
-                                    height: 17 / 12, color: AppColors.fg1)),
+                                style: sans(12.5,
+                                    height: 17 / 12.5, color: AppColors.fg1)),
                           ],
                         ),
                       ),
                       const SizedBox(width: 8),
                       Text('Edit',
-                          style:
-                              sans(11, height: 15 / 11, color: AppColors.fg2)),
+                          style: sans(11.5,
+                              height: 15 / 11.5,
+                              weight: FontWeight.w500,
+                              color: AppColors.fg3)),
                     ]),
                   ),
                 ),
@@ -830,6 +884,7 @@ class QuestionBarState extends State<QuestionBar> {
           ],
         );
 
+    Widget? footerLeft;
     Widget questionInput() {
       final id = q?['id']?.toString();
       if (q == null || id == null) return const SizedBox.shrink();
@@ -840,12 +895,14 @@ class QuestionBarState extends State<QuestionBar> {
       if (ctx != null && ctx.isNotEmpty) {
         children.add(Padding(
           padding: const EdgeInsets.only(bottom: 8),
-          child:
-              Text(ctx, style: sans(12, height: 17 / 12, color: AppColors.fg2)),
+          child: Text(ctx,
+              style: sans(12.5, height: 18 / 12.5, color: AppColors.fg3)),
         ));
       }
       if (kind == 'multi_choice') {
         final picked = _multi[id] ?? const <String>{};
+        footerLeft = Text('${picked.length} of ${opts.length} selected',
+            style: sans(11.5, height: 16 / 11.5, color: AppColors.fg3));
         children.add(Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
@@ -853,34 +910,43 @@ class QuestionBarState extends State<QuestionBar> {
             for (final o in opts)
               AskCheckboxRow(
                 label: o.label,
+                description: o.description,
                 selected: picked.contains(o.value),
                 onTap: _sent ? null : () => _pick(q, o),
               ),
-            Padding(
-              padding: const EdgeInsets.only(left: 7, top: 3),
-              child: Text('${picked.length} of ${opts.length} selected',
-                  style: sans(11.5, height: 16 / 11.5, color: AppColors.fg2)),
-            ),
           ],
         ));
       } else if (kind != 'free_text') {
-        children.add(Wrap(spacing: 8, runSpacing: 8, children: [
-          for (final o in opts)
-            AskChoicePill(
-              label: o.label,
-              selected: _choice[id] == o.value && !_freeText.contains(id),
+        children.add(Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < opts.length; i++) ...[
+              if (i > 0) const SizedBox(height: 5),
+              AskChoiceRow(
+                label: opts[i].label,
+                description: opts[i].description,
+                keyHint: i < 9 ? '${i + 1}' : null,
+                recommended: opts[i].recommended,
+                selected:
+                    _choice[id] == opts[i].value && !_freeText.contains(id),
+                disabled: _sent,
+                onTap: () => _pick(q, opts[i]),
+              ),
+            ],
+            const SizedBox(height: 5),
+            AskChoiceRow(
+              label: _freeText.contains(id)
+                  ? 'Writing a response'
+                  : 'Write your own answer…',
+              keyHint: opts.length < 9 ? '${opts.length + 1}' : null,
+              custom: true,
+              selected: _freeText.contains(id),
               disabled: _sent,
-              onTap: () => _pick(q, o),
+              onTap: _toggleFreeText,
             ),
-          AskChoicePill(
-            label: _freeText.contains(id)
-                ? 'Writing a response'
-                : 'Write your own answer',
-            selected: _freeText.contains(id),
-            disabled: _sent,
-            onTap: _toggleFreeText,
-          ),
-        ]));
+          ],
+        ));
       }
       if (writing) {
         children.add(Padding(
@@ -892,14 +958,6 @@ class QuestionBarState extends State<QuestionBar> {
           ),
         ));
       }
-      if (opts.isNotEmpty && !writing) {
-        children.add(Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Text(
-              'Press 1–${opts.length > 9 ? 9 : opts.length} to choose · Enter ${last ? 'to submit' : 'for next'}',
-              style: sans(11, height: 15 / 11, color: AppColors.fg3)),
-        ));
-      }
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
@@ -907,10 +965,13 @@ class QuestionBarState extends State<QuestionBar> {
       );
     }
 
+    final body = _review ? reviewRows() : questionInput();
     return DesktopAskCard(
+      kindLabel: kindLabel,
       title: title,
       meta: meta,
-      payload: _review ? reviewRows() : questionInput(),
+      payload: body,
+      footerLeft: footerLeft,
       actions: [
         if (!_review)
           AskButton('Skip',
@@ -921,6 +982,7 @@ class QuestionBarState extends State<QuestionBar> {
         AskButton(_sent ? 'Sending' : nextLabel,
             variant: AskButtonVariant.primary,
             busy: _sent,
+            shortcut: '↵',
             onTap: (_ready && !_sent) ? _submit : null),
       ],
     );

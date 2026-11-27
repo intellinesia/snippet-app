@@ -140,13 +140,18 @@ class _TranscriptCardState extends State<TranscriptCard> {
       padding: EdgeInsets.symmetric(vertical: S.of(3)),
       child: Material(
         color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(R.card),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(kMobile ? R.card : 8),
+          side: kMobile
+              ? BorderSide.none
+              : BorderSide(color: AppColors.border),
+        ),
         clipBehavior: Clip.antiAlias,
         child: widget.onTap == null
             ? content
             : Pressable(
                 kind: PressKind.card,
-                radius: 10,
+                radius: kMobile ? 10 : 8,
                 child: InkWell(onTap: widget.onTap, child: content)),
       ),
     );

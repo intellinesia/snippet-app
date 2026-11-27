@@ -23,6 +23,7 @@ import 'package:pasteboard/pasteboard.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../chat/activity_dock.dart';
+import '../chat/decided_card.dart';
 import '../chat/send_flight.dart';
 import '../chat/shared_artifact_line.dart';
 import '../chat/activity_sheet.dart';

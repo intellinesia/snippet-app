@@ -104,8 +104,9 @@ class _LimitCardState extends State<LimitCard> {
           : '${widget.profile} limit reached';
       return DesktopAskCard(
         key: const ValueKey('limit-card'),
+        kindLabel: 'Usage limit',
         needsYou: widget.options.isNotEmpty,
-        meta: 'Usage limit',
+        meta: widget.profile,
         title: title,
         payload: Text(
             has

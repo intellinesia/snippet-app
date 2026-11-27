@@ -59,7 +59,8 @@ void main() {
     final material = tester.widget<Material>(find
         .ancestor(of: find.text('Approve'), matching: find.byType(Material))
         .first);
-    expect(material.borderRadius, BorderRadius.circular(6));
+    final shape = material.shape as RoundedRectangleBorder;
+    expect(shape.borderRadius, BorderRadius.circular(6));
   });
 
   testDesktopWidgets('choose-one option cards say Selected and expose a border',
@@ -118,7 +119,7 @@ void main() {
       },
     )));
 
-    expect(find.text('Needs you'), findsOneWidget);
+    expect(find.text('Canvas ask'), findsOneWidget);
     expect(find.text('Sashy · r14'), findsOneWidget);
     expect(find.text('Which frame should ship?'), findsOneWidget);
     expect(find.text('Open on canvas'), findsOneWidget);
@@ -130,7 +131,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(answers, ['a']);
-    expect(find.text('Needs you'), findsNothing);
+    expect(find.text('Canvas ask'), findsNothing);
     expect(find.textContaining('Answered'), findsOneWidget);
     expect(find.textContaining('pinned at r14'), findsOneWidget);
   });
@@ -294,7 +295,7 @@ void main() {
       ),
       onAction: action,
     )));
-    expect(find.text('Needs you'), findsOneWidget);
+    expect(find.text('Incoming call'), findsOneWidget);
     expect(find.text('Lead is calling: voice check-in'), findsOneWidget);
     expect(find.text('Accept'), findsOneWidget);
     expect(find.text('Decline'), findsOneWidget);
@@ -307,7 +308,7 @@ void main() {
       ),
       onAction: action,
     )));
-    expect(find.text('Needs you'), findsNothing);
+    expect(find.text('Incoming call'), findsNothing);
     expect(find.text('Stop'), findsOneWidget);
   });
 
@@ -323,7 +324,7 @@ void main() {
       options: const ['GPT-5'],
       settled: false,
     )));
-    expect(find.text('Needs you'), findsOneWidget);
+    expect(find.text('Usage limit'), findsOneWidget);
     expect(find.textContaining('Claude limit reached'), findsOneWidget);
     expect(find.text('Continue on GPT-5'), findsOneWidget);
 
@@ -335,7 +336,7 @@ void main() {
       options: const [],
       settled: false,
     )));
-    expect(find.text('Needs you'), findsNothing);
+    expect(find.text('Usage limit'), findsNothing);
     expect(find.text('Wait for reset'), findsOneWidget);
   });
 }

@@ -183,6 +183,97 @@ class _ThreadCard extends StatelessWidget {
     final lead = agent.isNotEmpty
         ? AgentMochi(agent, size: 16)
         : AppIcon(icon, size: 16, color: AppColors.fg2);
+    if (!kMobile) {
+      final (statusBg, statusFg) = switch (tone) {
+        Tone.run => (AppColors.run.withValues(alpha: 0.12), AppColors.run),
+        Tone.ok => (
+            AppColors.diffAddFg.withValues(alpha: 0.12),
+            AppColors.diffAddFg,
+          ),
+        Tone.danger => (
+            AppColors.danger.withValues(alpha: 0.12),
+            AppColors.danger,
+          ),
+        _ => (AppColors.surface2, AppColors.fg3),
+      };
+      return Container(
+        width: double.infinity,
+        margin: EdgeInsets.symmetric(vertical: S.s4),
+        decoration: BoxDecoration(
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.border),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 9, 12, 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(children: [
+                lead,
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(kind,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12,
+                          height: 16 / 12,
+                          weight: FontWeight.w500,
+                          color: AppColors.fg2)),
+                ),
+                if (stat.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: statusBg,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(stat,
+                        style: sans(11,
+                            height: 15 / 11,
+                            weight: FontWeight.w500,
+                            color: statusFg)),
+                  ),
+                ],
+                if (reference != null && reference!.isNotEmpty) ...[
+                  const Spacer(),
+                  Text(reference!,
+                      style: codeMono(11, height: 15 / 11, color: AppColors.fg4)),
+                ],
+              ]),
+              if (head.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(head,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(13,
+                          height: 18 / 13,
+                          weight: FontWeight.w500,
+                          color: AppColors.fg1)),
+                ),
+              if (body.trim().isNotEmpty)
+                Padding(
+                  padding: EdgeInsets.only(top: head.isEmpty ? 6 : 3),
+                  child: _PreviewBody(body: body),
+                ),
+              if (foot.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(foot,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(11.5, height: 1.35, color: AppColors.fg3)),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
     return Container(
       width: double.infinity,
       margin: EdgeInsets.symmetric(vertical: kMobile ? 6 : 0),
@@ -731,10 +822,9 @@ class WorkerQuestionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!kMobile) {
       return DesktopAskCard(
+        kindLabel: 'Lane question',
         title: question.question.trim(),
-        meta: question.task.trim().isEmpty
-            ? 'Lane question'
-            : 'Lane question from ${question.task.trim()}',
+        meta: question.task.trim(),
         payload: Text('Lead answers from your brief, or pings you',
             style: sans(12, height: 17 / 12, color: AppColors.fg2)),
         actions: [

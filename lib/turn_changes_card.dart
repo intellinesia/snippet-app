@@ -39,17 +39,18 @@ class _TurnChangesCardState extends State<TurnChangesCard> {
       behavior: HitTestBehavior.opaque,
       onTap: widget.onReview,
       child: Container(
-        height: 28,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        height: 26,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
           color: AppColors.surface2,
           borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: AppColors.border2),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          AppIcon('file-diff', size: 13, color: AppColors.fg1),
+          AppIcon('file-diff', size: 12.5, color: AppColors.fg1),
           const SizedBox(width: 6),
           Text('Review changes',
-              style: sans(12, weight: W.label, color: AppColors.fg1)),
+              style: sans(11.5, weight: W.label, color: AppColors.fg1)),
         ]),
       ),
     );
@@ -77,6 +78,7 @@ class _TurnChangesCardState extends State<TurnChangesCard> {
         decoration: BoxDecoration(
           color: AppColors.surface1,
           borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.border),
         ),
         clipBehavior: Clip.antiAlias,
         child:

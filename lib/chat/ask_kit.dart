@@ -27,9 +27,10 @@ class AskIcon extends StatelessWidget {
 
 /// The locked needs-you header: the surface stays tonal; only this dot is amber.
 class NeedsYouHeader extends StatelessWidget {
-  const NeedsYouHeader({super.key, this.meta});
+  const NeedsYouHeader({super.key, this.meta, this.label = 'Needs you'});
 
   final String? meta;
+  final String label;
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -43,9 +44,9 @@ class NeedsYouHeader extends StatelessWidget {
                 BoxDecoration(color: AppColors.run, shape: BoxShape.circle),
           ),
           const SizedBox(width: 7),
-          Text('Needs you',
-              style: sans(kMobile ? 13 : 12,
-                  height: kMobile ? 18 / 13 : 16 / 12,
+          Text(label,
+              style: sans(kMobile ? 13 : 11.5,
+                  height: kMobile ? 18 / 13 : 16 / 11.5,
                   weight: FontWeight.w500,
                   color: AppColors.fg2)),
           const Spacer(),
@@ -55,7 +56,7 @@ class NeedsYouHeader extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.right,
-                  style: sans(11, height: 15 / 11, color: AppColors.fg2)),
+                  style: sans(11.5, height: 16 / 11.5, color: AppColors.fg3)),
             ),
         ]),
       );
@@ -71,7 +72,7 @@ class AskActionWideGap extends StatelessWidget {
 
 enum AskButtonVariant { primary, secondary, ghost }
 
-/// Locked desktop action button: 28 high, radius 6, 12.5/500 label.
+/// Locked desktop action button: 28 high, radius 6, crisp hairline on secondary.
 class AskButton extends StatelessWidget {
   const AskButton(
     this.label, {
@@ -80,6 +81,7 @@ class AskButton extends StatelessWidget {
     this.variant = AskButtonVariant.secondary,
     this.busy = false,
     this.icon,
+    this.shortcut,
   });
 
   final String label;
@@ -87,6 +89,7 @@ class AskButton extends StatelessWidget {
   final AskButtonVariant variant;
   final bool busy;
   final String? icon;
+  final String? shortcut;
 
   @override
   Widget build(BuildContext context) {
@@ -94,20 +97,29 @@ class AskButton extends StatelessWidget {
     final fill = !enabled
         ? (variant == AskButtonVariant.ghost
             ? Colors.transparent
-            : AppColors.surface3)
+            : AppColors.surface2)
         : switch (variant) {
             AskButtonVariant.primary => AppColors.fg1,
-            AskButtonVariant.secondary => AppColors.surface3,
+            AskButtonVariant.secondary =>
+              kMobile ? AppColors.surface3 : AppColors.surface2,
             AskButtonVariant.ghost => Colors.transparent,
           };
     final ink = !enabled
-        ? AppColors.fg2
+        ? AppColors.fg4
         : switch (variant) {
             AskButtonVariant.primary => AppColors.bg,
             AskButtonVariant.secondary => AppColors.fg1,
-            AskButtonVariant.ghost => AppColors.fg2,
+            AskButtonVariant.ghost => AppColors.fg3,
           };
+    final borderSide = !kMobile && variant == AskButtonVariant.secondary
+        ? BorderSide(color: enabled ? AppColors.border2 : AppColors.border)
+        : !kMobile && variant == AskButtonVariant.primary && enabled
+            ? BorderSide(color: AppColors.fg1)
+            : BorderSide.none;
     final radius = BorderRadius.circular(kMobile ? 8 : 6);
+    final hPad = kMobile
+        ? 10.0
+        : (variant == AskButtonVariant.ghost ? 8.0 : 11.0);
     return Semantics(
       button: true,
       enabled: enabled,
@@ -117,13 +129,17 @@ class AskButton extends StatelessWidget {
             enabled ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
         child: Material(
           color: fill,
-          borderRadius: radius,
+          shape: RoundedRectangleBorder(
+            borderRadius: radius,
+            side: borderSide,
+          ),
+          clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: enabled ? onTap : null,
             borderRadius: radius,
             child: Container(
               height: kMobile ? 36 : 28,
-              padding: EdgeInsets.symmetric(horizontal: kMobile ? 10 : 12),
+              padding: EdgeInsets.symmetric(horizontal: hPad),
               alignment: Alignment.center,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 if (busy) ...[
@@ -137,11 +153,18 @@ class AskButton extends StatelessWidget {
                   child: Text(label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(12.5,
-                          height: 16 / 12.5,
+                      style: sans(kMobile ? 12.5 : 12,
+                          height: 16 / (kMobile ? 12.5 : 12),
                           weight: FontWeight.w500,
                           color: ink)),
                 ),
+                if (shortcut != null && shortcut!.isNotEmpty && !busy) ...[
+                  const SizedBox(width: 6),
+                  Text(shortcut!,
+                      style: codeMono(10,
+                          height: 14 / 10,
+                          color: ink.withValues(alpha: 0.6))),
+                ],
               ]),
             ),
           ),
@@ -151,48 +174,82 @@ class AskButton extends StatelessWidget {
   }
 }
 
-/// Flat s2 card used by every open desktop ask. When its parent caps height,
-/// only the payload scrolls; the header and action row remain reachable.
+/// Hairline-framed s1 card used by every open desktop ask. When its parent caps
+/// height, only the payload scrolls; the header and action bar remain reachable.
 class DesktopAskCard extends StatelessWidget {
   const DesktopAskCard({
     super.key,
     required this.title,
+    this.kindLabel,
     this.meta,
     this.payload,
     this.actions = const [],
+    this.footerLeft,
     this.needsYou = true,
     this.margin = EdgeInsets.zero,
   });
 
   final String title;
+  final String? kindLabel;
   final String? meta;
   final Widget? payload;
   final List<Widget> actions;
+  final Widget? footerLeft;
   final bool needsYou;
   final EdgeInsetsGeometry margin;
 
   Widget _title() => Text(title,
-      style: sans(kMobile ? 15 : 13,
-          height: kMobile ? 21 / 15 : 19 / 13, weight: FontWeight.w500, color: AppColors.fg1));
+      style: sans(kMobile ? 15 : 13.5,
+          height: kMobile ? 21 / 15 : 19 / 13.5,
+          weight: FontWeight.w500,
+          color: AppColors.fg1));
 
-  Widget _actions() => Padding(
-        padding: const EdgeInsets.only(top: 12),
-        child: Row(children: [
-          for (var i = 0; i < actions.length; i++) ...[
-            if (i > 0 &&
-                actions[i] is! AskActionWideGap &&
-                actions[i - 1] is! AskActionWideGap)
-              const SizedBox(width: 8),
-            if (actions[i] is AskActionWideGap)
-              const SizedBox(width: 16)
-            else
-              actions[i],
-          ],
-        ]),
-      );
+  Widget _footer() {
+    final left = <Widget>[if (footerLeft != null) footerLeft!];
+    final right = <Widget>[];
+    for (final a in actions) {
+      if (a is AskActionWideGap) continue;
+      if (a is AskButton && a.variant == AskButtonVariant.ghost) {
+        left.add(a);
+      } else {
+        right.add(a);
+      }
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      decoration: BoxDecoration(
+        color: AppColors.surface1,
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
+      child: Row(children: [
+        if (left.isNotEmpty)
+          Expanded(
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: left,
+            ),
+          ),
+        if (left.isEmpty) const Spacer(),
+        if (right.isNotEmpty) ...[
+          const SizedBox(width: 8),
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            for (var i = 0; i < right.length; i++) ...[
+              if (i > 0) const SizedBox(width: 6),
+              right[i],
+            ],
+          ]),
+        ],
+      ]),
+    );
+  }
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    final hasFooter = actions.isNotEmpty || footerLeft != null;
+    if (kMobile) {
+      return Container(
         margin: margin,
         decoration: BoxDecoration(
           color: AppColors.surface2,
@@ -200,37 +257,93 @@ class DesktopAskCard extends StatelessWidget {
         ),
         clipBehavior: Clip.antiAlias,
         child: LayoutBuilder(builder: (context, box) {
-          final head = <Widget>[
-            if (needsYou) NeedsYouHeader(meta: meta),
-            if (needsYou)
-              const SizedBox(height: 8)
-            else
-              const SizedBox.shrink(),
-            _title(),
-          ];
-          final tail = actions.isEmpty ? null : _actions();
           final body = payload == null
               ? const SizedBox.shrink()
               : Padding(
                   padding: const EdgeInsets.only(top: 10), child: payload);
-          final column = Column(
+          return Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (needsYou) ...[
+                  NeedsYouHeader(label: kindLabel ?? 'Needs you', meta: meta),
+                  const SizedBox(height: 8),
+                ],
+                _title(),
+                if (payload != null)
+                  box.hasBoundedHeight
+                      ? Flexible(child: SingleChildScrollView(child: body))
+                      : body,
+                if (actions.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Wrap(spacing: 8, runSpacing: 8, children: [
+                      for (final a in actions)
+                        if (a is! AskActionWideGap) a,
+                    ]),
+                  ),
+              ],
+            ),
+          );
+        }),
+      );
+    }
+
+    return Container(
+      margin: margin,
+      decoration: BoxDecoration(
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.border2),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: LayoutBuilder(builder: (context, box) {
+        final body = Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              ...head,
-              if (payload != null)
-                box.hasBoundedHeight
-                    ? Flexible(child: SingleChildScrollView(child: body))
-                    : body,
-              if (tail != null) tail,
+              _title(),
+              if (payload != null) ...[
+                const SizedBox(height: 10),
+                payload!,
+              ],
             ],
-          );
-          return Padding(padding: EdgeInsets.all(kMobile ? 14 : 12), child: column);
-        }),
-      );
+          ),
+        );
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (needsYou)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                decoration: BoxDecoration(
+                  color: AppColors.surface2,
+                  border: Border(bottom: BorderSide(color: AppColors.border)),
+                ),
+                child: NeedsYouHeader(
+                  label: kindLabel ?? 'Needs you',
+                  meta: meta,
+                ),
+              ),
+            if (box.hasBoundedHeight)
+              Flexible(child: SingleChildScrollView(child: body))
+            else
+              body,
+            if (hasFooter) _footer(),
+          ],
+        );
+      }),
+    );
+  }
 }
 
-/// Permission payload: mono command on the one-step-lift s3 plate.
+/// Permission payload: recessed dark code well with hairline border and `$` cue.
 class AskCommandPlate extends StatelessWidget {
   const AskCommandPlate(this.code, {super.key, this.maxLines});
 
@@ -240,16 +353,199 @@ class AskCommandPlate extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         width: double.infinity,
-        constraints: const BoxConstraints(minHeight: 30),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        constraints: const BoxConstraints(minHeight: 34),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
         decoration: BoxDecoration(
-          color: AppColors.surface3,
-          borderRadius: BorderRadius.circular(6),
+          color: kMobile ? AppColors.surface3 : AppColors.bg,
+          borderRadius: BorderRadius.circular(7),
+          border: kMobile ? null : Border.all(color: AppColors.border),
         ),
-        child: SelectableText(code,
-            maxLines: maxLines,
-            style: codeMono(12, height: 18 / 12, color: AppColors.fg1)),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (!kMobile) ...[
+            Text('\$',
+                style: codeMono(12, height: 18 / 12, color: AppColors.fg4)),
+            const SizedBox(width: 8),
+          ],
+          Expanded(
+            child: SelectableText(code,
+                maxLines: maxLines,
+                style: codeMono(12, height: 18 / 12, color: AppColors.fg1)),
+          ),
+        ]),
       );
+}
+
+/// Vault secret badge shown inside approval cards when a command references a secret.
+class AskVaultChip extends StatelessWidget {
+  const AskVaultChip(this.name, {super.key});
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: AppColors.run.withValues(alpha: 0.11),
+          borderRadius: BorderRadius.circular(5),
+          border: Border.all(color: AppColors.run.withValues(alpha: 0.28)),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          AskIcon('lock', size: 11, color: AppColors.run),
+          const SizedBox(width: 5),
+          Text(name,
+              style: codeMono(11, height: 15 / 11, color: AppColors.run)),
+        ]),
+      );
+}
+
+/// Structured desktop single-choice row with optional keycap, description, and
+/// Recommended tag.
+class AskChoiceRow extends StatelessWidget {
+  const AskChoiceRow({
+    super.key,
+    required this.label,
+    required this.selected,
+    this.description,
+    this.keyHint,
+    this.recommended = false,
+    this.custom = false,
+    this.disabled = false,
+    this.onTap,
+  });
+
+  final String label;
+  final String? description;
+  final String? keyHint;
+  final bool selected;
+  final bool recommended;
+  final bool custom;
+  final bool disabled;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = !disabled && onTap != null;
+    final radius = BorderRadius.circular(7);
+    final fill = selected ? AppColors.surface2 : Colors.transparent;
+    final borderColor = selected ? AppColors.fg2 : AppColors.border;
+    final desc = description?.trim() ?? '';
+    return Semantics(
+      button: true,
+      selected: selected,
+      enabled: enabled,
+      label: label,
+      child: MouseRegion(
+        cursor:
+            enabled ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
+        child: Material(
+          color: fill,
+          shape: RoundedRectangleBorder(
+            borderRadius: radius,
+            side: BorderSide(color: borderColor),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: enabled ? onTap : null,
+            borderRadius: radius,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                if (keyHint != null && keyHint!.isNotEmpty)
+                  Container(
+                    width: 18,
+                    height: 18,
+                    margin: const EdgeInsets.only(top: 1),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: selected ? AppColors.fg1 : AppColors.bg,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                          color: selected ? AppColors.fg1 : AppColors.border2),
+                    ),
+                    child: Text(keyHint!,
+                        style: codeMono(10.5,
+                            height: 1,
+                            weight: FontWeight.w500,
+                            color: selected ? AppColors.bg : AppColors.fg3)),
+                  )
+                else
+                  Container(
+                    width: 15,
+                    height: 15,
+                    margin: const EdgeInsets.only(top: 2),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: selected ? AppColors.fg1 : AppColors.bg,
+                      border: Border.all(
+                          color: selected ? AppColors.fg1 : AppColors.border2),
+                    ),
+                    child: selected
+                        ? Center(
+                            child: Container(
+                              width: 5,
+                              height: 5,
+                              decoration: BoxDecoration(
+                                color: AppColors.bg,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          )
+                        : null,
+                  ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(children: [
+                        Flexible(
+                          child: Text(label,
+                              style: sans(12.5,
+                                  height: 18 / 12.5,
+                                  weight: custom && !selected
+                                      ? FontWeight.w400
+                                      : FontWeight.w500,
+                                  color: disabled
+                                      ? AppColors.fg3
+                                      : (custom && !selected
+                                          ? AppColors.fg3
+                                          : AppColors.fg1))),
+                        ),
+                        if (recommended) ...[
+                          const SizedBox(width: 7),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface3,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text('Recommended',
+                                style: sans(10.5,
+                                    height: 15 / 10.5,
+                                    weight: FontWeight.w500,
+                                    color: AppColors.fg2)),
+                          ),
+                        ],
+                      ]),
+                      if (desc.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(desc,
+                              style: sans(12,
+                                  height: 17 / 12, color: AppColors.fg3)),
+                        ),
+                    ],
+                  ),
+                ),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// ASK-06 choice pill: selection is glyph + weight on the same tonal fill.
@@ -428,53 +724,76 @@ class AskOptionGrid extends StatelessWidget {
       });
 }
 
-/// Choose-many row: 28 pitch, 14 checkbox, mono label, selected tonal row.
+/// Choose-many row: hairline-bordered Geist Sans row with optional description.
 class AskCheckboxRow extends StatelessWidget {
   const AskCheckboxRow({
     super.key,
     required this.label,
     required this.selected,
+    this.description,
     this.onTap,
   });
 
   final String label;
+  final String? description;
   final bool selected;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(6);
-    return Material(
-      color: selected ? AppColors.surface3 : Colors.transparent,
-      borderRadius: radius,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: radius,
-        child: SizedBox(
-          height: 28,
+    final radius = BorderRadius.circular(7);
+    final desc = description?.trim() ?? '';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 5),
+      child: Material(
+        color: selected ? AppColors.surface2 : Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          side: BorderSide(
+              color: selected ? AppColors.fg2 : AppColors.border),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: radius,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 7),
-            child: Row(children: [
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Container(
-                width: 14,
-                height: 14,
+                width: 15,
+                height: 15,
+                margin: const EdgeInsets.only(top: 2),
                 decoration: BoxDecoration(
-                  color: selected ? AppColors.fg1 : Colors.transparent,
-                  borderRadius: BorderRadius.circular(3),
+                  color: selected ? AppColors.fg1 : AppColors.bg,
+                  borderRadius: BorderRadius.circular(4),
                   border: Border.all(
-                      color: selected ? AppColors.fg1 : AppColors.fg3,
+                      color: selected ? AppColors.fg1 : AppColors.border2,
                       width: 1),
                 ),
                 child: selected
                     ? AskIcon('check', size: 10, color: AppColors.bg)
                     : null,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(
-                child: Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: codeMono(12, height: 17 / 12, color: AppColors.fg1)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(label,
+                        style: sans(12.5,
+                            height: 18 / 12.5,
+                            weight: FontWeight.w500,
+                            color: AppColors.fg1)),
+                    if (desc.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(desc,
+                            style: sans(12,
+                                height: 17 / 12, color: AppColors.fg3)),
+                      ),
+                  ],
+                ),
               ),
             ]),
           ),
@@ -484,7 +803,7 @@ class AskCheckboxRow extends StatelessWidget {
   }
 }
 
-/// Free-text payload plate: s3, radius 6, 34 minimum, 12/400 placeholder.
+/// Free-text payload plate: recessed bg with crisp border2 outline.
 class AskTextInput extends StatelessWidget {
   const AskTextInput({
     super.key,
@@ -501,10 +820,11 @@ class AskTextInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        constraints: const BoxConstraints(minHeight: 34),
+        constraints: const BoxConstraints(minHeight: 36),
         decoration: BoxDecoration(
-          color: AppColors.surface3,
-          borderRadius: BorderRadius.circular(6),
+          color: kMobile ? AppColors.surface3 : AppColors.bg,
+          borderRadius: BorderRadius.circular(7),
+          border: kMobile ? null : Border.all(color: AppColors.border2),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 10),
         child: TextField(
@@ -513,13 +833,13 @@ class AskTextInput extends StatelessWidget {
           minLines: 1,
           maxLines: 4,
           onSubmitted: onSubmitted,
-          style: sans(12, height: 17 / 12, color: AppColors.fg1),
+          style: sans(12.5, height: 18 / 12.5, color: AppColors.fg1),
           cursorColor: AppColors.fg1,
           decoration: InputDecoration(
             isDense: true,
             border: InputBorder.none,
             hintText: hint,
-            hintStyle: sans(12, height: 17 / 12, color: AppColors.fg2),
+            hintStyle: sans(12.5, height: 18 / 12.5, color: AppColors.fg3),
             contentPadding: const EdgeInsets.symmetric(vertical: 8),
           ),
         ),
