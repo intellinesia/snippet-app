@@ -287,8 +287,8 @@ final _quiet = _palette(
   diffDelBg: const Color(0xFF2A1D1C),
 );
 
-// Desktop Quiet dark takes Capy's near-black greys, sampled from the app.
-final _quietCapy = _palette(
+// Desktop Quiet dark takes near-black greys.
+final _quietDesk = _palette(
   name: 'quiet',
   label: 'Quiet',
   bg: const Color(0xFF070707),
@@ -1070,7 +1070,7 @@ class ThemeManager extends ChangeNotifier {
 /// Convenience accessor — same as `ThemeManager.instance.current`.
 ThemePreset get currentTheme {
   final t = ThemeManager.instance.current;
-  return !kMobile && t.name == 'quiet' ? _quietCapy : t;
+  return !kMobile && t.name == 'quiet' ? _quietDesk : t;
 }
 
 /// Marks every descendant element dirty so theme token updates reach subtrees
@@ -1113,9 +1113,9 @@ class AppColors {
   static Color get line => currentTheme.border;
   static Color get lineStrong => currentTheme.border2;
 
-  /// Pane rows, pane dividers and the panel edge: Capy keeps these barely
+  /// Pane rows, pane dividers and the panel edge: keep these barely
   /// above the pane fill, fainter than card outlines.
-  static Color get paneLine => identical(currentTheme, _quietCapy)
+  static Color get paneLine => identical(currentTheme, _quietDesk)
       ? const Color(0xFF121212)
       : _quietDeskLight
           ? const Color(0xFFEFEFEA)
@@ -1157,7 +1157,7 @@ class AppColors {
       : (_deskBlack
               ? const Color(0xFF09090A)
               : _quietDesk
-                  // Capy depth: chrome sits darker than the reading panel.
+                  // Depth: chrome sits darker than the reading panel.
                   ? (_quietDeskLight
                       ? currentTheme.surface2
                       : const Color(0xFF000000))
@@ -1263,26 +1263,26 @@ Color get readingBg => AppColors.canvas;
 // wants edges that feel engineered.
 // ---------------------------------------------------------------------------
 
-/// Desktop pane rows and their tab pills (Capy metrics), shared by the
+/// Desktop pane rows and their tab pills, shared by the
 /// window tabs, the pane rows and the right panel.
 abstract final class PaneRow {
   static bool get _quietLight => !kMobile && currentTheme.name == 'quiet-light';
 
-  /// Active pane-pill plate: Capy's #1A, a step above the window tab.
-  static Color get plate => identical(currentTheme, _quietCapy)
+  /// Active pane-pill plate: the #1A, a step above the window tab.
+  static Color get plate => identical(currentTheme, _quietDesk)
       ? const Color(0xFF1A1A1A)
       : _quietLight
           ? currentTheme.surface3
           : currentTheme.surface2;
 
-  /// Active window-tab plate: Capy's #15.
-  static Color get tabPlate => identical(currentTheme, _quietCapy)
+  /// Active window-tab plate: the #15.
+  static Color get tabPlate => identical(currentTheme, _quietDesk)
       ? const Color(0xFF151515)
       : _quietLight
           ? Color.lerp(currentTheme.surface2, currentTheme.surface3, 0.7)!
           : currentTheme.surface2;
 
-  /// Active labels sit well below white, as Capy's do.
+  /// Active labels sit well below white.
   static Color get labelOn => _quietLight
       ? Color.lerp(AppColors.fg1, AppColors.fg2, 0.72)!
       : Color.lerp(AppColors.fg1, AppColors.fg2, 0.6)!;
@@ -1301,7 +1301,7 @@ class R {
   static ThemeShapeTokens get _shape => ThemeManager.instance.resolved.shape;
   static double get _scale => math.max(0.0, _shape.radiusScale);
 
-  // Desktop follows Capy's tighter ladder; phone radii read as toys at pointer
+  // Desktop follows the tighter ladder; phone radii read as toys at pointer
   // scale. A theme can still go smaller, never rounder.
   static double _cap(double v, double desk) => kMobile ? v : math.min(v, desk);
 

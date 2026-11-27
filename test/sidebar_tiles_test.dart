@@ -8,7 +8,7 @@ import 'package:snippet/widgets.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('section count shows only once collapsed, as in Capy',
+  testWidgets('section count shows only once collapsed',
       (tester) async {
     Future<void> pump(bool collapsed) async {
       await tester.pumpWidget(

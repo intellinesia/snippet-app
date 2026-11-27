@@ -206,7 +206,7 @@ class DeskActionButton extends StatelessWidget {
     final Color ink;
     if (icon == 'arrow-up' || icon == 'mic' || icon == 'stop') {
       fill = AppColors.accent;
-      // Capy inks its blue action black; a dark accent (quiet-light) needs its own ink.
+      // Ink its blue action black; a dark accent (quiet-light) needs its own ink.
       ink = AppColors.accent.computeLuminance() > 0.18
           ? const Color(0xFF000000)
           : AppColors.accentFg;
@@ -356,7 +356,7 @@ class DeskMachineLine extends StatelessWidget {
     ].where((p) => p.isNotEmpty).join(' · ');
     if (parts.isEmpty) return const SizedBox.shrink();
     return Padding(
-      // Aligned with the card's content, as Capy's footer is.
+      // Aligned with the card's content.
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         AppIcon('laptop', size: 13, color: AppColors.fg3),
@@ -384,7 +384,7 @@ class DeskMachineLine extends StatelessWidget {
 }
 
 /// The composer card: attachments and quiet status sit outside it; inside are
-/// the text, then a toolbar with attach, model and chips left, mic/action right.
+/// The text, then a toolbar with attach, model and chips left, mic/action right.
 class DeskComposerCard extends StatelessWidget {
   const DeskComposerCard({
     super.key,
@@ -434,7 +434,7 @@ class DeskComposerCard extends StatelessWidget {
         border: InputBorder.none,
         hintText: hint,
         hintMaxLines: 1,
-        // Capy's placeholder sits far back, near the card's edge tone.
+        // The placeholder sits far back, near the card's edge tone.
         hintStyle: fieldStyle.copyWith(
             color: hintColor, overflow: TextOverflow.ellipsis),
       );

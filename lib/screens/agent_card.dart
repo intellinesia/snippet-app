@@ -48,7 +48,7 @@ final _uuidToken = RegExp(
 
 /// Strip raw ids out of an agent's last-message text so the status line never
 /// shows `group:<uuid>`, task uuids or other ids. A `group:` reference becomes
-/// the group's title when known, otherwise it is dropped.
+/// The group's title when known, otherwise it is dropped.
 String cleanAgentStatusText(String text,
     {Map<String, String> groupTitles = const {}}) {
   var t = flattenMarkdown(text);
@@ -576,7 +576,7 @@ enum AgentRowStatusKind {
 }
 
 /// Desktop sidebar row for an agent or Lead: a 22 px portrait, name and time
-/// at Capy's 32 px pitch.
+/// at the 32 px pitch.
 class AgentRowShell extends StatefulWidget {
   const AgentRowShell({
     super.key,
@@ -622,7 +622,7 @@ class AgentRowShell extends StatefulWidget {
   /// so a group's side-by-side faces stay full size while names line up.
   final bool wideAvatar;
 
-  /// Desktop Agents-list rows are one line at Capy's 32 pt pitch.
+  /// Desktop Agents-list rows are one line at the 32 pt pitch.
   final bool compact;
   final String name;
   final String preview;
@@ -738,7 +738,7 @@ class _AgentRowShellState extends State<AgentRowShell> {
     final kind = _kind;
     final offline = kind == AgentRowStatusKind.offline;
     final compact = widget.compact;
-    // Capy's sidebar: titles a step below white, metadata well back.
+    // The sidebar: titles a step below white, metadata well back.
     final nameColor = offline ? AppColors.fg3 : sidebarTitleInk();
     final metaInk = sidebarMetaInk();
     final statusStyle = sans(12,

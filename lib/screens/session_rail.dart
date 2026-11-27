@@ -322,7 +322,7 @@ class _SessionRailState extends State<SessionRail> {
   /// Desktop drill-in page (lanes, jobs, checkpoints, wakes, usage); null is the root.
   String? _page;
 
-  /// Panel tabs opened from its +, kept in order after Overview (Capy).
+  /// Panel tabs opened from its +, kept in order after Overview.
   final List<String> _openTabs = [];
   int _laneFilter = 0;
   List<Map<String, dynamic>> _procs = const [];
@@ -1742,7 +1742,7 @@ class _RailCardState extends State<_RailCard> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
             curve: const Cubic(.23, 1, .32, 1),
-            // Capy's destination card: 48 pt, a tone above the pane, hairline.
+            // The destination card: 48 pt, a tone above the pane, hairline.
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: _hover && widget.onTap != null

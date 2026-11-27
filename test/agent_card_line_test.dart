@@ -173,7 +173,7 @@ void main() {
   });
 
   testWidgets(
-      'desktop row spacing, avatar, preview and expansion chevron match Capy',
+      'desktop row spacing, avatar, preview and expansion chevron match the desktop spec',
       (t) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     var toggles = 0;

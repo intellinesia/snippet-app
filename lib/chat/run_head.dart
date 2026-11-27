@@ -51,7 +51,7 @@ class SoftBubble extends StatelessWidget {
         child: child,
       );
     }
-    // Capy's one-line bubble is #1A: a quarter step from s2 towards s3.
+    // The one-line bubble is #1A: a quarter step from s2 towards s3.
     final fill = selected
         ? AppColors.surface3
         : Color.lerp(AppColors.surface2, AppColors.surface3, 0.25)!;

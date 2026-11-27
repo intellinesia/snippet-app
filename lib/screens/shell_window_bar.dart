@@ -182,7 +182,7 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
             key: widget.chipKey,
             height: 32,
             width: widget.width,
-            // Capy pill: the active tab is a filled plate, others are bare text.
+            // Pill: the active tab is a filled plate, others are bare text.
             child: Center(
               child: Container(
                 height: 28,

@@ -110,13 +110,13 @@ TextStyle chatText({required bool mine, BuildContext? context}) =>
     sans(kMobile ? ChatColors.fontSize : 13,
         height: kMobile ? 1.3 : 19 / 13,
         color: mine
-            // Capy keeps even the user's bubble ink well below white.
+            // Keep even the user's bubble ink well below white.
             ? (kMobile
                 ? (context != null
                     ? ChatColors.sentTextIn(context)
                     : ChatColors.sentText)
                 : AppColors.fg2)
-            // Capy keeps agent prose a step below white on the dark desk.
+            // Keep agent prose a step below white on the dark desk.
             : (kMobile
                 ? AppColors.fg1
                 : Color.lerp(AppColors.fg2, AppColors.fg1, 0.3)!));

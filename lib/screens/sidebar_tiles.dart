@@ -4,7 +4,7 @@ import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
-// Capy's dark sidebar keeps labels near B6 and the selected plate at 0D.
+// The dark sidebar keeps labels near B6 and the selected plate at 0D.
 Color sidebarTitleInk() {
   if (!kMobile && currentTheme.name == 'quiet') {
     return const Color(0xFFB6B6B6);
@@ -130,7 +130,7 @@ class SidebarSectionHeader extends StatelessWidget {
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: toggle,
-                  // Capy: a plain bold title; collapse by clicking it.
+                  // A plain bold title; collapse by clicking it.
                   child: Row(children: [
                     Flexible(
                       child: Text(title,
@@ -139,7 +139,7 @@ class SidebarSectionHeader extends StatelessWidget {
                           style: sans(13,
                               weight: W.label, color: sidebarTitleInk())),
                     ),
-                    // Capy shows no count; it stays as a hint once collapsed.
+                    // Show no count; it stays as a hint once collapsed.
                     if (count != null && collapsed) ...[
                       const SizedBox(width: 6),
                       Text('$count', style: sans(11.5, color: sidebarMetaInk())),

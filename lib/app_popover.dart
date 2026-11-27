@@ -40,12 +40,12 @@ class AppPopoverSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Capy's desktop menus are nearly square: 8 pt corners.
+    // The desktop menus are nearly square: 8 pt corners.
     final radius = BorderRadius.circular(kMobile ? R.lg : R.of(8));
     return DecoratedBox(
       decoration: BoxDecoration(borderRadius: radius, boxShadow: overlayShadow),
       child: Material(
-        // Capy's menu fill is its #15 plate, one step below surface2.
+        // The menu fill is its #15 plate, one step below surface2.
         color: kMobile ? AppColors.surface2 : PaneRow.tabPlate,
         shape: RoundedRectangleBorder(
             borderRadius: radius,
@@ -161,7 +161,7 @@ class AppPopoverAnchor {
 }
 
 /// Where a popover of [child] size goes in a [size] overlay: under (or above)
-/// the anchor, flipping when the preferred side lacks room, clamped on screen.
+/// The anchor, flipping when the preferred side lacks room, clamped on screen.
 Offset popoverPosition(AppPopoverAnchor anchor, Size size, Size child) {
   const gap = 6.0, edge = 8.0;
   final spaceBelow = size.height - anchor.vertical.bottom - gap - edge;
@@ -457,7 +457,7 @@ class _PopoverMenuState<T> extends State<_PopoverMenu<T>> {
                   padding: EdgeInsets.fromLTRB(S.s8, S.s4, S.s8, 0),
                   child: leadingHeading.child,
                 ),
-              // Capy: a bare query line over a full-width hairline.
+              // A bare query line over a full-width hairline.
               SizedBox(
                 height: 30,
                 child: TextField(

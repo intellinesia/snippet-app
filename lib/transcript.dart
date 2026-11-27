@@ -996,7 +996,7 @@ class _ToolRunState extends State<ToolRun> {
 // ---------------------------------------------------------------------------
 
 /// Who runs a lane and on what: provider logo for the effective profile, then
-/// the agent identity. Draws nothing when neither resolves.
+/// The agent identity. Draws nothing when neither resolves.
 class LaneWho extends StatelessWidget {
   final DaemonClient? client;
   final String? agent;
@@ -1481,7 +1481,7 @@ class _SystemDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = label[0].toUpperCase() + label.substring(1);
-    // Desktop: Capy's bare, dim, centred checkpoint label.
+    // Desktop: the bare, dim, centred checkpoint label.
     if (!kMobile) {
       return Padding(
         padding: EdgeInsets.symmetric(vertical: S.s12),

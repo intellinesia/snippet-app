@@ -166,7 +166,7 @@ class StripChip extends StatelessWidget {
       );
 }
 
-/// A Capy-style tab pill for a pane row (chat header, session panel).
+/// A tab pill for a pane row (chat header, session panel).
 class PanePill extends StatefulWidget {
   const PanePill(
       {super.key,

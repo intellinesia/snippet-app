@@ -157,7 +157,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     }
     // The header rides inside the session so the docked panel spans full height.
     final info = _sessions?.where((x) => x.id == t.sessionId).firstOrNull;
-    // Capy's line under the composer: machine, project and branch.
+    // The line under the composer: machine, project and branch.
     return DeskComposerMeta(
         machine: _active?.label ?? '',
         project: lastPathSegment(info?.folder ?? t.workspacePath),
@@ -293,7 +293,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         agentIds: [agent.id],
         title: name,
         // State, model and sessions live in the panel's Overview; the row
-        // keeps only quiet controls at its right end (Capy).
+        // keeps only quiet controls at its right end.
         leading: [
           Builder(
             builder: (ctx) => IconBtn('plus',
@@ -353,7 +353,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       tabs: _paneTabsFor(t),
       agentIds: [owner ?? 'snippet'],
       title: t.title.trim().isEmpty ? 'Session' : t.title.trim(),
-      // Capy keeps the row quiet: state lives in the panel; only a
+      // Keep the row quiet: state lives in the panel; only a
       // request for the user surfaces here.
       subtitle: needs ? 'Needs you' : '',
       live: running && !needs,
@@ -1049,7 +1049,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     final lanes = s?.lanes.where((l) => l.running).length ?? 0;
     String? count(int n) => n > 0 ? '$n' : null;
     void act(String a) => _dispatchSessionAction(a);
-    // Views open as tabs in the session panel, as in Capy, not as drawers.
+    // Views open as tabs in the session panel, not as drawers.
     void page(String p) {
       sessionRailPageRequest.value = p;
       if (sessionRailCollapsed.value) setSessionRailCollapsed(false);
@@ -1435,7 +1435,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
               ),
             ),
           ),
-        // Capy keeps six quiet icons; the host only shows when it needs action.
+        // Keep six quiet icons; the host only shows when it needs action.
         if (down)
           _FooterBtn(
               icon: 'server',

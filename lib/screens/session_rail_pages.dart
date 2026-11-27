@@ -227,7 +227,7 @@ extension _RailPages on _SessionRailState {
     );
   }
 
-  /// Desktop Overview (Capy pass): status, what is happening now, changes,
+  /// Desktop Overview: status, what is happening now, changes,
   /// artifacts, task and quick ways into the panel's other tabs.
   List<Widget> _overviewRoot() {
     final s = widget.state;
@@ -328,7 +328,7 @@ extension _RailPages on _SessionRailState {
           ),
         );
 
-    // Capy's Overview leads into Diffs, Files and Shell as cards.
+    // The Overview leads into Diffs, Files and Shell as cards.
     final cards = <Widget>[
       _navRow('file-diff', 'Diffs',
           value: nFiles == 0 ? 'No changes' : '$nFiles',
@@ -371,7 +371,7 @@ extension _RailPages on _SessionRailState {
               const SizedBox(height: 14),
               _nowCard(s, steps),
             ],
-            _capyHead('Changes',
+            _paneHead('Changes',
                 meta: nFiles == 0
                     ? null
                     : '$nFiles file${nFiles == 1 ? '' : 's'}',
@@ -390,12 +390,12 @@ extension _RailPages on _SessionRailState {
             else
               Text('No changes yet.', style: sans(12, color: AppColors.fg3)),
             if (_artifacts.isNotEmpty) ...[
-              _capyHead('Artifacts',
+              _paneHead('Artifacts',
                   meta: '${_artifacts.length}', onTap: w.onDeliverables),
               for (final a in _artifacts.reversed.take(4)) _artifactRow(a),
             ],
             if (t != null) ...[
-              _capyHead('Task',
+              _paneHead('Task',
                   meta: t.status.label,
                   onTap:
                       w.onOpenTask != null ? () => w.onOpenTask!(t.id) : null),
@@ -415,7 +415,7 @@ extension _RailPages on _SessionRailState {
     ];
   }
 
-  Widget _capyHead(String title,
+  Widget _paneHead(String title,
           {String? meta, (int, int)? adds, VoidCallback? onTap}) =>
       Padding(
         padding: const EdgeInsets.only(top: 16, bottom: 8),

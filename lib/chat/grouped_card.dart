@@ -17,12 +17,12 @@ BorderRadius groupedSegmentRadius({required bool first, required bool last}) {
 }
 
 /// A chat card as grouped segments, 2px apart: pass the segments in order and
-/// the first and last round at the group ends.
+/// The first and last round at the group ends.
 class GroupedCard extends StatelessWidget {
   const GroupedCard({super.key, required this.segments, this.quiet = false});
   final List<Widget> segments;
 
-  /// Capy's chat card: one dim plate with hairlines, not separate heavy tiles.
+  /// The chat card: one dim plate with hairlines, not separate heavy tiles.
   final bool quiet;
 
   @override
@@ -95,7 +95,7 @@ class GroupedCardHeader extends StatelessWidget {
   final Widget? trailing;
   final VoidCallback? onTap;
 
-  /// Low-contrast file metadata in Capy's quiet desktop cards.
+  /// Low-contrast file metadata in the quiet desktop cards.
   final bool quietInk;
 
   static Widget chevron() =>

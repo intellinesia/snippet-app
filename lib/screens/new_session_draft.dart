@@ -475,7 +475,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
       Material(
         key: key,
         color: Colors.transparent,
-        // Capy: quiet borderless controls; hover shows the plate.
+        // Quiet borderless controls; hover shows the plate.
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(R.of(6)),
         ),
@@ -711,7 +711,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
         ]),
       );
 
-  /// Capy's context line above the card: who, where, and on which tree.
+  /// The context line above the card: who, where, and on which tree.
   Widget _contextLine() {
     final where = [
       if (_folder != null) _folderLabel,
@@ -2063,8 +2063,8 @@ class _FolderPopoverState extends State<_FolderPopover> {
   }
 }
 
-/// Capy's new-thread canvas: a blue halftone whose dots shrink away from
-/// the top-left corner.
+/// The new-thread canvas: a blue halftone whose dots shrink away from
+/// The top-left corner.
 class _DotField extends CustomPainter {
   const _DotField();
 

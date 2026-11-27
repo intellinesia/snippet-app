@@ -4,7 +4,7 @@ import '../mochi.dart';
 import '../theme.dart';
 import 'agent_cluster.dart';
 
-/// Desktop pane row above a chat (Capy layout): the chat as a filled tab
+/// Desktop pane row above a chat: the chat as a filled tab
 /// pill with the pane's + beside it, and its state line plus actions at the
 /// right end. A hairline closes it.
 class ChatHeaderBar extends StatelessWidget {
@@ -32,7 +32,7 @@ class ChatHeaderBar extends StatelessWidget {
   /// Sits right after the pill (the pane's "+").
   final List<Widget> leading;
 
-  /// The pane's other tabs, as pills after the chat's own (one row, as Capy).
+  /// The pane's other tabs, as pills after the chat's own (one row).
   final List<Widget> tabs;
   final List<Widget> actions;
 

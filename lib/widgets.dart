@@ -412,7 +412,7 @@ MarkdownStyleSheet agentMarkdownStyle(BuildContext context) {
   }
   _cachedAgentMarkdownThemeIndex = themeIndex;
   final reading = TS.reading();
-  // Desktop transcript: Capy's 13/19, a step below white.
+  // Desktop transcript: the 13/19, a step below white.
   final prose = kMobile
       ? reading
       : reading.copyWith(
@@ -909,7 +909,7 @@ class Pressable extends StatefulWidget {
   final bool haptic;
 
   /// Hold time before the press shows; for long-press targets, so a tap or
-  /// the start of a scroll never flinches.
+  /// The start of a scroll never flinches.
   final Duration delay;
 
   /// Long-press targets: a still hold lifts the surface before the menu opens.
@@ -1247,7 +1247,7 @@ class HoverSurface extends StatefulWidget {
 }
 
 /// True while a middle click is being delivered as a tap, so the shell opens
-/// the target in a new tab instead of the active one.
+/// The target in a new tab instead of the active one.
 bool middleClickOpen = false;
 
 class _HoverSurfaceState extends State<HoverSurface> {
@@ -1477,7 +1477,7 @@ class _DesktopIconBtnState extends State<_DesktopIconBtn> {
                   child: Center(
                     child: AppIcon(widget.name,
                         size: widget.iconSize,
-                        // Capy keeps resting icons quiet; they light on hover.
+                        // Keep resting icons quiet; they light on hover.
                         color: lit ? AppColors.fg1 : AppColors.fg3),
                   ),
                 ),
@@ -1606,7 +1606,7 @@ class AttachmentPill extends StatelessWidget {
 
 /// A compact, readable transcript attached to the audio pill. It is collapsed by
 /// default so the conversation stays compact, but can be expanded without hiding
-/// the original audio attachment.
+/// The original audio attachment.
 class AudioTranscriptCard extends StatefulWidget {
   final List<AudioTranscriptItem> items;
   const AudioTranscriptCard({super.key, required this.items});

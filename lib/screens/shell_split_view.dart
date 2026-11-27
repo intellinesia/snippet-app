@@ -319,7 +319,7 @@ class _ShellSplitViewState extends State<ShellSplitView>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // A lone chat has no inner strip (C3): its header carries + and
-            // the session panel toggle.
+            // The session panel toggle.
             if (list.length + readouts.length > 1 &&
                 !(p == ShellPane.left &&
                     shownTab != null &&
@@ -389,7 +389,7 @@ class _ShellSplitViewState extends State<ShellSplitView>
                   children: [
                     if (widget.sidebarTop != null) widget.sidebarTop!,
                     if (widget.sidebarHeader != null) widget.sidebarHeader!,
-                    // Capy: the footer tools share the sidebar's icon row,
+                    // The footer tools share the sidebar's icon row,
                     // pinned to its right end.
                     Expanded(
                       child: widget.sidebarFooter == null

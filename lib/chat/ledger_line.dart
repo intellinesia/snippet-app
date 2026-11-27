@@ -255,7 +255,7 @@ class _LedgerLineState extends State<LedgerLine> {
       // Desktop TC-01/02: one s1 surface, a state icon at x+14, the sentence
       // at x+32, mono duration at the right and expansion behind one hairline.
       final lifted = _phrase != null && !widget.open;
-      // Capy: steps read as quiet text; a plate only on hover or when open.
+      // Steps read as quiet text; a plate only on hover or when open.
       return MouseRegion(
         onEnter: (_) => setState(() => _hover = true),
         onExit: (_) => setState(() => _hover = false),
@@ -812,7 +812,7 @@ class _LedgerGanttState extends State<LedgerGantt> {
 }
 
 /// Running run: one 40px strip with the mascot, what is happening in words,
-/// the command, a step bar sized by time, elapsed time, Peek and Stop. The
+/// The command, a step bar sized by time, elapsed time, Peek and Stop. The
 /// latest failure sits above it in red with its last output lines.
 class LedgerStrip extends StatefulWidget {
   const LedgerStrip({super.key, required this.rows, required this.steps});

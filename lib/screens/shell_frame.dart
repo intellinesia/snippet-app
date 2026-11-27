@@ -87,7 +87,7 @@ class ShellTitleRow extends StatelessWidget {
                     3 * 28 -
                     6)
                 .clamp(0.0, reserveWindowControls ? 116.0 : 122.0),
-            // The brand sits in the sidebar's own row below, as in Capy.
+            // The brand sits in the sidebar's own row below.
             child: const SizedBox.shrink(),
           ),
           _toggle(),
@@ -108,7 +108,7 @@ class ShellTitleRow extends StatelessWidget {
 }
 
 /// The cluster that replaces the title row over the strip's left edge while
-/// the sidebar is hidden (ho-topbar band 5): tabs then start at x232.
+/// The sidebar is hidden (ho-topbar band 5): tabs then start at x232.
 class ShellCollapsedNavCluster extends StatelessWidget {
   const ShellCollapsedNavCluster({
     super.key,

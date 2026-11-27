@@ -225,7 +225,7 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
     );
   }
 
-  /// Desktop Overview head (Capy): state, how long, what it is, then the
+  /// Desktop Overview head: state, how long, what it is, then the
   /// agent and its menu at the right end.
   Widget _statusLine(bool hasMenu) {
     final a = widget.agent;
@@ -442,7 +442,7 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
     );
   }
 
-  /// Desktop: the quick links as Capy's outlined "Open" pills.
+  /// Desktop: the quick links as the outlined "Open" pills.
   Widget _openPills() {
     final cells = <(String, String, VoidCallback)>[
       if (widget.onInbox != null) ('inbox', 'Inbox', widget.onInbox!),
@@ -968,7 +968,7 @@ class _Row extends StatelessWidget {
   final bool chevron;
   final VoidCallback? onTap;
 
-  /// Desktop (Capy): one quiet 30 px line, icon, title, then the detail.
+  /// Desktop: one quiet 30 px line, icon, title, then the detail.
   Widget _desktop() {
     final hasSub = sub != null && sub!.isNotEmpty;
     return Material(

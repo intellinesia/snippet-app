@@ -502,7 +502,7 @@ class _SystemNoticeLineState extends State<SystemNoticeLine> {
 
   Widget _desk() {
     final interactive = notice.detail.isNotEmpty || notice.rows.isNotEmpty;
-    // Capy's finished compaction checkpoint is only a dim centred label.
+    // The finished compaction checkpoint is only a dim centred label.
     if (notice.kind == 'compacted') {
       return Padding(
         padding: EdgeInsets.symmetric(vertical: S.s12),

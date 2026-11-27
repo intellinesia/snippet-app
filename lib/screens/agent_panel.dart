@@ -324,7 +324,7 @@ class AgentSidePanel extends StatelessWidget {
     );
   }
 
-  /// Desktop pane row (Capy): Overview, each opened page, + and hide.
+  /// Desktop pane row: Overview, each opened page, + and hide.
   Widget _tabRow(BuildContext context, RightTab? reading) => Container(
         key: const ValueKey('agent-panel-tabs'),
         height: PaneRow.height,
@@ -456,7 +456,7 @@ class AgentSidePanel extends StatelessWidget {
 
 // ---------------------------------------------------------------------------
 // Desktop docked-panel primitives (round 17). Mockup pixels go through [pr] so
-// the theme's radius scale still applies.
+// The theme's radius scale still applies.
 // ---------------------------------------------------------------------------
 
 double pr(double px) => R.of(px / 0.6);

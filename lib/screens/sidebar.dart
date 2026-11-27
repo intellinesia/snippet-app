@@ -177,7 +177,7 @@ class Sidebar extends StatefulWidget {
   final ValueChanged<MobileHome> onMobileHome;
 
   /// Phone drill-down state + setter. Also shell-owned, for the same reason:
-  /// the back handler and the bar's visibility both live up there.
+  /// The back handler and the bar's visibility both live up there.
   final CoordinationAgent? agent;
   final ValueChanged<CoordinationAgent?> onAgent;
   final bool listening;
@@ -1364,7 +1364,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           ? (_collapsedAgentsCount ?? visibleCount)
           : visibleCount,
       onToggle: _toggleAgentsCollapsed,
-      // Capy: plus and more; search and filter live under more.
+      // Plus and more; search and filter live under more.
       moreTooltip: 'Search and filter',
       moreBuilder: (ctx) async {
         final pick = await showAppMenu<String>(context, anchor: ctx, items: [
@@ -1510,7 +1510,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           child: _withSidebarKeyboard(body),
         ),
       ),
-      // Capy footer: the account anchor, then places and tools in one row.
+      // Footer: the account anchor, then places and tools in one row.
       SizedBox(
         height: 44,
         child: Padding(
@@ -1536,7 +1536,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     ]);
   }
 
-  /// Capy's brand row: the mark, then search and a new session at the right.
+  /// The brand row: the mark, then search and a new session at the right.
   Widget _brandRow() => SizedBox(
         height: PaneRow.height,
         child: Padding(
