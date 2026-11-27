@@ -308,6 +308,7 @@ class _MobileShellState extends State<MobileShell>
                         // Pages opened over home float their header frost up here.
                         child: StatusInset(
                           top: MediaQuery.paddingOf(context).top,
+                          bottom: MediaQuery.paddingOf(context).bottom,
                           child: SafeArea(
                             child: sidebar,
                           ),

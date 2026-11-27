@@ -72,12 +72,19 @@ class Glass extends StatelessWidget {
 
 /// The status bar height a [SafeArea] took away, so frost can still reach under it.
 class StatusInset extends InheritedWidget {
-  const StatusInset({super.key, required this.top, required super.child});
+  const StatusInset(
+      {super.key, required this.top, this.bottom = 0, required super.child});
 
   final double top;
 
+  /// The bottom inset the host's SafeArea consumed; 0 when it left it.
+  final double bottom;
+
   static double of(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<StatusInset>()?.top ?? 0;
+
+  static double bottomOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<StatusInset>()?.bottom ?? 0;
 
   /// For a page: its own top padding, or the inset its host passes down
   /// when the page sits under the host's SafeArea.
@@ -87,7 +94,8 @@ class StatusInset extends InheritedWidget {
   }
 
   @override
-  bool updateShouldNotify(StatusInset oldWidget) => top != oldWidget.top;
+  bool updateShouldNotify(StatusInset oldWidget) =>
+      top != oldWidget.top || bottom != oldWidget.bottom;
 }
 
 /// The frosted strip a chat header floats on; the transcript scrolls under it.

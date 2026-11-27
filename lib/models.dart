@@ -1367,6 +1367,12 @@ class CoordinationAgent {
   /// The name without the " | role" suffix, for narrow phone surfaces.
   String get shortName => shortAgentName(displayName);
 
+  /// The " | role" suffix of the name, or empty.
+  String get nameRole {
+    final n = displayName, i = n.indexOf(' | ');
+    return i > 0 ? n.substring(i + 3).trim() : '';
+  }
+
   /// Tasks by status, as the daemon counts them: open work of any age, and
   /// finished work from the last 7 days. Null when the daemon predates it.
   final Map<String, int>? taskCounts;

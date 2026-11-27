@@ -4,8 +4,9 @@ import 'dart:math' show max;
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../glass.dart' show StatusInset;
 import '../chat/agent_cluster.dart' show GroupGlyph;
-import '../chat/signal_row.dart' show prettyModel, prettyProfile;
+import '../chat/signal_row.dart' show prettyModel;
 import '../mobile_kit.dart';
 import '../mochi.dart';
 import '../models.dart';
@@ -116,8 +117,7 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
   }
 
   CoordinationAgent get a => widget.agent;
-  String get _name =>
-      a.shortName.trim().isEmpty ? a.id : a.shortName.trim();
+  String get _name => a.shortName.trim().isEmpty ? a.id : a.shortName.trim();
   bool get _isPaused => _paused ?? a.status == 'paused';
 
   List<SessionInfo> get _mine => [
@@ -243,19 +243,25 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
             : relativeTime(mine.first.lastActive);
     final status =
         [statusWord.toLowerCase(), if (since.isNotEmpty) since].join(' ');
-    final role = a.role.trim();
+    final role = a.role.trim().isNotEmpty ? a.role.trim() : a.nameRole;
     final needs = statusWord == 'Needs you';
     final modelValue = model.isNotEmpty
         ? prettyModel(model)
+        // Board: a profile reads as its own name ("swe-2.1").
         : (profile ?? '').isNotEmpty
-            ? prettyProfile(profile!)
+            ? profile!
             : 'Default';
     final notes = _memory ?? 0;
     final wakes = _wakeCount;
     final inbox = mine.where(sessionNeedsYou).length;
     final barH = an ? 64.0 : 56.0;
-    final bottom =
-        an ? mq.padding.bottom + 10 : max(12.0, mq.padding.bottom - 8);
+    // Board: the Message button sits 22 above the Android inset, the ask bar
+    // 26 off the iPhone edge. Measured from the screen, so add back what the
+    // host's SafeArea consumed; the header lifts like the chat header.
+    final eaten = StatusInset.bottomOf(context);
+    final rawBottom = mq.padding.bottom + eaten;
+    final bottom = (an ? rawBottom + 22 : max(26.0, rawBottom - 8)) - eaten;
+    const lift = mkChatHeaderLift;
 
     final hero = an
         ? Padding(
@@ -339,7 +345,7 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
       },
       child: ListView(
         padding: EdgeInsets.only(
-            top: mq.padding.top + barH, bottom: bottom + 56 + 24),
+            top: mq.padding.top + barH - lift, bottom: bottom + 56 + 24),
         children: [
           hero,
           // The group's 4 px hit margin should not push the next section down.
@@ -398,7 +404,7 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
     final bar = Positioned(
       left: 0,
       right: 0,
-      top: 0,
+      top: -lift,
       height: mq.padding.top + barH,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
@@ -427,7 +433,8 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
 
     return Material(
       color: AppColors.bg,
-      child: Stack(children: [
+      // The bar lifts and the ask bar dips past the page box, by design.
+      child: Stack(clipBehavior: Clip.none, children: [
         Positioned.fill(child: list),
         bar,
         cta,
@@ -585,7 +592,7 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
   String _memberLine(GroupSummary g) {
     final names = [
       for (final m in g.members)
-        if (!m.isHuman) groupMemberName(m, _agents)
+        if (!m.isHuman) shortAgentName(groupMemberName(m, _agents))
     ];
     final human = g.members.any((m) => m.isHuman);
     if (names.isEmpty) return '${g.members.length} members';
