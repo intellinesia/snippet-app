@@ -213,7 +213,6 @@ class LedgerLine extends StatefulWidget {
 
 class _LedgerLineState extends State<LedgerLine> {
   int? _phrase;
-  bool _hover = false;
 
   // Kept after closing so the collapse animates the rows it was showing.
   int _shown = 0;
@@ -255,77 +254,76 @@ class _LedgerLineState extends State<LedgerLine> {
       // at x+32, mono duration at the right and expansion behind one hairline.
       final lifted = _phrase != null && !widget.open;
       final expanded = widget.open || lifted;
-      // Steps read as quiet text; a plate only on hover or when open.
-      return MouseRegion(
-        onEnter: (_) => setState(() => _hover = true),
-        onExit: (_) => setState(() => _hover = false),
-        child: Container(
-          decoration: BoxDecoration(
-            color: lifted
-                ? AppColors.surface2
-                : (widget.open || _hover)
-                    ? AppColors.surface1
-                    : null,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TapDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () {
-                  if (lifted) {
-                    setState(() => _phrase = null);
-                  } else {
-                    if (_phrase != null) setState(() => _phrase = null);
-                    widget.onTap();
-                  }
-                },
-                child: SizedBox(
-                  height: 30,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(10, 0, 4, 0),
-                    child: Row(children: [
-                      SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: Center(
-                          child:
-                              AppIcon('check', size: 13, color: AppColors.fg3),
+      // Steps read as quiet text flush with the column; a plate only when open.
+      return Container(
+        decoration: BoxDecoration(
+          color: lifted
+              ? AppColors.surface2
+              : widget.open
+                  ? AppColors.surface1
+                  : null,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TapDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                if (lifted) {
+                  setState(() => _phrase = null);
+                } else {
+                  if (_phrase != null) setState(() => _phrase = null);
+                  widget.onTap();
+                }
+              },
+              child: SizedBox(
+                height: 30,
+                child: Padding(
+                  padding: expanded
+                      ? const EdgeInsets.fromLTRB(10, 0, 4, 0)
+                      : EdgeInsets.zero,
+                  child: Row(children: [
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: Center(
+                        child:
+                            AppIcon('check', size: 13, color: AppColors.fg3),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text.rich(
+                        TextSpan(children: spans),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: base,
+                      ),
+                    ),
+                    if (took != null) ...[
+                      const SizedBox(width: 10),
+                      Text(formatWorkDuration(took),
+                          style: mono(11, color: AppColors.fg3)),
+                    ],
+                    const SizedBox(width: 4),
+                    SizedBox(
+                      width: expanded ? 28 : 16,
+                      height: 28,
+                      child: Center(
+                        child: AnimatedRotation(
+                          turns: expanded ? 0.25 : 0,
+                          duration: const Duration(milliseconds: 160),
+                          child: AppIcon('chevron-right',
+                              size: 12, color: AppColors.fg3),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text.rich(
-                          TextSpan(children: spans),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: base,
-                        ),
-                      ),
-                      if (took != null) ...[
-                        const SizedBox(width: 10),
-                        Text(formatWorkDuration(took),
-                            style: mono(11, color: AppColors.fg3)),
-                      ],
-                      const SizedBox(width: 4),
-                      SizedBox(
-                        width: 28,
-                        height: 28,
-                        child: Center(
-                          child: AnimatedRotation(
-                            turns: expanded ? 0.25 : 0,
-                            duration: const Duration(milliseconds: 160),
-                            child: AppIcon('chevron-right',
-                                size: 12, color: AppColors.fg3),
-                          ),
-                        ),
-                      ),
-                    ]),
-                  ),
+                    ),
+                  ]),
                 ),
               ),
+            ),
               SpringExpand(
                 open: widget.open,
                 child: Column(
@@ -362,8 +360,7 @@ class _LedgerLineState extends State<LedgerLine> {
                         ],
                       ),
               ),
-            ],
-          ),
+          ],
         ),
       );
     }
@@ -447,7 +444,7 @@ class _LedgerLineState extends State<LedgerLine> {
   }
 }
 
-class _PhraseTarget extends StatefulWidget {
+class _PhraseTarget extends StatelessWidget {
   const _PhraseTarget({
     required this.phrase,
     required this.steps,
@@ -463,132 +460,22 @@ class _PhraseTarget extends StatefulWidget {
   final VoidCallback onTap;
 
   @override
-  State<_PhraseTarget> createState() => _PhraseTargetState();
-}
-
-class _PhraseTargetState extends State<_PhraseTarget> {
-  final _portal = OverlayPortalController();
-  final _link = LayerLink();
-  bool _hover = false;
-
-  void _set(bool v) {
-    if (!mounted || _hover == v) return;
-    setState(() => _hover = v);
-    v ? _portal.show() : _portal.hide();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final p = widget.phrase;
-    final on = _hover || widget.active;
-    final tone = on ? AppColors.accent : AppColors.fg2;
-    return CompositedTransformTarget(
-      link: _link,
-      child: OverlayPortal(
-        controller: _portal,
-        overlayChildBuilder: (_) => Positioned(
-          left: 0,
-          top: 0,
-          child: CompositedTransformFollower(
-            link: _link,
-            showWhenUnlinked: false,
-            targetAnchor: Alignment.bottomLeft,
-            followerAnchor: Alignment.topLeft,
-            offset: const Offset(0, 4),
-            child: IgnorePointer(child: _LedgerPopover(steps: widget.steps)),
+    final tone = active ? AppColors.accent : AppColors.fg2;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: TapDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Text.rich(TextSpan(children: [
+          TextSpan(
+            text: phrase.text,
+            style: style.copyWith(
+              color: tone,
+              decoration: TextDecoration.none,
+            ),
           ),
-        ),
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          onEnter: (_) => _set(true),
-          onExit: (_) => _set(false),
-          child: TapDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: widget.onTap,
-            child: Text.rich(TextSpan(children: [
-              TextSpan(
-                text: p.text,
-                style: widget.style.copyWith(
-                  color: tone,
-                  decoration: TextDecoration.none,
-                ),
-              ),
-            ])),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LedgerPopover extends StatelessWidget {
-  const _LedgerPopover({required this.steps});
-  final List<ToolStep> steps;
-
-  static const _max = 6;
-
-  @override
-  Widget build(BuildContext context) {
-    final shown = steps.take(_max).toList();
-    final more = steps.length - shown.length;
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 440, minWidth: 200),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: AppColors.surface2,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: overlayShadow,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(6),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (final s in shown) _PopRow(step: s),
-              if (more > 0)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(6, 4, 6, 2),
-                  child: Text('+$more more',
-                      style: sans(12, color: AppColors.fg3)),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PopRow extends StatelessWidget {
-  const _PopRow({required this.step});
-  final ToolStep step;
-
-  @override
-  Widget build(BuildContext context) {
-    final bad = _stepFailed(step);
-    final meta = stepChip(step)?.text ?? stepDuration(step);
-    final target = stepTarget(step);
-    return SizedBox(
-      height: 24,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        child: Row(children: [
-          AppIcon(_iconFor(_kindOf(step).$1),
-              size: 13, color: AppColors.fg3),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(target.isEmpty ? liveStepText(step) : target,
-                maxLines: 1,
-                softWrap: false,
-                overflow: TextOverflow.ellipsis,
-                style: mono(11.5, color: bad ? AppColors.fg2 : AppColors.fg1)),
-          ),
-          if (meta != null) ...[
-            const SizedBox(width: 12),
-            Text(meta, style: mono(11, color: AppColors.fg3)),
-          ],
-        ]),
+        ])),
       ),
     );
   }
