@@ -648,6 +648,30 @@ Future<T?> showMkSheet<T>(
   );
 }
 
+/// Sheet tiles two to a row, 8 apart (board "+" sheet).
+class MkTileGrid extends StatelessWidget {
+  const MkTileGrid({super.key, required this.tiles});
+  final List<Widget> tiles;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < tiles.length; i += 2) ...[
+            if (i > 0) const SizedBox(height: 8),
+            Row(children: [
+              Expanded(child: tiles[i]),
+              const SizedBox(width: 8),
+              Expanded(
+                  child:
+                      i + 1 < tiles.length ? tiles[i + 1] : const SizedBox()),
+            ]),
+          ],
+        ],
+      );
+}
+
 /// A grid pill inside a sheet (Photos, Files, Camera): 56 high, 28 corners.
 class MkSheetTile extends StatelessWidget {
   const MkSheetTile(

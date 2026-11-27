@@ -6,23 +6,33 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
       _pickFiles();
       return;
     }
-    final choice = await showAppSheet<String>(context,
-        title: 'Add context',
-        child: Row(children: [
-          _ctxOption('camera', 'Camera', 'camera'),
-          SizedBox(width: S.s8),
-          _ctxOption('image', 'Photos', 'photos'),
-          SizedBox(width: S.s8),
-          _ctxOption('file', 'Files', 'files'),
-        ]));
-    if (choice == 'camera') {
-      _pickCamera();
-    } else if (choice == 'photos') {
-      _pickPhotos();
-    } else if (choice == 'files') {
-      _pickFiles();
-    }
+    VoidCallback? chosen;
+    await showMkSheet<void>(context,
+        builder: (ctx) => _plusTiles((fn) {
+              chosen = fn;
+              Navigator.pop(ctx);
+            }));
+    chosen?.call();
   }
+
+  /// The board's "+" grid, shared by the Lead sheet and the session tray.
+  Widget _plusTiles(void Function(VoidCallback) run) => MkTileGrid(tiles: [
+        MkSheetTile(
+            icon: 'image', label: 'Photos', onTap: () => run(_pickPhotos)),
+        MkSheetTile(
+            icon: 'camera', label: 'Camera', onTap: () => run(_pickCamera)),
+        MkSheetTile(icon: 'file', label: 'Files', onTap: () => run(_pickFiles)),
+        MkSheetTile(
+            icon: 'audio-lines',
+            label: 'Voice',
+            onTap: () => run(() => _voice.start())),
+        MkSheetTile(
+            icon: 'columns-3',
+            label: 'Canvas',
+            onTap: () => run(_newCanvasFromComposer)),
+        MkSheetTile(
+            icon: 'clock', label: 'Schedule', onTap: () => run(_openWakes)),
+      ]);
 
   Future<void> _attachVoiceTake(Uint8List bytes, String name) =>
       _ingest([(name: name, localPath: null, readBytes: () async => bytes)]);
@@ -30,7 +40,7 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
   Future<void> _pickDesktopPhoto() async {
     final path = await pickLocalImage();
     if (path == null) return;
-        final name = path.split('/').last.split('\\').last;
+    final name = path.split('/').last.split('\\').last;
     await _ingest([
       (name: name, localPath: path, readBytes: () => File(path).readAsBytes())
     ]);
@@ -47,32 +57,6 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
     } catch (e) {
       if (mounted) _toast('canvas failed: $e');
     }
-  }
-
-  Widget _ctxOption(String icon, String label, String value) {
-    return Expanded(
-      child: Builder(
-        builder: (tileContext) => Material(
-          color: SurfaceScope.groupOf(tileContext),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(R.md),
-            side: BorderSide(color: AppColors.border),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () => Navigator.pop(tileContext, value),
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: S.s12),
-              child: Column(children: [
-                AppIcon(icon, size: 20, color: AppColors.fg1),
-                SizedBox(height: S.s6),
-                Text(label, style: TS.label(AppColors.fg2)),
-              ]),
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   /// A file already in this session's workspace: attached by path, no upload.

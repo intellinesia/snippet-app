@@ -1128,25 +1128,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
               subtitle: 'Stop this step, then send',
               onTap: () => run(() => _send({'kind': 'interrupt'}))),
         ]),
-      ComposerGroup(children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          child: Row(children: [
-            ComposerTrayTile(
-                icon: 'file', label: 'File', onTap: () => run(_pickFiles)),
-            const Spacer(),
-            ComposerTrayTile(
-                icon: 'mic',
-                label: 'Voice',
-                onTap: () => run(() => _voice.start())),
-            const Spacer(),
-            ComposerTrayTile(
-                icon: 'columns-3',
-                label: 'Canvas',
-                onTap: () => run(_newCanvasFromComposer)),
-          ]),
-        ),
-      ]),
+      _plusTiles(run),
       ComposerGroup(children: [
         ComposerTrayRow(
             icon: 'arrow-right',
