@@ -332,8 +332,9 @@ class MkGroupRow extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(15.5, color: ink))),
+              // Tight so the value and chevron sit on the trailing edge.
               if (value != null && value!.isNotEmpty)
-                Flexible(
+                Expanded(
                   child: Text(value!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

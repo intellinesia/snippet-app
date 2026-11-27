@@ -245,8 +245,9 @@ class MkPill extends StatelessWidget {
       child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
+        // 48 target around the 40 pill.
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
+          padding: const EdgeInsets.symmetric(vertical: 4),
           child: Container(
             height: MK.pill,
             padding: EdgeInsets.symmetric(

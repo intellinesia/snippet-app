@@ -29,7 +29,9 @@ class MkAskCard extends StatelessWidget {
   final String question;
   final String? time;
   final String primary;
-  final String secondary;
+
+  /// Null leaves one full-width primary pill.
+  final String? secondary;
   final VoidCallback? onPrimary;
   final VoidCallback? onSecondary;
   final VoidCallback? onOpen;
@@ -76,9 +78,11 @@ class MkAskCard extends StatelessWidget {
           if (extra != null) ...[const SizedBox(height: 10), extra!],
           const SizedBox(height: 12),
           Row(children: [
-            Expanded(
-                child: MkPill(secondary, onTap: onSecondary, expand: true)),
-            const SizedBox(width: 8),
+            if (secondary != null) ...[
+              Expanded(
+                  child: MkPill(secondary!, onTap: onSecondary, expand: true)),
+              const SizedBox(width: 8),
+            ],
             Expanded(
                 child: MkPill(primary,
                     tone: MkPillTone.primary, onTap: onPrimary, expand: true)),

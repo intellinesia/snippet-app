@@ -4,6 +4,7 @@ import '../../phone_attention_bar.dart';
 import '../../platform.dart';
 import '../../theme.dart';
 import '../../toast_avoid.dart';
+import '../../mobile_kit.dart';
 
 /// Scroll distance after which the large title hands over to the inline one.
 const double kTitleCollapseAt = 24;
@@ -41,35 +42,78 @@ class _CollapsingRootState extends State<CollapsingRoot> {
 
   @override
   Widget build(BuildContext context) {
-    final d = reduceMotion(context) ? Duration.zero : const Duration(milliseconds: 150);
+    final d = reduceMotion(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 150);
+    final a = kAndroidLook;
+    // iPhone groups header actions in one glass capsule; Android keeps bare
+    // 48 icon buttons on the app bar.
+    final actions = widget.actions.isEmpty
+        ? const <Widget>[]
+        : a
+            ? widget.actions
+            : [
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: MkGlass(
+                    radius: 22,
+                    child: SizedBox(
+                      height: 44,
+                      child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: widget.actions),
+                    ),
+                  ),
+                ),
+              ];
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       ToastAvoid(
         child: AnimatedContainer(
           duration: d,
-          constraints: const BoxConstraints(minHeight: 52),
+          constraints: const BoxConstraints(minHeight: 56),
           decoration: BoxDecoration(
-            color: _collapsed ? AppColors.surface1 : AppColors.bg,
+            color: _collapsed
+                ? (a ? AppColors.surface1 : AppColors.bg)
+                : AppColors.bg,
             border: Border(
                 bottom: BorderSide(
-                    color: _collapsed ? AppColors.border : Colors.transparent)),
+                    width: 0.5,
+                    color: _collapsed && !a
+                        ? AppColors.fg1.withValues(alpha: 0.10)
+                        : Colors.transparent)),
           ),
-          padding: EdgeInsets.only(left: widget.leading == null ? 16 : 0, right: 4),
-          child: Row(children: [
-            if (widget.leading != null) widget.leading!,
-            Expanded(
-              child: AnimatedOpacity(
-                duration: d,
-                opacity: _collapsed ? 1 : 0,
-                child: ExcludeSemantics(
-                  excluding: !_collapsed,
-                  child: Text(widget.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(16, weight: W.label, color: AppColors.fg1)),
+          padding: EdgeInsets.only(
+              left: widget.leading == null ? (a ? 16 : 20) : 4, right: 4),
+          child: Stack(alignment: Alignment.center, children: [
+            Row(children: [
+              if (widget.leading != null) widget.leading!,
+              const Spacer(),
+              ...actions,
+            ]),
+            Positioned.fill(
+              left: a ? (widget.leading == null ? 0 : 52) : 96,
+              right: a ? 104 : 96,
+              child: IgnorePointer(
+                child: AnimatedOpacity(
+                  duration: d,
+                  opacity: _collapsed ? 1 : 0,
+                  child: ExcludeSemantics(
+                    excluding: !_collapsed,
+                    child: Align(
+                      alignment: a ? Alignment.centerLeft : Alignment.center,
+                      child: Text(widget.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: a
+                              ? sans(22, weight: W.label, color: AppColors.fg1)
+                              : sans(16.5,
+                                  weight: FontWeight.w600,
+                                  color: AppColors.fg1)),
+                    ),
+                  ),
                 ),
               ),
             ),
-            ...widget.actions,
           ]),
         ),
       ),
@@ -82,7 +126,7 @@ class _CollapsingRootState extends State<CollapsingRoot> {
   }
 }
 
-/// The 28/500 title that heads a tab-root list, x16.
+/// The large title that heads a tab-root list.
 class LargeTitle extends StatelessWidget {
   const LargeTitle(this.title, {super.key, this.tagline});
   final String title;
@@ -90,13 +134,11 @@ class LargeTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+        padding: EdgeInsets.fromLTRB(kAndroidLook ? 16 : 20, 0, 20, 4),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Semantics(
             header: true,
-            child: Text(title,
-                style: sans(28,
-                    height: 37.8 / 28, weight: W.label, color: AppColors.fg1)),
+            child: Text(title, style: mkLargeTitle()),
           ),
           if (tagline != null)
             Padding(

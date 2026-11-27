@@ -7,6 +7,7 @@ import '../../models.dart';
 import '../../tap_detector.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
+import '../../mobile_kit.dart';
 import '../session_list_row.dart' show sessionNeedsYou;
 import '../shell_nav.dart' show sessionBusy;
 import '../../pins.dart';
@@ -15,7 +16,6 @@ import 'lead_phone.dart';
 import 'home_data.dart';
 import 'home_style.dart' show homeAge;
 import 'needs_you_pager.dart' show askText;
-
 
 /// Quiet Home and Sessions: two calm lists, no hero, no shader, no cards.
 /// Both read the same sessions; Home shows only what matters now.
@@ -32,10 +32,11 @@ class _IconTap extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
           child: SizedBox(
-              width: 48,
-              height: 48,
-              child:
-                  Center(child: AppIcon(icon, size: 20, color: AppColors.fg2))),
+              width: kAndroidLook ? 48 : 44,
+              height: kAndroidLook ? 48 : 44,
+              child: Center(
+                  child: AppIcon(icon,
+                      size: kAndroidLook ? 22 : 19, color: AppColors.fg1))),
         ),
       );
 }
@@ -213,15 +214,30 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
             name: _agentName(a.session, names),
             time: relativeTime(a.session.lastActive),
             text: askText(a).ask,
-            onTap: () => w.onOpenSession(a.session)),
+            onTap: () => w.onOpenSession(a.session),
+            // Approvals answer in place; questions open the session to reply.
+            primary: a.kind == AskKind.approval && w.onDecide != null
+                ? 'Go ahead'
+                : (a.kind == AskKind.question ? 'Answer' : 'Open'),
+            secondary: a.kind == AskKind.approval && w.onDecide != null
+                ? 'Not yet'
+                : null,
+            onPrimary: a.kind == AskKind.approval && w.onDecide != null
+                ? () => w.onDecide!(a.session, true)
+                : null,
+            onSecondary: a.kind == AskKind.approval && w.onDecide != null
+                ? () => w.onDecide!(a.session, false)
+                : null),
       for (final g in groupAsks)
         AskCardData(
             agentId: g.agentIds.firstOrNull ?? 'snippet',
             name: g.title.isEmpty ? 'Group' : g.title,
             time: relativeTime(
                 (groupActivityAt(g)?.millisecondsSinceEpoch ?? 0) ~/ 1000),
-            text:
-                'Waiting on ${[for (final id in g.agentIds) if (askers.contains(id)) (names[id] ?? id)].join(', ')}',
+            text: 'Waiting on ${[
+              for (final id in g.agentIds)
+                if (askers.contains(id)) (names[id] ?? id)
+            ].join(', ')}',
             onTap: () => w.onOpenGroup?.call(g)),
     ];
 
@@ -235,10 +251,13 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
         .length;
 
     const bar = LargeTitle('Agents');
-    Widget root(Widget list) => CollapsingRoot(title: 'Agents', actions: [
+    Widget root(Widget list) => CollapsingRoot(
+        title: 'Agents',
+        actions: [
           _IconTap('search', 'Search', w.onSearch),
           _IconTap('settings', 'Settings', w.onSettings),
-        ], child: list);
+        ],
+        child: list);
     if (all.isEmpty && w.groups.isEmpty) {
       return root(ListView(children: [
         bar,
@@ -261,9 +280,9 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
       return a.state == CrewState.needsYou ? 'Needs you' : 'Idle';
     }
 
-    AgentCardData card(_HomeAgent a) => AgentCardData(
-        a.agent, status(a), a.line,
-        working: a.state == CrewState.working);
+    AgentCardData card(_HomeAgent a) =>
+        AgentCardData(a.agent, status(a), a.line,
+            working: a.state == CrewState.working);
     void open(CoordinationAgent a) {
       if (a.isLead && w.onOpenLead != null) {
         w.onOpenLead!();
@@ -288,7 +307,7 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
     }
     if (f == HomeFilter.all || f == HomeFilter.needs) {
       if (pager.isNotEmpty) {
-        body.add(const SizedBox(height: 16));
+        body.add(const SizedBox(height: 14));
         body.add(AskPager(items: pager));
       } else if (f == HomeFilter.needs) {
         body.add(const _Empty('Nothing needs you'));
@@ -296,7 +315,7 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
     }
     if (f == HomeFilter.all || f == HomeFilter.working) {
       if (working.isNotEmpty) {
-        body.add(HomeLabel('Working  ${working.length}'));
+        body.add(HomeLabel('Working'));
         final shown = _showAllWorking || f == HomeFilter.working
             ? working
             : working.take(4).toList();
@@ -341,7 +360,24 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
         }
       }
       if (recent.isNotEmpty) {
-        body.add(const HomeLabel('Recent'));
+        body.add(HomeLabel('Recent',
+            trailing: finished > 0
+                ? Semantics(
+                    button: true,
+                    child: TapDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: w.onOpenSessions,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 48),
+                        child: Center(
+                          widthFactor: 1,
+                          child: Text('$finished finished today',
+                              style: sans(13, color: AppColors.fg3)),
+                        ),
+                      ),
+                    ),
+                  )
+                : null));
         for (final a in recent.take(3)) {
           final at = a.activityMs;
           body.add(MarkRow(
@@ -355,13 +391,12 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
       }
     }
 
-    final foot = Padding(
-      padding: const EdgeInsets.only(top: 16, bottom: 16),
-      child: HomeFooter(
-          onAll: w.onAllAgents,
-          finished: finished,
-          onFinished: w.onOpenSessions),
-    );
+    final foot = w.onAllAgents == null
+        ? const SizedBox(height: 16)
+        : Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 16),
+            child: TextLink('All agents', w.onAllAgents!),
+          );
 
     return root(CustomScrollView(slivers: [
       SliverList(
@@ -369,7 +404,7 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
           bar,
           if (w.offline != null) w.offline!,
           Padding(
-            padding: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.only(top: 10),
             child: ChipRow(chips: [
               StateChip('All', f == HomeFilter.all,
                   () => setState(() => _filter = HomeFilter.all)),

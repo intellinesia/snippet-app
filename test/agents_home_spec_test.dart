@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:snippet/mobile_kit.dart';
 import 'package:snippet/api.dart';
 import 'hm_pump.dart' show hmExpectTargets;
 import 'package:snippet/models.dart';
@@ -16,7 +17,11 @@ class _Client extends DaemonClient {
   Future<ServerConfig> getConfig({bool force = false}) async =>
       ServerConfig.fromJson({
         'profiles': [
-          {'name': 'quiet', 'provider': 'claude-code', 'model': 'claude-opus-4-1'}
+          {
+            'name': 'quiet',
+            'provider': 'claude-code',
+            'model': 'claude-opus-4-1'
+          }
         ]
       });
 }
@@ -94,7 +99,9 @@ void main() {
   final report = <String>[];
   tearDownAll(() {
     // ignore: avoid_print
-    for (final l in report) print(l);
+    for (final l in report) {
+      print(l);
+    }
   });
 
   for (final w in [360.0, 393.0, 430.0]) {
@@ -118,37 +125,33 @@ void main() {
             scale);
         hmExpectTargets(t);
         final content = w - 32;
-        final cards = find.byType(AgentCard);
+        // Working agents scroll sideways as 150 wide tiles.
+        final cards = find.byType(MkWorkingTile);
         expect(cards, findsNWidgets(4));
         final c0 = t.getSize(cards.first);
-        final big = scale >= 1.35;
-        expect(c0.width, closeTo(big ? content : (content - 10) / 2, 0.6));
-        expect(c0.height, greaterThanOrEqualTo(138));
-        for (final c in cards.evaluate()) {
-          expect(t.getSize(find.byWidget(c.widget)).height,
-              greaterThanOrEqualTo(138));
-        }
+        expect(c0.width, 150);
         for (final chip in find.byType(StateChip).evaluate()) {
           expect(t.getSize(find.byWidget(chip.widget)).height, 44);
         }
         expect(find.byType(StateChip), findsNWidgets(4));
         expect(find.byKey(const ValueKey('chip-amber-dot')), findsNothing);
+        // Asks are never folded: both show in full, one under another.
+        expect(find.byType(MkAskCard), findsNWidgets(2));
         final ask = t.getSize(find.byKey(const ValueKey('ask-card')).first);
         expect(ask.width, closeTo(content, 0.6));
-        expect(ask.height, greaterThanOrEqualTo(82));
-        expect(find.text('1 of 2'), findsOneWidget);
-        final foot = t.getSize(find.byKey(const ValueKey('home-footer')));
-        expect(foot.width, closeTo(content, 0.6));
-        expect(foot.height, greaterThanOrEqualTo(50));
+        expect(find.byKey(const ValueKey('home-footer')), findsNothing);
         expect(find.text('All agents'), findsOneWidget);
         expect(find.text('1 finished today'), findsOneWidget);
         final search = t.getSize(find.bySemanticsLabel('Search'));
         final settings = t.getSize(find.bySemanticsLabel('Settings'));
-        expect(search, const Size(48, 48));
-        expect(settings, const Size(48, 48));
+        // The harness runs as Android, where icon targets are 48.
+        final icon = kAndroidLook ? 48.0 : 44.0;
+        expect(search, Size(icon, icon));
+        expect(settings, Size(icon, icon));
+        final foot = 'none';
         for (final r in find.byType(MarkRow).evaluate()) {
           expect(t.getSize(find.byWidget(r.widget)).height,
-              greaterThanOrEqualTo(56));
+              greaterThanOrEqualTo(60));
           expect(t.getSize(find.byWidget(r.widget)).width, w);
         }
         expect(find.byType(MarkRow).evaluate().length, lessThanOrEqualTo(4));
@@ -156,7 +159,7 @@ void main() {
           for (final e in find.text('Agents').evaluate())
             (e.widget as Text).style!.fontSize
         ];
-        expect(sizes, contains(28));
+        expect(sizes, contains(kAndroidLook ? 28 : 32));
         report.add(
             'HOME w=$w s=$scale card=$c0 ask=$ask footer=$foot search=$search');
         sem.dispose();
@@ -181,17 +184,18 @@ void main() {
         expect(find.textContaining('opus'), findsWidgets);
         expect(t.getSize(find.bySemanticsLabel('Back')), const Size(48, 48));
         expect(t.getSize(find.bySemanticsLabel('Search')), const Size(48, 48));
-        expect(find.text('All 10'), findsOneWidget);
-        expect(find.text('Working 5'), findsOneWidget);
-        expect(find.text('Idle 3'), findsOneWidget);
-        expect(find.text('Asking 2'), findsOneWidget);
+        // Counts render as a quieter span inside the segment label.
+        expect(find.text('All  10', findRichText: true), findsOneWidget);
+        expect(find.text('Working  5', findRichText: true), findsOneWidget);
+        expect(find.text('Idle  3', findRichText: true), findsOneWidget);
+        expect(find.text('Asking  2', findRichText: true), findsOneWidget);
         expect(find.text('10 agents, 1 group'), findsOneWidget);
         for (final chip in find.byType(StateChip).evaluate()) {
           expect(t.getSize(find.byWidget(chip.widget)).height, 44);
         }
         for (final r in find.byType(MarkRow).evaluate()) {
           final s = t.getSize(find.byWidget(r.widget));
-          expect(s.height, greaterThanOrEqualTo(56));
+          expect(s.height, greaterThanOrEqualTo(60));
           expect(s.width, w);
         }
         // 8 rows then a fold of 2.
@@ -200,15 +204,15 @@ void main() {
         await t.tap(find.text('Show 2 more'));
         await t.pump();
         expect(find.byType(MarkRow), findsNWidgets(10));
-        await t.tap(find.text('Working 5'));
+        await t.tap(find.text('Working  5', findRichText: true));
         await t.pump();
         expect(find.byType(MarkRow), findsNWidgets(5));
-        await t.tap(find.text('Idle 3'));
+        await t.tap(find.text('Idle  3', findRichText: true));
         await t.pump();
         expect(find.byType(MarkRow), findsNWidgets(3));
         await t.tap(find.text('Groups'));
         await t.pump();
-        expect(find.text('Groups 1'), findsOneWidget);
+        expect(find.text('Groups  1', findRichText: true), findsOneWidget);
         final g = t.getSize(find.byType(MarkRow).first);
         expect(g.height, greaterThanOrEqualTo(68));
         report.add('ALL w=$w s=$scale row=$g');
@@ -254,7 +258,8 @@ void main() {
                   Expanded(child: ProfileTile('clock', 'Wake', onTap: () {})),
                 ]),
               ),
-              ProfileRow('Profile', 'Quiet reviewer, 200k context and a long tail',
+              ProfileRow(
+                  'Profile', 'Quiet reviewer, 200k context and a long tail',
                   onTap: () {}),
             ]),
             w,
