@@ -149,8 +149,8 @@ class LargeTitle extends StatelessWidget {
         // Board: iPhone title row centres on the 56 action row; Android sits
         // 4 under the app bar. Room on the right for the iPhone actions.
         padding: kAndroidLook
-            ? const EdgeInsets.fromLTRB(20, 4, 20, 4)
-            : const EdgeInsets.fromLTRB(20, 6, 120, 4),
+            ? const EdgeInsets.fromLTRB(20, 10, 20, 4)
+            : const EdgeInsets.fromLTRB(20, 4, 120, 5),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Semantics(
             header: true,

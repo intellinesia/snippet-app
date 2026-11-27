@@ -569,9 +569,7 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
       maxScaleFactor: 1.35,
       child: ToastAvoid(
         child: MkFilterGroup<String?>(
-          padding: kAndroidLook
-              ? const EdgeInsets.fromLTRB(16, 4, 16, 0)
-              : const EdgeInsets.fromLTRB(20, 10, 20, 0),
+          padding: MK.filterPad,
           options: [
             for (final (k, l) in [...main, ...extra])
               MkFilter(k, l, count: k == null ? total : null),

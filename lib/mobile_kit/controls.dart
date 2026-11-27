@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../glass.dart';
 import '../tap_detector.dart';
 import '../theme.dart';
+import '../toast_avoid.dart';
 import '../widgets.dart';
 import 'tokens.dart';
 
@@ -54,11 +55,15 @@ class MkIconButton extends StatelessWidget {
       required this.label,
       this.onTap,
       this.size,
+      this.color,
       this.bare = false});
   final String icon;
   final String label;
   final VoidCallback? onTap;
   final double? size;
+
+  /// Icon ink when it carries state (a live call); defaults to fg1.
+  final Color? color;
 
   /// No surface even on iPhone (inside a cluster or the composer).
   final bool bare;
@@ -71,8 +76,8 @@ class MkIconButton extends StatelessWidget {
       height: d,
       child: Center(
           child: AppIcon(icon,
-              size: kAndroidLook ? 22 : 19,
-              color: onTap == null ? AppColors.fg4 : AppColors.fg1)),
+              size: kAndroidLook ? 22 : 20,
+              color: onTap == null ? AppColors.fg4 : color ?? AppColors.fg1)),
     );
     if (!kAndroidLook && !bare) face = MkGlass(child: face);
     return Semantics(
@@ -376,7 +381,7 @@ class MkSplitButton extends StatelessWidget {
     return Row(mainAxisSize: MainAxisSize.min, children: [
       part(
           Row(mainAxisSize: MainAxisSize.min, children: [
-            AppIcon(icon, size: 17, color: MK.onPrimary),
+            AppIcon(icon, size: 14, color: MK.onPrimary),
             const SizedBox(width: 6),
             Text(label, style: sans(14, weight: W.label, color: MK.onPrimary)),
           ]),
@@ -384,16 +389,17 @@ class MkSplitButton extends StatelessWidget {
               left: outer, right: onMenu == null ? outer : inner),
           onTap,
           label,
-          EdgeInsets.fromLTRB(12, 0, onMenu == null ? 16 : 14, 0)),
+          EdgeInsets.fromLTRB(
+              12, 0, onMenu == null || kAndroidLook ? 16 : 14, 0)),
       if (onMenu != null) ...[
         const SizedBox(width: 2),
         part(
             Center(
-                child: AppIcon('chevron-down', size: 16, color: MK.onPrimary)),
+                child: AppIcon('chevron-down', size: 14, color: MK.onPrimary)),
             BorderRadius.horizontal(left: inner, right: outer),
             onMenu,
             menuLabel,
-            const EdgeInsets.symmetric(horizontal: 10)),
+            EdgeInsets.symmetric(horizontal: kAndroidLook ? 12 : 10)),
       ],
     ]);
   }
@@ -459,4 +465,74 @@ class MkToggle extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A bare header icon in a 44 (Android 48) target, beside a large title.
+class MkIconTap extends StatelessWidget {
+  const MkIconTap(this.icon, this.label, this.onTap, {super.key});
+  final String icon, label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: label,
+        child: TapDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: SizedBox(
+              width: kAndroidLook ? 48 : 44,
+              height: kAndroidLook ? 48 : 44,
+              child: Center(
+                  child: AppIcon(icon,
+                      size: kAndroidLook ? 22 : 19, color: AppColors.fg1))),
+        ),
+      );
+}
+
+/// The list search field under a large title: s2, no outline, search glyph.
+class MkSearchField extends StatelessWidget {
+  const MkSearchField(
+      {super.key,
+      required this.controller,
+      required this.hint,
+      required this.onChanged,
+      this.autofocus = true});
+  final TextEditingController controller;
+  final String hint;
+  final ValueChanged<String> onChanged;
+  final bool autofocus;
+
+  @override
+  Widget build(BuildContext context) => ToastAvoid(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(kAndroidLook ? 16 : MK.gutter, 8,
+              kAndroidLook ? 16 : MK.gutter, 0),
+          child: TextField(
+            controller: controller,
+            autofocus: autofocus,
+            onChanged: onChanged,
+            style: sans(15, color: AppColors.fg1),
+            cursorColor: AppColors.fg1,
+            decoration: InputDecoration(
+              isDense: true,
+              filled: true,
+              fillColor: AppColors.surface2,
+              prefixIcon: Padding(
+                padding: const EdgeInsets.only(left: 12, right: 8),
+                child: AppIcon('search', size: 16, color: AppColors.fg3),
+              ),
+              prefixIconConstraints:
+                  const BoxConstraints(minWidth: 36, minHeight: 20),
+              hintText: hint,
+              hintStyle: sans(15, color: AppColors.fg3),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(kAndroidLook ? 28 : 12),
+                  borderSide: BorderSide.none),
+            ),
+          ),
+        ),
+      );
 }

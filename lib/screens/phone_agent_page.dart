@@ -117,7 +117,7 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
 
   CoordinationAgent get a => widget.agent;
   String get _name =>
-      a.displayName.trim().isEmpty ? a.id : a.displayName.trim();
+      a.shortName.trim().isEmpty ? a.id : a.shortName.trim();
   bool get _isPaused => _paused ?? a.status == 'paused';
 
   List<SessionInfo> get _mine => [

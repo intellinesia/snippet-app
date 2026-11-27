@@ -354,22 +354,21 @@ class _MobileShellState extends State<MobileShell>
                 MobileHome.home => 0,
                 MobileHome.agents => 0,
                 MobileHome.chats => 1,
+                MobileHome.artifacts => 2,
                 MobileHome.tasks => 3,
               },
               onSelect: (i) {
                 final p = _tabPlaces[i];
-                if (p == QuietPlace.artifacts) {
-                  widget.onArtifacts?.call();
-                  return;
-                }
                 onMobileHome(switch (p) {
                   QuietPlace.sessions => MobileHome.chats,
+                  QuietPlace.artifacts => MobileHome.artifacts,
                   QuietPlace.tasks => MobileHome.tasks,
                   _ => MobileHome.home,
                 });
               },
               onCompose: widget.onNew!,
               onComposeLong: widget.onNewLong,
+              androidFab: mobileHome != MobileHome.tasks,
             )
           : null,
       body: Stack(children: [

@@ -21,7 +21,7 @@ class MK {
   static const double gutter = 20;
   static const double rowMin = 60;
   static const double rowAvatar = 40;
-  static const double glassButton = 40;
+  static const double glassButton = 44;
   static const double pill = 40;
   static const double tabBar = 62;
   static const double fab = 62;
@@ -29,6 +29,11 @@ class MK {
   static const double androidNav = 80;
   static const double cardRadius = 24;
   static const double groupRadius = 22;
+
+  /// The filter row under a large title, the same on every tab (board).
+  static EdgeInsets get filterPad => kAndroidLook
+      ? const EdgeInsets.fromLTRB(16, 6, 16, 0)
+      : const EdgeInsets.fromLTRB(20, 10, 20, 0);
 
   /// Height of the full-width primary buttons.
   static double get bigButton => kAndroidLook ? 56 : 50;

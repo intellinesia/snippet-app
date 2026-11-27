@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -267,7 +268,10 @@ class ChatComposer extends StatelessWidget {
                 kMobile ? 12 : S.s20,
                 S.s8,
                 kMobile ? 12 : S.s20,
-                kMobile ? 8 + (keyboard > 0 ? 0 : mq.padding.bottom) : 18),
+                // Board: the phone composer floats 26 off the bottom edge.
+                kMobile
+                    ? (keyboard > 0 ? 8 : math.max(26.0, mq.padding.bottom - 8))
+                    : 18),
             child: ListenableBuilder(
               listenable: Listenable.merge([voice, input, listen]),
               builder: (context, _) {

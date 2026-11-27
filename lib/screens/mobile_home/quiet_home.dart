@@ -137,7 +137,7 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final w = widget;
-    final names = {for (final a in w.agents) a.id: a.displayName};
+    final names = {for (final a in w.agents) a.id: a.shortName};
     final asks = needsYouItems(w.sessions);
     final rows = agentRows(w.agents, w.sessions);
     final lead = w.agents.where((a) => a.isLead).firstOrNull;
@@ -350,7 +350,7 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
             a.activityMs,
             MarkRow(
               mark: agentFace(a.agent.id, 40),
-              title: a.agent.displayName,
+              title: a.agent.shortName,
               time:
                   a.activityMs == 0 ? null : relativeTime(a.activityMs ~/ 1000),
               sub: a.line,
@@ -410,18 +410,19 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
         delegate: SliverChildListDelegate([
           bar,
           if (w.offline != null) w.offline!,
-          Padding(
-            padding: const EdgeInsets.only(top: 10),
-            child: ChipRow(chips: [
-              StateChip('All', f == HomeFilter.all,
-                  () => setState(() => _filter = HomeFilter.all)),
-              StateChip('Working', f == HomeFilter.working,
-                  () => setState(() => _filter = HomeFilter.working)),
-              StateChip('Needs you', f == HomeFilter.needs,
-                  () => setState(() => _filter = HomeFilter.needs)),
-              StateChip('Pinned', f == HomeFilter.pinned,
-                  () => setState(() => _filter = HomeFilter.pinned)),
-            ]),
+          // Board: the shared filter group, counts on Working and Needs you.
+          MkFilterGroup<HomeFilter>(
+            padding: MK.filterPad,
+            options: [
+              const MkFilter(HomeFilter.all, 'All'),
+              MkFilter(HomeFilter.working, 'Working',
+                  count: working.isEmpty ? null : working.length),
+              MkFilter(HomeFilter.needs, 'Needs you',
+                  count: pager.isEmpty ? null : pager.length),
+              const MkFilter(HomeFilter.pinned, 'Pinned'),
+            ],
+            selected: f,
+            onSelect: (v) => setState(() => _filter = v),
           ),
           ...body,
         ]),

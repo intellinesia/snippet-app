@@ -1495,8 +1495,9 @@ class W {
 }
 
 FontWeight weightFor(FontWeight w) {
+  // Phone board: 600 for large titles, header names and sheet titles.
   final cap = kMobile
-      ? math.max(FontWeight.w500.value, W.strong.value)
+      ? math.max(FontWeight.w600.value, W.strong.value)
       : FontWeight.w500.value;
   return w.value > cap ? _fontWeightFor(cap) : w;
 }

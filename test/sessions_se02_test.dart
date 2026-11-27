@@ -71,9 +71,10 @@ void main() {
         // Title never "Untitled session"; fallback names the folder.
         expect(find.text('Untitled session'), findsNothing);
         expect(find.text('New session in snippet-mobile-all'), findsOneWidget);
-        // Title after the state mark: gutter + 24 mark + 14 gap.
+        // Board: title after the state mark, iPhone gutter + 24 slot + 12
+        // gap, Android tile inset 32 + 40 slot + 14 gap.
         expect(tester.getTopLeft(find.text('Wire the wake')).dx,
-            (kAndroidLook ? 32 : MK.gutter) + 24 + 14);
+            kAndroidLook ? 32 + 40 + 14 : MK.gutter + 24 + 12);
         // Group label.
         expect(find.text('snippet-mobile-all'), findsNWidgets(2)); // group label + sub
         // Needs you row: amber word only; failed row carries the word.

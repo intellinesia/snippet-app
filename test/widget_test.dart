@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:snippet/models.dart';
+import 'package:snippet/platform.dart' show kMobile;
 import 'package:snippet/tool_activity.dart';
 import 'package:snippet/screens/lead/lead_state.dart';
 import 'package:snippet/tool_views.dart';
@@ -474,11 +475,12 @@ void main() {
   //      rendered regular and hierarchy came from size alone;
   //   2. palette values drifting below accessible contrast on the dark canvas.
 
-  test('type helpers honour 400-500 and cap at 500', () {
+  test('type helpers honour the weight cap: 600 on phone, 500 on desktop', () {
     TestWidgetsFlutterBinding.ensureInitialized();
+    final cap = kMobile ? FontWeight.w600 : FontWeight.w500;
     expect(sans(15, weight: FontWeight.w500).fontWeight, FontWeight.w500);
-    expect(mono(13, weight: FontWeight.w600).fontWeight, FontWeight.w500);
-    expect(sans(20, weight: FontWeight.w700).fontWeight, FontWeight.w500);
+    expect(mono(13, weight: FontWeight.w600).fontWeight, cap);
+    expect(sans(20, weight: FontWeight.w700).fontWeight, cap);
   });
 
   test('dark palette clears accessible contrast on every surface', () {

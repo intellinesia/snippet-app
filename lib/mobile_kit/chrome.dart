@@ -191,6 +191,7 @@ class MkTabBar extends StatelessWidget {
     this.attention = const {},
     this.composeIcon = 'edit',
     this.composeLabel = 'New',
+    this.androidFab = true,
   });
   final List<MkTab> tabs;
   final int? selected;
@@ -202,6 +203,10 @@ class MkTabBar extends StatelessWidget {
   final Set<int> attention;
   final String composeIcon;
   final String composeLabel;
+
+  /// Android only: off where the page carries its own primary action
+  /// (Tasks has the New task split button).
+  final bool androidFab;
 
   @override
   Widget build(BuildContext context) =>
@@ -327,13 +332,16 @@ class MkTabBar extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(0, 0, 16, 16),
-          child: _fab(MK.androidFab, BorderRadius.circular(16), const [
-            BoxShadow(
-                color: Color(0x66000000), blurRadius: 18, offset: Offset(0, 6)),
-          ]),
-        ),
+        if (androidFab)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(0, 0, 16, 16),
+            child: _fab(MK.androidFab, BorderRadius.circular(16), const [
+              BoxShadow(
+                  color: Color(0x66000000),
+                  blurRadius: 18,
+                  offset: Offset(0, 6)),
+            ]),
+          ),
         Container(
           color: AppColors.surface1,
           padding: EdgeInsets.fromLTRB(8, 12, 8, bottom + 16),
@@ -493,6 +501,17 @@ class MkThreadSurface extends StatelessWidget {
 /// Height of the phone chat header under the status bar (board: 56 / 64).
 double get mkChatHeaderHeight => kAndroidLook ? 64 : 56;
 
+/// Board: the chat header starts 5 above the status inset (iPhone controls
+/// centre at 82, the thread begins at 116; Android 108).
+const double mkChatHeaderLift = 5;
+
+/// Thread top below the unlifted header box: board gap 6 / 4, less the lift.
+double get _threadGap => (kAndroidLook ? 4 : 6) - mkChatHeaderLift;
+
+/// Lifts a phone chat header by [mkChatHeaderLift].
+Widget mkLiftHeader(Widget header) => Transform.translate(
+    offset: const Offset(0, -mkChatHeaderLift), child: header);
+
 /// The rounded thread surface behind a phone chat: page ground above, a
 /// surface1 sheet with 28 top corners starting just under the header.
 class MkThreadBackdrop extends StatelessWidget {
@@ -509,7 +528,7 @@ class MkThreadBackdrop extends StatelessWidget {
     if (!enabled) return child;
     final top = (statusTop ?? MediaQuery.paddingOf(context).top) +
         mkChatHeaderHeight +
-        (kAndroidLook ? 4 : 6);
+        _threadGap;
     final status = statusTop ?? MediaQuery.paddingOf(context).top;
     return Stack(fit: StackFit.expand, children: [
       ColoredBox(color: AppColors.bg),
@@ -539,7 +558,7 @@ class MkThreadBackdrop extends StatelessWidget {
 /// thread's 28 top corners cut out of it.
 abstract final class MkThreadCap {
   /// How far below the header the layer reaches.
-  static double get reach => (kAndroidLook ? 4.0 : 6.0) + 28;
+  static double get reach => _threadGap + 28;
 
   static Widget paint(Color bg) => CustomPaint(painter: _CapPainter(bg));
 }

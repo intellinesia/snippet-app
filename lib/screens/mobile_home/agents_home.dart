@@ -217,7 +217,7 @@ class AgentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
-        label: [data.agent.displayName, data.status, data.line]
+        label: [data.agent.shortName, data.status, data.line]
             .where((e) => e.isNotEmpty)
             .join(', '),
         excludeSemantics: true,
@@ -235,7 +235,7 @@ class AgentCard extends StatelessWidget {
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               ClipOval(child: AgentMochi(data.agent.id, size: 64)),
               const SizedBox(height: 5),
-              Text(data.agent.displayName,
+              Text(data.agent.shortName,
                   maxLines: 1,
                   textAlign: TextAlign.center,
                   overflow: TextOverflow.ellipsis,
@@ -280,7 +280,7 @@ class AgentGrid extends StatelessWidget {
               if (i > 0) const SizedBox(width: 10),
               MkWorkingTile(
                 avatar: AgentMochi(cards[i].agent.id, size: 44),
-                name: cards[i].agent.displayName,
+                name: cards[i].agent.shortName,
                 subtitle:
                     cards[i].line.isNotEmpty ? cards[i].line : cards[i].status,
                 working: cards[i].working,

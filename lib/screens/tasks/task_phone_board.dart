@@ -134,8 +134,7 @@ class _PhoneTaskBoardState extends State<PhoneTaskBoard> {
   Widget _chips() => MediaQuery.withClampedTextScaling(
         maxScaleFactor: 1.35,
         child: MkFilterGroup<BoardColumn>(
-          padding: EdgeInsets.fromLTRB(kAndroidLook ? 16 : MK.gutter, 2,
-              kAndroidLook ? 16 : MK.gutter, 8),
+          padding: MK.filterPad.copyWith(bottom: 8),
           options: [
             for (final c in BoardColumn.values)
               MkFilter(c, c.label, count: _of(c).length),

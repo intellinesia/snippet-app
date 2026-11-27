@@ -50,7 +50,9 @@ class ComposerCard extends StatefulWidget {
           {TextStyle? style, Color? hintColor}) =>
       InputDecoration(
         isCollapsed: true,
-        contentPadding: const EdgeInsets.fromLTRB(4, 9, 4, 9),
+        // Board: hint at 72 in the iPhone capsule (gap 4 + pad 6), 66 on
+        // Android (gap 2 + pad 2).
+        contentPadding: EdgeInsets.fromLTRB(kAndroidLook ? 4 : 10, 9, 4, 9),
         border: InputBorder.none,
         hintText: hint,
         hintMaxLines: 1,
@@ -334,7 +336,7 @@ class ComposerSendButton extends StatelessWidget {
             child: Center(
               child: sending
                   ? Spinner(size: 16, color: ink)
-                  : AppIcon(stop ? 'stop' : (android ? 'send' : 'arrow-up'),
+                  : AppIcon(stop ? 'stop' : (android ? 'send-right' : 'arrow-up'),
                       size: stop ? 15 : (android ? 22 : 21), color: ink),
             ),
           ),

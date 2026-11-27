@@ -170,7 +170,7 @@ class _QuietAgentsScreenState extends State<QuietAgentsScreen> {
         ),
       if (_groupsSegment)
         MkFilterGroup<bool>(
-          padding: EdgeInsets.fromLTRB(side, a ? 4 : 10, side, 0),
+          padding: MK.filterPad,
           options: [
             const MkFilter(false, 'Agents'),
             MkFilter(true, 'Groups', count: groups.length),
@@ -180,7 +180,7 @@ class _QuietAgentsScreenState extends State<QuietAgentsScreen> {
         )
       else
         MkFilterGroup<AllFilter>(
-          padding: EdgeInsets.fromLTRB(side, a ? 4 : 10, side, 0),
+          padding: MK.filterPad,
           options: [
             MkFilter(AllFilter.all, 'All', count: everyone.length),
             MkFilter(AllFilter.working, 'Working', count: working),
@@ -241,7 +241,7 @@ class _QuietAgentsScreenState extends State<QuietAgentsScreen> {
             final busy = l.state == CrewState.working;
             final ask = l.state == CrewState.needsYou;
             return MkRow(
-              title: l.agent.displayName,
+              title: l.agent.shortName,
               leading: AgentMochi(l.agent.id, size: 40),
               subtitle: [
                 if (l.model.isNotEmpty) l.model,

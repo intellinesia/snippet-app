@@ -200,7 +200,8 @@ class StageBar extends StatelessWidget {
         ]),
       ),
     );
-    return framed ? GlassTopFrame(thread: true, child: body) : body;
+    final lifted = mkLiftHeader(body);
+    return framed ? GlassTopFrame(thread: true, child: lifted) : lifted;
   }
 
   Widget _desk() {

@@ -490,7 +490,7 @@ class _SheetAgentRow extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(a.displayName,
+            Text(a.shortName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: sans(17, weight: FontWeight.w500, color: AppColors.fg1)),
@@ -518,7 +518,7 @@ class _SheetAgentRow extends StatelessWidget {
     ]);
     final tapArea = Semantics(
       button: true,
-      label: '${a.displayName}, ${plainPreview(row.line)}',
+      label: '${a.shortName}, ${plainPreview(row.line)}',
       child: ExcludeSemantics(
         child: InkWell(
           onTap: onOpen,
@@ -544,7 +544,7 @@ class _SheetAgentRow extends StatelessWidget {
           : Row(children: [
               Expanded(child: tapArea),
               ManagedPill(
-                name: a.displayName,
+                name: a.shortName,
                 count: managedCount,
                 tone: pillTone(heroAgentColor(a.id)),
                 onTap: onManaged,

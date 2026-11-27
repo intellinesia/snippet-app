@@ -39,7 +39,7 @@ import 'mobile_home/quiet_lists.dart';
 import 'tasks/tasks_panel.dart' show TasksPanel;
 import 'phone_hero.dart';
 import '../session_quick_send.dart';
-import 'artifacts_screen.dart' show openArtifactsList;
+import 'artifacts_screen.dart' show ArtifactsScreen, openArtifactsList;
 import 'sessions_inbox.dart' show openSessionsInbox;
 import 'mobile_home/everyone_switcher.dart' show showEveryoneSwitcher;
 import 'pull_requests.dart' show openPullRequest;
@@ -766,6 +766,15 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           return _mobileUnavailable('Add a machine to see its tasks.');
         }
         return TasksPanel(key: const ValueKey('phone-tasks'), client: client);
+
+      case MobileHome.artifacts:
+        final client = widget.client;
+        if (client == null) {
+          return _mobileUnavailable('Add a machine to see its artifacts.');
+        }
+        // A tab root on the board: the bar stays, no back.
+        return ArtifactsScreen(
+            key: const ValueKey('phone-artifacts'), client: client);
 
       case MobileHome.agents:
         final client = widget.client;

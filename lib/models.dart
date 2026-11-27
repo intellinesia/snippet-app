@@ -1335,6 +1335,12 @@ class AgentPresence {
   }
 }
 
+/// The part of an agent name before any " | role" suffix.
+String shortAgentName(String n) {
+  final i = n.indexOf(' | ');
+  return (i > 0 ? n.substring(0, i) : n).trim();
+}
+
 /// A specialized worker identity in the SQLite coordination directory.
 class CoordinationAgent {
   final String id;
@@ -1357,6 +1363,9 @@ class CoordinationAgent {
 
   /// What the UI shows: the nickname when one is set, else the name.
   String get displayName => nickname ?? fullName;
+
+  /// The name without the " | role" suffix, for narrow phone surfaces.
+  String get shortName => shortAgentName(displayName);
 
   /// Tasks by status, as the daemon counts them: open work of any age, and
   /// finished work from the last 7 days. Null when the daemon predates it.

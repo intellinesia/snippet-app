@@ -118,6 +118,7 @@ abstract final class PhIcons {
   static const IconData notePencil = IconData(0xe34c, fontFamily: 'Phosphor');
   static const IconData package = IconData(0xe390, fontFamily: 'Phosphor');
   static const IconData paperPlaneTilt = IconData(0xe398, fontFamily: 'Phosphor');
+  static const IconData paperPlaneRight = IconData(0xe396, fontFamily: 'Phosphor');
   static const IconData paperclip = IconData(0xe39a, fontFamily: 'Phosphor');
   static const IconData path = IconData(0xe39c, fontFamily: 'Phosphor');
   static const IconData pause = IconData(0xe39e, fontFamily: 'Phosphor');
@@ -288,6 +289,7 @@ abstract final class PhIconsFill {
   static const IconData notePencil = IconData(0xe34c, fontFamily: 'PhosphorFill');
   static const IconData package = IconData(0xe390, fontFamily: 'PhosphorFill');
   static const IconData paperPlaneTilt = IconData(0xe398, fontFamily: 'PhosphorFill');
+  static const IconData paperPlaneRight = IconData(0xe396, fontFamily: 'PhosphorFill');
   static const IconData paperclip = IconData(0xe39a, fontFamily: 'PhosphorFill');
   static const IconData path = IconData(0xe39c, fontFamily: 'PhosphorFill');
   static const IconData pause = IconData(0xe39e, fontFamily: 'PhosphorFill');

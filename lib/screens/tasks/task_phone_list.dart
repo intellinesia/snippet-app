@@ -58,6 +58,24 @@ class _PhoneTasksRootState extends State<PhoneTasksRoot> {
   TaskScope _scope = TaskScope.all;
   bool _doneOpen = false;
   bool _board = false;
+  bool _searching = false;
+  final _q = TextEditingController();
+
+  @override
+  void dispose() {
+    _q.dispose();
+    super.dispose();
+  }
+
+  bool _hit(TaskItem t) {
+    final q = _q.text.trim().toLowerCase();
+    if (q.isEmpty) return true;
+    final owner =
+        taskOwnerAgent(t, widget.sessions, widget.agentNames)?.name ?? '';
+    return t.title.toLowerCase().contains(q) ||
+        t.id.toLowerCase().contains(q) ||
+        owner.toLowerCase().contains(q);
+  }
 
   bool _in(TaskItem t, TaskScope s) => switch (s) {
         TaskScope.all => true,
@@ -70,7 +88,7 @@ class _PhoneTasksRootState extends State<PhoneTasksRoot> {
     final all = widget.tasks;
     final shown = [
       for (final t in all)
-        if (_in(t, _scope)) t
+        if (_in(t, _scope) && _hit(t)) t
     ];
     List<TaskItem> of(Set<TaskStatus> s) => [
           for (final t in shown)
@@ -91,6 +109,11 @@ class _PhoneTasksRootState extends State<PhoneTasksRoot> {
 
     final children = <Widget>[
       _head(),
+      if (_searching)
+        MkSearchField(
+            controller: _q,
+            hint: 'Search tasks',
+            onChanged: (_) => setState(() {})),
       if (widget.stateBody == null && all.isNotEmpty) _chips(all),
     ];
     if (widget.stateBody != null) {
@@ -110,9 +133,11 @@ class _PhoneTasksRootState extends State<PhoneTasksRoot> {
           child: EmptyState(
             icon: 'list',
             title: 'Nothing here',
-            body: _scope == TaskScope.agents
-                ? 'No tasks created by agents.'
-                : 'No tasks created by you.',
+            body: _q.text.trim().isNotEmpty
+                ? 'No tasks match your search.'
+                : _scope == TaskScope.agents
+                    ? 'No tasks created by agents.'
+                    : 'No tasks created by you.',
           )));
     } else {
       for (final (label, items) in groups) {
@@ -166,7 +191,18 @@ class _PhoneTasksRootState extends State<PhoneTasksRoot> {
     return CollapsingRoot(
       title: widget.title,
       leading: widget.leading,
-      actions: widget.actions,
+      actions: [
+        ...widget.actions,
+        // Board: Android carries search in the top bar; iPhone has none.
+        if (kAndroidLook)
+          MkIconTap(
+              'search',
+              'Search',
+              () => setState(() {
+                    _searching = !_searching;
+                    if (!_searching) _q.clear();
+                  })),
+      ],
       child: PullToRefresh(
         onRefresh: widget.onRefresh,
         child: ListView(
@@ -189,12 +225,19 @@ class _PhoneTasksRootState extends State<PhoneTasksRoot> {
         padding: const EdgeInsets.only(right: 16),
         child: Row(children: [
           Expanded(child: LargeTitle(widget.title)),
-          MkSplitButton(
-            label: 'New task',
-            icon: 'plus',
-            onTap: widget.onNew,
-            onMenu: _menu,
-            menuLabel: 'Task options',
+          // Board: the split button sits 2 off the title centre, below on
+          // Android and above on iPhone.
+          Padding(
+            padding: kAndroidLook
+                ? const EdgeInsets.only(top: 4)
+                : const EdgeInsets.only(bottom: 4),
+            child: MkSplitButton(
+              label: 'New task',
+              icon: 'plus',
+              onTap: widget.onNew,
+              onMenu: _menu,
+              menuLabel: 'Task options',
+            ),
           ),
         ]),
       );
@@ -225,9 +268,7 @@ class _PhoneTasksRootState extends State<PhoneTasksRoot> {
     return MediaQuery.withClampedTextScaling(
       maxScaleFactor: 1.35,
       child: MkFilterGroup<TaskScope>(
-        padding: kAndroidLook
-            ? const EdgeInsets.fromLTRB(16, 4, 16, 0)
-            : const EdgeInsets.fromLTRB(20, 10, 20, 0),
+        padding: MK.filterPad,
         options: [
           MkFilter(TaskScope.all, 'All', count: n(TaskScope.all)),
           MkFilter(TaskScope.mine, 'Mine', count: n(TaskScope.mine)),

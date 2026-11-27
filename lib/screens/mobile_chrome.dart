@@ -269,8 +269,8 @@ class MobileMissionBar extends StatelessWidget {
     final android = kAndroidLook;
     final side = android ? 48.0 : MK.glassButton;
     final identity = Row(mainAxisSize: MainAxisSize.min, children: [
-      AgentMochi('lead', size: android ? 36 : 30),
-      SizedBox(width: android ? 12 : 8),
+      AgentMochi('lead', size: android ? 36 : 32),
+      SizedBox(width: android ? 10 : 8),
       Flexible(
         child: Text('Lead',
             maxLines: 1,
@@ -295,16 +295,16 @@ class MobileMissionBar extends StatelessWidget {
                 radius: 24,
                 child: Container(
                   height: 44,
-                  padding: const EdgeInsets.fromLTRB(7, 0, 16, 0),
+                  padding: const EdgeInsets.fromLTRB(6, 0, 16, 0),
                   child: identity,
                 ),
               ),
       ),
     );
-    return SizedBox(
+    return mkLiftHeader(SizedBox(
       height: mkChatHeaderHeight,
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: android ? 4 : M.gutter),
+        padding: EdgeInsets.symmetric(horizontal: android ? 4 : 14),
         child: Row(children: [
           if (onBack != null) ...[
             MkIconButton(
@@ -312,7 +312,7 @@ class MobileMissionBar extends StatelessWidget {
                 label: 'Back',
                 bare: android,
                 onTap: onBack),
-            SizedBox(width: android ? 4 : 8),
+            SizedBox(width: android ? 2 : 8),
           ] else
             SizedBox(width: android ? 12 : side + 8),
           Expanded(child: android ? chip : Center(child: chip)),
@@ -322,22 +322,25 @@ class MobileMissionBar extends StatelessWidget {
               listenable: AmbientController.instance,
               builder: (context, _) {
                 final live = AmbientController.instance.running;
-                final btn = RoundBtn(
-                  tooltip: live ? 'Voice call' : 'Start voice',
-                  size: side,
+                return MkIconButton(
+                  icon: 'phone',
+                  label: live ? 'Voice call' : 'Start voice',
+                  color: live ? AppColors.ok : null,
                   onTap: () => startMobileVoice(context, c),
-                  child: AppIcon('phone',
-                      size: android ? 22 : 18,
-                      color: live ? AppColors.ok : AppColors.fg1),
                 );
-                return android ? btn : MkGlass(child: btn);
               },
             )
           else
             SizedBox(width: side),
+          // Board: Android pairs call with a more button.
+          if (android && onActions != null) ...[
+            const SizedBox(width: 2),
+            MkIconButton(
+                icon: 'more-vertical', label: 'More', onTap: onActions),
+          ],
         ]),
       ),
-    );
+    ));
   }
 }
 

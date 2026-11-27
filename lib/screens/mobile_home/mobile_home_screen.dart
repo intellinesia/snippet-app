@@ -331,7 +331,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
   Widget build(BuildContext context) {
     final sessions = widget.sessions;
     final asks = needsYouItems(sessions);
-    final names = {for (final a in widget.agents) a.id: a.displayName};
+    final names = {for (final a in widget.agents) a.id: a.shortName};
     String agentName(String id) {
       final n = names[id]?.trim();
       return (n != null && n.isNotEmpty) ? n : id;

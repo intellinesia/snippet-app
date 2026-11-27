@@ -138,9 +138,9 @@ class AgentRow {
     final r = at[b.agent.id]!.compareTo(at[a.agent.id]!);
     return r != 0
         ? r
-        : a.agent.displayName
+        : a.agent.shortName
             .toLowerCase()
-            .compareTo(b.agent.displayName.toLowerCase());
+            .compareTo(b.agent.shortName.toLowerCase());
   }
 
   working.sort(byRecent);

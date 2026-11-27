@@ -272,7 +272,7 @@ class _AgentLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = Text(agent.displayName,
+    final name = Text(agent.shortName,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: sans(15,
@@ -295,7 +295,7 @@ class _AgentLine extends StatelessWidget {
                 style: sans(12, color: AppColors.fg3));
     return Semantics(
       button: true,
-      label: agent.displayName,
+      label: agent.shortName,
       hint: needsYou ? 'Needs you' : last,
       excludeSemantics: true,
       child: InkWell(

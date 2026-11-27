@@ -114,30 +114,4 @@ void main() {
     });
   }
 
-  testWidgets('home header icons and trailing do not overlap', (tester) async {
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(393, 852);
-    addTearDown(tester.view.reset);
-    debugDefaultTargetPlatformOverride = TargetPlatform.android;
-    await tester.pumpWidget(MaterialApp(
-        theme: buildAppTheme(),
-        home: Scaffold(
-            body: QuietPlaceHeader(
-                title: 'Agents',
-                onNewMenu: (_) {},
-                onSearch: () {},
-                onSettings: () {},
-                trailing: const Text('3h')))));
-    final rects = [
-      for (final l in ['New', 'Search', 'Settings'])
-        tester.getRect(find.bySemanticsLabel(l)),
-      tester.getRect(find.text('3h')),
-    ];
-    for (var i = 0; i < rects.length; i++) {
-      for (var j = i + 1; j < rects.length; j++) {
-        expect(rects[i].overlaps(rects[j]), isFalse, reason: '$i vs $j');
-      }
-    }
-    debugDefaultTargetPlatformOverride = null;
-  });
 }

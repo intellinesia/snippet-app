@@ -116,7 +116,7 @@ class ManagedView extends StatelessWidget {
           right: 0,
           child: StageBar(
             members: [StageMember(agent.id, state: AgentCharacterState.idle)],
-            title: agent.displayName,
+            title: agent.shortName,
             subtitle: '$n managed session${n == 1 ? '' : 's'}',
           ),
         ),
@@ -147,8 +147,8 @@ class ManagedView extends StatelessWidget {
           child: HomeComposer(
             client: client,
             agentId: agent.id,
-            agentName: agent.displayName,
-            hint: 'Message ${agent.displayName}',
+            agentName: agent.shortName,
+            hint: 'Message ${agent.shortName}',
             onPlus: onPlus,
             onSent: onSent,
           ),

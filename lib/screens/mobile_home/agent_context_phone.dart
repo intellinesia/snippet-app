@@ -132,7 +132,7 @@ class _AgentContextPageState extends State<AgentContextPage> {
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(a.displayName,
+              Text(a.shortName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: sans(18, weight: FontWeight.w500, color: AppColors.fg1)),
@@ -202,7 +202,7 @@ class _AgentContextPageState extends State<AgentContextPage> {
       child: SafeArea(
         child: Column(children: [
           PushedBar(
-            title: a.displayName,
+            title: a.shortName,
             subtitle: live == null
                 ? 'Idle'
                 : 'Working · ${live.title.isEmpty ? 'Untitled session' : live.title}',

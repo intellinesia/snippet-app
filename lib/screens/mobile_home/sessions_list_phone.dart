@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../models.dart';
 import '../../tap_detector.dart';
 import '../../theme.dart';
-import '../../toast_avoid.dart';
 import '../../widgets.dart';
 import '../../mobile_kit.dart';
 import '../session_list_row.dart' show projectLabel, sessionNeedsYou;
@@ -174,7 +173,7 @@ class _QuietSessionsScreenState extends State<QuietSessionsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final names = {for (final a in widget.agents) a.id: a.displayName};
+    final names = {for (final a in widget.agents) a.id: a.shortName};
     final all = [...widget.sessions];
     int count(SessionsFilter f) => all.where((s) => _inFilter(s, f)).length;
     final q = _q.text.trim().toLowerCase();
@@ -221,36 +220,10 @@ class _QuietSessionsScreenState extends State<QuietSessionsScreen> {
       else
         const LargeTitle('Sessions'),
       if (_searching)
-        ToastAvoid(
-            child: Padding(
-          padding: EdgeInsets.fromLTRB(kAndroidLook ? 16 : MK.gutter, 8,
-              kAndroidLook ? 16 : MK.gutter, 0),
-          child: TextField(
+        MkSearchField(
             controller: _q,
-            autofocus: true,
-            onChanged: (_) => setState(() {}),
-            style: sans(15, color: AppColors.fg1),
-            cursorColor: AppColors.fg1,
-            decoration: InputDecoration(
-              isDense: true,
-              filled: true,
-              fillColor: AppColors.surface2,
-              prefixIcon: Padding(
-                padding: const EdgeInsets.only(left: 12, right: 8),
-                child: AppIcon('search', size: 16, color: AppColors.fg3),
-              ),
-              prefixIconConstraints:
-                  const BoxConstraints(minWidth: 36, minHeight: 20),
-              hintText: 'Search sessions',
-              hintStyle: sans(15, color: AppColors.fg3),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(kAndroidLook ? 28 : 12),
-                  borderSide: BorderSide.none),
-            ),
-          ),
-        )),
+            hint: 'Search sessions',
+            onChanged: (_) => setState(() {})),
       if (all.isNotEmpty)
         _ChipRow(
           filter: _filter,
@@ -296,8 +269,8 @@ class _QuietSessionsScreenState extends State<QuietSessionsScreen> {
       title: 'Sessions',
       actions: [
         if (!widget.selecting) ...[
-          _IconTap('sliders-horizontal', 'Filter', _openFilter),
-          _IconTap(
+          MkIconTap('sliders-horizontal', 'Filter', _openFilter),
+          MkIconTap(
               'search',
               'Search',
               () => setState(() {
@@ -333,28 +306,6 @@ class _SelectAllText extends StatelessWidget {
       style: sans(13, weight: W.label, color: AppColors.fg1));
 }
 
-class _IconTap extends StatelessWidget {
-  const _IconTap(this.icon, this.label, this.onTap);
-  final String icon, label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-        button: true,
-        label: label,
-        child: TapDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: SizedBox(
-              width: kAndroidLook ? 48 : 44,
-              height: kAndroidLook ? 48 : 44,
-              child: Center(
-                  child: AppIcon(icon,
-                      size: kAndroidLook ? 22 : 19, color: AppColors.fg1))),
-        ),
-      );
-}
-
 String _filterLabel(SessionsFilter f) => switch (f) {
       SessionsFilter.all => 'All',
       SessionsFilter.working => 'Working',
@@ -381,8 +332,7 @@ class _ChipRow extends StatelessWidget {
     return MediaQuery(
       data: mq.copyWith(textScaler: scaler),
       child: MkFilterGroup<SessionsFilter>(
-        padding: EdgeInsets.fromLTRB(
-            kAndroidLook ? 16 : MK.gutter, 2, kAndroidLook ? 16 : MK.gutter, 0),
+        padding: MK.filterPad,
         options: [
           for (final f in visible)
             MkFilter(f, _filterLabel(f), count: counts[f] ?? 0),
@@ -423,7 +373,7 @@ class SessionRowPhone extends StatelessWidget {
     final ch = s.changes ?? s.totalChanges;
     final diff = ch == null || (ch.added == 0 && ch.removed == 0)
         ? null
-        : '+${ch.added} -${ch.removed}';
+        : '+${ch.added} \u2212${ch.removed}';
 
     Widget mark;
     if (selecting) {
@@ -447,9 +397,31 @@ class SessionRowPhone extends StatelessWidget {
             : failed
                 ? 'Failed'
                 : 'Completed';
-    // Android rows sit inside segmented cards, which own the outer inset.
-    final left = kAndroidLook ? 16.0 : MK.gutter;
-    const markSlot = 24.0, gap = 14.0;
+    // Board rows: iPhone 24 slot, 12 gap, 64 tall; Android tiles 40 slot,
+    // 14 gap, 68 tall. The mark centres on the whole row.
+    final a = kAndroidLook;
+    final left = a ? 16.0 : MK.gutter;
+    final markSlot = a ? 40.0 : 24.0, gap = a ? 14.0 : 12.0;
+    final titleText = Text(title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: a ? mkRowTitle() : sans(15, weight: W.label, height: 1.4));
+    final timeText = Text(time, style: mkTime().copyWith(height: 1.4));
+    final subText = needs
+        ? Text('Needs you',
+            style: sans(13, weight: W.label, height: 1.4, color: MK.amber))
+        : Text.rich(
+            TextSpan(children: [
+              TextSpan(text: sub),
+              if (diff != null) ...[
+                TextSpan(text: ' · ', style: TextStyle(color: AppColors.fg4)),
+                TextSpan(text: diff),
+              ],
+            ]),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: mkMonoSub(),
+          );
     return Semantics(
       button: true,
       selected: selected,
@@ -460,60 +432,52 @@ class SessionRowPhone extends StatelessWidget {
           onTap: onTap,
           onLongPress: onLongPress,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 64),
-            child: Stack(children: [
+            constraints: BoxConstraints(minHeight: a ? 68 : 64),
+            // Passthrough keeps the min height so the content centres.
+            child: Stack(fit: StackFit.passthrough, children: [
               Padding(
-                padding: EdgeInsets.fromLTRB(left, 11, left, 11),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: markSlot,
-                      height: 21,
-                      child: OverflowBox(
-                          maxHeight: 30, child: Center(child: mark)),
-                    ),
-                    const SizedBox(width: gap),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: mkRowTitle()),
-                          const SizedBox(height: 2),
-                          if (needs)
-                            Text('Needs you',
-                                style:
-                                    sans(13, weight: W.label, color: MK.amber))
-                          else
-                            Text.rich(
-                              TextSpan(children: [
-                                TextSpan(text: sub),
-                                if (diff != null) ...[
-                                  TextSpan(
-                                      text: '  ·  ',
-                                      style: TextStyle(color: AppColors.fg4)),
-                                  TextSpan(text: diff),
+                padding: EdgeInsets.symmetric(horizontal: left, vertical: 10),
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SizedBox(width: markSlot, child: Center(child: mark)),
+                      SizedBox(width: gap),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (a)
+                              titleText
+                            else
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(child: titleText),
+                                  const SizedBox(width: 8),
+                                  timeText,
                                 ],
-                              ]),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: mkMonoSub(),
-                            ),
-                        ],
+                              ),
+                            const SizedBox(height: 2),
+                            subText,
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text(time, style: mkTime()),
-                    ),
-                  ],
+                      if (a) ...[
+                        const SizedBox(width: 14),
+                        Align(
+                          alignment: Alignment.topCenter,
+                          child: Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: timeText),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
-              if (!last && !kAndroidLook)
+              if (!last && !a)
                 Positioned(
                     left: left + markSlot + gap,
                     right: left,

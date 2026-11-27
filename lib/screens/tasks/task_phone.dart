@@ -45,7 +45,7 @@ String shortAgo(String iso, {DateTime? now}) {
   for (final id in [s?.agentId, s?.workerAgentId, s?.ownerAgentId]) {
     if (id == null || id.isEmpty) continue;
     final n = agentNames[id];
-    if (n != null && n.trim().isNotEmpty) return (id: id, name: n.trim());
+    if (n != null && n.trim().isNotEmpty) return (id: id, name: shortAgentName(n));
   }
   if (t.createdById.toLowerCase() == 'lead') return (id: 'lead', name: 'Lead');
   return null;

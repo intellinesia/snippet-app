@@ -106,7 +106,7 @@ class HomeResting extends StatelessWidget {
 
   Widget _workingView(BuildContext context) {
     final reduce = reduceMotion(context);
-    final first = working.first.agent.displayName;
+    final first = working.first.agent.shortName;
     final headline =
         working.length == 1 ? '$first is working' : '${working.length} agents are working';
     // Centred in the free space, so the card never hangs from the nav.
@@ -276,7 +276,7 @@ class HomeWorkingBlock extends StatelessWidget {
     final f = _facts(r);
     return _tap(
       r,
-      '${r.agent.displayName}, ${f.task}',
+      '${r.agent.shortName}, ${f.task}',
       Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
@@ -294,7 +294,7 @@ class HomeWorkingBlock extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(r.agent.displayName,
+                    Text(r.agent.shortName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: sans(20,
@@ -307,7 +307,7 @@ class HomeWorkingBlock extends StatelessWidget {
               ),
               if (f.count > 0)
                 ManagedPill(
-                  name: r.agent.displayName,
+                  name: r.agent.shortName,
                   count: f.count,
                   tone: pillTone(heroAgentColor(r.agent.id)),
                   onTap: () => onOpenManaged(r.agent),
@@ -328,7 +328,7 @@ class HomeWorkingBlock extends StatelessWidget {
     final f = _facts(r);
     return _tap(
       r,
-      '${r.agent.displayName}, ${f.task}',
+      '${r.agent.shortName}, ${f.task}',
       ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 64),
         child: Padding(
@@ -341,7 +341,7 @@ class HomeWorkingBlock extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(r.agent.displayName,
+                  Text(r.agent.shortName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(16,

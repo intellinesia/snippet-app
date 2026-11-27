@@ -23,7 +23,8 @@ enum MobileHome {
   home('Home', 'home'),
   chats('Sessions', 'sessions'),
   tasks('Tasks', 'task'),
-  agents('Agents', 'users');
+  agents('Agents', 'users'),
+  artifacts('Artifacts', 'file-stack');
 
   const MobileHome(this.label, this.icon);
   final String label;

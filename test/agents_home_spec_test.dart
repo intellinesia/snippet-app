@@ -130,11 +130,11 @@ void main() {
         expect(cards, findsNWidgets(4));
         final c0 = t.getSize(cards.first);
         expect(c0.width, 150);
-        for (final chip in find.byType(StateChip).evaluate()) {
-          expect(t.getSize(find.byWidget(chip.widget)).height, 44);
-        }
-        expect(find.byType(StateChip), findsNWidgets(4));
-        expect(find.byKey(const ValueKey('chip-amber-dot')), findsNothing);
+        // Board: one connected filter group, four options, 44 targets.
+        final group = find.byType(MkFilterGroup<HomeFilter>);
+        expect(group, findsOneWidget);
+        expect(t.widget<MkFilterGroup<HomeFilter>>(group).options.length, 4);
+        expect(t.getSize(find.bySemanticsLabel(RegExp(r'^All'))).height, 44);
         // Asks are never folded: both show in full, one under another.
         expect(find.byType(MkAskCard), findsNWidgets(2));
         final ask = t.getSize(find.byKey(const ValueKey('ask-card')).first);
@@ -238,7 +238,7 @@ void main() {
     expect(find.text('No agents yet'), findsOneWidget);
     final b = t.getSize(find.byKey(const ValueKey('empty-new-agent')));
     expect(b.height, greaterThanOrEqualTo(44));
-    expect(find.byType(StateChip), findsNothing);
+    expect(find.byType(MkFilterGroup<HomeFilter>), findsNothing);
   });
 
   for (final w in [360.0, 393.0, 430.0]) {

@@ -17,7 +17,8 @@ abstract final class C7 {
       AppColors.fg1.withValues(alpha: 0.07), AppColors.surface3);
   static double get pill => kMobile ? 56 : 52;
   static double get pillRadius => kMobile ? 28 : 26;
-  static double get btn => kMobile ? (kAndroidLook ? 48 : 44) : 40;
+  // Board: 44 slots inside the phone field on both platforms.
+  static double get btn => kMobile ? 44 : 40;
   static const double ends = 20;
   static const double inner = 4;
   static double get field => kMobile ? 15.5 : 16;
