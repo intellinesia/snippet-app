@@ -215,7 +215,7 @@ class _SessionsInboxViewState extends State<SessionsInboxView> {
             decoration: BoxDecoration(
                 color: AppColors.surface2, shape: BoxShape.circle),
             alignment: Alignment.center,
-            child: AppIcon('processes', size: 26, color: AppColors.fg3),
+            child: AppIcon('sessions', size: 26, color: AppColors.fg3),
           ),
           const SizedBox(height: 24),
           Text('No sessions yet',

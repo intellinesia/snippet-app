@@ -443,7 +443,7 @@ class RightTab {
           ShellPanelPurpose.deliverables => 'image',
           ShellPanelPurpose.canvas => 'grid',
           ShellPanelPurpose.artifacts => 'file-stack',
-          ShellPanelPurpose.sessions => 'processes',
+          ShellPanelPurpose.sessions => 'sessions',
           ShellPanelPurpose.memory => 'book-marked',
           ShellPanelPurpose.pullRequests => 'pull-request',
           ShellPanelPurpose.recurring ||

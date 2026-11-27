@@ -1306,7 +1306,7 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
         border: Border.all(color: AppColors.fg1.withValues(alpha: 0.08)),
       ),
       child: Row(children: [
-        AppIcon(_atHome ? 'home' : 'folder', size: 16, color: AppColors.fg3),
+        AppIcon(_atHome ? 'house' : 'folder', size: 16, color: AppColors.fg3),
         SizedBox(width: S.s6),
         Expanded(
           child: SizedBox(
@@ -1356,7 +1356,7 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
         ),
         if (!_atHome) ...[
           SizedBox(width: S.s4),
-          IconBtn('home',
+          IconBtn('house',
               size: M.minTarget,
               iconSize: 17,
               tooltip: 'Home',

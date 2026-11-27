@@ -1232,7 +1232,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           return Row(mainAxisSize: MainAxisSize.min, children: [
             b('home', 'Home', place == 'home',
                 () => _selectPlace(QuietPlace.home)),
-            b('processes', 'Sessions', place == 'sessions',
+            b('sessions', 'Sessions', place == 'sessions',
                 _openSessionsPage),
             b('list-checks', 'Tasks', place == 'tasks',
                 () => _selectPlace(QuietPlace.tasks)),
