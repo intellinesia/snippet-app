@@ -2,6 +2,7 @@ import 'collapsing_root.dart';
 export 'sessions_list_phone.dart';
 import 'package:flutter/material.dart';
 
+import '../../chat/agent_cluster.dart' show GroupGlyph;
 import '../../crew_status.dart';
 import '../../models.dart';
 import '../../tap_detector.dart';
@@ -339,7 +340,7 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
       }
     }
     if (f == HomeFilter.all) {
-      // Board: groups live in Recent beside agents, newest first.
+      // Agents first, then their groups in a section of their own.
       final workingIds = {
         for (final a in all)
           if (a.state == CrewState.working) a.agent.id
@@ -357,28 +358,6 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
               onTap: () => open(a.agent),
             )
           ),
-        for (final g in sortedGroups(w.groups))
-          () {
-            final n = g.members.length;
-            final active =
-                g.members.where((m) => workingIds.contains(m.id)).length;
-            final at = DateTime.tryParse(g.lastEventAt ?? '')
-                    ?.millisecondsSinceEpoch ??
-                0;
-            final preview = (g.preview ?? '').trim();
-            return (
-              at,
-              MarkRow(
-                mark: groupMark(40),
-                title: g.title.isEmpty ? 'Group' : g.title,
-                time: at == 0 ? null : relativeTime(at ~/ 1000),
-                sub: preview.isNotEmpty
-                    ? preview
-                    : '$n ${n == 1 ? 'member' : 'members'} · $active active',
-                onTap: w.onOpenGroup == null ? null : () => w.onOpenGroup!(g),
-              )
-            );
-          }(),
       ]..sort((x, y) => y.$1.compareTo(x.$1));
       if (rows.isNotEmpty) {
         body.add(HomeLabel('Recent',
@@ -401,6 +380,28 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
                 : null));
         for (final r in rows) {
           body.add(r.$2);
+        }
+      }
+      final groups = sortedGroups(w.groups);
+      if (groups.isNotEmpty) {
+        body.add(const HomeLabel('Groups'));
+        for (final g in groups) {
+          final n = g.members.length;
+          final active =
+              g.members.where((m) => workingIds.contains(m.id)).length;
+          final at =
+              DateTime.tryParse(g.lastEventAt ?? '')?.millisecondsSinceEpoch ??
+                  0;
+          final preview = (g.preview ?? '').trim();
+          body.add(MarkRow(
+            mark: GroupGlyph(size: 40, ids: g.agentIds, count: n),
+            title: g.title.isEmpty ? 'Group' : g.title,
+            time: at == 0 ? null : relativeTime(at ~/ 1000),
+            sub: preview.isNotEmpty
+                ? preview
+                : '$n ${n == 1 ? 'member' : 'members'} · $active active',
+            onTap: w.onOpenGroup == null ? null : () => w.onOpenGroup!(g),
+          ));
         }
       }
     }

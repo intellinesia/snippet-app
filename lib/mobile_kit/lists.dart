@@ -243,8 +243,8 @@ class MkGroup extends StatelessWidget {
           ),
         if (footer != null)
           Padding(
-            padding: EdgeInsets.fromLTRB(
-                m + (a ? 12 : 16), 8, m + (a ? 12 : 16), 0),
+            padding:
+                EdgeInsets.fromLTRB(m + (a ? 12 : 16), 8, m + (a ? 12 : 16), 0),
             child: Text(footer!, style: sans(13, color: AppColors.fg4)),
           ),
       ],
@@ -274,9 +274,13 @@ class MkGroupRow extends StatelessWidget {
     this.chevron = true,
     this.destructive = false,
     this.valueMono = false,
+    this.bareIcon = false,
   });
   final String label;
   final String? icon;
+
+  /// The icon alone, as on the sheet tiles above, without the tinted box.
+  final bool bareIcon;
   final String? value;
   final Widget? trailing;
   final VoidCallback? onTap;
@@ -294,17 +298,22 @@ class MkGroupRow extends StatelessWidget {
         : sans(a ? 13.5 : 14.5, color: AppColors.fg3);
     final iconBox = icon == null
         ? null
-        : Container(
-            width: a ? 40 : 30,
-            height: a ? 40 : 30,
-            decoration: BoxDecoration(
-              color: AppColors.surface3,
-              shape: a ? BoxShape.circle : BoxShape.rectangle,
-              borderRadius: a ? null : BorderRadius.circular(9),
-            ),
-            child: Center(
-                child: AppIcon(icon!, size: a ? 19 : 17, color: AppColors.fg2)),
-          );
+        : bareIcon
+            ? SizedBox(
+                width: 24,
+                child: AppIcon(icon!, size: 21, color: AppColors.fg2))
+            : Container(
+                width: a ? 40 : 30,
+                height: a ? 40 : 30,
+                decoration: BoxDecoration(
+                  color: AppColors.surface3,
+                  shape: a ? BoxShape.circle : BoxShape.rectangle,
+                  borderRadius: a ? null : BorderRadius.circular(9),
+                ),
+                child: Center(
+                    child: AppIcon(icon!,
+                        size: a ? 19 : 17, color: AppColors.fg2)),
+              );
     final Widget content;
     if (a) {
       content = Row(children: [

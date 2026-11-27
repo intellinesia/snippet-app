@@ -391,6 +391,8 @@ class ComposerTrayRow extends StatelessWidget {
     if (kMobile) {
       return MkGroupRow(
         label: label,
+        icon: icon,
+        bareIcon: true,
         value: value,
         chevron: chevron,
         destructive: color == AppColors.danger,
