@@ -450,7 +450,14 @@ class SettingsRow extends StatelessWidget {
       if (onTap == null && onLongPress == null) return stacked;
       return Material(
         type: MaterialType.transparency,
-        child: InkWell(onTap: onTap, onLongPress: onLongPress, child: stacked),
+        child: InkWell(
+          onTap: onTap,
+          onLongPress: onLongPress,
+          hoverColor: kMobile ? null : Colors.transparent,
+          highlightColor: kMobile ? null : Colors.transparent,
+          splashColor: kMobile ? null : Colors.transparent,
+          child: stacked,
+        ),
       );
     }
     Widget row(double? valueMax) => Row(children: [
@@ -494,7 +501,14 @@ class SettingsRow extends StatelessWidget {
     if (onTap == null && onLongPress == null) return content;
     return Material(
       type: MaterialType.transparency,
-      child: InkWell(onTap: onTap, onLongPress: onLongPress, child: content),
+      child: InkWell(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        hoverColor: kMobile ? null : Colors.transparent,
+        highlightColor: kMobile ? null : Colors.transparent,
+        splashColor: kMobile ? null : Colors.transparent,
+        child: content,
+      ),
     );
   }
 }

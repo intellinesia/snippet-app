@@ -283,25 +283,45 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         for (final s in _sessions ?? const <SessionInfo>[])
           if (s.displayAgentId == agent.id) s
       ];
-      return ChatHeaderBar(
-        tabs: _paneTabsFor(t),
-        agentIds: [agent.id],
-        title: name,
-        // State, model and sessions live in the panel's Overview; the row
-        // keeps only quiet controls at its right end.
-        leading: [
-          Builder(
-            builder: (ctx) => IconBtn('plus',
-                size: 28,
-                iconSize: 12,
-                tooltip: 'Open a tab',
-                onTap: () => _showAgentAddMenu(ctx, agent.id, sessions)),
-          ),
-        ],
-        actions: [
-          // Open, the panel's own row carries the hide button.
-          if (_panelHidden) _panelButton('sidebar', 'panel'),
-        ],
+      return ListenableBuilder(
+        listenable: agentWorkView,
+        builder: (_, __) {
+          final inDesk =
+              agent.id != 'lead' && agentWorkView.value.contains(agent.id);
+          return ChatHeaderBar(
+            active: !inDesk,
+            onTitleTap: inDesk ? () => setAgentWorkView(agent.id, false) : null,
+            tabs: [
+              if (inDesk)
+                PanePill(
+                  key: ValueKey('pane-pill-desk-${agent.id}'),
+                  icon: 'layers',
+                  label: 'Desk work',
+                  active: true,
+                  onTap: () {},
+                  onClose: () => setAgentWorkView(agent.id, false),
+                ),
+              ..._paneTabsFor(t),
+            ],
+            agentIds: [agent.id],
+            title: name,
+            // State, model and sessions live in the panel's Overview; the row
+            // keeps only quiet controls at its right end.
+            leading: [
+              Builder(
+                builder: (ctx) => IconBtn('plus',
+                    size: 28,
+                    iconSize: 12,
+                    tooltip: 'Open a tab',
+                    onTap: () => _showAgentAddMenu(ctx, agent.id, sessions)),
+              ),
+            ],
+            actions: [
+              // Open, the panel's own row carries the hide button.
+              if (_panelHidden) _panelButton('sidebar', 'panel'),
+            ],
+          );
+        },
       );
     }
     final request = readout?.request;

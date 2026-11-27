@@ -1959,7 +1959,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
   }
 
   Widget _tableRow(Widget a, Widget b, Widget c, Widget d, Widget e,
-          {double height = 32}) =>
+          {double height = 40}) =>
       ConstrainedBox(
         constraints: BoxConstraints(minHeight: height),
         child: Row(children: [
@@ -2046,6 +2046,15 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     }
     return _tableRow(
       Row(children: [
+        Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: health == true ? AppColors.diffAddFg : AppColors.fg4,
+          ),
+        ),
+        const SizedBox(width: 9),
         Flexible(
             child: _tableCell(i.label.isEmpty ? hostOf(i.url) : i.label,
                 color: AppColors.fg1)),

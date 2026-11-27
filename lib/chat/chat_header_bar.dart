@@ -12,6 +12,8 @@ class ChatHeaderBar extends StatelessWidget {
     super.key,
     required this.agentIds,
     required this.title,
+    this.active = true,
+    this.onTitleTap,
     this.subtitle = '',
     this.live = false,
     this.leading = const [],
@@ -24,6 +26,8 @@ class ChatHeaderBar extends StatelessWidget {
   /// One id draws the agent; two or more draw the group cluster.
   final List<String> agentIds;
   final String title;
+  final bool active;
+  final VoidCallback? onTitleTap;
   final String subtitle;
 
   /// Puts a live dot before [subtitle].
@@ -45,10 +49,30 @@ class ChatHeaderBar extends StatelessWidget {
             child: AgentMochi(agentIds.isEmpty ? 'snippet' : agentIds.first,
                 size: 16),
           );
+    final titlePill = Container(
+      key: const ValueKey('chat-header-pill'),
+      height: PaneRow.pill,
+      padding: const EdgeInsets.fromLTRB(9, 0, 11, 0),
+      decoration: BoxDecoration(
+        color: active ? PaneRow.plate : Colors.transparent,
+        borderRadius: BorderRadius.circular(PaneRow.radius),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        avatar,
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(PaneRow.label,
+                  color: active ? PaneRow.labelOn : PaneRow.labelOff)),
+        ),
+      ]),
+    );
     return Container(
       key: const ValueKey('chat-header-bar'),
       height: height,
-      padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
+      padding: const EdgeInsets.fromLTRB(12, 0, 10, 0),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline)),
       ),
@@ -60,25 +84,16 @@ class ChatHeaderBar extends StatelessWidget {
             Flexible(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 320),
-                child: Container(
-                  key: const ValueKey('chat-header-pill'),
-                  height: PaneRow.pill,
-                  padding: const EdgeInsets.fromLTRB(9, 0, 11, 0),
-                  decoration: BoxDecoration(
-                    color: PaneRow.plate,
-                    borderRadius: BorderRadius.circular(PaneRow.radius),
-                  ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    avatar,
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(PaneRow.label, color: PaneRow.labelOn)),
-                    ),
-                  ]),
-                ),
+                child: onTitleTap == null
+                    ? titlePill
+                    : MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: onTitleTap,
+                          child: titlePill,
+                        ),
+                      ),
               ),
             ),
             for (final w in tabs) ...[

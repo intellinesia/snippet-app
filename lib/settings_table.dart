@@ -158,32 +158,18 @@ class SettingsTable extends StatelessWidget {
   }
 }
 
-class _HoverRow extends StatefulWidget {
+class _HoverRow extends StatelessWidget {
   const _HoverRow({super.key, required this.onTap, required this.child});
   final VoidCallback onTap;
   final Widget child;
 
   @override
-  State<_HoverRow> createState() => _HoverRowState();
-}
-
-class _HoverRowState extends State<_HoverRow> {
-  bool _hover = false;
-
-  @override
   Widget build(BuildContext context) => MouseRegion(
         cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hover = true),
-        onExit: (_) => setState(() => _hover = false),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: widget.onTap,
-          child: ColoredBox(
-            color: _hover
-                ? AppColors.surface3.withValues(alpha: 0.6)
-                : Colors.transparent,
-            child: widget.child,
-          ),
+          onTap: onTap,
+          child: child,
         ),
       );
 }
