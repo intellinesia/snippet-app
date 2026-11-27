@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../phone_attention_bar.dart';
 import '../../platform.dart';
+import '../../glass.dart' show StatusInset;
 import '../../theme.dart';
 import '../../toast_avoid.dart';
 import '../../mobile_kit.dart';
@@ -72,7 +73,7 @@ class _CollapsingRootState extends State<CollapsingRoot> {
         constraints: const BoxConstraints(minHeight: 56),
         decoration: BoxDecoration(
           color: _collapsed
-              ? (a ? AppColors.surface1 : AppColors.bg)
+              ? (a ? AppColors.surface2 : AppColors.bg)
               : (a ? AppColors.bg : Colors.transparent),
           border: Border(
               bottom: BorderSide(
@@ -118,8 +119,22 @@ class _CollapsingRootState extends State<CollapsingRoot> {
     final list = NotificationListener<ScrollNotification>(
         onNotification: _onScroll, child: widget.child);
     if (a) {
+      // Board: the tonal fill runs up behind the status bar, which the host
+      // SafeArea has already consumed, so paint that strip above the bar.
+      final inset = StatusInset.of(context);
       return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        bar,
+        Stack(clipBehavior: Clip.none, children: [
+          Positioned(
+            top: -inset,
+            height: inset,
+            left: 0,
+            right: 0,
+            child: AnimatedContainer(
+                duration: d,
+                color: _collapsed ? AppColors.surface2 : AppColors.bg),
+          ),
+          bar,
+        ]),
         if (kMobile) const PhoneAttentionLayer(),
         Expanded(child: list),
       ]);

@@ -401,16 +401,19 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
       ),
     );
 
+    final eatenTop = mq.padding.top > 0 ? 0.0 : StatusInset.of(context);
     final bar = Positioned(
       left: 0,
       right: 0,
-      top: -lift,
-      height: mq.padding.top + barH,
+      // Reach up behind a status bar the host SafeArea consumed so the
+      // tonal fill covers it too.
+      top: -lift - eatenTop,
+      height: mq.padding.top + eatenTop + barH,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
-        color: an && _scrolled ? AppColors.surface1 : Colors.transparent,
-        padding:
-            EdgeInsets.fromLTRB(an ? 4 : 14, mq.padding.top, an ? 4 : 14, 0),
+        color: an && _scrolled ? AppColors.surface2 : Colors.transparent,
+        padding: EdgeInsets.fromLTRB(
+            an ? 4 : 14, mq.padding.top + eatenTop, an ? 4 : 14, 0),
         child: Row(children: [
           MkIconButton(
               icon: an ? 'arrow-left' : 'chevron-left',
