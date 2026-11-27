@@ -131,14 +131,21 @@ class _CardMarkdownBodyState extends State<CardMarkdownBody> {
           TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => setState(() => _open = !_open),
-            child: HitArea(
-              child: Padding(
-                padding: EdgeInsets.only(top: S.s2),
-                child: Text(_open ? 'Show less' : 'Show more',
-                    style: sans(TranscriptCard.metaSize,
-                        weight: W.label, color: AppColors.fg3)),
-              ),
-            ),
+            child: kMobile
+                ? HitArea(
+                    child: Padding(
+                      padding: EdgeInsets.only(top: S.s2),
+                      child: Text(_open ? 'Show less' : 'Show more',
+                          style: sans(TranscriptCard.metaSize,
+                              weight: W.label, color: AppColors.fg3)),
+                    ),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.only(top: 5),
+                    child: Text(_open ? 'Show less' : 'Show more',
+                        style: sans(11.5,
+                            weight: FontWeight.w500, color: AppColors.fg3)),
+                  ),
           ),
       ],
     );
@@ -220,35 +227,39 @@ class _ThreadCard extends StatelessWidget {
                     )
                   : null,
               child: Row(children: [
-                lead,
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(kind,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(12,
-                          height: 16 / 12,
-                          weight: FontWeight.w500,
-                          color: AppColors.fg2)),
-                ),
-                if (stat.isNotEmpty) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: statusBg,
-                      borderRadius: BorderRadius.circular(4),
+                Expanded(
+                  child: Row(children: [
+                    lead,
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(kind,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(12,
+                              height: 16 / 12,
+                              weight: FontWeight.w500,
+                              color: AppColors.fg2)),
                     ),
-                    child: Text(stat,
-                        style: sans(11,
-                            height: 15 / 11,
-                            weight: FontWeight.w500,
-                            color: statusFg)),
-                  ),
-                ],
+                    if (stat.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: statusBg,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(stat,
+                            style: sans(11,
+                                height: 15 / 11,
+                                weight: FontWeight.w500,
+                                color: statusFg)),
+                      ),
+                    ],
+                  ]),
+                ),
                 if (reference != null && reference!.isNotEmpty) ...[
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   Text(reference!,
                       style:
                           codeMono(11, height: 15 / 11, color: AppColors.fg4)),
@@ -1270,42 +1281,55 @@ class _LaneMessageCardState extends State<LaneMessageCard> {
                   border: Border(bottom: BorderSide(color: AppColors.border)),
                 ),
                 child: Row(children: [
-                  AppIcon(laneGlyph(widget.laneTitle),
-                      size: 13,
-                      color: widget.waiting ? AppColors.run : AppColors.fg2),
-                  const SizedBox(width: 8),
-                  if (told) ...[
-                    Text('Told',
-                        style:
-                            sans(12, height: 16 / 12, color: AppColors.fg3)),
-                    const SizedBox(width: 5),
-                  ],
-                  Flexible(
-                    child: Text(widget.laneTitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(12.5,
-                            height: 16 / 12.5,
-                            weight: FontWeight.w500,
-                            color: AppColors.fg1)),
-                  ),
-                  if (status.isNotEmpty) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: statusBg,
-                        borderRadius: BorderRadius.circular(4),
+                  Expanded(
+                    child: Row(children: [
+                      if (widget.waiting) ...[
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                              color: AppColors.run, shape: BoxShape.circle),
+                        ),
+                        const SizedBox(width: 7),
+                      ] else ...[
+                        AppIcon(laneGlyph(widget.laneTitle),
+                            size: 13, color: AppColors.fg2),
+                        const SizedBox(width: 8),
+                      ],
+                      if (told) ...[
+                        Text('Told',
+                            style: sans(12,
+                                height: 16 / 12, color: AppColors.fg3)),
+                        const SizedBox(width: 5),
+                      ],
+                      Flexible(
+                        child: Text(widget.laneTitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(12.5,
+                                height: 16 / 12.5,
+                                weight: FontWeight.w500,
+                                color: AppColors.fg1)),
                       ),
-                      child: Text(status,
-                          style: sans(11,
-                              height: 15 / 11,
-                              weight: FontWeight.w500,
-                              color: statusFg)),
-                    ),
-                  ],
-                  const Spacer(),
+                      if (status.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: statusBg,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(status,
+                              style: sans(11,
+                                  height: 15 / 11,
+                                  weight: FontWeight.w500,
+                                  color: statusFg)),
+                        ),
+                      ],
+                    ]),
+                  ),
+                  const SizedBox(width: 8),
                   if (time != null && !widget.waiting) ...[
                     Text(time,
                         style: sans(11.5, height: 15 / 11.5, color: faint)),
@@ -1560,37 +1584,48 @@ class _AgentBubble extends StatelessWidget {
                 border: Border(bottom: BorderSide(color: AppColors.border)),
               ),
               child: Row(children: [
-                if (id.isNotEmpty)
-                  AgentMochi(id, size: 16)
-                else
-                  AppIcon(outbound ? 'send' : 'message',
-                      size: 13, color: AppColors.fg2),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(12,
-                          height: 16 / 12,
-                          weight: FontWeight.w500,
-                          color: AppColors.fg2)),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface2,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(outbound ? 'Sent' : 'Message',
-                      style: sans(11,
-                          height: 15 / 11,
-                          weight: FontWeight.w500,
-                          color: AppColors.fg3)),
+                Expanded(
+                  child: Row(children: [
+                    if (id.isNotEmpty)
+                      AgentMochi(id, size: 16)
+                    else
+                      AppIcon(outbound ? 'send' : 'message',
+                          size: 13, color: AppColors.fg2),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(12,
+                              height: 16 / 12,
+                              weight: FontWeight.w500,
+                              color: AppColors.fg2)),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface2,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        AppIcon(
+                            outbound ? 'arrow-up-right' : 'arrow-down-left',
+                            size: 10,
+                            color: AppColors.fg3),
+                        const SizedBox(width: 3),
+                        Text(outbound ? 'Sent' : 'Received',
+                            style: sans(11,
+                                height: 15 / 11,
+                                weight: FontWeight.w500,
+                                color: AppColors.fg3)),
+                      ]),
+                    ),
+                  ]),
                 ),
                 if (time != null && time!.isNotEmpty) ...[
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   Text(time!,
                       style:
                           sans(11.5, height: 15 / 11.5, color: AppColors.fg4)),
