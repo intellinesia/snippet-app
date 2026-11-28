@@ -203,7 +203,7 @@ void main() {
 
       expect(find.text('main.dart'), findsOneWidget);
       // Title plus the bold last breadcrumb.
-      expect(find.text('lib'), findsNWidgets(2));
+      expect(find.text('lib'), findsNWidgets(3));
       expect(find.text('root'), findsOneWidget);
 
       // In subfolder, the 'New chat' tile targets '/root/lib'
@@ -215,7 +215,7 @@ void main() {
       await tester.tap(find.byTooltip('Back'));
       await tester.pumpAndSettle();
 
-      expect(find.text('root'), findsNWidgets(2));
+      expect(find.text('root'), findsNWidgets(3));
       expect(find.text('notes.txt'), findsOneWidget);
       expect(closed, isFalse);
 

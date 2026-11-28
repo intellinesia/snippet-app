@@ -11,6 +11,7 @@ import '../settings_form.dart';
 
 import '../widgets.dart';
 import '../tap_detector.dart';
+import '../mobile_kit.dart' show MkPage, MkPill, MkPillTone;
 
 // (value sent to the daemon, label shown in the pill)
 const _providers = [
@@ -80,8 +81,7 @@ class InferenceProfileEditor extends StatefulWidget {
       this.onSaved,
       this.onSubmit});
   @override
-  State<InferenceProfileEditor> createState() =>
-      InferenceProfileEditorState();
+  State<InferenceProfileEditor> createState() => InferenceProfileEditorState();
 }
 
 class InferenceProfileEditorState extends State<InferenceProfileEditor> {
@@ -540,8 +540,8 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
     final title = _isEdit ? 'Edit profile' : 'Add profile';
     final footer = kMobile
         ? Padding(
-            padding: EdgeInsets.fromLTRB(
-                S.s16, S.s8, S.s16, S.s12 + MediaQuery.of(context).padding.bottom),
+            padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16,
+                S.s12 + MediaQuery.of(context).padding.bottom),
             child: Btn(_busy ? 'Saving…' : 'Save profile',
                 full: true,
                 disabled: _busy || _model.text.trim().isEmpty,
@@ -569,6 +569,40 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
               ],
             ),
           );
+    if (kMobile && !widget.embedded) {
+      final name = _isEdit
+          ? widget.existing!.name
+          : (_name.text.trim().isNotEmpty ? _name.text.trim() : 'New profile');
+      return Material(
+        color: AppColors.bg,
+        child: Column(children: [
+          Expanded(
+            child: MkPage(
+              title: name,
+              onBack: _dismiss,
+              bottomClearance: false,
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                  sliver: SliverList(
+                      delegate: SliverChildListDelegate(
+                          _formChildren(pills, header: false))),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+                16, 8, 16, 12 + MediaQuery.paddingOf(context).bottom),
+            child: MkPill(
+                _busy ? 'Saving' : (_isEdit ? 'Save changes' : 'Add profile'),
+                tone: MkPillTone.primary,
+                expand: true,
+                onTap: _busy || _model.text.trim().isEmpty ? null : _save),
+          ),
+        ]),
+      );
+    }
     final body = Column(children: [
       // No embedded header. When embedded, the HOST level owns the header
       // (inference_profiles.dart draws "Edit profile" / "Add profile"), so
@@ -603,7 +637,8 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
         key: const ValueKey('xai'),
         client: widget.client,
         signedInLabel: 'Signed in to xAI',
-        blurb: 'Grok uses your SuperGrok / X Premium subscription — no API key.',
+        blurb:
+            'Grok uses your SuperGrok / X Premium subscription — no API key.',
         buttonLabel: 'Sign in with SuperGrok / X Premium',
         signedIn: (c) => c.xaiSignedIn(),
         begin: (c) => c.xaiLoginBegin(),
@@ -827,9 +862,8 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
       ]),
       SettingsGroup(
         header: 'Connection',
-        footer: signIn == null
-            ? 'Keys stay on the machine running snippet.'
-            : null,
+        footer:
+            signIn == null ? 'Keys stay on the machine running snippet.' : null,
         children: connection,
       ),
       SettingsGroup(header: 'Options', children: [
@@ -902,9 +936,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
             : null,
         footerLeft: _isEdit && widget.onDelete != null
             ? Btn('Delete profile',
-                small: true,
-                variant: BtnVariant.danger,
-                onTap: widget.onDelete)
+                small: true, variant: BtnVariant.danger, onTap: widget.onDelete)
             : Text('Used for new sessions if set active',
                 style: sans(11.5, color: AppColors.fg3)),
         footerRight: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -919,9 +951,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
     }
     return SettingsColumn(children: [
       SettingsHeader(
-        back: widget.inSplit
-            ? null
-            : SettingsBack('Profiles', onTap: _dismiss),
+        back: widget.inSplit ? null : SettingsBack('Profiles', onTap: _dismiss),
         title: title,
         subtitle: [
           _providerLabel(_provider),
@@ -939,11 +969,30 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
   }
 
   Widget _nativeForm(List<(String, String)> pills) {
+    final children = _formChildren(pills);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final baseH = kMobile ? 16.0 : (widget.embedded ? 24.0 : 20.0);
+        final extra = kMobile
+            ? 0.0
+            : ((constraints.maxWidth - 768) / 2).clamp(0.0, double.infinity);
+        return ListView(
+          padding: EdgeInsets.fromLTRB(
+              baseH + extra, kMobile ? S.s4 : S.s8, baseH + extra, S.s24),
+          children: children,
+        );
+      },
+    );
+  }
+
+  List<Widget> _formChildren(List<(String, String)> pills,
+      {bool header = true}) {
     final modelName = _model.text.trim();
     final title = _isEdit
         ? widget.existing!.name
         : (_name.text.trim().isNotEmpty ? _name.text.trim() : 'New profile');
-    final effortLabel = '${(_reasoning?['label'] as String?) ?? 'Reasoning'} effort';
+    final effortLabel =
+        '${(_reasoning?['label'] as String?) ?? 'Reasoning'} effort';
     final compact = (int.tryParse(_compact.text.trim()) ?? 90).clamp(10, 100);
     Widget providerPicker() => SettingsPopup<String>(
           label: _providerLabel(_provider),
@@ -959,7 +1008,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
             _scheduleReasoning();
           }),
         );
-    final header = kMobile
+    final headerView = kMobile
         ? Padding(
             padding: EdgeInsets.fromLTRB(S.s4, S.of(10), S.s4, S.of(10)),
             child: Text(title,
@@ -1040,203 +1089,190 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
               hint: 'https://api.example.com/v1'),
         ),
     ];
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final baseH = kMobile ? 16.0 : (widget.embedded ? 24.0 : 20.0);
-        final extra = kMobile
-            ? 0.0
-            : ((constraints.maxWidth - 768) / 2).clamp(0.0, double.infinity);
-        return ListView(
-          padding: EdgeInsets.fromLTRB(
-              baseH + extra, kMobile ? S.s4 : S.s8, baseH + extra, S.s24),
-          children: [
-        header,
-        SettingsGroup(header: 'Model', children: [
-          if (!_isEdit)
-            SettingsRow(
-              label: 'Name',
-              trailing: SettingsField(
-                  controller: _name,
-                  width: 220,
-                  hint: 'Defaults to the provider',
-                  onChanged: (_) => setState(() {})),
-            ),
+    return [
+      if (header) headerView,
+      SettingsGroup(header: 'Model', children: [
+        if (!_isEdit)
           SettingsRow(
-            label: 'Provider',
-            trailing: _isEdit
-                ? Row(mainAxisSize: MainAxisSize.min, children: [
-                    ProviderLogo(_provider, size: 12),
-                    SizedBox(width: S.s6),
-                    Text(_providerLabel(_provider),
-                        style: sans(kMobile ? 15 : 13, color: AppColors.fg3)),
-                  ])
-                : providerPicker(),
-          ),
-          SettingsRow(
-            label: 'Model',
+            label: 'Name',
             trailing: SettingsField(
-              controller: _model,
-              width: kMobile ? 210 : 240,
-              mono: !kMobile,
-              onChanged: (_) {
-                setState(() {});
-                _scheduleReasoning();
-              },
-              hint: _isChatgpt
-                  ? 'gpt-5.1-codex'
-                  : _isClaudeCode
-                      ? 'sonnet'
-                      : _isAntigravity
-                          ? 'gemini-3.8-flash-high'
-                          : _isDevin
-                              ? 'swe-2'
-                              : 'claude-sonnet-4.5',
-              suffix: _loadingModels
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: Center(child: Spinner(size: 12)))
-                  : TapDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: _busy ? null : _browseModels,
-                      child: Padding(
-                        padding: EdgeInsets.only(left: S.s2),
-                        child: AppIcon(
-                          _showModelBrowser ? 'x' : 'chevrons-up-down',
-                          size: kMobile ? 14 : 13,
-                          color: AppColors.fg4,
-                        ),
+                controller: _name,
+                width: 220,
+                hint: 'Defaults to the provider',
+                onChanged: (_) => setState(() {})),
+          ),
+        SettingsRow(
+          label: 'Provider',
+          trailing: _isEdit
+              ? Row(mainAxisSize: MainAxisSize.min, children: [
+                  ProviderLogo(_provider, size: 12),
+                  SizedBox(width: S.s6),
+                  Text(_providerLabel(_provider),
+                      style: sans(kMobile ? 15 : 13, color: AppColors.fg3)),
+                ])
+              : providerPicker(),
+        ),
+        SettingsRow(
+          label: 'Model',
+          trailing: SettingsField(
+            controller: _model,
+            width: kMobile ? 210 : 240,
+            mono: !kMobile,
+            onChanged: (_) {
+              setState(() {});
+              _scheduleReasoning();
+            },
+            hint: _isChatgpt
+                ? 'gpt-5.1-codex'
+                : _isClaudeCode
+                    ? 'sonnet'
+                    : _isAntigravity
+                        ? 'gemini-3.8-flash-high'
+                        : _isDevin
+                            ? 'swe-2'
+                            : 'claude-sonnet-4.5',
+            suffix: _loadingModels
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: Center(child: Spinner(size: 12)))
+                : TapDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _busy ? null : _browseModels,
+                    child: Padding(
+                      padding: EdgeInsets.only(left: S.s2),
+                      child: AppIcon(
+                        _showModelBrowser ? 'x' : 'chevrons-up-down',
+                        size: kMobile ? 14 : 13,
+                        color: AppColors.fg4,
                       ),
                     ),
-            ),
+                  ),
           ),
-          if (_showModelBrowser && _catalogModels != null)
-            Padding(
-              padding: EdgeInsets.fromLTRB(S.s12, 0, S.s12, S.s12),
-              child: _inlineModelBrowser(),
-            ),
-          SettingsRow(
-            label: effortLabel,
-            trailing: _effortAdjustable
-                ? SettingsPopup<String>(
-                    label: _effortItems
-                            .where((i) => i.$1 == _effort)
-                            .firstOrNull
-                            ?.$2 ??
-                        'Default',
-                    items: _effortItems,
-                    selected: _effort,
-                    onSelected: (v) => setState(() => _effort = v),
-                  )
-                : Text(
-                    _reasoning?['control'] == 'model'
-                        ? 'Set by the model'
-                        : 'Not adjustable',
-                    style: sans(kMobile ? 15 : 13, color: AppColors.fg3)),
-          ),
-        ]),
-        if (_modelHint != null)
+        ),
+        if (_showModelBrowser && _catalogModels != null)
           Padding(
-            padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.of(18)),
-            child: Text(_modelHint!,
-                style: sans(12, height: 1.4, color: AppColors.fg4)),
+            padding: EdgeInsets.fromLTRB(S.s12, 0, S.s12, S.s12),
+            child: _inlineModelBrowser(),
           ),
-        SettingsGroup(header: 'Context', children: [
-          SettingsRow(
-            label: 'Context window',
-            sub: 'Tokens. Blank keeps the default.',
-            trailing: SettingsField(
-                controller: _ctx,
-                width: 150,
-                mono: true,
-                number: true,
-                hint: '200000'),
-          ),
-          SettingsRow(
-            label: 'Compact at',
-            sub: 'History is summarised when the window is this full.',
-            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-              SizedBox(
-                width: kMobile ? 110 : 160,
-                child: SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    trackHeight: 3,
-                    activeTrackColor: AppColors.accent,
-                    inactiveTrackColor: AppColors.surface3,
-                    thumbColor: AppColors.fg1,
-                    overlayShape: SliderComponentShape.noOverlay,
-                    thumbShape:
-                        const RoundSliderThumbShape(enabledThumbRadius: 7),
-                  ),
-                  child: Slider(
-                    value: compact.toDouble(),
-                    min: 10,
-                    max: 100,
-                    divisions: 18,
-                    onChanged: (v) =>
-                        setState(() => _compact.text = '${v.round()}'),
-                  ),
+        SettingsRow(
+          label: effortLabel,
+          trailing: _effortAdjustable
+              ? SettingsPopup<String>(
+                  label: _effortItems
+                          .where((i) => i.$1 == _effort)
+                          .firstOrNull
+                          ?.$2 ??
+                      'Default',
+                  items: _effortItems,
+                  selected: _effort,
+                  onSelected: (v) => setState(() => _effort = v),
+                )
+              : Text(
+                  _reasoning?['control'] == 'model'
+                      ? 'Set by the model'
+                      : 'Not adjustable',
+                  style: sans(kMobile ? 15 : 13, color: AppColors.fg3)),
+        ),
+      ]),
+      if (_modelHint != null)
+        Padding(
+          padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.of(18)),
+          child: Text(_modelHint!,
+              style: sans(12, height: 1.4, color: AppColors.fg4)),
+        ),
+      SettingsGroup(header: 'Context', children: [
+        SettingsRow(
+          label: 'Context window',
+          sub: 'Tokens. Blank keeps the default.',
+          trailing: SettingsField(
+              controller: _ctx,
+              width: 150,
+              mono: true,
+              number: true,
+              hint: '200000'),
+        ),
+        SettingsRow(
+          label: 'Compact at',
+          sub: 'History is summarised when the window is this full.',
+          trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+            SizedBox(
+              width: kMobile ? 110 : 160,
+              child: SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  trackHeight: 3,
+                  activeTrackColor: AppColors.accent,
+                  inactiveTrackColor: AppColors.surface3,
+                  thumbColor: AppColors.fg1,
+                  overlayShape: SliderComponentShape.noOverlay,
+                  thumbShape:
+                      const RoundSliderThumbShape(enabledThumbRadius: 7),
+                ),
+                child: Slider(
+                  value: compact.toDouble(),
+                  min: 10,
+                  max: 100,
+                  divisions: 18,
+                  onChanged: (v) =>
+                      setState(() => _compact.text = '${v.round()}'),
                 ),
               ),
-              SizedBox(
-                width: 40,
-                child: Text('$compact%',
-                    textAlign: TextAlign.right,
-                    style: sans(kMobile ? 15 : 13, color: AppColors.fg2)),
-              ),
-            ]),
-          ),
-          if (_usesOpenAiAdapter(_provider))
-            SettingsRow(
-              label: 'Stream responses',
-              sub: 'For models that return nothing otherwise.',
-              trailing: SettingsSwitch(
-                  value: _stream, onChanged: (v) => setState(() => _stream = v)),
             ),
-        ]),
-        SettingsGroup(
-          header: 'Connection',
-          footer: 'Keys stay on the machine running snippet.',
-          children: connection,
-        ),
-        SettingsGroup(header: 'Options', children: [
-          SettingsRow(
-            label: 'Supports images',
-            sub: 'Send screenshots and diagrams to this model.',
-            trailing: SettingsSwitch(
-                value: _images, onChanged: (v) => setState(() => _images = v)),
-          ),
-          if (_isXai)
-            SettingsRow(
-              label: 'X search',
-              sub: 'Let Grok search X with xAI’s server-side tool.',
-              trailing: SettingsSwitch(
-                  value: _xSearch,
-                  onChanged: (v) => setState(() => _xSearch = v)),
+            SizedBox(
+              width: 40,
+              child: Text('$compact%',
+                  textAlign: TextAlign.right,
+                  style: sans(kMobile ? 15 : 13, color: AppColors.fg2)),
             ),
-          SettingsRow(
-            label: 'Use for new sessions',
-            sub: 'Make this the active profile.',
-            trailing: SettingsSwitch(
-                value: _active, onChanged: (v) => setState(() => _active = v)),
-          ),
-        ]),
-        if (_isEdit && widget.onDelete != null && kMobile)
-          SettingsGroup(children: [
-            SettingsRow(
-                label: 'Delete profile', danger: true, onTap: widget.onDelete),
           ]),
-        if (_error != null)
-          Padding(
-            padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s12),
-            child: Text(_error!, style: sans(12, color: AppColors.run)),
+        ),
+        if (_usesOpenAiAdapter(_provider))
+          SettingsRow(
+            label: 'Stream responses',
+            sub: 'For models that return nothing otherwise.',
+            trailing: SettingsSwitch(
+                value: _stream, onChanged: (v) => setState(() => _stream = v)),
           ),
-          ],
-        );
-      },
-    );
+      ]),
+      SettingsGroup(
+        header: 'Connection',
+        footer: 'Keys stay on the machine running snippet.',
+        children: connection,
+      ),
+      SettingsGroup(header: 'Options', children: [
+        SettingsRow(
+          label: 'Supports images',
+          sub: 'Send screenshots and diagrams to this model.',
+          trailing: SettingsSwitch(
+              value: _images, onChanged: (v) => setState(() => _images = v)),
+        ),
+        if (_isXai)
+          SettingsRow(
+            label: 'X search',
+            sub: 'Let Grok search X with xAI’s server-side tool.',
+            trailing: SettingsSwitch(
+                value: _xSearch,
+                onChanged: (v) => setState(() => _xSearch = v)),
+          ),
+        SettingsRow(
+          label: 'Use for new sessions',
+          sub: 'Make this the active profile.',
+          trailing: SettingsSwitch(
+              value: _active, onChanged: (v) => setState(() => _active = v)),
+        ),
+      ]),
+      if (_isEdit && widget.onDelete != null && kMobile)
+        SettingsGroup(children: [
+          SettingsRow(
+              label: 'Delete profile', danger: true, onTap: widget.onDelete),
+        ]),
+      if (_error != null)
+        Padding(
+          padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s12),
+          child: Text(_error!, style: sans(12, color: AppColors.run)),
+        ),
+    ];
   }
-
 }
 
 /// Searchable list over the provider's live model catalog. Rows show the raw
@@ -1320,7 +1356,8 @@ class _ModelPickerSheetState extends State<_ModelPickerSheet> {
                   // An empty filter result used to render as a blank sheet --
                   // indistinguishable from "still loading".
                   ? Padding(
-                      padding: EdgeInsets.fromLTRB(S.s16, S.of(28), S.s16, S.s32),
+                      padding:
+                          EdgeInsets.fromLTRB(S.s16, S.of(28), S.s16, S.s32),
                       child: Column(children: [
                         AppIcon('search', size: 18, color: AppColors.fg4),
                         SizedBox(height: S.of(9)),
@@ -1369,7 +1406,8 @@ class _ModelPickerSheetState extends State<_ModelPickerSheet> {
           hoverColor: AppColors.surface2,
           onTap: () => Navigator.pop(ctx, m),
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.of(10)),
+            padding:
+                EdgeInsets.symmetric(horizontal: S.s12, vertical: S.of(10)),
             child: Row(children: [
               Expanded(
                 child: Column(
@@ -1417,9 +1455,16 @@ class _CliAgentStatusState extends State<_CliAgentStatus> {
 
   bool get _claude => widget.provider == 'claude-code';
   bool get _devin => widget.provider == 'devin';
-  String get _label =>
-      _claude ? 'Claude Code' : _devin ? 'Devin' : 'Antigravity';
-  String get _command => _claude ? 'claude' : _devin ? 'devin' : 'agy';
+  String get _label => _claude
+      ? 'Claude Code'
+      : _devin
+          ? 'Devin'
+          : 'Antigravity';
+  String get _command => _claude
+      ? 'claude'
+      : _devin
+          ? 'devin'
+          : 'agy';
 
   @override
   void initState() {
@@ -1645,8 +1690,7 @@ class _SubSignInState extends State<_SubSignIn> {
         SizedBox(width: S.s8),
         Text(widget.signedInLabel, style: sans(13, color: AppColors.fg2)),
         const Spacer(),
-        TapDetector(
-            onTap: _signOut, child: Text('Sign out', style: TS.meta())),
+        TapDetector(onTap: _signOut, child: Text('Sign out', style: TS.meta())),
       ]);
     }
     if (_code != null) {

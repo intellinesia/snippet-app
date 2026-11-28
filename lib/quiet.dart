@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
+import 'mobile_kit/cards.dart' show MkNotice;
 import 'tap_detector.dart';
 import 'platform.dart';
 import 'theme.dart';
@@ -329,81 +330,21 @@ class _QuietOfflineBannerState extends State<QuietOfflineBanner> {
     return Semantics(
       liveRegion: true,
       container: true,
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-        constraints: const BoxConstraints(minHeight: 56),
-        decoration: BoxDecoration(
-          color: AppColors.surface2,
-          borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: MkNotice(
+          key: const ValueKey('offline-banner'),
+          margin: EdgeInsets.zero,
+          icon: 'wifi-off',
+          // Only the name is shortened, never the words.
+          title: '${_shortName(widget.machine)} offline, showing cached',
+          subtitle: widget.since == null
+              ? null
+              : 'Last updated ${widget.since}. Replies send when it is back.',
+          action: retry ? (_retrying ? 'Retrying' : 'Retry') : null,
+          actionKey: const ValueKey('offline-retry'),
+          onAction: _retrying ? null : _retry,
         ),
-        child: Stack(
-            key: const ValueKey('offline-banner'),
-            clipBehavior: Clip.none,
-            children: [
-              Padding(
-                padding: EdgeInsets.fromLTRB(16, 12, retry ? 40 : 16, 12),
-                child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                          padding: const EdgeInsets.only(top: 1),
-                          child: AppIcon('wifi-off',
-                              size: 20, color: AppColors.fg2)),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                  // Only the name is shortened, never the words.
-                                  '${_shortName(widget.machine)} offline, showing cached',
-                                  style: sans(14,
-                                      height: 20 / 14, color: AppColors.fg1)),
-                              if (widget.since != null)
-                                Text(
-                                    'Last updated ${widget.since}. Replies send when it is back.',
-                                    style: sans(12,
-                                        height: 16 / 12, color: AppColors.fg3)),
-                            ]),
-                      ),
-                    ]),
-              ),
-              if (retry)
-                Positioned(
-                  right: -12,
-                  top: 0,
-                  bottom: 0,
-                  child: Center(
-                    child: Semantics(
-                      button: true,
-                      enabled: !_retrying,
-                      excludeSemantics: true,
-                      label: _retrying ? 'Retrying' : 'Retry',
-                      child: TapDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: _retrying ? null : _retry,
-                        child: SizedBox(
-                          key: const ValueKey('offline-retry'),
-                          width: 48,
-                          height: 48,
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 12),
-                            child: Align(
-                              alignment: Alignment.centerRight,
-                              child: Text(_retrying ? 'Retrying' : 'Retry',
-                                  maxLines: 1,
-                                  softWrap: false,
-                                  style: sans(13,
-                                      weight: W.label, color: AppColors.fg1)),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ]),
       ),
     );
   }

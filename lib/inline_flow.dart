@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'chat/ask_kit.dart';
+import 'mobile_kit/controls.dart' show MkPill, MkPillTone;
 import 'platform.dart';
 import 'settings_form.dart';
 import 'theme.dart';
@@ -108,34 +109,36 @@ class _InlineConfirmStripState extends State<InlineConfirmStrip> {
       },
       child: Focus(
         focusNode: _focus,
+        // Phone: a kit confirm. 15 question, 13.5 consequence, two 40 pills.
         child: Container(
           color: AppColors.danger.withValues(alpha: 0.06),
-          padding: EdgeInsets.symmetric(
-              horizontal: Grouped.padX, vertical: Grouped.padY + 3),
-          child: Row(children: [
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(widget.title,
-                      style: sans(13, weight: W.label, color: AppColors.fg1)),
-                  const SizedBox(height: 2),
-                  Text(widget.body, style: sans(12, color: AppColors.fg3)),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Btn('Cancel',
-                small: true,
-                variant: BtnVariant.secondary,
-                onTap: widget.onCancel),
-            const SizedBox(width: 8),
-            Btn(widget.confirmLabel,
-                small: true,
-                variant: BtnVariant.danger,
-                onTap: widget.onConfirm),
-          ]),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(widget.title,
+                  style: sans(15, weight: W.label, color: AppColors.fg1)),
+              const SizedBox(height: 2),
+              Text(widget.body,
+                  style: sans(13.5, height: 18 / 13.5, color: AppColors.fg3)),
+              const SizedBox(height: 12),
+              Row(children: [
+                Expanded(
+                  child: MkPill('Cancel',
+                      expand: true,
+                      onTap: widget.busy ? null : widget.onCancel),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: MkPill(widget.confirmLabel,
+                      expand: true,
+                      tone: MkPillTone.primary,
+                      onTap: widget.busy ? null : widget.onConfirm),
+                ),
+              ]),
+            ],
+          ),
         ),
       ),
     );

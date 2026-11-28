@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../api.dart';
+import '../../mochi.dart' show AgentMochi;
 import '../../models.dart';
 import '../../tap_detector.dart';
 import '../../theme.dart';
@@ -219,15 +220,18 @@ class NewTaskBody extends StatelessWidget {
                       anchor: a,
                       below: true,
                       alignEnd: true,
+                      title: 'Owner',
                       items: [
                         appMenuItem(
                             value: '',
                             label: 'Lead picks',
+                            leading: const AgentMochi('lead', size: 28),
                             selected: ctrl.agentId == null),
                         for (final g in ctrl.agents)
                           appMenuItem(
                               value: g.id,
                               label: ctrl.agentName(g),
+                              leading: AgentMochi(g.id, size: 28),
                               selected: ctrl.agentId == g.id),
                       ]);
                   if (picked != null) {
@@ -246,10 +250,12 @@ class NewTaskBody extends StatelessWidget {
                       anchor: a,
                       below: true,
                       alignEnd: true,
+                      title: 'Priority',
                       items: [
                         for (var i = 0; i < 3; i++)
                           appMenuItem(
                               value: i,
+                              icon: const ['arrow-down', 'minus', 'chevron-up'][i],
                               label: NewTaskController.priorities[i],
                               selected: ctrl.priority == i),
                       ]);

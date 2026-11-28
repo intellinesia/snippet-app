@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'phosphor_icons.dart';
 
+import 'mobile_kit.dart' show MkIconButton, kAndroidLook;
 import 'platform.dart';
 import 'settings_form.dart';
 import 'theme.dart';
@@ -479,8 +480,8 @@ class SettingsHeader extends StatelessWidget {
       child: Row(children: [
         Expanded(
           child: Text(sub,
-              style: sans(kMobile ? 13 : 12,
-                  height: 1.45, color: AppColors.fg3)),
+              style:
+                  sans(kMobile ? 13 : 12, height: 1.45, color: AppColors.fg3)),
         ),
         for (final a in actions) ...[SizedBox(width: S.s8), a],
       ]),
@@ -491,6 +492,46 @@ class SettingsHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final hosted = _hosted(context);
     if (hosted != null) return hosted;
+    if (compact && kMobile) {
+      // The kit page bar: Android start-aligned, iPhone centred.
+      final android = kAndroidLook;
+      final backBtn = MkIconButton(
+          icon: android ? 'arrow-left' : 'chevron-left',
+          label: 'Back',
+          bare: android,
+          onTap: onBack ?? () => Navigator.maybePop(context));
+      return SizedBox(
+        height: android ? 64 : 56,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: android ? 4 : 12),
+          child: android
+              ? Row(children: [
+                  backBtn,
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(22, weight: W.label, color: AppColors.fg1)),
+                  ),
+                  ...actions,
+                  const SizedBox(width: 8),
+                ])
+              : Stack(alignment: Alignment.center, children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 56),
+                    child: Text(title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: sans(16.5,
+                            weight: FontWeight.w600, color: AppColors.fg1)),
+                  ),
+                  Row(children: [backBtn, const Spacer(), ...actions]),
+                ]),
+        ),
+      );
+    }
     if (compact) {
       // Design language v7: 56 tall, 40 back circle, centred 17/600 title.
       return SizedBox(
@@ -537,7 +578,10 @@ class SettingsHeader extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: kMobile
                       ? sans(24, weight: FontWeight.w600, color: AppColors.fg1)
-                      : sans(16, weight: FontWeight.w500, height: 1.3, color: AppColors.fg1)),
+                      : sans(16,
+                          weight: FontWeight.w500,
+                          height: 1.3,
+                          color: AppColors.fg1)),
             ),
             for (final a in actions) ...[SizedBox(width: S.s8), a],
           ]),

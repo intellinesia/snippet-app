@@ -456,6 +456,9 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
         });
       }),
       MkAction('sliders-horizontal', 'Show', _openShow),
+      MkAction('plus', 'New canvas', () {
+        if (!_creating) _newCanvas();
+      }),
     ];
     final head = <Widget>[
       const LargeTitle('Artifacts'),
@@ -582,48 +585,32 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
     );
   }
 
-  void _openShow() {
-    showMkSheet<void>(context,
-        title: 'Show',
-        builder: (ctx) => Column(mainAxisSize: MainAxisSize.min, children: [
-              for (final (k, l) in _kinds)
-                Semantics(
-                  button: true,
-                  selected: _kind == k,
-                  label: 'Show $l',
-                  excludeSemantics: true,
-                  child: TapDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () {
-                      Navigator.of(ctx).pop();
-                      setState(() => _kind = k);
-                    },
-                    child: SizedBox(
-                      height: 48,
-                      child: Row(children: [
-                        Expanded(
-                            child: Text(l,
-                                style: sans(15.5,
-                                    weight: _kind == k ? W.label : W.body,
-                                    color: AppColors.fg1))),
-                        if (_kind == k)
-                          AppIcon('check', size: 18, color: AppColors.fg1),
-                      ]),
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 12),
-              MkSheetTile(
-                icon: 'plus',
-                label: 'New canvas',
-                onTap: _creating
-                    ? null
-                    : () {
-                        Navigator.of(ctx).pop();
-                        _newCanvas();
-                      },
-              ),
-            ]));
+  static String _kindIcon(String? k) => switch (k) {
+        null => 'layers',
+        'canvas' => 'grid',
+        'image' => 'image',
+        'pdf' => 'pdf',
+        'document' => 'file-text',
+        _ => 'file',
+      };
+
+  Future<void> _openShow() async {
+    const all = '__all';
+    final picked = await showAppMenu<String>(
+      context,
+      title: 'Show',
+      items: [
+        for (final (k, l) in _kinds)
+          appMenuItem(
+            value: k ?? all,
+            label: l,
+            icon: _kindIcon(k),
+            selected: _kind == k,
+          ),
+      ],
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _kind = picked == all ? null : picked);
   }
 
   static String _ago(DateTime t) {

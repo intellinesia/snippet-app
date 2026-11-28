@@ -11,6 +11,7 @@ import 'package:video_player/video_player.dart';
 import '../file_actions.dart';
 import '../file_icons.dart';
 import '../media_views.dart';
+import '../mobile_kit/tokens.dart' show kAndroidLook;
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -202,10 +203,10 @@ class _PhoneSheetState extends State<_PhoneSheet> {
             curve: Motion.exit,
             height: height,
             child: ClipRRect(
-              borderRadius:
-                  BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
+              borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(kAndroidLook ? 28 : 38)),
               child: ColoredBox(
-                color: AppColors.raised,
+                color: kitSheetFill,
                 child: _PreviewContent(
                   session: widget.session,
                   onRemove: widget.onRemove,

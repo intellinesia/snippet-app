@@ -193,7 +193,7 @@ class _QuietAgentsScreenState extends State<QuietAgentsScreen> {
     ];
 
     if (_groupsSegment) {
-      if (shownGroups.isEmpty) children.add(const _Empty('No groups'));
+      if (shownGroups.isEmpty) children.add(const MkEmpty('No groups'));
       final workingIds = {
         for (final l in everyone)
           if (l.state == CrewState.working) l.agent.id
@@ -225,7 +225,7 @@ class _QuietAgentsScreenState extends State<QuietAgentsScreen> {
     } else {
       children.add(const MkSection('Agents'));
       if (shownAgents.isEmpty) {
-        children.add(_Empty(switch (_filter) {
+        children.add(MkEmpty(switch (_filter) {
           AllFilter.working => 'No agents are working',
           AllFilter.asking => 'No agents need you',
           AllFilter.idle => 'No agents are idle',
@@ -319,19 +319,5 @@ class _Fold extends StatelessWidget {
             ),
           ),
         ),
-      );
-}
-
-class _Empty extends StatelessWidget {
-  const _Empty(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(kGutter, 24, kGutter, 8),
-        child: Center(
-            child: Text(text,
-                textAlign: TextAlign.center,
-                style: sans(14, color: AppColors.fg3))),
       );
 }

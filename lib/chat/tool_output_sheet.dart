@@ -49,18 +49,14 @@ class _ToolOutputSheetState extends State<ToolOutputSheet> {
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.paddingOf(context).bottom;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16, 0, 16, bottom + 12),
+    // The platform sheet; tabs and body sit on its fill.
+    return AppSheetSurface(
       child: Container(
-        height: 208,
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-        decoration: BoxDecoration(
-          color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(12),
-        ),
+        height: 260 + bottom,
+        padding: EdgeInsets.fromLTRB(16, 0, 16, 12 + bottom),
         child: Column(children: [
           SizedBox(
-            height: 30,
+            height: 40,
             child: Row(children: [
               for (final (i, label) in const [
                 (0, 'Input'),
@@ -72,12 +68,12 @@ class _ToolOutputSheetState extends State<ToolOutputSheet> {
                   behavior: HitTestBehavior.opaque,
                   onTap: () => setState(() => _tab = i),
                   child: Container(
-                    height: 28,
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    height: 36,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: _tab == i ? AppColors.surface2 : Colors.transparent,
-                      borderRadius: BorderRadius.circular(6),
+                      color: _tab == i ? AppColors.surface3 : Colors.transparent,
+                      borderRadius: BorderRadius.circular(18),
                     ),
                     child: Text(label,
                         style: sans(12,
@@ -94,7 +90,7 @@ class _ToolOutputSheetState extends State<ToolOutputSheet> {
               child: Align(
                 alignment: Alignment.topLeft,
                 child: Text(_text.trim().isEmpty ? 'No output' : _text,
-                    style: mono(11,
+                    style: mono(12.5,
                         height: 1.45,
                         color: _text.trim().isEmpty
                             ? AppColors.fg3

@@ -550,13 +550,16 @@ class PushedBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
+        // The kit bar: no rule on Android, a hairline on iPhone.
         decoration: BoxDecoration(
-            border:
-                Border(bottom: BorderSide(color: AppColors.border, width: 1))),
+            border: kAndroidLook
+                ? null
+                : Border(
+                    bottom: BorderSide(color: AppColors.border, width: 0.5))),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 52),
+          constraints: BoxConstraints(minHeight: kAndroidLook ? 64 : 52),
           child: Row(children: [
-            BarIcon('chevron-left', 'Back',
+            BarIcon(kAndroidLook ? 'arrow-left' : 'chevron-left', 'Back',
                 onBack ?? () => Navigator.maybePop(context)),
             Expanded(
               child: Padding(
@@ -567,8 +570,13 @@ class PushedBar extends StatelessWidget {
                       Text(title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: sans(titleSize,
-                              weight: FontWeight.w500, color: AppColors.fg1)),
+                          style: sans(
+                              kAndroidLook &&
+                                      (subtitle == null || subtitle!.isEmpty)
+                                  ? 22
+                                  : titleSize + (kAndroidLook ? 2 : 0),
+                              weight: kAndroidLook ? W.label : FontWeight.w500,
+                              color: AppColors.fg1)),
                       if (subtitle != null && subtitle!.isNotEmpty)
                         Text(subtitle!,
                             maxLines: 2,

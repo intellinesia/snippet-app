@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import '../../api.dart';
 import '../../mobile_kit.dart';
 import '../../models.dart';
+import '../../motion_routes.dart';
+import '../memory_screen.dart' show MemoryScreen;
 import '../../theme.dart';
-import '../../widgets.dart';
 import '../phone_agent_page.dart' show shortPath;
 import '../shell_nav.dart' show sessionBusy;
 import '../tasks/task_phone_list.dart' show PhoneTaskCard;
@@ -80,17 +81,41 @@ class _AgentContextPageState extends State<AgentContextPage> {
               onTap: () => widget.onOpenSession?.call(l[i])),
       ]);
 
-  Widget _folderRows(Iterable<String> l) => MkList(children: [
+  Widget _folderRows(Iterable<String> l) => MkGroup(children: [
         for (final f in l)
-          MkRow(
-              title: shortPath(f),
-              leading: AppIcon('folder', size: 22, color: AppColors.fg2),
-              divider: f != l.last),
+          MkGroupRow(
+              icon: 'folder',
+              label: f.split('/').where((x) => x.isNotEmpty).lastOrNull ?? f,
+              value: shortPath(f),
+              valueMono: true,
+              chevron: false),
       ]);
 
-  Widget _note(String text) => Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      child: Text(text, style: sans(14, color: AppColors.fg3)));
+  Widget _note(String text) => MkEmpty(text);
+
+  void _openMemory(MemoryScope m) =>
+      Navigator.of(context).push(AppPageRoute<void>(
+          builder: (ctx) => MemoryScreen(
+              client: widget.client,
+              initialKey: m.key,
+              onBack: () => Navigator.of(ctx).pop())));
+
+  static String _kind(String k) => switch (k) {
+        'agent' => 'Agent',
+        'project' => 'Project',
+        'global' => 'You',
+        'session' => 'Session',
+        _ => k.isEmpty ? 'Memory' : '${k[0].toUpperCase()}${k.substring(1)}',
+      };
+
+  List<MemoryScope> get _memorySorted {
+    int rank(MemoryScope m) =>
+        switch (m.kind) { 'agent' => 0, 'project' => 1, _ => 2 };
+    return [..._memory]..sort((a, b) {
+        final r = rank(a).compareTo(rank(b));
+        return r != 0 ? r : a.label.compareTo(b.label);
+      });
+  }
 
   List<Widget> _overview() {
     final active = [
@@ -109,12 +134,9 @@ class _AgentContextPageState extends State<AgentContextPage> {
       ],
       if (_wakes.isNotEmpty) ...[
         const MkSection('Wakes'),
-        MkList(children: [
+        MkGroup(children: [
           for (final w in _wakes)
-            MkRow(
-                title: w,
-                leading: AppIcon('clock', size: 22, color: AppColors.fg2),
-                divider: w != _wakes.last),
+            MkGroupRow(icon: 'clock', label: w, chevron: false),
         ]),
       ],
       if (active.isEmpty && folders.isEmpty && _wakes.isEmpty)
@@ -145,14 +167,14 @@ class _AgentContextPageState extends State<AgentContextPage> {
       case 3:
         if (_memory.isEmpty) return [_note('No memory yet')];
         return [
-          MkList(children: [
-            for (final m in _memory)
-              MkRow(
-                  title: m.label.isEmpty ? m.key : m.label,
-                  leading: AppIcon('book', size: 22, color: AppColors.fg2),
+          MkGroup(children: [
+            for (final m in _memorySorted)
+              MkGroupRow(
+                  icon: 'brain',
+                  label: m.label.isEmpty ? m.key : m.label,
                   subtitle:
-                      '${m.entries} ${m.entries == 1 ? 'entry' : 'entries'}',
-                  divider: m != _memory.last),
+                      '${_kind(m.kind)} \u00b7 ${m.entries} ${m.entries == 1 ? 'entry' : 'entries'}',
+                  onTap: () => _openMemory(m)),
           ]),
         ];
       default:
@@ -185,7 +207,9 @@ class _AgentContextPageState extends State<AgentContextPage> {
           ],
         ),
         slivers: [
-          SliverList(delegate: SliverChildListDelegate(_body())),
+          SliverList(
+              delegate: SliverChildListDelegate(
+                  [const SizedBox(height: 8), ..._body()])),
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
         ],
       ),

@@ -115,27 +115,13 @@ Future<void> showCommandPalette(
         padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),
         child: ConstrainedBox(
           constraints: BoxConstraints(maxHeight: available * 0.85),
-          child: _frame(body()),
+          child: AppSheetSurface(child: body()),
         ),
       );
     },
   );
 }
 
-Widget _frame(Widget child) {
-  final radius = BorderRadius.vertical(top: Radius.circular(R.sheetTop));
-  return ClipRRect(
-    borderRadius: radius,
-    child: DecoratedBox(
-      position: DecorationPosition.foreground,
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        border: Border(top: BorderSide(color: AppColors.border2)),
-      ),
-      child: Material(color: AppColors.glassSurface, child: child),
-    ),
-  );
-}
 
 Widget _solidFrame(Widget child) {
   final radius = BorderRadius.all(Radius.circular(R.lg));

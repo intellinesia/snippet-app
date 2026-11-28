@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../api.dart';
 import '../models.dart';
+import '../mobile_kit.dart';
 import '../motion_routes.dart';
 import '../panel.dart';
 import '../platform.dart';
@@ -268,13 +269,16 @@ class _GitScreenState extends State<GitScreen> {
   Widget build(BuildContext context) {
     Theme.of(context); // Rebuild on theme change
     final st = _st;
+    if (kMobile && !widget.embedded) return _phone(st);
     final content = Column(children: [
       if (widget.embedded)
         Container(
           height: PaneRow.height,
           padding: EdgeInsets.fromLTRB(S.of(18), 0, S.s8, 0),
           decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline)),
+            border: Border(
+                bottom: BorderSide(
+                    color: AppColors.paneLine, width: AppColors.hairline)),
           ),
           child: Row(children: [
             Expanded(
@@ -337,6 +341,285 @@ class _GitScreenState extends State<GitScreen> {
       body: SafeArea(bottom: false, child: content),
     );
   }
+
+  // ---- Phone page (kit) ----
+
+  Widget _phone(GitStatus? st) {
+    final a = kAndroidLook;
+    final slivers = <Widget>[];
+    if (_busy || _refreshing) {
+      slivers.add(SliverToBoxAdapter(
+        child: LinearProgressIndicator(
+          minHeight: 2,
+          backgroundColor: AppColors.tint2,
+          color: AppColors.accent,
+        ),
+      ));
+    }
+    if (_loading) {
+      slivers.add(SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(child: DelayedSpinner(size: 22)),
+      ));
+    } else if (_error != null && (st == null || !st.ok)) {
+      slivers.add(SliverFillRemaining(
+        hasScrollBody: false,
+        child: st == null
+            ? EmptyState(
+                icon: 'alert-triangle',
+                title: 'Couldn\'t read Git status',
+                body: _error!,
+              )
+            : EmptyState(
+                icon: 'git-branch',
+                title: 'Not a Git repository',
+                body:
+                    'Initialise Git here to track changes, branches and pull requests.',
+                action: MkPill(_initing ? 'Initialising…' : 'Initialise Git',
+                    icon: 'git-branch', onTap: _initing ? null : _initRepo),
+              ),
+      ));
+    } else {
+      slivers.addAll(_phoneSlivers(st!));
+    }
+    slivers.add(SliverToBoxAdapter(child: SizedBox(height: a ? 24 : 32)));
+    return Material(
+      color: AppColors.bg,
+      child: MkPage(
+        title: 'Git',
+        onBack: widget.onClose ?? () => Navigator.pop(context),
+        bottomClearance: false,
+        onRefresh: _loading ? null : () async => _load(),
+        slivers: slivers,
+      ),
+    );
+  }
+
+  List<Widget> _phoneSlivers(GitStatus st) {
+    final moving = {..._optStaged, ..._optUnstaged};
+    final staged = [
+      ...st.staged.where((f) => !_optUnstaged.contains(f.path)),
+      ...[...st.changed, ...st.untracked]
+          .where((f) => _optStaged.contains(f.path) && !f.staged),
+    ];
+    final changed = [
+      ...st.changed.where((f) => !_optStaged.contains(f.path)),
+      ...st.staged.where(
+          (f) => _optUnstaged.contains(f.path) && f.x != 'A' && !f.unstaged),
+    ];
+    final untracked = [
+      ...st.untracked.where((f) => !_optStaged.contains(f.path)),
+      ...st.staged.where((f) => _optUnstaged.contains(f.path) && f.x == 'A'),
+    ];
+    final empty = st.files.isEmpty && moving.isEmpty;
+    Widget box(Widget w) => SliverToBoxAdapter(child: w);
+    final hasUp = st.upstream != null;
+    final sync = hasUp
+        ? (st.ahead == 0 && st.behind == 0
+            ? 'Up to date'
+            : [
+                if (st.ahead > 0) '${st.ahead} to push',
+                if (st.behind > 0) '${st.behind} to pull',
+              ].join(' · '))
+        : 'Not published';
+    return [
+      box(MkGroup(children: [
+        PhoneListRow(
+          leading: phoneRowIcon(AppIcon('git-branch',
+              size: kAndroidLook ? 19 : 17, color: AppColors.fg2)),
+          title: Text(st.branch.isEmpty ? '(no branch)' : st.branch,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: mono(14, color: AppColors.fg1)),
+          sub: sync,
+          trailing: AppIcon('chevron-down', size: 16, color: AppColors.fg4),
+          onTap: _busy ? null : _branchSheet,
+        ),
+        if (hasUp) ...[
+          MkGroupRow(
+            icon: 'arrow-down',
+            label: st.behind > 0 ? 'Pull ${st.behind}' : 'Pull',
+            chevron: false,
+            onTap: _busy
+                ? null
+                : () =>
+                    _op(() => widget.client.gitPull(_repo), okMsg: 'Pulled'),
+          ),
+          MkGroupRow(
+            icon: 'arrow-up',
+            label: st.ahead > 0 ? 'Push ${st.ahead}' : 'Push',
+            chevron: false,
+            onTap: _busy
+                ? null
+                : () =>
+                    _op(() => widget.client.gitPush(_repo), okMsg: 'Pushed'),
+          ),
+        ] else
+          MkGroupRow(
+            icon: 'upload',
+            label: 'Publish branch',
+            chevron: false,
+            onTap: _busy
+                ? null
+                : () =>
+                    _op(() => widget.client.gitPush(_repo), okMsg: 'Published'),
+          ),
+      ])),
+      if (empty)
+        box(Padding(
+          padding: const EdgeInsets.only(top: 32),
+          child: EmptyState(
+            icon: 'check-check',
+            title: 'Working tree clean',
+            body: 'No changes to commit.',
+          ),
+        ))
+      else ...[
+        if (staged.isNotEmpty)
+          ..._phoneSection('Staged', 'Unstage all',
+              () => _op(() => widget.client.gitUnstage(_repo)), staged, true),
+        if (changed.isNotEmpty)
+          ..._phoneSection(
+              'Changes',
+              'Stage all',
+              () => _op(() => widget.client.gitStage(_repo, all: true)),
+              changed,
+              false),
+        if (untracked.isNotEmpty)
+          ..._phoneSection(
+              'Untracked',
+              'Stage all',
+              () => _op(() => widget.client.gitStage(_repo, all: true)),
+              untracked,
+              false),
+      ],
+      box(_phoneCommit(st)),
+    ];
+  }
+
+  List<Widget> _phoneSection(String title, String actionLabel,
+      VoidCallback onAction, List<GitFile> files, bool staged) {
+    final expanded = files.length <= _collapsedLimit + 2 ||
+        _expandedSections.contains(title);
+    final shown = expanded ? files : files.take(_collapsedLimit).toList();
+    return [
+      SliverToBoxAdapter(
+          child: MkSection(title,
+              trailing: actionLabel, onTrailing: _busy ? null : onAction)),
+      SliverToBoxAdapter(
+        child: MkGroup(children: [
+          for (var i = 0; i < shown.length; i++)
+            _phoneFile(shown[i],
+                staged: staged, last: i == shown.length - 1 && expanded),
+          if (!expanded)
+            MkGroupRow(
+              icon: 'chevron-down',
+              label: 'Show ${files.length - _collapsedLimit} more',
+              chevron: false,
+              onTap: () => setState(() => _expandedSections.add(title)),
+            ),
+        ]),
+      ),
+    ];
+  }
+
+  Widget _phoneFile(GitFile f, {required bool staged, required bool last}) {
+    final code = staged
+        ? (f.x.trim().isNotEmpty ? f.x : (f.untracked ? 'A' : f.y))
+        : (f.untracked ? '?' : (f.y.trim().isNotEmpty ? f.y : f.x));
+    final (fg, _) = toneColors(_statusTone(code));
+    final slash = f.path.lastIndexOf('/');
+    final name = slash < 0 ? f.path : f.path.substring(slash + 1);
+    final dir = slash < 0 ? '' : f.path.substring(0, slash);
+    return Semantics(
+      label: f.path,
+      child: PhoneListRow(
+        leading: Container(
+          width: 28,
+          height: 28,
+          alignment: Alignment.center,
+          decoration:
+              BoxDecoration(color: AppColors.surface3, shape: BoxShape.circle),
+          child: Text(code == '?' ? 'U' : code,
+              style: mono(12, weight: FontWeight.w600, color: fg)),
+        ),
+        title: Text(name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: mono(13.5, color: AppColors.fg1)),
+        sub: dir.isEmpty ? null : dir,
+        monoSub: true,
+        trailing: MkIconTap(staged ? 'minus' : 'plus',
+            staged ? 'Unstage ${f.path}' : 'Stage ${f.path}', () {
+          if (!_busy) _toggleStage(f, staged: staged);
+        }),
+        onTap: () => _openDiff(f, staged: staged),
+        last: last,
+      ),
+    );
+  }
+
+  Widget _phoneCommit(GitStatus st) {
+    final hasStaged = st.staged.isNotEmpty;
+    final hasAny = st.files.isNotEmpty;
+    final hasMsg = _commitController.text.trim().isNotEmpty;
+    final canCommit = !_busy && hasMsg && hasAny;
+    final a = kAndroidLook;
+    final label = hasStaged
+        ? 'Commit ${st.staged.length}'
+        : hasAny
+            ? 'Commit all'
+            : 'Commit';
+    // Stays tappable with staged files and no message; _commit focuses the field.
+    final VoidCallback? onTap = hasStaged
+        ? (_busy ? null : _commit)
+        : (canCommit ? _stageAllAndCommit : null);
+    return Padding(
+      padding:
+          EdgeInsets.fromLTRB(a ? 16 : MK.gutter, 24, a ? 16 : MK.gutter, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 52),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppColors.surface2,
+                borderRadius: BorderRadius.circular(MK.groupRadius),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TextField(
+                  controller: _commitController,
+                  focusNode: _commitFocus,
+                  minLines: 1,
+                  maxLines: 5,
+                  textInputAction: TextInputAction.newline,
+                  onChanged: (_) => setState(() {}),
+                  style: sans(15, color: AppColors.fg1),
+                  cursorColor: AppColors.fg1,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    filled: false,
+                    hintText: 'Commit message',
+                    hintStyle: sans(15, color: AppColors.fg4),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          MkPill(label, tone: MkPillTone.primary, expand: true, onTap: onTap),
+        ],
+      ),
+    );
+  }
+
+  // ---- End phone page ----
 
   Widget _body(GitStatus st) {
     final moving = {..._optStaged, ..._optUnstaged};
@@ -657,7 +940,7 @@ class _GitScreenState extends State<GitScreen> {
   }
 
   Tone _statusTone(String code) => switch (code) {
-        'M' => Tone.run,
+        'M' => kMobile ? Tone.neutral : Tone.run,
         'A' => Tone.ok,
         'D' => Tone.danger,
         'R' => Tone.accent,
@@ -1113,13 +1396,14 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
     return (lines: result, additions: adds, deletions: dels);
   }
 
-  Widget _diffHeader(String name, String? parentDir,
-      {required bool showBack}) {
+  Widget _diffHeader(String name, String? parentDir, {required bool showBack}) {
     return Container(
       height: PaneRow.height,
       padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline)),
+        border: Border(
+            bottom: BorderSide(
+                color: AppColors.paneLine, width: AppColors.hairline)),
       ),
       child: Row(children: [
         if (showBack) ...[
@@ -1148,20 +1432,16 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
           ),
         ),
         if (_additions > 0) ...[
-          Text('+$_additions',
-              style: mono(12, color: AppColors.diffAddFg)),
+          Text('+$_additions', style: mono(12, color: AppColors.diffAddFg)),
           SizedBox(width: S.s4),
         ],
         if (_deletions > 0) ...[
-          Text('-$_deletions',
-              style: mono(12, color: AppColors.diffDelFg)),
+          Text('-$_deletions', style: mono(12, color: AppColors.diffDelFg)),
           SizedBox(width: S.s4),
         ],
         if (_patch != null && _patch!.isNotEmpty)
-          IconBtn('clipboard',
-              size: 26,
-              iconSize: 13,
-              tooltip: 'Copy diff', onTap: () {
+          IconBtn('clipboard', size: 26, iconSize: 13, tooltip: 'Copy diff',
+              onTap: () {
             Clipboard.setData(ClipboardData(text: _patch!));
             toast(context, 'Diff copied');
           }),
@@ -1202,8 +1482,7 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
 
     final body = Column(children: [
       if (!widget.embedded && kMobile) bar,
-      if (!kMobile)
-        _diffHeader(name, parentDir, showBack: !widget.embedded),
+      if (!kMobile) _diffHeader(name, parentDir, showBack: !widget.embedded),
       if (_loading)
         Expanded(
           child: Center(child: DelayedSpinner(size: 22)),
@@ -1280,10 +1559,7 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
     )..layout();
     final width = painter.width;
     painter.dispose();
-    return width +
-        (kMobile
-            ? _gutterWidth + 40
-            : (_gutterWidth + 14) * 2 + 32);
+    return width + (kMobile ? _gutterWidth + 40 : (_gutterWidth + 14) * 2 + 32);
   }
 
   double _measureGutter() {
@@ -1319,8 +1595,8 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
         child: Text(line.text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: codeMono(11.5,
-                weight: FontWeight.w400, color: AppColors.fg4)),
+            style:
+                codeMono(11.5, weight: FontWeight.w400, color: AppColors.fg4)),
       );
     }
     if (line.type == _DiffLineType.hunk) {
@@ -1449,4 +1725,101 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
       ),
     );
   }
+}
+
+/// A kit-styled group row with a custom title widget (mono paths, rich names).
+class PhoneListRow extends StatelessWidget {
+  const PhoneListRow({
+    super.key,
+    required this.leading,
+    required this.title,
+    this.sub,
+    this.monoSub = false,
+    this.trailing,
+    this.onTap,
+    this.onLongPress,
+    this.selected = false,
+    this.last = true,
+  });
+  final VoidCallback? onLongPress;
+  final bool selected;
+  final Widget leading;
+  final Widget title;
+  final String? sub;
+  final bool monoSub;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+  final bool last;
+
+  @override
+  Widget build(BuildContext context) {
+    final a = kAndroidLook;
+    final text = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        title,
+        if (sub != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(sub!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: monoSub ? mkMonoSub() : sans(13, color: AppColors.fg3)),
+          ),
+      ],
+    );
+    return Material(
+        color: selected ? AppColors.surface2 : Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          onLongPress: onLongPress,
+          splashFactory: a ? InkRipple.splashFactory : NoSplash.splashFactory,
+          highlightColor: AppColors.fg1.withValues(alpha: 0.04),
+          child: Padding(
+            padding: a
+                ? const EdgeInsets.fromLTRB(16, 6, 4, 6)
+                : const EdgeInsets.only(left: 16, right: 2),
+            child: Row(children: [
+              leading,
+              SizedBox(width: a ? 14 : 12),
+              Expanded(
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 52),
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    border: a || last
+                        ? null
+                        : Border(
+                            bottom: BorderSide(color: MK.hairline, width: 0.5)),
+                  ),
+                  child: Row(children: [
+                    Expanded(child: text),
+                    if (trailing != null) ...[
+                      const SizedBox(width: 8),
+                      trailing!,
+                    ],
+                  ]),
+                ),
+              ),
+            ]),
+          ),
+        ));
+  }
+}
+
+/// The tonal icon tile at the head of a kit group row (circle on Android).
+Widget phoneRowIcon(Widget icon) {
+  final a = kAndroidLook;
+  return Container(
+    width: a ? 40 : 30,
+    height: a ? 40 : 30,
+    decoration: BoxDecoration(
+      color: AppColors.surface3,
+      shape: a ? BoxShape.circle : BoxShape.rectangle,
+      borderRadius: a ? null : BorderRadius.circular(9),
+    ),
+    child: Center(child: icon),
+  );
 }

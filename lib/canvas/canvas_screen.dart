@@ -952,12 +952,9 @@ class _CanvasScreenState extends State<CanvasScreen>
       sheetAnimationStyle: sheetMotion,
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface1,
+      backgroundColor: Colors.transparent,
       barrierColor: AppColors.scrim,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
-      ),
-      builder: (sheetCtx) => StatefulBuilder(
+      builder: (sheetCtx) => AppSheetSurface(child: StatefulBuilder(
         builder: (ctx, setSheetState) {
           final live = _pins.where((p) => p.id == pin.id).firstOrNull ?? pin;
           return SizedBox(
@@ -991,7 +988,7 @@ class _CanvasScreenState extends State<CanvasScreen>
             ),
           );
         },
-      ),
+      )),
     );
   }
 
@@ -1288,12 +1285,9 @@ class _CanvasScreenState extends State<CanvasScreen>
       sheetAnimationStyle: sheetMotion,
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface1,
+      backgroundColor: Colors.transparent,
       barrierColor: AppColors.scrim,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
-      ),
-      builder: (sheetCtx) => Padding(
+      builder: (sheetCtx) => AppSheetSurface(child: Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.viewInsetsOf(sheetCtx).bottom,
         ),
@@ -1326,7 +1320,7 @@ class _CanvasScreenState extends State<CanvasScreen>
             ],
           ),
         ),
-      ),
+      )),
     );
     if (mounted) {
       setState(() => _pendingPin = null);
@@ -1338,12 +1332,9 @@ class _CanvasScreenState extends State<CanvasScreen>
       sheetAnimationStyle: sheetMotion,
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface1,
+      backgroundColor: Colors.transparent,
       barrierColor: AppColors.scrim,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
-      ),
-      builder: (sheetCtx) => StatefulBuilder(
+      builder: (sheetCtx) => AppSheetSurface(child: StatefulBuilder(
         builder: (ctx, setSheetState) {
           final titles = {for (final f in _index.frames) f.id: f.title};
           return SizedBox(
@@ -1387,7 +1378,7 @@ class _CanvasScreenState extends State<CanvasScreen>
             ),
           );
         },
-      ),
+      )),
     );
   }
 
@@ -1396,12 +1387,9 @@ class _CanvasScreenState extends State<CanvasScreen>
       sheetAnimationStyle: sheetMotion,
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface1,
+      backgroundColor: Colors.transparent,
       barrierColor: AppColors.scrim,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
-      ),
-      builder: (sheetCtx) => StatefulBuilder(
+      builder: (sheetCtx) => AppSheetSurface(child: StatefulBuilder(
         builder: (ctx, setSheetState) => SizedBox(
           height: MediaQuery.sizeOf(ctx).height * 0.65,
           child: SafeArea(
@@ -1446,7 +1434,7 @@ class _CanvasScreenState extends State<CanvasScreen>
             ),
           ),
         ),
-      ),
+      )),
     );
   }
 

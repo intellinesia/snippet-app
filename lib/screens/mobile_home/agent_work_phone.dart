@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../api.dart';
+import '../../mobile_kit.dart';
 import '../../models.dart';
 import '../../quiet.dart';
-import '../../tap_detector.dart';
 import '../../theme.dart';
-import '../../widgets.dart';
 import '../tasks/task_common.dart' show openTaskDetail;
-import 'agents_home.dart';
-
-// Cards and segments sit 16 in from the screen edge on the board.
-const double _inset = 16;
 
 /// Kind label for an inbox entry: Assignment, Question or Result.
 String inboxKind(InboxEntry e) {
@@ -78,148 +73,91 @@ class _AgentWorkPageState extends State<AgentWorkPage> {
     final body = (e.title?.isNotEmpty == true ? e.title! : e.text)
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
-    return Semantics(
-      button: true,
-      label: '${inboxKind(e)}, ${_ago(e.createdAt)}, $body${waiting ? ', Needs you' : ''}',
-      excludeSemantics: true,
-      child: TapDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: e.taskId == null || e.taskId!.isEmpty
-            ? null
-            : () => openTaskDetail(context, widget.client, e.taskId!),
-        child: Container(
-          key: ValueKey('inbox-${e.id}'),
-          constraints: const BoxConstraints(minHeight: 64),
-          padding: const EdgeInsets.fromLTRB(21, 10, _inset, 10),
-          decoration: BoxDecoration(
-              border: Border(
-                  bottom: BorderSide(color: AppColors.border, width: 1))),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: AppIcon(
-                  switch (inboxKind(e)) {
-                    'Question' => 'help-circle',
-                    'Assignment' => 'inbox',
-                    'Result' => 'check-circle',
-                    _ => 'message',
-                  },
-                  size: 20,
-                  color: AppColors.fg2),
-            ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Text(inboxKind(e),
-                      style: sans(11, weight: FontWeight.w500, color: AppColors.fg3)),
-                  if (waiting) ...[
-                    const SizedBox(width: 8),
-                    const QuietHand(size: 16),
-                    const SizedBox(width: 4),
-                    Text('Needs you',
-                        style: sans(11, weight: FontWeight.w500, color: quietAmber)),
-                  ],
-                  const Spacer(),
-                  Text(_ago(e.createdAt), style: sans(11, color: AppColors.fg3)),
-                ]),
-                const SizedBox(height: 2),
-                Text(body,
-                    maxLines: bigText(context) ? 3 : 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(14, color: AppColors.fg1)),
-              ]),
-            ),
-          ]),
-        ),
-      ),
+    return MkGroupRow(
+      key: ValueKey('inbox-${e.id}'),
+      icon: switch (inboxKind(e)) {
+        'Question' => 'help-circle',
+        'Assignment' => 'inbox',
+        'Result' => 'check-circle',
+        _ => 'message',
+      },
+      label: body,
+      subtitle:
+          '${inboxKind(e)} \u00b7 ${_ago(e.createdAt)}${waiting ? ' \u00b7 Needs you' : ''}',
+      chevron: false,
+      trailing: waiting ? const QuietHand(size: 18) : null,
+      onTap: e.taskId == null || e.taskId!.isEmpty
+          ? null
+          : () => openTaskDetail(context, widget.client, e.taskId!),
     );
   }
 
   List<Widget> _inboxBody() {
     final l = _inbox;
-    if (l == null) return [const _Note('Loading')];
-    if (l.isEmpty) return [const _Note('Nothing in the inbox')];
-    return [for (final e in l) _inboxRow(e, l)];
+    if (l == null) return [const MkEmpty('Loading')];
+    if (l.isEmpty) return [const MkEmpty('Nothing in the inbox')];
+    return [
+      MkGroup(children: [for (final e in l) _inboxRow(e, l)])
+    ];
   }
 
   List<Widget> _boardBody() {
     final l = _tasks;
-    if (l == null) return [const _Note('Loading')];
+    if (l == null) return [const MkEmpty('Loading')];
     final cols = <(String, bool Function(TaskItem))>[
       ('Todo', (t) => t.status == TaskStatus.todo),
-      ('Doing', (t) =>
-          t.status == TaskStatus.inProgress ||
-          t.status == TaskStatus.inReview ||
-          t.status == TaskStatus.blocked),
+      (
+        'Doing',
+        (t) =>
+            t.status == TaskStatus.inProgress ||
+            t.status == TaskStatus.inReview ||
+            t.status == TaskStatus.blocked
+      ),
       ('Done', (t) => t.status == TaskStatus.done),
     ];
     final out = <Widget>[];
     for (final (label, test) in cols) {
-      final items = [for (final t in l) if (test(t)) t];
-      out.add(HomeLabel('$label  ${items.length}', top: 16));
-      for (final t in items) {
-        out.add(Padding(
-          padding: const EdgeInsets.fromLTRB(_inset, 0, _inset, 8),
-          child: Semantics(
-            button: true,
-            label: '${t.title}, ${widget.agentName}',
-            excludeSemantics: true,
-            child: TapDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => openTaskDetail(context, widget.client, t.id),
-              child: Container(
-                key: const ValueKey('board-card'),
-                constraints: const BoxConstraints(minHeight: 48),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                alignment: Alignment.centerLeft,
-                decoration: BoxDecoration(
-                    color: AppColors.surface1,
-                    borderRadius: BorderRadius.circular(10)),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(t.title,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(14, color: AppColors.fg1)),
-                      Text(widget.agentName,
-                          style: sans(11, color: AppColors.fg3)),
-                    ]),
-              ),
-            ),
+      final items = [
+        for (final t in l)
+          if (test(t)) t
+      ];
+      if (items.isEmpty) continue;
+      out.add(MkGroup(header: '$label  ${items.length}', children: [
+        for (final t in items)
+          MkGroupRow(
+            key: const ValueKey('board-card'),
+            icon: 'list-checks',
+            label: t.title,
+            subtitle: widget.agentName,
+            chevron: false,
+            onTap: () => openTaskDetail(context, widget.client, t.id),
           ),
-        ));
-      }
+      ]));
     }
+    if (out.isEmpty) out.add(const MkEmpty('No tasks yet'));
     return out;
   }
 
   @override
   Widget build(BuildContext context) => Material(
         color: AppColors.bg,
-        child: SafeArea(
-          child: Column(children: [
-            PushedBar(title: widget.agentName, subtitle: 'Work and records'),
-            SpecTabs(
-                labels: const ['Inbox', 'Board'],
-                index: _tab,
-                onTap: (i) => setState(() => _tab = i)),
-            Expanded(
-                child: ListView(
-                    padding: const EdgeInsets.only(bottom: 24),
-                    children: _tab == 0 ? _inboxBody() : _boardBody())),
-          ]),
+        child: MkPage(
+          title: 'Work',
+          onBack: () => Navigator.of(context).pop(),
+          bottomClearance: false,
+          filters: MkFilterGroup<int>(
+            selected: _tab,
+            onSelect: (i) => setState(() => _tab = i),
+            options: const [MkFilter(0, 'Inbox'), MkFilter(1, 'Board')],
+          ),
+          slivers: [
+            SliverList(
+                delegate: SliverChildListDelegate([
+              const SizedBox(height: 8),
+              ..._tab == 0 ? _inboxBody() : _boardBody(),
+              const SizedBox(height: 24),
+            ])),
+          ],
         ),
       );
-}
-
-class _Note extends StatelessWidget {
-  const _Note(this.text);
-  final String text;
-  @override
-  Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.all(_inset * 2),
-      child: Center(child: Text(text, style: sans(14, color: AppColors.fg3))));
 }

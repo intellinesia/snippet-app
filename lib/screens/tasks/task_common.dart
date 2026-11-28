@@ -153,17 +153,23 @@ class TaskEmptyNote extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            EmptyArt(art, width: 76),
-            const SizedBox(height: 12),
+            EmptyArt(art, width: kMobile ? 96 : 76),
+            SizedBox(height: kMobile ? 16 : 12),
+            // Phones read at the kit's sizes: 16 title, 14 line.
             Text(title,
                 textAlign: TextAlign.center,
-                style: sans(12.5, weight: W.label, color: AppColors.fg3)),
+                style: kMobile
+                    ? sans(16, weight: W.label, color: AppColors.fg1)
+                    : sans(12.5, weight: W.label, color: AppColors.fg3)),
             if ((body ?? '').isNotEmpty) ...[
-              const SizedBox(height: 4),
+              SizedBox(height: kMobile ? 6 : 4),
               Text(body!,
                   textAlign: TextAlign.center,
-                  style: sans(12,
-                      color: Color.lerp(AppColors.fg4, AppColors.panelBg, 0.4))),
+                  style: kMobile
+                      ? sans(14, height: 20 / 14, color: AppColors.fg3)
+                      : sans(12,
+                          color: Color.lerp(
+                              AppColors.fg4, AppColors.panelBg, 0.4))),
             ],
           ]),
         ),

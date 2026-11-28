@@ -11,6 +11,7 @@ import '../media_views.dart' show DaemonScope;
 import '../models.dart';
 import '../motion_routes.dart';
 import '../panel.dart';
+import '../mobile_kit/controls.dart' show MkPill;
 import '../platform.dart';
 import '../pull_refresh.dart';
 import '../shell_panel.dart';
@@ -1300,7 +1301,10 @@ class _Notice extends StatelessWidget {
             Text(text,
                 textAlign: TextAlign.center,
                 style: sans(_body, color: AppColors.fg3, height: 1.45)),
-            if (action != null)
+            if (action != null && kMobile) ...[
+              const SizedBox(height: 12),
+              MkPill(action!, onTap: onAction),
+            ] else if (action != null)
               TextButton(
                 onPressed: onAction,
                 child:

@@ -12,6 +12,7 @@ import 'artifact_viewer.dart';
 import 'file_viewer.dart';
 import '../file_icons.dart';
 import '../tap_detector.dart';
+import '../mobile_kit.dart' show MkFilter, MkFilterGroup, kAndroidLook;
 
 class ArtifactGrid extends StatefulWidget {
   const ArtifactGrid({
@@ -144,7 +145,11 @@ class _ArtifactGridState extends State<ArtifactGrid> {
               ),
             ),
             if (_q.isNotEmpty)
-              IconBtn('x', size: 24, iconSize: 10, tooltip: 'Clear', onTap: _search.clear),
+              IconBtn('x',
+                  size: 24,
+                  iconSize: 10,
+                  tooltip: 'Clear',
+                  onTap: _search.clear),
           ]),
         ),
       );
@@ -237,40 +242,37 @@ class _ArtifactGridState extends State<ArtifactGrid> {
       if (widget.showHeader)
         Container(
           height: PaneRow.height,
-        padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
-        decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline))),
-        child: Row(children: [
-          AppIcon('layers', size: PaneRow.icon, color: AppColors.fg3),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text('Artifacts and files',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sans(PaneRow.label,
-                    weight: W.label, color: PaneRow.labelOn)),
-          ),
-        ]),
-      ),
+          padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
+          decoration: BoxDecoration(
+              border: Border(
+                  bottom: BorderSide(
+                      color: AppColors.paneLine, width: AppColors.hairline))),
+          child: Row(children: [
+            AppIcon('layers', size: PaneRow.icon, color: AppColors.fg3),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text('Artifacts and files',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(PaneRow.label,
+                      weight: W.label, color: PaneRow.labelOn)),
+            ),
+          ]),
+        ),
       _searchField(),
       Padding(
         padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
         child: SizedBox(
           height: PaneRow.pill,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              _chip('All'),
-              for (final g in ['Pages', 'Docs', 'Images', 'Tables', 'Code'])
-                if ((groups[g] ?? 0) > 0) ...[
-                  const SizedBox(width: 2),
-                  _chip(g)
-                ],
-              if (widget.files.isNotEmpty) ...[
-                const SizedBox(width: 2),
-                _chip('Files')
-              ],
-            ]),
+          child: ListView(scrollDirection: Axis.horizontal, children: [
+            _chip('All'),
+            for (final g in ['Pages', 'Docs', 'Images', 'Tables', 'Code'])
+              if ((groups[g] ?? 0) > 0) ...[const SizedBox(width: 2), _chip(g)],
+            if (widget.files.isNotEmpty) ...[
+              const SizedBox(width: 2),
+              _chip('Files')
+            ],
+          ]),
         ),
       ),
       Expanded(
@@ -311,8 +313,8 @@ class _ArtifactGridState extends State<ArtifactGrid> {
                   selected: false,
                   onTap: widget.onOpenFileTab == null
                       ? null
-                      : () => widget.onOpenFileTab!(
-                          f.path, f.path.split('/').last),
+                      : () =>
+                          widget.onOpenFileTab!(f.path, f.path.split('/').last),
                 ),
             ],
             if (arts.isEmpty && files.isEmpty)
@@ -464,72 +466,32 @@ class _ArtifactCollectionState extends State<ArtifactCollection> {
     }
   }
 
-  Widget _chip(String label, int n) {
-    final on = _filter == label;
-    return Padding(
-      padding: const EdgeInsets.only(right: 6),
-      child: Semantics(
-        button: true,
-        selected: on,
-        child: TapDetector(
-          key: ValueKey('artifact-chip-$label'),
-          behavior: HitTestBehavior.opaque,
-          onTap: () => setState(() => _filter = label),
-          child: Container(
-            height: 32,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: on ? AppColors.fg1 : AppColors.surface2,
-              borderRadius: BorderRadius.circular(kMobile ? 16 : R.of(6)),
-              border: Border.all(color: on ? AppColors.fg1 : AppColors.line),
-            ),
-            child: Text.rich(
-              TextSpan(children: [
-                TextSpan(text: label),
-                TextSpan(
-                  text: '  $n',
-                  style: sans(14,
-                      tabular: true,
-                      color: on
-                          ? AppColors.pageBg.withValues(alpha: 0.6)
-                          : AppColors.fg4),
-                ),
-              ]),
-              style: sans(14,
-                  height: 1.2, color: on ? AppColors.pageBg : AppColors.fg2),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _searchField(int arts, int files) {
     final hint = [
       'Search $arts artifact${arts == 1 ? '' : 's'}',
       if (files > 0) '$files file${files == 1 ? '' : 's'}',
     ].join(' and ');
+    final a = kAndroidLook;
     return Container(
-      height: 44,
+      height: a ? 48 : 40,
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.lineStrong),
+        color: AppColors.surface2,
+        borderRadius: BorderRadius.circular(a ? 28 : 12),
       ),
       child: Row(children: [
-        AppIcon('search', size: 18, color: AppColors.fg4),
+        AppIcon('search', size: a ? 18 : 16, color: AppColors.fg3),
         const SizedBox(width: 10),
         Expanded(
           child: TextField(
             key: const ValueKey('artifact-search'),
             controller: _search,
             cursorColor: AppColors.accent,
-            style: sans(16, color: AppColors.fg1),
+            style: sans(15, color: AppColors.fg1),
             textInputAction: TextInputAction.search,
             decoration: InputDecoration.collapsed(
               hintText: hint,
-              hintStyle: sans(16, color: AppColors.fg4),
+              hintStyle: sans(15, color: AppColors.fg3),
             ),
           ),
         ),
@@ -596,15 +558,17 @@ class _ArtifactCollectionState extends State<ArtifactCollection> {
     final children = <Widget>[
       _searchField(widget.artifacts.length, widget.files.length),
       const SizedBox(height: 12),
-      SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        clipBehavior: Clip.none,
-        child: Row(children: [
-          _chip('All', total),
+      MkFilterGroup<String>(
+        padding: EdgeInsets.zero,
+        selected: _filter,
+        onSelect: (v) => setState(() => _filter = v),
+        options: [
+          MkFilter('All', 'All', count: total),
           for (final g in ['Pages', 'Images', 'Docs', 'Tables'])
-            if ((counts[g] ?? 0) > 0) _chip(g, counts[g]!),
-          if (widget.files.isNotEmpty) _chip('Files', widget.files.length),
-        ]),
+            if ((counts[g] ?? 0) > 0) MkFilter(g, g, count: counts[g]!),
+          if (widget.files.isNotEmpty)
+            MkFilter('Files', 'Files', count: widget.files.length),
+        ],
       ),
       for (final d in ['Today', 'Yesterday', 'Earlier'])
         if (days[d] != null) ...[_label(d), _grid(days[d]!)],
@@ -695,7 +659,7 @@ class _ArtifactCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.surface2,
               borderRadius: BorderRadius.circular(kMobile ? 20 : R.card),
-              border: Border.all(color: AppColors.line),
+              border: kMobile ? null : Border.all(color: AppColors.line),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -737,11 +701,13 @@ class _ArtifactCard extends StatelessWidget {
                       color: AppColors.surface1,
                       borderRadius:
                           const BorderRadius.vertical(top: Radius.circular(12)),
-                      border: Border(
-                        top: BorderSide(color: AppColors.line),
-                        left: BorderSide(color: AppColors.line),
-                        right: BorderSide(color: AppColors.line),
-                      ),
+                      border: kMobile
+                          ? null
+                          : Border(
+                              top: BorderSide(color: AppColors.line),
+                              left: BorderSide(color: AppColors.line),
+                              right: BorderSide(color: AppColors.line),
+                            ),
                     ),
                     child: preview,
                   ),

@@ -89,8 +89,8 @@ class ToolErrorPanel extends StatelessWidget {
                             sheetAnimationStyle: sheetMotion,
                             context: context,
                             isScrollControlled: true,
-                            backgroundColor: AppColors.surface1,
-                            builder: (_) => SafeArea(
+                            backgroundColor: Colors.transparent,
+                            builder: (_) => AppSheetSurface(child: SafeArea(
                               child: ConstrainedBox(
                                 constraints: BoxConstraints(
                                     maxHeight:
@@ -99,7 +99,7 @@ class ToolErrorPanel extends StatelessWidget {
                                     padding: const EdgeInsets.all(16),
                                     child: SelectableText(text, style: mono)),
                               ),
-                            ),
+                            )),
                           )),
                 const Spacer(),
                 AskButton('Copy error',
@@ -172,8 +172,8 @@ class ToolErrorPanel extends StatelessWidget {
                     sheetAnimationStyle: sheetMotion,
                     context: context,
                     isScrollControlled: true,
-                    backgroundColor: AppColors.surface1,
-                    builder: (_) => SafeArea(
+                    backgroundColor: Colors.transparent,
+                    builder: (_) => AppSheetSurface(child: SafeArea(
                       child: ConstrainedBox(
                         constraints: BoxConstraints(
                             maxHeight: MediaQuery.sizeOf(context).height * 0.6),
@@ -181,7 +181,7 @@ class ToolErrorPanel extends StatelessWidget {
                             padding: const EdgeInsets.all(16),
                             child: Text(text, style: mono)),
                       ),
-                    ),
+                    )),
                   ),
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(minHeight: 48),

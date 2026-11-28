@@ -6,6 +6,7 @@ import '../../phosphor_icons.dart';
 
 import '../../api.dart';
 import '../../markdown_preview.dart';
+import '../../mobile_kit/tokens.dart' show kAndroidLook;
 import '../../models.dart';
 import '../../panel.dart' show presentScreen;
 import '../../platform.dart';
@@ -182,17 +183,11 @@ class _TaskSheetState extends State<TaskSheet> {
     return Material(
       color: bg,
       clipBehavior: Clip.antiAlias,
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      // Page sheet: M3 28 corners on Android, 38 on iPhone; platform grabber.
+      borderRadius: BorderRadius.vertical(
+          top: Radius.circular(kAndroidLook ? 28 : 38)),
       child: Column(children: [
-        SizedBox(height: 10),
-        Container(
-          width: 40,
-          height: 5,
-          decoration: BoxDecoration(
-              color: AppColors.border2,
-              borderRadius: BorderRadius.circular(3)),
-        ),
-        SizedBox(height: 10),
+        const SheetGrabHandle(),
         Expanded(
           child: t == null
               ? _stub()

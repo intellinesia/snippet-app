@@ -232,6 +232,8 @@ void main() {
     await _phone(tester, GitScreen(client: _Daemon(), sessionId: 's1', onClose: () {}));
     expect(find.text('U'), findsOneWidget);
     expect(find.text('Commit 2'), findsOneWidget);
+    await tester.ensureVisible(find.text('Commit 2'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Commit 2'));
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Enter a commit message'), findsOneWidget);

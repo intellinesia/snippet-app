@@ -3,14 +3,10 @@ import 'package:flutter/material.dart';
 import '../../agent_character.dart';
 import '../../api.dart';
 import '../../chat/signal_row.dart' show prettyModel, prettyProfile;
+import '../../mobile_kit.dart';
 import '../../models.dart';
 import '../../tap_detector.dart';
 import '../../theme.dart';
-import '../../widgets.dart';
-import 'agents_home.dart';
-
-// Cards and segments sit 16 in from the screen edge on the board.
-const double _inset = 16;
 
 /// Create agent (HM-11). Name and Role are sent as the build prompt; the
 /// daemon's build call takes no profile or channel fields.
@@ -35,10 +31,14 @@ class _PhoneCreateAgentPageState extends State<PhoneCreateAgentPage> {
   void initState() {
     super.initState();
     CharacterRoster.load().then((r) {
-      if (mounted) setState(() => _characters = r.characters.keys.take(12).toList());
+      if (mounted) {
+        setState(() => _characters = r.characters.keys.take(12).toList());
+      }
     }).catchError((_) {});
     widget.client.getConfig().then((c) {
-      if (mounted) setState(() => _profiles = {for (final p in c.profiles) p.name: p});
+      if (mounted) {
+        setState(() => _profiles = {for (final p in c.profiles) p.name: p});
+      }
     }).catchError((_) {});
   }
 
@@ -81,47 +81,31 @@ class _PhoneCreateAgentPageState extends State<PhoneCreateAgentPage> {
   }
 
   Future<void> _pickProfile() async {
-    final pick = await showAppSheet<String>(
+    final pick = await showMkSheet<String>(
       context,
       title: 'Inference profile',
-      maxHeight: 560,
-      child: Builder(
-        builder: (ctx) => Column(mainAxisSize: MainAxisSize.min, children: [
-          for (final k in _profiles.keys)
-            MarkRow(
-              mark: AppIcon('sliders', size: 20, color: AppColors.fg2),
-              markSize: 20,
-              title: _profileLabel(k),
-              hairline: false,
-              minHeight: 48,
-              onTap: () => Navigator.of(ctx).pop(k),
-            ),
-        ]),
-      ),
+      builder: (ctx) => MkGroup(flush: true, children: [
+        for (final k in _profiles.keys)
+          MkGroupRow(
+            icon: 'sliders',
+            label: _profileLabel(k),
+            chevron: false,
+            onTap: () => Navigator.of(ctx).pop(k),
+          ),
+      ]),
     );
     if (pick != null && mounted) setState(() => _profile = pick);
   }
 
-  Widget _field(String label, Widget child) => Padding(
-        padding: const EdgeInsets.fromLTRB(_inset, 0, _inset, 12),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(label,
-                  style: sans(11, weight: FontWeight.w500, color: AppColors.fg3))),
-          child,
-        ]),
-      );
-
-  Widget _box({required Widget child, VoidCallback? onTap}) => TapDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
+  Widget _box({required Widget child}) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Container(
           constraints: const BoxConstraints(minHeight: 48),
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           alignment: Alignment.centerLeft,
           decoration: BoxDecoration(
-              color: AppColors.surface1, borderRadius: BorderRadius.circular(12)),
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(16)),
           child: child,
         ),
       );
@@ -142,30 +126,28 @@ class _PhoneCreateAgentPageState extends State<PhoneCreateAgentPage> {
     final pk = _profile;
     return Material(
       color: AppColors.bg,
-      child: SafeArea(
-        child: Column(children: [
-          const PushedBar(title: 'New agent'),
-          Expanded(
-            child: ListView(padding: const EdgeInsets.only(top: 16), children: [
-              _field('Name', _text(_name, 'Name')),
-              _field('Role', _text(_role, 'What it is for')),
-              _field(
-                  'Inference profile',
-                  _box(
-                    onTap: _profiles.isEmpty ? null : _pickProfile,
-                    child: Row(children: [
-                      Expanded(
-                          child: Text(
-                              pk == null ? 'Default' : _profileLabel(pk),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: sans(15, color: AppColors.fg1))),
-                      AppIcon('chevron-down', size: 20, color: AppColors.fg2),
-                    ]),
-                  )),
-              const HomeLabel('Appearance', top: 8),
+      child: MkPage(
+        title: 'New agent',
+        onBack: () => Navigator.of(context).pop(),
+        bottomClearance: false,
+        slivers: [
+          SliverList(
+            delegate: SliverChildListDelegate([
+              const MkSection('Name'),
+              _text(_name, 'Name'),
+              const MkSection('Role'),
+              _text(_role, 'What it is for'),
+              MkGroup(header: 'Model', children: [
+                MkGroupRow(
+                  icon: 'sliders',
+                  label: 'Inference profile',
+                  value: pk == null ? 'Default' : _profileLabel(pk),
+                  onTap: _profiles.isEmpty ? null : _pickProfile,
+                ),
+              ]),
+              const MkSection('Appearance'),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: _inset),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: LayoutBuilder(builder: (context, c) {
                   final cell = c.maxWidth / 6;
                   return Wrap(children: [
@@ -188,10 +170,12 @@ class _PhoneCreateAgentPageState extends State<PhoneCreateAgentPage> {
                                 decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     border: id == _character
-                                        ? Border.all(color: AppColors.fg2, width: 2)
+                                        ? Border.all(
+                                            color: AppColors.fg2, width: 2)
                                         : null),
                                 child: ClipOval(
-                                    child: AgentCharacter(id, size: 40, staggerKey: id)),
+                                    child: AgentCharacter(id,
+                                        size: 40, staggerKey: id)),
                               ),
                             ),
                           ),
@@ -200,48 +184,47 @@ class _PhoneCreateAgentPageState extends State<PhoneCreateAgentPage> {
                   ]);
                 }),
               ),
-              const SizedBox(height: 8),
-              SwitchRow('Wake on schedule', _wake, (v) => setState(() => _wake = v)),
-              SwitchRow('Reach me on phone', _reach, (v) => setState(() => _reach = v)),
+              MkGroup(header: 'Contact', children: [
+                MkGroupRow(
+                  icon: 'clock',
+                  label: 'Wake on schedule',
+                  chevron: false,
+                  trailing: MkToggle(
+                      value: _wake,
+                      label: 'Wake on schedule',
+                      onChanged: (v) => setState(() => _wake = v)),
+                ),
+                MkGroupRow(
+                  icon: 'phone',
+                  label: 'Reach me on phone',
+                  chevron: false,
+                  trailing: MkToggle(
+                      value: _reach,
+                      label: 'Reach me on phone',
+                      onChanged: (v) => setState(() => _reach = v)),
+                ),
+              ]),
               if (_error != null)
                 Padding(
-                  padding: const EdgeInsets.all(_inset),
+                  padding: const EdgeInsets.fromLTRB(28, 16, 28, 0),
                   child: Text(_error!, style: sans(13, color: AppColors.fg2)),
                 ),
-            ]),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(_inset, 8, _inset, 12),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
               if (!_valid)
                 Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Text('Add a name', style: sans(12, color: AppColors.fg3))),
-              Semantics(
-                button: true,
-                enabled: _valid,
-                label: 'Create',
-                excludeSemantics: true,
-                child: TapDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: _valid ? _create : null,
-                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(28, 16, 28, 0),
+                    child: Text('Add a name',
+                        style: sans(13, color: AppColors.fg3))),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                child: MkPill(_busy ? 'Creating' : 'Create',
                     key: const ValueKey('create-button'),
-                    constraints: const BoxConstraints(minHeight: 48),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                        color: _valid ? AppColors.fg1 : AppColors.surface3,
-                        borderRadius: BorderRadius.circular(24)),
-                    child: Text(_busy ? 'Creating' : 'Create',
-                        style: sans(14,
-                            weight: FontWeight.w500,
-                            color: _valid ? AppColors.bg : AppColors.fg4)),
-                  ),
-                ),
+                    expand: true,
+                    tone: MkPillTone.primary,
+                    onTap: _valid ? _create : null),
               ),
             ]),
           ),
-        ]),
+        ],
       ),
     );
   }

@@ -9,6 +9,7 @@ import 'phosphor_icons.dart';
 import 'chat/message_focus_overlay.dart';
 import 'media_views.dart';
 import 'mochi.dart';
+import 'mobile_kit/tokens.dart' show kAndroidLook;
 import 'models.dart';
 import 'platform.dart';
 import 'tap_detector.dart' show HitArea, TapDetector;
@@ -208,7 +209,9 @@ class QuotedReplyLine extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 2),
                     child: Text(
-                      deleted ? 'Original message deleted' : 'Replying to $author',
+                      deleted
+                          ? 'Original message deleted'
+                          : 'Replying to $author',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(12,
@@ -294,45 +297,56 @@ class PendingReplyBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!kMobile) return _desk();
+    final target = kAndroidLook ? 48.0 : 44.0;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Container(
-        height: 40,
-        padding: const EdgeInsets.only(left: 12, right: 10),
+        constraints: const BoxConstraints(minHeight: 52),
+        padding: const EdgeInsets.fromLTRB(14, 6, 2, 6),
         decoration: BoxDecoration(
           color: AppColors.surface2,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(18),
         ),
         child: Row(children: [
-          Expanded(
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Flexible(
-                flex: 0,
-                child: Text('Replying to $author',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(12,
-                        height: 17 / 12,
-                        weight: FontWeight.w500,
-                        color: AppColors.fg2)),
-              ),
-              Flexible(
-                child: Text('  $text',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(13, height: 18 / 13, color: AppColors.fg1)),
-              ),
-            ]),
+          SizedBox.square(
+            dimension: 24,
+            child:
+                Center(child: AppIcon('reply', size: 18, color: AppColors.fg3)),
           ),
-          Tooltip(
-            message: 'Clear reply',
-            child: TapDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onClear,
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: Center(child: AppIcon('x', size: 14, color: AppColors.fg2)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Replying to $author',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13,
+                        height: 18 / 13,
+                        weight: W.label,
+                        color: AppColors.fg2)),
+                Text(text,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(14.5, height: 20 / 14.5, color: AppColors.fg1)),
+              ],
+            ),
+          ),
+          Semantics(
+            button: true,
+            label: 'Clear reply',
+            excludeSemantics: true,
+            child: Tooltip(
+              message: 'Clear reply',
+              child: TapDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onClear,
+                child: SizedBox.square(
+                  dimension: target,
+                  child: Center(
+                      child: AppIcon('x', size: 18, color: AppColors.fg2)),
+                ),
               ),
             ),
           ),

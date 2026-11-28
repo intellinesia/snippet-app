@@ -226,3 +226,97 @@ class MkStateMark extends StatelessWidget {
     };
   }
 }
+
+/// An inline notice on a page or above the composer: offline, disconnected,
+/// a cold session. A 20 icon in a 24 slot, a 15 line with an optional 13.5
+/// line under it, and one text action centred on the right with a 48 target.
+class MkNotice extends StatelessWidget {
+  const MkNotice({
+    super.key,
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.action,
+    this.onAction,
+    this.actionKey,
+    this.margin = const EdgeInsets.fromLTRB(16, 8, 16, 8),
+  });
+
+  final Key? actionKey;
+
+  final String icon;
+  final String title;
+  final String? subtitle;
+  final String? action;
+  final VoidCallback? onAction;
+  final EdgeInsetsGeometry margin;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasAction = action != null;
+    return Container(
+      margin: margin,
+      constraints: const BoxConstraints(minHeight: 56),
+      padding: hasAction
+          ? const EdgeInsets.fromLTRB(16, 4, 4, 4)
+          : const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      decoration: BoxDecoration(
+        color: AppColors.surface2,
+        borderRadius: BorderRadius.circular(MK.groupRadius),
+      ),
+      child: Row(children: [
+        SizedBox.square(
+          dimension: 24,
+          child: Center(child: AppIcon(icon, size: 20, color: AppColors.fg2)),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: sans(15, height: 20 / 15, color: AppColors.fg1)),
+              if (subtitle != null && subtitle!.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(subtitle!,
+                    style: sans(13.5, height: 18 / 13.5, color: AppColors.fg3)),
+              ],
+            ],
+          ),
+        ),
+        if (hasAction)
+          Semantics(
+            button: true,
+            enabled: onAction != null,
+            excludeSemantics: true,
+            label: action,
+            child: TapDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onAction,
+              child: ConstrainedBox(
+                key: actionKey,
+                constraints: BoxConstraints(
+                    minWidth: 48, minHeight: kAndroidLook ? 48 : 44),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Center(
+                    widthFactor: 1,
+                    heightFactor: 1,
+                    child: Text(action!,
+                        maxLines: 1,
+                        softWrap: false,
+                        style: sans(15,
+                            weight: W.label,
+                            color: onAction == null
+                                ? AppColors.fg3
+                                : AppColors.fg1)),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ]),
+    );
+  }
+}

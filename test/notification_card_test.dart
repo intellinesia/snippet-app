@@ -99,11 +99,11 @@ void main() {
         expect(t.getRect(card).left, 16);
         expect(t.getRect(card).width, size.width - 32);
         expect(t.getSize(card).height,
-            scale <= 1.01 ? 153 : greaterThanOrEqualTo(153.0));
+            scale <= 1.01 ? 165 : greaterThanOrEqualTo(165.0));
         expect(find.text('Open'), findsNothing);
         for (final l in ['Approve', 'Deny']) {
           final s = t.getSize(_btn(l));
-          expect(s.height, 36, reason: l);
+          expect(s.height, 40, reason: l);
         }
         expect(find.text('Needs you'), findsOneWidget);
         expect(
@@ -116,7 +116,7 @@ void main() {
 
         await _pump(t, size, scale, _message);
         expect(t.getSize(card).height,
-            scale <= 1.01 ? 152 : greaterThanOrEqualTo(152.0));
+            scale <= 1.01 ? 164 : greaterThanOrEqualTo(164.0));
         expect(find.text('Approve'), findsNothing);
         expect(find.text('Open'), findsNothing);
         expect(find.text('Reply'), findsOneWidget);
@@ -126,11 +126,11 @@ void main() {
 
         await _pump(t, size, scale, _decision);
         expect(t.getSize(card).height,
-            scale <= 1.01 ? 153 : greaterThanOrEqualTo(153.0));
+            scale <= 1.01 ? 165 : greaterThanOrEqualTo(165.0));
         expect(find.text('Approve'), findsNothing);
         expect(find.text('Open'), findsNothing);
         for (final l in ['main', 'release']) {
-          expect(t.getSize(_btn(l)).height, 36);
+          expect(t.getSize(_btn(l)).height, 40);
         }
         expect(t.takeException(), isNull);
       });

@@ -2856,7 +2856,10 @@ class ProviderLogo extends StatelessWidget {
 /// Short git status letter and token colour for a file-browser / tree entry.
 ({String letter, Color color})? fsGitStatusMeta(String? status) =>
     switch (status) {
-      'modified' => (letter: 'M', color: AppColors.run),
+      'modified' => (
+          letter: 'M',
+          color: kMobile ? AppColors.fg2 : AppColors.run
+        ),
       'added' => (letter: 'A', color: AppColors.ok),
       'untracked' => (letter: 'U', color: AppColors.fg4),
       'deleted' => (letter: 'D', color: AppColors.danger),

@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
 import 'app_popover.dart';
 import 'dialog_widgets.dart' show trackMenuTrigger;
+import 'mobile_kit/tokens.dart' show kAndroidLook;
 import 'platform.dart';
 import 'theme.dart';
 import 'widgets.dart';
@@ -24,6 +26,9 @@ PopupMenuItem<T> appMenuItem<T>({
   bool selected = false,
   bool enabled = true,
   double height = 30,
+
+  /// Phone sheet only: an avatar or other 28 mark in place of the icon.
+  Widget? leading,
 }) {
   if (kMobile) {
     return PopupMenuItem<T>(
@@ -33,6 +38,7 @@ PopupMenuItem<T> appMenuItem<T>({
       padding: EdgeInsets.zero,
       child: _SheetRowBody(
           icon: icon ?? _verbIcon(label),
+          leading: leading,
           label: label,
           trailing: detail,
           danger: danger,
@@ -189,12 +195,18 @@ class _SheetRowBody extends StatelessWidget {
       hint: detail,
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 56),
-        // Icon at x26, label at x64, trailing text at viewport minus 20.
+        // Icon at x26, label at x64, trailing text at viewport minus 20. A
+        // row with no mark starts its label at x24, with no empty slot.
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(26, 8, 20, 8),
+          padding: EdgeInsets.fromLTRB(lead == null ? 24 : 26, 8, 20, 8),
           child: Row(children: [
-            SizedBox(width: 20, child: lead),
-            const SizedBox(width: 18),
+            if (leading != null) ...[
+              SizedBox(width: 28, child: Center(child: leading)),
+              const SizedBox(width: 10),
+            ] else if (lead != null) ...[
+              SizedBox(width: 20, child: lead),
+              const SizedBox(width: 18),
+            ],
             Expanded(
               child: Text(label,
                   maxLines: 2,
@@ -233,6 +245,28 @@ class _SheetRowBody extends StatelessWidget {
   }
 }
 
+/// The kit sheet header: 22 start-aligned on Android, 17 centred on iPhone.
+class _SheetTitle extends StatelessWidget {
+  const _SheetTitle(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final a = kAndroidLook;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(24, a ? 4 : 2, 24, a ? 12 : 10),
+      child: Semantics(
+        header: true,
+        child: Text(text,
+            textAlign: a ? TextAlign.start : TextAlign.center,
+            style: a
+                ? sans(22, weight: W.label, color: AppColors.fg1)
+                : sans(17, weight: FontWeight.w600, color: AppColors.fg1)),
+      ),
+    );
+  }
+}
+
 /// The 36x4 grab handle every phone sheet carries.
 class SheetGrabHandle extends StatelessWidget {
   const SheetGrabHandle({super.key, this.compact = false});
@@ -241,21 +275,46 @@ class SheetGrabHandle extends StatelessWidget {
   final bool compact;
 
   @override
-  Widget build(BuildContext context) => Padding(
+  Widget build(BuildContext context) {
+    // Phones: the platform grabber, as in the kit sheet (M3 32x4, iOS 36x5).
+    if (kMobile) {
+      final a = kAndroidLook;
+      return Padding(
         padding: compact
-            ? EdgeInsets.only(top: S.s4)
-            : EdgeInsets.only(top: S.s8, bottom: S.s8),
+            ? EdgeInsets.only(top: a ? 10 : 6)
+            : EdgeInsets.only(top: a ? 14 : 6, bottom: a ? 16 : 10),
         child: Center(
           child: Container(
-            width: 36,
-            height: 4,
+            width: a ? 32 : 36,
+            height: a ? 4 : 5,
             decoration: BoxDecoration(
-                color: AppColors.surface3,
-                borderRadius: BorderRadius.circular(2)),
+                color: a ? AppColors.fg4 : Colors.white.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(3)),
           ),
         ),
       );
+    }
+    return Padding(
+      padding: compact
+          ? EdgeInsets.only(top: S.s4)
+          : EdgeInsets.only(top: S.s8, bottom: S.s8),
+      child: Center(
+        child: Container(
+          width: 36,
+          height: 4,
+          decoration: BoxDecoration(
+              color: AppColors.surface3,
+              borderRadius: BorderRadius.circular(2)),
+        ),
+      ),
+    );
+  }
 }
+
+/// Sheet fill on phones: between the first and second surface, as in the kit.
+Color get kitSheetFill => kAndroidLook
+    ? Color.lerp(AppColors.surface1, AppColors.surface2, 0.5)!
+    : AppColors.surface1;
 
 /// The one phone sheet surface: [R.sheetTop] top corners, raised fill, grab
 /// handle. [child] gets the remaining height.
@@ -278,6 +337,7 @@ class AppSheetSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (kMobile) return _phone(context);
     final fill = color ?? AppColors.raised;
     final body = DecoratedBox(
       decoration: BoxDecoration(
@@ -294,6 +354,51 @@ class AppSheetSurface extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
       child: body,
+    );
+  }
+
+  /// The kit sheet: on Android a Material 3 bottom sheet (28 top corners,
+  /// container fill); on iPhone a floating glass card inset 8 with 38
+  /// corners, or a full-width page sheet when it fills the height.
+  Widget _phone(BuildContext context) {
+    final a = kAndroidLook;
+    Widget column(Widget c) => Column(
+            mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (handle) const SheetGrabHandle(),
+              expand ? Expanded(child: c) : Flexible(child: c)
+            ]);
+    final fill = color ?? kitSheetFill;
+    if (a || expand) {
+      return ClipRRect(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(a ? 28 : 38)),
+        child: ColoredBox(color: fill, child: column(child)),
+      );
+    }
+    final mq = MediaQuery.of(context);
+    final bottom = mq.viewInsets.bottom > 0 ? 8.0 : mq.padding.bottom + 8;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(8, 0, 8, bottom),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(38),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+          child: ColoredBox(
+            color: color ?? const Color(0xB830302D),
+            // The card already clears the home indicator.
+            child: MediaQuery.removePadding(
+              context: context,
+              removeBottom: true,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: column(child),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -338,6 +443,9 @@ Future<T?> showAppMenu<T>(
 
   /// Overrides the outlined default, for menus drawn as a bare stepped surface.
   ShapeBorder? shape,
+
+  /// Phone sheet only: a header naming the choice ("Owner", "Priority").
+  String? title,
 }) {
   if (kMobile) {
     return showModalBottomSheet<T>(
@@ -360,7 +468,10 @@ Future<T?> showAppMenu<T>(
                 child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: _appMenuSheetEntries(sheet, items)),
+                    children: [
+                      if (title != null) _SheetTitle(title),
+                      ..._appMenuSheetEntries(sheet, items),
+                    ]),
               ),
             ),
           ),
@@ -430,9 +541,12 @@ List<Widget> _appMenuSheetEntries<T>(
   final out = <Widget>[];
   var prevRow = false;
   var first = true;
-  Widget hairline() => Container(
+  // Hairlines start under the label: x64 after a mark, x24 without one.
+  bool marked(Widget? c) =>
+      c is! _SheetRowBody || c.leading != null || c.icon != null;
+  Widget hairline([Widget? next]) => Container(
       height: 1,
-      margin: const EdgeInsets.only(left: 64, right: 16),
+      margin: EdgeInsets.only(left: marked(next) ? 64 : 24, right: 16),
       color: AppColors.line);
   for (var i = 0; i < items.length; i++) {
     final entry = items[i];
@@ -448,7 +562,7 @@ List<Widget> _appMenuSheetEntries<T>(
     if (!entry.enabled) {
       final child = entry.child;
       if (child is _SheetRowBody) {
-        if (prevRow) out.add(hairline());
+        if (prevRow) out.add(hairline(child));
         out.add(child);
         prevRow = true;
         continue;
@@ -460,7 +574,7 @@ List<Widget> _appMenuSheetEntries<T>(
       prevRow = false;
       continue;
     }
-    if (prevRow) out.add(hairline());
+    if (prevRow) out.add(hairline(entry.child));
     out.add(InkWell(
       autofocus: first,
       onTap: () => Navigator.pop(sheet, entry.value),

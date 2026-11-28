@@ -5,12 +5,12 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../file_icons.dart';
 import '../desktop_pick.dart';
+import '../mobile_kit.dart';
 import '../models.dart';
 import '../panel.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import '../settings_form.dart';
 import 'git.dart';
 import 'file_viewer.dart';
 import '../tap_detector.dart';
@@ -323,251 +323,549 @@ class _FileExplorerState extends State<FileExplorer> {
                   _up(listing);
                 }
               },
-              child: Column(children: [
-                if (!kMobile &&
-                    !(ShellPanelRoot.inPanel(context) &&
-                        segs.isEmpty &&
-                        !_selecting))
-                  Container(
-                    height: 52,
-                    padding: EdgeInsets.symmetric(horizontal: S.of(10)),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface1,
-                      border:
-                          Border(bottom: BorderSide(color: AppColors.border)),
-                    ),
-                    child: Row(children: [
-                      IconBtn('chevron-left',
-                          size: 30,
-                          iconSize: 18,
-                          tooltip: _selecting ? 'Exit select' : 'Back',
-                          onTap: _selecting
+              child: kMobile
+                  ? _phonePage(listing)
+                  : Column(children: [
+                      if (!kMobile &&
+                          !(ShellPanelRoot.inPanel(context) &&
+                              segs.isEmpty &&
+                              !_selecting))
+                        Container(
+                          height: 52,
+                          padding: EdgeInsets.symmetric(horizontal: S.of(10)),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface1,
+                            border: Border(
+                                bottom: BorderSide(color: AppColors.border)),
+                          ),
+                          child: Row(children: [
+                            IconBtn('chevron-left',
+                                size: 30,
+                                iconSize: 18,
+                                tooltip: _selecting ? 'Exit select' : 'Back',
+                                onTap: _selecting
+                                    ? _exitSelect
+                                    : (listing?.parent != null &&
+                                            listing?.path != _root
+                                        ? () => _up(listing!)
+                                        : (widget.onClose ??
+                                            () => Navigator.pop(context)))),
+                            SizedBox(width: S.s4),
+                            Expanded(
+                              child: segs.isEmpty
+                                  ? Text(widget.title,
+                                      style: sans(13,
+                                          weight: W.label,
+                                          color: AppColors.fg1))
+                                  : SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      child: Row(children: [
+                                        TapDetector(
+                                          onTap: listing?.parent == null
+                                              ? null
+                                              : () => _go('/', forward: false),
+                                          child: AppIcon('folder',
+                                              size: 14, color: AppColors.fg3),
+                                        ),
+                                        SizedBox(width: S.s4),
+                                        for (var i = 0;
+                                            i < segs.length;
+                                            i++) ...[
+                                          if (i > 0)
+                                            Padding(
+                                              padding: EdgeInsets.symmetric(
+                                                  horizontal: S.of(3)),
+                                              child: AppIcon('chevron-right',
+                                                  size: 11,
+                                                  color: AppColors.fg4),
+                                            ),
+                                          TapDetector(
+                                            onTap: i == segs.length - 1
+                                                ? null
+                                                : () => _go(
+                                                    '/${segs.sublist(0, i + 1).join('/')}',
+                                                    forward: false),
+                                            child: Text(segs[i],
+                                                style: mono(12,
+                                                    color: i == segs.length - 1
+                                                        ? AppColors.fg1
+                                                        : AppColors.fg3)),
+                                          ),
+                                        ],
+                                      ]),
+                                    ),
+                            ),
+                            SizedBox(width: S.s8),
+                            if (_selecting) ...[
+                              Text('${_selected.length} selected',
+                                  style: sans(12,
+                                      tabular: true, color: AppColors.accent)),
+                              SizedBox(width: S.s8),
+                              IconBtn('trash',
+                                  size: 28,
+                                  iconSize: 14,
+                                  tooltip: 'Delete',
+                                  onTap: (_busy != null ||
+                                          listing == null ||
+                                          _selected.isEmpty)
+                                      ? null
+                                      : () => _deleteSelected(listing.path)),
+                              IconBtn('x',
+                                  size: 28,
+                                  iconSize: 14,
+                                  tooltip: 'Cancel',
+                                  onTap: _exitSelect),
+                            ] else ...[
+                              if (!_selecting &&
+                                  listing != null &&
+                                  widget.onNewChat != null)
+                                InkWell(
+                                  onTap: () => widget.onNewChat!(listing.path),
+                                  borderRadius: BorderRadius.circular(R.xs),
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: S.of(9), vertical: S.s4),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.accentBg,
+                                      borderRadius: BorderRadius.circular(R.xs),
+                                      border: Border.all(
+                                          color: AppColors.accentLine),
+                                    ),
+                                    child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          AppIcon('plus',
+                                              size: 11,
+                                              color: AppColors.accent),
+                                          SizedBox(width: S.s4),
+                                          Text('New chat here',
+                                              style: sans(11,
+                                                  weight: W.label,
+                                                  color: AppColors.accent)),
+                                        ]),
+                                  ),
+                                ),
+                              if (listing != null) ...[
+                                SizedBox(width: S.s4),
+                                IconBtn('git-branch',
+                                    size: 28,
+                                    iconSize: 14,
+                                    tooltip: 'Git',
+                                    onTap: () => _openGit(listing.path)),
+                                IconBtn('upload',
+                                    size: 28,
+                                    iconSize: 14,
+                                    tooltip: 'Upload files',
+                                    onTap: _busy != null
+                                        ? null
+                                        : () => _upload(listing.path)),
+                                IconBtn('folder-plus',
+                                    size: 28,
+                                    iconSize: 14,
+                                    tooltip: 'New folder',
+                                    onTap: _busy != null
+                                        ? null
+                                        : () => _newFolder(listing.path)),
+                              ],
+                            ],
+                          ]),
+                        )
+                      else ...[
+                        SnAppBar(
+                          title: _selecting
+                              ? '${_selected.length} selected'
+                              : _folderTitle(listing),
+                          // No subtitle. The folder path was printed TWICE — here and
+                          // again in the row below the divider — so the same long
+                          // string appeared twice within ~40dp and the header read as
+                          // broken. The path describes the LIST, so it belongs in that
+                          // row (with the item count); this bar names the screen.
+                          titleSize: kMobile ? M.sectionTitle : 15,
+                          compact: true,
+                          keepBack: true,
+                          onBack: _selecting
                               ? _exitSelect
                               : (listing?.parent != null &&
                                       listing?.path != _root
                                   ? () => _up(listing!)
                                   : (widget.onClose ??
-                                      () => Navigator.pop(context)))),
-                      SizedBox(width: S.s4),
-                      Expanded(
-                        child: segs.isEmpty
-                            ? Text(widget.title,
-                                style: sans(13,
-                                    weight: W.label, color: AppColors.fg1))
-                            : SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: Row(children: [
-                                  TapDetector(
-                                    onTap: listing?.parent == null
-                                        ? null
-                                        : () => _go('/', forward: false),
-                                    child: AppIcon('folder',
-                                        size: 14, color: AppColors.fg3),
-                                  ),
-                                  SizedBox(width: S.s4),
-                                  for (var i = 0; i < segs.length; i++) ...[
-                                    if (i > 0)
-                                      Padding(
-                                        padding: EdgeInsets.symmetric(
-                                            horizontal: S.of(3)),
-                                        child: AppIcon('chevron-right',
-                                            size: 11, color: AppColors.fg4),
-                                      ),
-                                    TapDetector(
-                                      onTap: i == segs.length - 1
+                                      () => Navigator.pop(context))),
+                          actions: _selecting
+                              ? [
+                                  IconBtn('trash',
+                                      tooltip: 'Delete',
+                                      onTap: (_busy != null ||
+                                              listing == null ||
+                                              _selected.isEmpty)
                                           ? null
-                                          : () => _go(
-                                              '/${segs.sublist(0, i + 1).join('/')}',
-                                              forward: false),
-                                      child: Text(segs[i],
-                                          style: mono(12,
-                                              color: i == segs.length - 1
-                                                  ? AppColors.fg1
-                                                  : AppColors.fg3)),
-                                    ),
-                                  ],
-                                ]),
-                              ),
-                      ),
-                      SizedBox(width: S.s8),
-                      if (_selecting) ...[
-                        Text('${_selected.length} selected',
-                            style: sans(12,
-                                tabular: true, color: AppColors.accent)),
-                        SizedBox(width: S.s8),
-                        IconBtn('trash',
-                            size: 28,
-                            iconSize: 14,
-                            tooltip: 'Delete',
-                            onTap: (_busy != null ||
-                                    listing == null ||
-                                    _selected.isEmpty)
-                                ? null
-                                : () => _deleteSelected(listing.path)),
-                        IconBtn('x',
-                            size: 28,
-                            iconSize: 14,
-                            tooltip: 'Cancel',
-                            onTap: _exitSelect),
-                      ] else ...[
-                        if (!_selecting &&
-                            listing != null &&
-                            widget.onNewChat != null)
-                          InkWell(
-                            onTap: () => widget.onNewChat!(listing.path),
-                            borderRadius: BorderRadius.circular(R.xs),
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: S.of(9), vertical: S.s4),
-                              decoration: BoxDecoration(
-                                color: AppColors.accentBg,
-                                borderRadius: BorderRadius.circular(R.xs),
-                                border: Border.all(color: AppColors.accentLine),
-                              ),
-                              child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    AppIcon('plus',
-                                        size: 11, color: AppColors.accent),
-                                    SizedBox(width: S.s4),
-                                    Text('New chat here',
-                                        style: sans(11,
-                                            weight: W.label,
-                                            color: AppColors.accent)),
-                                  ]),
-                            ),
-                          ),
-                        if (listing != null) ...[
-                          SizedBox(width: S.s4),
-                          IconBtn('git-branch',
-                              size: 28,
-                              iconSize: 14,
-                              tooltip: 'Git',
-                              onTap: () => _openGit(listing.path)),
-                          IconBtn('upload',
-                              size: 28,
-                              iconSize: 14,
-                              tooltip: 'Upload files',
-                              onTap: _busy != null
-                                  ? null
-                                  : () => _upload(listing.path)),
-                          IconBtn('folder-plus',
-                              size: 28,
-                              iconSize: 14,
-                              tooltip: 'New folder',
-                              onTap: _busy != null
-                                  ? null
-                                  : () => _newFolder(listing.path)),
-                        ],
+                                          : () =>
+                                              _deleteSelected(listing.path)),
+                                  IconBtn('x',
+                                      tooltip: 'Cancel', onTap: _exitSelect),
+                                ]
+                              : [
+                                  if (listing != null && !kMobile)
+                                    IconBtn('search',
+                                        tooltip: 'Filter files',
+                                        active:
+                                            _searching || _filter.isNotEmpty,
+                                        onTap: () => setState(() {
+                                              _searching = !_searching;
+                                              if (!_searching) {
+                                                _filterCtl.clear();
+                                                _filter = '';
+                                              }
+                                            })),
+                                  if (listing != null &&
+                                      widget.onNewChat != null &&
+                                      !kMobile)
+                                    IconBtn('plus',
+                                        tooltip: 'New chat here',
+                                        onTap: () =>
+                                            widget.onNewChat!(listing.path)),
+                                  if (listing != null)
+                                    IconBtn(
+                                        kMobile
+                                            ? 'more-horizontal'
+                                            : 'more-vertical',
+                                        tooltip: 'Folder actions',
+                                        onTap: () =>
+                                            _showFolderActions(listing.path)),
+                                  if (widget.onClose != null &&
+                                      listing?.path != _root)
+                                    IconBtn('x',
+                                        tooltip: 'Close',
+                                        onTap: widget.onClose),
+                                ],
+                        ),
+                        if (!_selecting && listing != null && !kMobile)
+                          _mobileSwitcherContext(listing),
                       ],
-                    ]),
-                  )
-                else ...[
-                  SnAppBar(
-                    title: _selecting
-                        ? '${_selected.length} selected'
-                        : _folderTitle(listing),
-                    // No subtitle. The folder path was printed TWICE — here and
-                    // again in the row below the divider — so the same long
-                    // string appeared twice within ~40dp and the header read as
-                    // broken. The path describes the LIST, so it belongs in that
-                    // row (with the item count); this bar names the screen.
-                    titleSize: kMobile ? M.sectionTitle : 15,
-                    compact: true,
-                    keepBack: true,
-                    onBack: _selecting
-                        ? _exitSelect
-                        : (listing?.parent != null && listing?.path != _root
-                            ? () => _up(listing!)
-                            : (widget.onClose ?? () => Navigator.pop(context))),
-                    actions: _selecting
-                        ? [
-                            IconBtn('trash',
-                                tooltip: 'Delete',
-                                onTap: (_busy != null ||
-                                        listing == null ||
-                                        _selected.isEmpty)
-                                    ? null
-                                    : () => _deleteSelected(listing.path)),
-                            IconBtn('x', tooltip: 'Cancel', onTap: _exitSelect),
-                          ]
-                        : [
-                            if (listing != null && !kMobile)
-                              IconBtn('search',
-                                  tooltip: 'Filter files',
-                                  active: _searching || _filter.isNotEmpty,
-                                  onTap: () => setState(() {
-                                        _searching = !_searching;
-                                        if (!_searching) {
-                                          _filterCtl.clear();
-                                          _filter = '';
-                                        }
-                                      })),
-                            if (listing != null &&
-                                widget.onNewChat != null &&
-                                !kMobile)
-                              IconBtn('plus',
-                                  tooltip: 'New chat here',
-                                  onTap: () => widget.onNewChat!(listing.path)),
-                            if (listing != null)
-                              IconBtn(
-                                  kMobile ? 'more-horizontal' : 'more-vertical',
-                                  tooltip: 'Folder actions',
-                                  onTap: () =>
-                                      _showFolderActions(listing.path)),
-                            if (widget.onClose != null &&
-                                listing?.path != _root)
-                              IconBtn('x',
-                                  tooltip: 'Close', onTap: widget.onClose),
-                          ],
-                  ),
-                  if (!_selecting && listing != null && !kMobile)
-                    _mobileSwitcherContext(listing),
-                ],
-                if (_busy != null)
-                  Container(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: S.s16, vertical: S.s6),
-                    decoration: BoxDecoration(
-                        border: Border(
-                            bottom: BorderSide(color: AppColors.border))),
-                    child: Row(children: [
-                      Spinner(size: 14, color: AppColors.accent),
-                      SizedBox(width: S.of(10)),
+                      if (_busy != null)
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: S.s16, vertical: S.s6),
+                          decoration: BoxDecoration(
+                              border: Border(
+                                  bottom: BorderSide(color: AppColors.border))),
+                          child: Row(children: [
+                            Spinner(size: 14, color: AppColors.accent),
+                            SizedBox(width: S.of(10)),
+                            Expanded(
+                              child: Text(_busy!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: sans(12, color: AppColors.fg2)),
+                            ),
+                          ]),
+                        ),
+                      if (_dirLoading && listing != null)
+                        LinearProgressIndicator(
+                            minHeight: 2,
+                            backgroundColor: Colors.transparent,
+                            color: AppColors.accent)
+                      else
+                        SizedBox(height: S.s2),
                       Expanded(
-                        child: Text(_busy!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(12, color: AppColors.fg2)),
+                        child: listing == null && _dirError == null
+                            ? Center(child: DelayedSpinner(size: 22))
+                            : listing == null
+                                ? Center(
+                                    child: Padding(
+                                        padding: EdgeInsets.all(S.s24),
+                                        child: Text(_dirError ?? '',
+                                            textAlign: TextAlign.center,
+                                            style: TS.meta())))
+                                : _animatedList(listing),
                       ),
                     ]),
-                  ),
-                if (_dirLoading && listing != null)
-                  LinearProgressIndicator(
-                      minHeight: 2,
-                      backgroundColor: Colors.transparent,
-                      color: AppColors.accent)
-                else
-                  SizedBox(height: S.s2),
-                Expanded(
-                  child: listing == null && _dirError == null
-                      ? Center(child: DelayedSpinner(size: 22))
-                      : listing == null
-                          ? Center(
-                              child: Padding(
-                                  padding: EdgeInsets.all(S.s24),
-                                  child: Text(_dirError ?? '',
-                                      textAlign: TextAlign.center,
-                                      style: TS.meta())))
-                          : _animatedList(listing),
-                ),
-              ]),
             );
           },
         ),
       ),
     );
   }
+
+  // ---- Phone page (kit) ----
+
+  VoidCallback _phoneBack(FsListing? listing) => _selecting
+      ? _exitSelect
+      : (listing?.parent != null && listing?.path != _root
+          ? () => _up(listing!)
+          : (widget.onClose ?? () => Navigator.pop(context)));
+
+  Widget _phonePage(FsListing? listing) {
+    final slivers = <Widget>[];
+    if (listing == null) {
+      slivers.add(SliverFillRemaining(
+        hasScrollBody: false,
+        child: _dirError == null
+            ? Center(child: DelayedSpinner(size: 22))
+            : Center(
+                child: Padding(
+                    padding: EdgeInsets.all(S.s24),
+                    child: Text(_dirError ?? '',
+                        textAlign: TextAlign.center, style: TS.meta()))),
+      ));
+    } else {
+      slivers.addAll(_phoneSlivers(listing));
+    }
+    final page = MkPage(
+      key: ValueKey(listing?.path ?? ''),
+      title:
+          _selecting ? '${_selected.length} selected' : _folderTitle(listing),
+      onBack: _phoneBack(listing),
+      bottomClearance: false,
+      actions: _selecting
+          ? [
+              MkAction(
+                  'trash',
+                  'Delete',
+                  (_busy != null || listing == null || _selected.isEmpty)
+                      ? null
+                      : () => _deleteSelected(listing.path)),
+              MkAction('x', 'Cancel', _exitSelect),
+            ]
+          : [
+              if (listing != null)
+                MkAction('more-horizontal', 'Folder actions',
+                    () => _showFolderActions(listing.path)),
+              if (widget.onClose != null && listing?.path != _root)
+                MkAction('x', 'Close', widget.onClose),
+            ],
+      slivers: slivers,
+    );
+    final reduced = reduceMotion(context);
+    return Material(
+      color: AppColors.bg,
+      child: AnimatedSwitcher(
+        duration: Motion.base,
+        switchInCurve: Motion.enter,
+        switchOutCurve: Motion.exit,
+        layoutBuilder: (current, previous) => Stack(
+          fit: StackFit.expand,
+          children: [...previous, if (current != null) current],
+        ),
+        transitionBuilder: (child, anim) {
+          if (reduced) return FadeTransition(opacity: anim, child: child);
+          final incoming = child.key == ValueKey(listing?.path ?? '');
+          final dir = _forward ? 1.0 : -1.0;
+          final dx = incoming ? 0.15 * dir : -0.15 * dir;
+          return FadeTransition(
+            opacity: anim,
+            child: SlideTransition(
+              position:
+                  Tween(begin: Offset(dx, 0), end: Offset.zero).animate(anim),
+              child: child,
+            ),
+          );
+        },
+        child: page,
+      ),
+    );
+  }
+
+  List<Widget> _phoneSlivers(FsListing listing) {
+    final a = kAndroidLook;
+    final side = a ? 16.0 : MK.gutter;
+    final entries = _visibleEntries(listing);
+    final folders = [
+      for (final e in entries)
+        if (e.isDir) e
+    ];
+    final files = [
+      for (final e in entries)
+        if (!e.isDir) e
+    ];
+    Widget box(Widget w) => SliverToBoxAdapter(child: w);
+    return [
+      if (_busy != null)
+        box(Padding(
+          padding: EdgeInsets.fromLTRB(side, 8, side, 0),
+          child: Row(children: [
+            Spinner(size: 14, color: AppColors.fg2),
+            SizedBox(width: S.of(10)),
+            Expanded(
+              child: Text(_busy!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(13, color: AppColors.fg3)),
+            ),
+          ]),
+        )),
+      if (_dirLoading)
+        box(LinearProgressIndicator(
+            minHeight: 2,
+            backgroundColor: Colors.transparent,
+            color: AppColors.accent)),
+      if (!_selecting) ...[
+        box(_phoneCrumbs(listing)),
+        box(MkSearchField(
+          controller: _filterCtl,
+          hint: 'Filter this folder',
+          autofocus: false,
+          onChanged: (value) => setState(() => _filter = value),
+        )),
+        box(Padding(
+          padding: EdgeInsets.fromLTRB(side, 12, side, 0),
+          child: Row(children: [
+            if (widget.onNewChat != null) ...[
+              _phoneTile(
+                  'plus', 'New chat', () => widget.onNewChat!(listing.path)),
+              const SizedBox(width: 8),
+            ],
+            _phoneTile('git-branch', 'Git', () => _openGit(listing.path)),
+            const SizedBox(width: 8),
+            _phoneTile('upload', 'Upload',
+                _busy == null ? () => _upload(listing.path) : null),
+            const SizedBox(width: 8),
+            _phoneTile('folder-plus', 'New folder',
+                _busy == null ? () => _newFolder(listing.path) : null),
+          ]),
+        )),
+      ],
+      if (entries.isEmpty)
+        box(Padding(
+          padding: const EdgeInsets.only(top: 24),
+          child: EmptyState(
+            icon: _filter.isEmpty ? 'file-text' : 'search',
+            title: _filter.isEmpty ? 'This folder is empty' : 'No matches',
+            body: _filter.isEmpty
+                ? 'Files appear as agents write them.'
+                : 'No files match "$_filter".',
+            action: _filter.isEmpty && listing.parent != null
+                ? MkPill('Go up', onTap: () => _up(listing))
+                : null,
+          ),
+        )),
+      if (folders.isNotEmpty)
+        box(MkGroup(header: 'Folders', children: [
+          for (var i = 0; i < folders.length; i++)
+            _phoneEntry(folders[i], i == folders.length - 1),
+        ])),
+      if (files.isNotEmpty)
+        box(MkGroup(header: 'Files', children: [
+          for (var i = 0; i < files.length; i++)
+            _phoneEntry(files[i], i == files.length - 1),
+        ])),
+      box(const SizedBox(height: 32)),
+    ];
+  }
+
+  Widget _phoneCrumbs(FsListing listing) {
+    final segs = listing.path.split('/').where((p) => p.isNotEmpty).toList();
+    final home = segs.length >= 2 && segs[0] == 'home' ? 2 : 0;
+    final crumbs = <(String, String)>[
+      if (home == 2) ('~', '/${segs[0]}/${segs[1]}') else ('/', '/'),
+      for (var i = home; i < segs.length; i++)
+        (segs[i], '/${segs.sublist(0, i + 1).join('/')}'),
+    ];
+    return _Crumbs(
+      key: ValueKey(listing.path),
+      crumbs: crumbs,
+      onTap: (path) => _go(path, forward: false),
+    );
+  }
+
+  Widget _phoneTile(String icon, String label, VoidCallback? onTap) {
+    final radius = BorderRadius.circular(kAndroidLook ? 22 : 14);
+    return Expanded(
+      child: Opacity(
+        opacity: onTap == null ? 0.5 : 1,
+        child: Material(
+          color: AppColors.surface2,
+          borderRadius: radius,
+          child: InkWell(
+            borderRadius: radius,
+            onTap: onTap,
+            child: SizedBox(
+              height: 56,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  AppIcon(icon, size: 18, color: AppColors.fg2),
+                  const SizedBox(height: 4),
+                  Text(label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12, color: AppColors.fg1)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _phoneEntry(FsEntry e, bool last) {
+    final a = kAndroidLook;
+    final selected = _selected.contains(e.path);
+    final icon = e.isDir
+        ? AppIcon('folder', size: a ? 19 : 17, color: AppColors.fg2)
+        : FileGlyph(e.name, isDir: false, size: a ? 19 : 17);
+    final meta = [
+      if (!e.isDir && e.size != null) formatBytes(e.size),
+      if (!e.isDir && e.modified != null && e.modified! > 0)
+        relativeTime(e.modified!),
+    ].join(' · ');
+    final dot = e.name.lastIndexOf('.');
+    final stem = !e.isDir && dot > 0 ? e.name.substring(0, dot) : e.name;
+    final ext = !e.isDir && dot > 0 ? e.name.substring(dot) : '';
+    return PhoneListRow(
+      leading: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (_selecting) ...[
+          _selectMark(selected),
+          const SizedBox(width: 12),
+        ],
+        phoneRowIcon(icon),
+      ]),
+      title: Text.rich(
+        TextSpan(children: [
+          TextSpan(text: stem, style: mkRowTitle()),
+          if (ext.isNotEmpty)
+            TextSpan(text: ext, style: mkRowTitle(color: AppColors.fg3)),
+        ]),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      sub: meta.isEmpty ? null : meta,
+      selected: selected,
+      trailing: (e.gitStatus != null || e.git || (e.isDir && !a && !_selecting))
+          ? Row(mainAxisSize: MainAxisSize.min, children: [
+              if (e.gitStatus != null) FsGitStatusLabel(e.gitStatus),
+              if (e.git) ...[
+                const SizedBox(width: 8),
+                const Tag('git', tone: Tone.ok, icon: 'git-branch'),
+              ],
+              if (e.isDir && !a && !_selecting) ...[
+                const SizedBox(width: 6),
+                AppIcon('chevron-right', size: 16, color: AppColors.fg4),
+                const SizedBox(width: 12),
+              ] else
+                const SizedBox(width: 16),
+            ])
+          : null,
+      last: last,
+      onTap: _selecting
+          ? () => _toggle(e)
+          : (e.isDir ? () => _go(e.path) : () => _openFile(e)),
+      onLongPress: () => _selecting ? _toggle(e) : _enterSelect(e),
+    );
+  }
+
+  Widget _selectMark(bool on) => Container(
+        width: 22,
+        height: 22,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: on ? AppColors.fg1 : AppColors.surface3,
+        ),
+        child: on ? AppIcon('check', size: 14, color: MK.onPrimary) : null,
+      );
+
+  // ---- End phone page ----
 
   String _folderTitle(FsListing? listing) {
     final path = listing?.path ?? '';
@@ -604,8 +902,7 @@ class _FileExplorerState extends State<FileExplorer> {
       },
       child: KeyedSubtree(
         key: ValueKey(listing.path),
-        child:
-            kMobile && !_selecting ? _phoneList(listing) : _entryList(listing),
+        child: _entryList(listing),
       ),
     );
   }
@@ -651,184 +948,6 @@ class _FileExplorerState extends State<FileExplorer> {
                   : (e.isDir ? () => _go(e.path) : () => _openFile(e)),
               onLongPress: () => _selecting ? _toggle(e) : _enterSelect(e),
             )),
-      ],
-    );
-  }
-
-  Widget _phoneCrumbs(FsListing listing) {
-    final segs = listing.path.split('/').where((p) => p.isNotEmpty).toList();
-    final home = segs.length >= 2 && segs[0] == 'home' ? 2 : 0;
-    final crumbs = <(String, String)>[
-      if (home == 2) ('~', '/${segs[0]}/${segs[1]}') else ('/', '/'),
-      for (var i = home; i < segs.length; i++)
-        (segs[i], '/${segs.sublist(0, i + 1).join('/')}'),
-    ];
-    return SizedBox(
-      height: 28,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        reverse: true,
-        padding: EdgeInsets.symmetric(horizontal: S.of(2)),
-        child: Row(children: [
-          for (var i = 0; i < crumbs.length; i++) ...[
-            if (i > 0)
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: S.of(3)),
-                child: AppIcon('chevron-right', size: 11, color: AppColors.fg3),
-              ),
-            TapDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: i == crumbs.length - 1
-                  ? null
-                  : () => _go(crumbs[i].$2, forward: false),
-              child: Padding(
-                padding:
-                    EdgeInsets.symmetric(horizontal: S.of(2), vertical: S.s4),
-                child: Text(crumbs[i].$1,
-                    style: sans(13,
-                        weight: i == crumbs.length - 1 ? W.label : W.body,
-                        color: i == crumbs.length - 1
-                            ? AppColors.fg1
-                            : AppColors.fg3)),
-              ),
-            ),
-          ],
-        ]),
-      ),
-    );
-  }
-
-  Widget _phoneFilter() => Container(
-        height: M.minTarget,
-        padding: EdgeInsets.symmetric(horizontal: S.s12),
-        decoration: BoxDecoration(
-          color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(R.of(12)),
-          border: Border.all(color: AppColors.line),
-        ),
-        child: Row(children: [
-          AppIcon('search', size: 15, color: AppColors.fg3),
-          SizedBox(width: S.s8),
-          Expanded(
-            child: TextField(
-              controller: _filterCtl,
-              onChanged: (value) => setState(() => _filter = value),
-              style: sans(14, color: AppColors.fg1),
-              decoration: InputDecoration(
-                isCollapsed: true,
-                border: InputBorder.none,
-                hintText: 'Filter this folder',
-                hintStyle: sans(14, color: AppColors.fg4),
-              ),
-            ),
-          ),
-          if (_filter.isNotEmpty)
-            IconBtn('x', size: 32, iconSize: 14, tooltip: 'Clear filter',
-                onTap: () {
-              _filterCtl.clear();
-              setState(() => _filter = '');
-            }),
-        ]),
-      );
-
-  Widget _phoneTile(String icon, String label, VoidCallback? onTap,
-      {bool accent = false}) {
-    final radius = BorderRadius.circular(R.of(14));
-    return Expanded(
-      child: Material(
-        color: accent ? AppColors.accentBg : AppColors.surface1,
-        borderRadius: radius,
-        child: InkWell(
-          borderRadius: radius,
-          onTap: onTap,
-          child: SizedBox(
-            height: 56,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                AppIcon(icon,
-                    size: 17, color: accent ? AppColors.accent : AppColors.fg2),
-                SizedBox(height: S.s6),
-                Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(12,
-                        color: accent ? AppColors.accent : AppColors.fg2)),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _phoneEntry(FsEntry e) => _Row(
-        isDir: e.isDir,
-        icon: _entryIcon(e.name, e.isDir),
-        name: e.name,
-        git: e.git,
-        gitStatus: e.gitStatus,
-        size: e.size,
-        modified: e.modified,
-        chevron: e.isDir,
-        grouped: true,
-        onTap: e.isDir ? () => _go(e.path) : () => _openFile(e),
-        onLongPress: () => _enterSelect(e),
-      );
-
-  Widget _phoneList(FsListing listing) {
-    final entries = _visibleEntries(listing);
-    final folders = [
-      for (final e in entries)
-        if (e.isDir) e
-    ];
-    final files = [
-      for (final e in entries)
-        if (!e.isDir) e
-    ];
-    final gap = SizedBox(width: S.s8);
-    return ListView(
-      padding: EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, S.s24),
-      children: [
-        _phoneCrumbs(listing),
-        SizedBox(height: S.s6),
-        _phoneFilter(),
-        SizedBox(height: S.s12),
-        Row(children: [
-          if (widget.onNewChat != null) ...[
-            _phoneTile(
-                'plus', 'New chat', () => widget.onNewChat!(listing.path),
-                accent: true),
-            gap,
-          ],
-          _phoneTile('git-branch', 'Git', () => _openGit(listing.path)),
-          gap,
-          _phoneTile('upload', 'Upload',
-              _busy == null ? () => _upload(listing.path) : null),
-          gap,
-          _phoneTile('folder-plus', 'New folder',
-              _busy == null ? () => _newFolder(listing.path) : null),
-        ]),
-        SizedBox(height: S.s20),
-        if (entries.isEmpty)
-          EmptyState(
-            icon: _filter.isEmpty ? 'file-text' : 'search',
-            title: _filter.isEmpty ? 'This folder is empty' : 'No matches',
-            body: _filter.isEmpty
-                ? 'Files appear as agents write them.'
-                : 'No files match "$_filter".',
-            action: _filter.isEmpty && listing.parent != null
-                ? StateButton('Go up', onTap: () => _up(listing))
-                : null,
-          ),
-        if (folders.isNotEmpty)
-          SettingsGroup(
-              header: 'Folders',
-              children: [for (final e in folders) _phoneEntry(e)]),
-        if (files.isNotEmpty)
-          SettingsGroup(
-              header: 'Files',
-              children: [for (final e in files) _phoneEntry(e)]),
       ],
     );
   }
@@ -1003,7 +1122,7 @@ class _FileExplorerState extends State<FileExplorer> {
 
 class _Row extends StatelessWidget {
   final String icon, name;
-  final bool git, muted, chevron, selecting, selected, grouped;
+  final bool git, muted, chevron, selecting, selected;
   final bool? isDir;
   final int? size, modified;
   final String? gitStatus;
@@ -1020,7 +1139,6 @@ class _Row extends StatelessWidget {
     this.chevron = false,
     this.selecting = false,
     this.selected = false,
-    this.grouped = false,
     this.onTap,
     this.onLongPress,
   });
@@ -1071,9 +1189,7 @@ class _Row extends StatelessWidget {
               else
                 AppIcon(icon,
                     size: kMobile ? 19 : 16,
-                    color: isFolder && kMobile && !grouped
-                        ? AppColors.accent
-                        : iconColor),
+                    color: isFolder && kMobile ? AppColors.accent : iconColor),
               SizedBox(width: kMobile ? S.s12 : 10),
               Expanded(
                   child: kMobile && !isFolder && !muted
@@ -1082,9 +1198,7 @@ class _Row extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: sans(kMobile ? M.rowTitle : 13,
-                              weight: isFolder && kMobile && !grouped
-                                  ? W.label
-                                  : W.body,
+                              weight: isFolder && kMobile ? W.label : W.body,
                               color: muted ? AppColors.fg3 : AppColors.fg1))),
               if (gitStatus != null) ...[
                 SizedBox(width: S.s8),
@@ -1155,3 +1269,62 @@ class _Row extends StatelessWidget {
 
 /// Push the file viewer as a full-screen route.
 ///
+
+/// Breadcrumb under a phone title: mono, start-aligned, scrolled to the
+/// current folder.
+class _Crumbs extends StatefulWidget {
+  const _Crumbs({super.key, required this.crumbs, required this.onTap});
+  final List<(String, String)> crumbs;
+  final void Function(String path) onTap;
+  @override
+  State<_Crumbs> createState() => _CrumbsState();
+}
+
+class _CrumbsState extends State<_Crumbs> {
+  final _ctl = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_ctl.hasClients) _ctl.jumpTo(_ctl.position.maxScrollExtent);
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final a = kAndroidLook;
+    final last = widget.crumbs.length - 1;
+    return SizedBox(
+      height: 44,
+      child: SingleChildScrollView(
+        controller: _ctl,
+        scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.symmetric(horizontal: a ? 24 : 16),
+        child: Row(children: [
+          for (var i = 0; i <= last; i++) ...[
+            if (i > 0) Text('/', style: mono(13, color: AppColors.fg4)),
+            TapDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: i == last ? null : () => widget.onTap(widget.crumbs[i].$2),
+              child: Container(
+                height: 44,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(widget.crumbs[i].$1,
+                    style: mono(13,
+                        color: i == last ? AppColors.fg1 : AppColors.fg3)),
+              ),
+            ),
+          ],
+        ]),
+      ),
+    );
+  }
+}

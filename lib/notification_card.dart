@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'mobile_kit/tokens.dart' show MK;
 import 'mochi.dart';
 import 'notification_banner.dart';
 import 'notification_text.dart';
@@ -154,23 +155,23 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
       label: label,
       child: Material(
         color: fill,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(20),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(20),
           child: SizedBox(
             width: width,
-            height: 36,
+            height: 40,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                AppIcon(icon, size: 14, color: fg),
-                const SizedBox(width: 4),
+                AppIcon(icon, size: 16, color: fg),
+                const SizedBox(width: 6),
                 Flexible(
                   child: Text(label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(13,
+                      style: sans(14,
                           weight: FontWeight.w500, height: 1, color: fg)),
                 ),
               ]),
@@ -260,13 +261,6 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
     final choices = action == CardAction.answer
         ? answerChoices(attention)
         : const <(String, String)>[];
-    final height = switch (action) {
-      CardAction.none => 73.0,
-      CardAction.approval || CardAction.answer => 153.0,
-      CardAction.reply || CardAction.view => 152.0,
-    };
-    final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
-    final fixedHeight = textScale <= 1.01;
     final twoLineBody = action == CardAction.reply || action == CardAction.view;
 
     Widget statusOrActions() {
@@ -287,13 +281,10 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
                 overflow: TextOverflow.ellipsis,
                 style: sans(13, color: AppColors.fg1)),
           ),
-          SizedBox(
-            width: 73,
-            child: _phoneChip(
-              label: 'Retry',
-              icon: 'refresh',
-              onTap: () => setState(() => _state = _Send.idle),
-            ),
+          _phoneChip(
+            label: 'Retry',
+            icon: 'refresh',
+            onTap: () => setState(() => _state = _Send.idle),
           ),
         ]);
       }
@@ -301,24 +292,18 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
         CardAction.none => const SizedBox.shrink(),
         CardAction.view => Align(
             alignment: Alignment.centerLeft,
-            child: SizedBox(
-              width: 70,
-              child:
-                  _phoneChip(label: 'View', icon: 'eye', onTap: widget.onOpen),
-            ),
+            child:
+                _phoneChip(label: 'View', icon: 'eye', onTap: widget.onOpen),
           ),
         CardAction.reply => Align(
             alignment: Alignment.centerLeft,
-            child: SizedBox(
-              width: 70,
-              child: _phoneChip(
-                label: 'Reply',
-                icon: 'reply',
-                onTap: () {
-                  setState(() => _replyExpanded = true);
-                  _focus.requestFocus();
-                },
-              ),
+            child: _phoneChip(
+              label: 'Reply',
+              icon: 'reply',
+              onTap: () {
+                setState(() => _replyExpanded = true);
+                _focus.requestFocus();
+              },
             ),
           ),
         CardAction.approval => Row(children: [
@@ -363,49 +348,37 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
     return Semantics(
       container: true,
       label: '$name, ${needs ? 'needs you' : 'message'}, $body',
+      // A floating kit card: content-sized, a 32 face beside the name.
       child: Container(
         width: double.infinity,
-        height: fixedHeight && !(_replyExpanded && action == CardAction.reply)
-            ? height
-            : null,
-        constraints:
-            !fixedHeight || (_replyExpanded && action == CardAction.reply)
-                ? BoxConstraints(minHeight: height)
-                : null,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: AppColors.surface2,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(MK.groupRadius),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.28),
+                blurRadius: 24,
+                offset: const Offset(0, 8)),
+          ],
         ),
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SizedBox(
-            height: 20,
-            child: Row(children: [
-              Container(
-                width: 20,
-                height: 20,
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  color: AppColors.surface3,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: AgentMochi('${p['agent_id'] ?? 'snippet'}', size: 20),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(13,
-                        weight: FontWeight.w500, color: AppColors.fg1)),
-              ),
-              Text(notificationAgo(p['created_at']),
-                  style: sans(12, color: AppColors.fg2)),
-            ]),
-          ),
+          Row(children: [
+            AgentMochi('${p['agent_id'] ?? 'snippet'}', size: 32),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(15, weight: W.label, color: AppColors.fg1)),
+            ),
+            const SizedBox(width: 8),
+            Text(notificationAgo(p['created_at']),
+                style: sans(13, color: AppColors.fg3, tabular: true)),
+          ]),
           if (needs) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: 10),
             SizedBox(
               height: 18,
               child: Row(children: [
@@ -423,14 +396,14 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
             ),
             const SizedBox(height: 4),
           ] else
-            const SizedBox(height: 6),
+            const SizedBox(height: 10),
           Text(body,
               maxLines: twoLineBody ? 2 : 1,
               overflow: TextOverflow.ellipsis,
               style: sans(15, height: 21 / 15, color: AppColors.fg1)),
           if (action != CardAction.none || busy || failed) ...[
-            SizedBox(height: twoLineBody ? 10 : 8),
-            SizedBox(height: 36, child: statusOrActions()),
+            const SizedBox(height: 12),
+            SizedBox(height: 40, child: statusOrActions()),
           ],
           if (_replyExpanded && action == CardAction.reply && !busy) ...[
             const SizedBox(height: 8),

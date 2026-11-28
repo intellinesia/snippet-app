@@ -7,6 +7,7 @@ import '../motion_routes.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../settings_form.dart';
+import '../mobile_kit.dart' show MkPill, MkPillTone, kAndroidLook;
 import '../settings_table.dart';
 import '../settings_target.dart';
 import '../widgets.dart';
@@ -264,7 +265,8 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
             )
           else
             Padding(
-              padding: EdgeInsets.fromLTRB(widget.embedded ? S.of(18) : S.s4, S.s6, S.s24, S.s6),
+              padding: EdgeInsets.fromLTRB(
+                  widget.embedded ? S.of(18) : S.s4, S.s6, S.s24, S.s6),
               child: NavBackRow(
                 title: _editProfile == null ? 'Add profile' : 'Edit profile',
                 onBack: _closeEditor,
@@ -299,34 +301,54 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
               body:
                   'Add an API key or a local model provider to start sessions.',
               action: kMobile
-                  ? null
+                  ? MkPill('Add profile',
+                      icon: 'plus',
+                      tone: MkPillTone.primary,
+                      onTap: () => _edit(null))
                   : Btn('Add profile',
                       icon: 'plus', small: true, onTap: () => _edit(null)),
             )
           else if (kMobile) ...[
             ListGroup(children: [
+              SettingsRow(
+                key: const Key('profiles-add'),
+                label: 'Add profile',
+                sub: 'An API key, a subscription or a local model',
+                icon: 'plus',
+                onTap: () => _edit(null),
+              ),
+            ]),
+            SizedBox(height: Grouped.sectionGap),
+            ListGroup(children: [
               for (final p in profiles)
-                _mark(p, SettingsRow(
-                  label: p.name,
-                  sub: '${p.provider} · ${p.model}',
-                  leading: Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      color: AppColors.surface2,
-                      borderRadius: BorderRadius.circular(R.md),
-                    ),
-                    child: Center(child: ProviderLogo(p.provider, size: 17)),
-                  ),
-                  onTap: () => _edit(p),
-                  chevron: true,
-                  trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                    if (!p.usable) const WarnChip(),
-                    if (p.active)
-                      Text('Active',
-                          style: sans(14, color: AppColors.fg3)),
-                  ]),
-                )),
+                _mark(
+                    p,
+                    SettingsRow(
+                      label: p.name,
+                      sub: '${p.provider} · ${p.model}',
+                      leading: Container(
+                        width: Grouped.well,
+                        height: Grouped.well,
+                        decoration: BoxDecoration(
+                          color: AppColors.surface3,
+                          shape: kAndroidLook
+                              ? BoxShape.circle
+                              : BoxShape.rectangle,
+                          borderRadius:
+                              kAndroidLook ? null : BorderRadius.circular(9),
+                        ),
+                        child: Center(
+                            child: ProviderLogo(p.provider,
+                                size: kAndroidLook ? 19 : 17)),
+                      ),
+                      onTap: () => _edit(p),
+                      chevron: true,
+                      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                        if (!p.usable) const WarnChip(),
+                        if (p.active)
+                          Text('Active', style: sans(14, color: AppColors.fg3)),
+                      ]),
+                    )),
             ]),
             Padding(
               padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
@@ -352,19 +374,22 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
                   'New chats use the active profile. Lanes and background work follow Routing.',
               children: [
                 for (final p in profiles)
-                  _mark(p, SettingsRow(
-                    label: p.name,
-                    sub: '${p.provider} · ${p.model}',
-                    leading: ProviderLogo(p.provider, size: 16),
-                    onTap: () => _edit(p),
-                    chevron: true,
-                    trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                      if (!p.usable) const WarnChip(),
-                      if (p.active)
-                        Text('Active',
-                            style: sans(12, color: AppColors.fg3)),
-                    ]),
-                  )),
+                  _mark(
+                      p,
+                      SettingsRow(
+                        label: p.name,
+                        sub: '${p.provider} · ${p.model}',
+                        leading: ProviderLogo(p.provider, size: 16),
+                        onTap: () => _edit(p),
+                        chevron: true,
+                        trailing:
+                            Row(mainAxisSize: MainAxisSize.min, children: [
+                          if (!p.usable) const WarnChip(),
+                          if (p.active)
+                            Text('Active',
+                                style: sans(12, color: AppColors.fg3)),
+                        ]),
+                      )),
               ],
             ),
             SettingsGroup(children: [
@@ -403,12 +428,9 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
               ],
             )
           else
-            NavBackRow(
-                title: 'Profiles',
-                onBack: widget.onBack!,
-                trailing: [
-                  HeaderAction('Add profile', onTap: () => _edit(null)),
-                ]),
+            NavBackRow(title: 'Profiles', onBack: widget.onBack!, trailing: [
+              HeaderAction('Add profile', onTap: () => _edit(null)),
+            ]),
           Expanded(child: scoped),
         ],
       );
@@ -435,8 +457,8 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
       future: _future,
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting && !snap.hasData) {
-          const loading =
-              SettingsGroup(children: [SettingsRow(label: 'Loading profiles…')]);
+          const loading = SettingsGroup(
+              children: [SettingsRow(label: 'Loading profiles…')]);
           if (widget.chromeless) {
             return const SettingsChromelessPage(children: [loading]);
           }

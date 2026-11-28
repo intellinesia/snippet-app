@@ -24,6 +24,7 @@ import '../widgets.dart';
 import 'artifact_grid.dart';
 import 'file_viewer.dart';
 import 'mobile_chrome.dart';
+import '../mobile_kit.dart' show MkIconButton, kAndroidLook;
 import '../tap_detector.dart';
 
 const _textExts = {
@@ -130,17 +131,18 @@ Future<void> showArtifactSheet(
     isScrollControlled: true,
     useSafeArea: true,
     enableDrag: false,
-    backgroundColor: AppColors.bg,
+    backgroundColor: Colors.transparent,
     sheetAnimationStyle: sheetMotion,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
-    ),
-    clipBehavior: Clip.antiAlias,
     builder: (sheet) {
       void close() => Navigator.of(sheet).pop();
       return FractionallySizedBox(
         heightFactor: 0.94,
-        child: _HeaderDragSheet(onClose: close, child: builder(close)),
+        child: AppSheetSurface(
+          expand: true,
+          handle: false,
+          color: AppColors.bg,
+          child: _HeaderDragSheet(onClose: close, child: builder(close)),
+        ),
       );
     },
   );
@@ -1233,46 +1235,48 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
       if (a != null) _artifactKindLabel(a.kind),
       if (v != null) 'v${v.n}',
     ].join(' \u00b7 ');
-    return ToastAvoid(child: Container(
-      color: AppColors.bg,
-      padding: EdgeInsets.fromLTRB(S.s8, S.s6, S.s8, S.s4),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Container(
-          width: 36,
-          height: 4,
-          margin: EdgeInsets.only(bottom: S.s6),
-          decoration: BoxDecoration(
-            color: AppColors.border2,
-            borderRadius: BorderRadius.circular(R.pill),
-          ),
-        ),
-        Row(children: [
-          RoundBtn(
-              icon: 'x',
-              size: kTapTarget,
-              iconSize: 20,
-              tooltip: 'Close',
-              onTap: widget.onClose),
-          Expanded(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Text(a?.title ?? 'Artifact',
-                  maxLines: 1,
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(15, weight: W.label, color: AppColors.fg1)),
-              if (sub.isNotEmpty)
-                Text(sub, maxLines: 1, style: sans(12, color: AppColors.fg2)),
+    return ToastAvoid(
+      child: Container(
+          color: AppColors.bg,
+          padding: EdgeInsets.fromLTRB(S.s8, S.s6, S.s8, S.s4),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+              width: 36,
+              height: 4,
+              margin: EdgeInsets.only(bottom: S.s6),
+              decoration: BoxDecoration(
+                color: AppColors.border2,
+                borderRadius: BorderRadius.circular(R.pill),
+              ),
+            ),
+            Row(children: [
+              RoundBtn(
+                  icon: 'x',
+                  size: kTapTarget,
+                  iconSize: 20,
+                  tooltip: 'Close',
+                  onTap: widget.onClose),
+              Expanded(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Text(a?.title ?? 'Artifact',
+                      maxLines: 1,
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(15, weight: W.label, color: AppColors.fg1)),
+                  if (sub.isNotEmpty)
+                    Text(sub,
+                        maxLines: 1, style: sans(12, color: AppColors.fg2)),
+                ]),
+              ),
+              Builder(
+                builder: (anchor) => IconBtn('more-horizontal',
+                    size: kTapTarget,
+                    iconSize: 19,
+                    tooltip: 'More',
+                    onTap: () => _more(anchor)),
+              ),
             ]),
-          ),
-          Builder(
-            builder: (anchor) => IconBtn('more-horizontal',
-                size: kTapTarget,
-                iconSize: 19,
-                tooltip: 'More',
-                onTap: () => _more(anchor)),
-          ),
-        ]),
-      ])),
+          ])),
     );
   }
 
@@ -1284,7 +1288,9 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
       height: PaneRow.height,
       padding: const EdgeInsets.fromLTRB(10, 0, 8, 0),
       decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline))),
+          border: Border(
+              bottom: BorderSide(
+                  color: AppColors.paneLine, width: AppColors.hairline))),
       child: Row(children: [
         Expanded(
           // A canvas pane is narrow: below this only the title stays.
@@ -1809,7 +1815,9 @@ class _SessionDeliverablesState extends State<SessionDeliverables> {
       Container(
         width: listWidth,
         decoration: BoxDecoration(
-            border: Border(right: BorderSide(color: AppColors.paneLine, width: AppColors.hairline))),
+            border: Border(
+                right: BorderSide(
+                    color: AppColors.paneLine, width: AppColors.hairline))),
         child: ArtifactGrid(
           client: widget.client,
           session: widget.session,
@@ -1938,8 +1946,10 @@ class _SessionDeliverablesState extends State<SessionDeliverables> {
               height: PaneRow.height,
               padding: const EdgeInsets.fromLTRB(10, 0, 8, 0),
               decoration: BoxDecoration(
-                  border:
-                      Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline))),
+                  border: Border(
+                      bottom: BorderSide(
+                          color: AppColors.paneLine,
+                          width: AppColors.hairline))),
               child: Row(children: [
                 Expanded(
                   child: Text('Artifacts & files',
@@ -2009,32 +2019,48 @@ class _SheetHeader extends StatelessWidget {
   final VoidCallback? onDone;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+  Widget build(BuildContext context) {
+    final close = onDone == null
+        ? null
+        : MkIconButton(
+            key: const ValueKey('deliverables-done'),
+            icon: 'x',
+            label: 'Close',
+            bare: true,
+            onTap: onDone!);
+    if (kAndroidLook) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 8, 4),
         child: SizedBox(
-          height: 48,
+          height: 56,
           child: Row(children: [
-            SizedBox(
-              width: 48,
-              child: onDone == null
-                  ? null
-                  : RoundBtn(
-                      key: const ValueKey('deliverables-done'),
-                      icon: 'x',
-                      size: 48,
-                      iconSize: 20,
-                      tooltip: 'Close',
-                      onTap: onDone),
-            ),
             Expanded(
               child: Text('Artifacts and files',
-                  textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(15, weight: W.label, color: AppColors.fg1)),
+                  style: sans(22, weight: W.label, color: AppColors.fg1)),
             ),
-            const SizedBox(width: 48),
+            if (close != null) close,
           ]),
         ),
       );
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+      child: SizedBox(
+        height: 44,
+        child: Row(children: [
+          SizedBox(width: 48, child: close),
+          Expanded(
+            child: Text('Artifacts and files',
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(17, weight: W.title, color: AppColors.fg1)),
+          ),
+          const SizedBox(width: 48),
+        ]),
+      ),
+    );
+  }
 }

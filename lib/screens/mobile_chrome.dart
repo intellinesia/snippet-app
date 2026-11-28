@@ -397,19 +397,25 @@ class MobileBackBar extends StatelessWidget {
             (trailing.isNotEmpty && canPop
                 ? () => Navigator.maybePop(context)
                 : null);
+    // Android bars start-align their title like the kit page bar.
+    final start = kAndroidLook;
     final text = Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment:
+          start ? CrossAxisAlignment.start : CrossAxisAlignment.center,
       children: [
         Row(mainAxisSize: MainAxisSize.min, children: [
           Flexible(
             child: Text(title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: pill
-                    ? TS.ui(AppColors.fg1).copyWith(
-                        fontSize: 15, fontWeight: W.strong, height: 1.25)
-                    : sans(16, weight: W.strong, color: AppColors.fg1)),
+                style: start
+                    ? sans(pill ? 18 : 22,
+                        weight: W.label, height: 1.25, color: AppColors.fg1)
+                    : pill
+                        ? TS.ui(AppColors.fg1).copyWith(
+                            fontSize: 15, fontWeight: W.strong, height: 1.25)
+                        : sans(16, weight: W.strong, color: AppColors.fg1)),
           ),
           if (chevron) ...[
             SizedBox(width: S.s4),
@@ -453,12 +459,12 @@ class MobileBackBar extends StatelessWidget {
                 label: menu ? 'Menu' : 'Back',
                 bare: kAndroidLook,
                 onTap: back),
-          if (back == null && trailing.isNotEmpty)
+          if (back == null && trailing.isNotEmpty && !start)
             SizedBox(width: 48.0 * trailing.length),
           Expanded(
             child: pill
                 ? Align(
-                    alignment: Alignment.center,
+                    alignment: start ? Alignment.centerLeft : Alignment.center,
                     child: Semantics(
                       button: onTitleTap != null,
                       onTapHint: onTitleTapHint,
@@ -468,18 +474,21 @@ class MobileBackBar extends StatelessWidget {
                         child: Container(
                           constraints: const BoxConstraints(minHeight: 44),
                           padding: EdgeInsets.only(right: S.s8),
-                          alignment: Alignment.center,
+                          alignment:
+                              start ? Alignment.centerLeft : Alignment.center,
                           child: IntrinsicWidth(child: label),
                         ),
                       ),
                     ),
                   )
-                : Align(alignment: Alignment.center, child: label),
+                : Align(
+                    alignment: start ? Alignment.centerLeft : Alignment.center,
+                    child: label),
           ),
           if (trailing.isNotEmpty) ...[
             SizedBox(width: S.s4),
             ...trailing,
-          ] else if (back != null)
+          ] else if (back != null && !start)
             const SizedBox(width: 48),
         ]),
       ),

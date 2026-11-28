@@ -31,8 +31,11 @@ void main() {
         expect(box.top, 8);
         expect(box.height, greaterThanOrEqualTo(56));
         final target = t.getRect(find.byKey(const ValueKey('offline-retry')));
-        expect(target.size, const Size(48, 48));
-        expect(target.right, w - 4);
+        expect(target.height, greaterThanOrEqualTo(48));
+        expect(target.width, greaterThanOrEqualTo(48));
+        // Centred on the right, inside the card.
+        expect(target.right, w - 20);
+        expect(target.center.dy, closeTo(box.center.dy, 0.5));
         final glyph = t.getRect(find.byType(AppIcon).first);
         expect(glyph.size, const Size(20, 20));
       });

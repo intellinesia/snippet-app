@@ -276,9 +276,17 @@ class MkGroupRow extends StatelessWidget {
     this.valueMono = false,
     this.bareIcon = false,
     this.subtitle,
+    this.leading,
+    this.subtitleMono = false,
   });
   final String label;
   final String? icon;
+
+  /// Replaces the icon well (a thumbnail, a spinner).
+  final Widget? leading;
+
+  /// Commands and paths: one mono line.
+  final bool subtitleMono;
 
   /// A description line under the label.
   final String? subtitle;
@@ -300,27 +308,31 @@ class MkGroupRow extends StatelessWidget {
     final valueStyle = valueMono
         ? mono(12.5, color: AppColors.fg3)
         : sans(a ? 13.5 : 14.5, color: AppColors.fg3);
-    final iconBox = icon == null
-        ? null
-        : bareIcon
-            ? SizedBox(
-                width: 24,
-                child: AppIcon(icon!, size: 21, color: AppColors.fg2))
-            : Container(
-                width: a ? 40 : 30,
-                height: a ? 40 : 30,
-                decoration: BoxDecoration(
-                  color: AppColors.surface3,
-                  shape: a ? BoxShape.circle : BoxShape.rectangle,
-                  borderRadius: a ? null : BorderRadius.circular(9),
-                ),
-                child: Center(
-                    child: AppIcon(icon!,
-                        size: a ? 19 : 17, color: AppColors.fg2)),
-              );
+    final iconBox = leading ??
+        (icon == null
+            ? null
+            : bareIcon
+                ? SizedBox(
+                    width: 24,
+                    child: AppIcon(icon!, size: 21, color: AppColors.fg2))
+                : Container(
+                    width: a ? 40 : 30,
+                    height: a ? 40 : 30,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface3,
+                      shape: a ? BoxShape.circle : BoxShape.rectangle,
+                      borderRadius: a ? null : BorderRadius.circular(9),
+                    ),
+                    child: Center(
+                        child: AppIcon(icon!,
+                            size: a ? 19 : 17, color: AppColors.fg2)),
+                  ));
     final sub = subtitle == null || subtitle!.isEmpty ? null : subtitle!;
     final hasValue = value != null && value!.isNotEmpty;
-    final subStyle = sans(a ? 13.5 : 13, color: AppColors.fg3);
+    final subStyle = subtitleMono
+        ? mono(12.5, height: 1.45, color: AppColors.fg3)
+        : sans(a ? 13.5 : 13, color: AppColors.fg3);
+    final subLines = subtitleMono ? 1 : 2;
     final Widget content;
     if (a) {
       content = Row(children: [
@@ -335,7 +347,7 @@ class MkGroupRow extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
                   child: Text(sub,
-                      maxLines: 2,
+                      maxLines: subLines,
                       overflow: TextOverflow.ellipsis,
                       style: subStyle),
                 )
@@ -392,7 +404,7 @@ class MkGroupRow extends StatelessWidget {
                                 style: sans(15.5, color: ink)),
                             const SizedBox(height: 2),
                             Text(sub,
-                                maxLines: 2,
+                                maxLines: subLines,
                                 overflow: TextOverflow.ellipsis,
                                 style: subStyle),
                           ],
@@ -444,4 +456,19 @@ class MkGroupRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A quiet empty line where a list would be: centred, 15 in the third ink.
+class MkEmpty extends StatelessWidget {
+  const MkEmpty(this.text, {super.key});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
+        child: Center(
+            child: Text(text,
+                textAlign: TextAlign.center,
+                style: sans(15, height: 21 / 15, color: AppColors.fg3))),
+      );
 }

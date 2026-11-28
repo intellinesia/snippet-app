@@ -15,7 +15,8 @@ import '../screens/agent_appearance.dart' show showAgentAppearance;
 import '../screens/agent_reach_panel.dart' show showAgentReachSettings;
 import '../screens/agent_wake_panel.dart' show showAgentWakeSettings;
 import '../screens/group_messaging.dart' show confirmDeleteGroup;
-import '../screens/mobile_home/agents_home.dart' show PushedBar, HomeLabel, MarkRow, SwitchRow, agentFace, groupMark;
+import '../mobile_kit.dart';
+import '../screens/mobile_home/agents_home.dart' show agentFace, groupMark;
 import '../screens/group_panel.dart';
 import '../group_mute.dart';
 import '../screens/agent_profile_panel.dart' show showAgentProfileSettings;
@@ -39,7 +40,6 @@ import 'agent_panel_body.dart';
 import '../settings_form.dart'
     show Grouped, SettingsGroup, SettingsHero, SettingsRow, SettingsSwitch;
 import '../phosphor_icons.dart';
-import '../tap_detector.dart';
 
 /// Lets rows inside a docked [AgentInfoPanel] push a nested page instead of
 /// opening a popover or sheet. Absent everywhere else, so the same rows keep
@@ -424,9 +424,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
     }
   }
 
-  bool get _mc =>
-      widget.agentId == 'lead' ||
-      (widget.agent?.isLead ?? false);
+  bool get _mc => widget.agentId == 'lead' || (widget.agent?.isLead ?? false);
 
   // Opens on top of this page, so back returns here.
   void _go(VoidCallback open) => open();
@@ -1371,9 +1369,7 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
       final all = await widget.client.coordinationAgents();
       if (!mounted) return;
       setState(() {
-        _agents = all
-            .where((a) => !a.isLead && a.status != 'archived')
-            .toList()
+        _agents = all.where((a) => !a.isLead && a.status != 'archived').toList()
           ..sort((a, b) => a.displayName.compareTo(b.displayName));
         _byId = {for (final a in _agents) a.id: a};
       });
@@ -1558,7 +1554,20 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
   String _created() {
     final d = DateTime.tryParse(_group.createdAt)?.toLocal();
     if (d == null) return '';
-    const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const m = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
     return ' - created ${d.day} ${m[d.month - 1]}';
   }
 
@@ -1568,48 +1577,29 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
         body: 'You will stop seeing its messages. The agents stay.',
         confirmLabel: 'Leave group');
     if (!ok || !mounted) return;
-    final me = [for (final m in _group.members) if (m.isHuman) m.id];
+    final me = [
+      for (final m in _group.members)
+        if (m.isHuman) m.id
+    ];
     await _update(
         () => widget.client.updateGroup(_group.id, removeMembers: me));
     if (mounted) _close();
   }
 
-  /// Phone group info (HM-07): bar, 64 mark, member rows, add, mute, leave.
+  /// Phone group info (HM-07): mark, member rows, add, mute, leave.
   Widget _phoneGroupPage(String title) {
     final n = _group.members.length;
-    Widget action(String icon, String label, VoidCallback? onTap,
-            {Color? color, Widget? trailing}) =>
-        Semantics(
-          button: true,
-          label: label,
-          excludeSemantics: true,
-          child: TapDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onTap,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 48),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(children: [
-                  AppIcon(icon, size: 20, color: color ?? AppColors.fg1),
-                  const SizedBox(width: 14),
-                  Expanded(
-                      child: Text(label,
-                          style: sans(15, color: color ?? AppColors.fg1))),
-                  if (trailing != null) trailing,
-                ]),
-              ),
-            ),
-          ),
-        );
+    final members = _group.members;
     return Material(
       color: AppColors.bg,
-      child: SafeArea(
-        child: Column(children: [
-          PushedBar(title: 'Group info', onBack: _close),
-          Expanded(
-            child: ListView(padding: const EdgeInsets.only(bottom: 32), children: [
-              const SizedBox(height: 16),
+      child: MkPage(
+        title: 'Group info',
+        onBack: _close,
+        bottomClearance: false,
+        slivers: [
+          SliverList(
+            delegate: SliverChildListDelegate([
+              const SizedBox(height: 8),
               Center(child: groupMark(64, radius: 17.9)),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -1617,7 +1607,8 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
                     textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(20, weight: FontWeight.w500, color: AppColors.fg1)),
+                    style: sans(20,
+                        weight: FontWeight.w500, color: AppColors.fg1)),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
@@ -1625,39 +1616,69 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
                     textAlign: TextAlign.center,
                     style: sans(13, color: AppColors.fg3)),
               ),
-              const HomeLabel('Members', top: 24),
-              for (final m in _group.members)
-                MarkRow(
-                  mark: m.isAgent
-                      ? agentFace(m.id, 36)
-                      : Center(child: AppIcon('user', size: 20, color: AppColors.fg3)),
-                  title: _name(m.id, m.kind),
-                  sub: m.isHuman
-                      ? 'You'
-                      : (m.id == _group.lead ? 'Leads the group' : 'Agent'),
-                  trailing: Text(
-                      m.isHuman ? 'Owner' : (m.id == _group.lead ? 'Admin' : 'Member'),
-                      style: sans(12, color: AppColors.fg3)),
-                  onTap: _busy || m.isHuman
-                      ? null
-                      : () => _update(() => widget.client
-                          .updateGroup(_group.id, removeMembers: [m.id])),
-                ),
-              action('user-plus', 'Add member', _busy ? null : _pickAdd),
+              const MkSection('Members'),
+              MkList(children: [
+                for (var i = 0; i < members.length; i++)
+                  MkRow(
+                    leading: SizedBox(
+                      width: 36,
+                      height: 36,
+                      child: members[i].isAgent
+                          ? agentFace(members[i].id, 36)
+                          : Center(
+                              child: AppIcon('user',
+                                  size: 20, color: AppColors.fg3)),
+                    ),
+                    title: _name(members[i].id, members[i].kind),
+                    subtitle: members[i].isHuman
+                        ? 'You'
+                        : (members[i].id == _group.lead
+                            ? 'Leads the group'
+                            : 'Agent'),
+                    time: members[i].isHuman
+                        ? 'Owner'
+                        : (members[i].id == _group.lead ? 'Admin' : 'Member'),
+                    divider: i != members.length - 1,
+                    onTap: _busy || members[i].isHuman
+                        ? null
+                        : () => _update(() => widget.client.updateGroup(
+                            _group.id,
+                            removeMembers: [members[i].id])),
+                  ),
+              ]),
+              const SizedBox(height: 20),
               ValueListenableBuilder<Set<String>>(
                 valueListenable: mutedGroups,
                 builder: (_, muted, __) {
                   final on = muted.contains(_group.id);
-                  return SwitchRow('Mute notifications', on,
-                      (v) => setGroupMuted(_group.id, v),
-                      sub: on ? 'On' : 'Off');
+                  return MkGroup(children: [
+                    MkGroupRow(
+                        icon: 'user-plus',
+                        label: 'Add member',
+                        chevron: false,
+                        onTap: _busy ? null : _pickAdd),
+                    MkGroupRow(
+                        icon: on ? 'bell-off' : 'bell',
+                        label: 'Mute notifications',
+                        chevron: false,
+                        onTap: () => setGroupMuted(_group.id, !on),
+                        trailing: MkToggle(
+                            value: on,
+                            label: 'Mute notifications',
+                            onChanged: (v) => setGroupMuted(_group.id, v))),
+                    MkGroupRow(
+                        icon: 'log-out',
+                        label: 'Leave group',
+                        chevron: false,
+                        destructive: true,
+                        onTap: _busy ? null : _leave),
+                  ]);
                 },
               ),
-              action('log-out', 'Leave group', _busy ? null : _leave,
-                  color: AppColors.danger),
+              const SizedBox(height: 32),
             ]),
           ),
-        ]),
+        ],
       ),
     );
   }
@@ -1677,7 +1698,9 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
         height: PaneRow.height,
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: AppColors.paneLine, width: AppColors.hairline))),
+            border: Border(
+                bottom: BorderSide(
+                    color: AppColors.paneLine, width: AppColors.hairline))),
         child: Row(children: [
           Expanded(
             child: Align(
@@ -1687,10 +1710,7 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
           ),
           if (onHide != null)
             IconBtn('sidebar',
-                size: 28,
-                iconSize: 14,
-                tooltip: 'Hide panel',
-                onTap: onHide),
+                size: 28, iconSize: 14, tooltip: 'Hide panel', onTap: onHide),
         ]),
       );
 

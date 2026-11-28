@@ -311,7 +311,7 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
         body.add(const SizedBox(height: 14));
         body.add(AskPager(items: pager));
       } else if (f == HomeFilter.needs) {
-        body.add(const _Empty('Nothing needs you'));
+        body.add(const MkEmpty('Nothing needs you'));
       }
     }
     if (f == HomeFilter.all || f == HomeFilter.working) {
@@ -327,12 +327,12 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
               () => setState(() => _showAllWorking = true)));
         }
       } else if (f == HomeFilter.working) {
-        body.add(const _Empty('No agents are working'));
+        body.add(const MkEmpty('No agents are working'));
       }
     }
     if (f == HomeFilter.pinned) {
       if (pinned.isEmpty) {
-        body.add(const _Empty('Nothing is pinned'));
+        body.add(const MkEmpty('Nothing is pinned'));
       } else {
         body.add(HomeLabel('Pinned  ${pinned.length}'));
         body.add(
@@ -432,15 +432,4 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
           child: SizedBox(height: MK.bottomClearance(context) + 16)),
     ]));
   }
-}
-
-class _Empty extends StatelessWidget {
-  const _Empty(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(kGutter, 24, kGutter, 8),
-        child: Center(child: Text(text, style: sans(14, color: AppColors.fg3))),
-      );
 }

@@ -340,9 +340,8 @@ class ComposerVoicePill extends StatelessWidget {
               tabular: true,
               color: recording ? AppColors.fg1 : AppColors.fg3)),
     ]);
+    // The same pill the composer uses, so recording never changes the frame.
     return ComposerPillSurface(
-      fill: kMobile ? AppColors.surface1 : null,
-      radius: kMobile ? 24 : null,
       child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
         ComposerBareButton('x', label: 'Discard', onTap: onDiscard),
         if (!recording)

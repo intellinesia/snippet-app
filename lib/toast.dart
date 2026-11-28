@@ -183,6 +183,65 @@ class _ToastCardState extends State<_ToastCard>
     _gone(d);
   }
 
+  // Phone: the kit notice shape, floating. A 20 mark in a 24 slot, a 15
+  // line, and a text action with a full target instead of a nested pill.
+  Widget _phoneCard(bool hasAction) => Container(
+        key: Key('toastCard-${d.message}'),
+        constraints: const BoxConstraints(minHeight: 52),
+        padding: EdgeInsets.fromLTRB(16, 4, hasAction ? 4 : 16, 4),
+        decoration: BoxDecoration(
+          color: AppColors.surface3,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.28),
+                blurRadius: 24,
+                offset: const Offset(0, 8)),
+          ],
+        ),
+        child: Row(children: [
+          SizedBox.square(
+            dimension: 24,
+            child: Center(
+              child: AppIcon(d.danger ? 'alert-triangle' : 'check',
+                  size: 20, color: AppColors.fg1),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Text(d.message,
+                  maxLines: hasAction ? 1 : 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(15, height: 20 / 15, color: AppColors.fg1)
+                      .copyWith(decoration: TextDecoration.none)),
+            ),
+          ),
+          if (hasAction)
+            TapDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                d.onAction?.call();
+                _dismiss();
+              },
+              child: ConstrainedBox(
+                key: const Key('toastAction'),
+                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Center(
+                    widthFactor: 1,
+                    child: Text(d.actionLabel!,
+                        style: sans(15, weight: W.label, color: AppColors.fg1)
+                            .copyWith(decoration: TextDecoration.none)),
+                  ),
+                ),
+              ),
+            ),
+        ]),
+      );
+
   @override
   Widget build(BuildContext context) {
     Theme.of(context);
@@ -224,7 +283,9 @@ class _ToastCardState extends State<_ToastCard>
                     setState(() => _drag = 0);
                   }
                 },
-                child: Container(
+                child: kMobile
+                    ? _phoneCard(hasAction)
+                    : Container(
                   key: Key('toastCard-${d.message}'),
                   constraints: BoxConstraints(minHeight: d.danger ? 48 : 36),
                   padding: EdgeInsets.only(left: 16, right: hasAction ? 0 : 16),

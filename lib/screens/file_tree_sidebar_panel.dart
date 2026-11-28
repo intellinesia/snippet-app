@@ -932,7 +932,7 @@ Future<void> showFileSearchDialog(
         padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),
         child: ConstrainedBox(
           constraints: BoxConstraints(maxHeight: available * 0.85),
-          child: _fileSearchFrame(body()),
+          child: AppSheetSurface(child: body()),
         ),
       );
     },

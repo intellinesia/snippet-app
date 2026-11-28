@@ -5,6 +5,7 @@ import 'platform.dart';
 import 'theme.dart';
 import 'widgets.dart';
 import 'tap_detector.dart';
+import 'mobile_kit/tokens.dart' show MK, kAndroidLook;
 
 // ---------------------------------------------------------------------------
 // Grouped rows, design language v7 (option A).
@@ -23,18 +24,20 @@ abstract final class Grouped {
 
   /// One step smaller rows and type on the phone.
   static bool compact = true;
-  static double _ph(double full, double small) => compact ? small : full;
 
   // Geometry.
   static const double gutter = 12;
-  static double get rowMin => _phone ? _ph(64, 56) : 48;
-  static double get rowMinTwoLine => _phone ? _ph(76, 66) : 56;
+  static double get rowMin => _phone ? 56 : 48;
+  static double get rowMinTwoLine => _phone ? 64 : 56;
   static double get padX => _phone ? 16 : 14;
-  static double get padY => _phone ? _ph(10, 8) : 10;
-  static double get icon => _phone ? _ph(22, 20) : 16;
-  static double get iconGap => _phone ? _ph(14, 12) : 12;
+  static double get padY => _phone ? (kAndroidLook ? 12 : 10) : 10;
+  static double get icon => _phone ? (kAndroidLook ? 19 : 17) : 16;
+  static double get iconGap => _phone ? (kAndroidLook ? 14 : 12) : 12;
+
+  /// The kit's tonal icon well: a 40 circle on Android, a 30 tile on iPhone.
+  static double get well => kAndroidLook ? 40 : 30;
   static const double chevron = 16;
-  static double get radiusEnd => _phone ? _ph(20, 18) : 10;
+  static double get radiusEnd => _phone ? 20 : 10;
   static const double radiusInner = 4;
   static const double gap = 2;
   static double get sectionGap => _phone ? 28 : 28;
@@ -53,12 +56,12 @@ abstract final class Grouped {
   // Type: whole-pixel sizes with their line heights.
   static const double pageTitleSize = 17;
   static double get heroSize => _phone ? 24 : 20;
-  static double get titleSize => _phone ? _ph(17, 16) : 13;
-  static double get titleLine => _phone ? _ph(22, 21) : 18;
-  static double get subSize => _phone ? _ph(15, 14) : 12;
-  static double get subLine => _phone ? _ph(20, 19) : 16;
-  static double get valueSize => _phone ? _ph(15, 14) : 12;
-  static double get labelSize => _phone ? _ph(15, 14) : 12;
+  static double get titleSize => _phone ? 15.5 : 13;
+  static double get titleLine => _phone ? 21.5 : 18;
+  static double get subSize => _phone ? (kAndroidLook ? 13.5 : 13) : 12;
+  static double get subLine => _phone ? 19 : 16;
+  static double get valueSize => _phone ? (kAndroidLook ? 13.5 : 14.5) : 12;
+  static double get labelSize => _phone ? (kAndroidLook ? 14 : 13) : 12;
   static double get footSize => _phone ? 14 : 12;
   static double get footLine => _phone ? 20 : 16;
 
@@ -99,13 +102,18 @@ abstract final class Grouped {
   }
 
   static TextStyle titleStyle([Color? color]) => sans(titleSize,
-      height: titleLine / titleSize, color: color ?? AppColors.fg1);
+      weight: _phone && kAndroidLook ? W.label : null,
+      height: titleLine / titleSize,
+      color: color ?? AppColors.fg1);
   static TextStyle subStyle([Color? color]) =>
       sans(subSize, height: subLine / subSize, color: color ?? muted);
   static TextStyle valueStyle([Color? color]) =>
       sans(valueSize, color: color ?? muted);
   static TextStyle labelStyle() => _phone
-      ? sans(labelSize, height: 20 / labelSize, color: label)
+      ? sans(labelSize,
+          weight: kAndroidLook ? W.label : null,
+          height: 20 / labelSize,
+          color: kAndroidLook ? AppColors.fg2 : AppColors.fg3)
       : sans(13,
           weight: FontWeight.w500, height: 18 / 13, color: AppColors.fg1);
 
@@ -147,9 +155,15 @@ class SettingsIcon extends StatelessWidget {
         ),
       );
     }
-    return SizedBox(
-      width: size + 2,
-      height: size + 2,
+    final a = kAndroidLook;
+    return Container(
+      width: Grouped.well,
+      height: Grouped.well,
+      decoration: BoxDecoration(
+        color: AppColors.surface3,
+        shape: a ? BoxShape.circle : BoxShape.rectangle,
+        borderRadius: a ? null : BorderRadius.circular(9),
+      ),
       child: Center(
         child: data != null
             ? Icon(data, size: size, color: c)
@@ -167,7 +181,7 @@ class SettingsLeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final box = kMobile ? Grouped.icon + 2 : 20.0;
+    final box = kMobile ? Grouped.well : 20.0;
     return SizedBox(
       width: box,
       height: box,
@@ -188,8 +202,8 @@ class SettingsSectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         // Desktop captions sit on the card edge, in line with page text and tables.
-        padding: EdgeInsets.fromLTRB(kMobile ? Grouped.padX : 0, 0,
-            kMobile ? Grouped.padX : 0, Grouped.labelGap),
+        padding: EdgeInsets.fromLTRB(kMobile ? (kAndroidLook ? 12 : 16) : 0, 0,
+            kMobile ? (kAndroidLook ? 12 : 16) : 0, Grouped.labelGap),
         child: Semantics(
           header: true,
           child: Text(text, style: Grouped.labelStyle()),
@@ -263,7 +277,26 @@ class GroupedTiles extends StatelessWidget {
         ),
       );
     }
-    final radius = BorderRadius.circular(R.of(14));
+    if (kAndroidLook) {
+      return Material(
+        type: MaterialType.transparency,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < n; i++) ...[
+              if (i > 0) const SizedBox(height: 2),
+              ClipRRect(
+                borderRadius: Grouped.tileRadius(i, n),
+                child: Material(
+                    color: color ?? AppColors.surface1, child: children[i]),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+    final radius = BorderRadius.circular(MK.groupRadius);
     return Container(
       decoration: BoxDecoration(
         color: color ?? AppColors.surface1,
@@ -436,7 +469,7 @@ class SettingsRow extends StatelessWidget {
                     ),
                   ]),
             ),
-            if (chevron)
+            if (chevron && !(kMobile && kAndroidLook))
               Padding(
                 padding: const EdgeInsets.only(left: 8),
                 child: AppIcon('chevron-right',
@@ -473,7 +506,7 @@ class SettingsRow extends StatelessWidget {
             ),
           ],
           if (trailing != null) ...[const SizedBox(width: 12), trailing!],
-          if (chevron)
+          if (chevron && !(kMobile && kAndroidLook))
             Transform.translate(
               offset: const Offset(4, 0),
               child: Padding(

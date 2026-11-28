@@ -427,8 +427,9 @@ class MkToggle extends StatelessWidget {
       child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onChanged == null ? null : () => onChanged!(!value),
+        // 48 target on Android, 44 on iPhone.
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
+          padding: EdgeInsets.symmetric(vertical: a ? 8 : 6.5),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
             width: w,

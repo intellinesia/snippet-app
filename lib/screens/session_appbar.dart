@@ -1370,6 +1370,20 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   }
 
   Widget _disconnectedBanner() {
+    if (kMobile) {
+      final what = _connError ?? 'Disconnected';
+      final n = _outbox.length;
+      return MkNotice(
+        icon: 'wifi-off',
+        title: what,
+        subtitle: n == 0
+            ? null
+            : '$n message${n == 1 ? '' : 's'} will send on reconnect',
+        action: 'Retry',
+        onAction: _retryNow,
+        margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      );
+    }
     return Container(
       height: kMobile ? 44 : null,
       margin: kMobile

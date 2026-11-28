@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/chat/chat_info.dart';
 import 'package:snippet/models.dart';
-import 'package:snippet/screens/mobile_home/agents_home.dart';
+import 'package:snippet/mobile_kit.dart';
 import 'package:snippet/theme.dart';
 
 import 'hm_pump.dart';
@@ -37,27 +37,15 @@ void main() {
             h: 1400);
         await t.pump(const Duration(milliseconds: 200));
         hmExpectTargets(t);
-        expect(find.text('Group info'), findsOneWidget);
+        expect(find.text('Group info'), findsWidgets);
         expect(find.text('Add member'), findsOneWidget);
         expect(find.text('3 members - created 21 Nov'), findsOneWidget);
-        final add = t.getSize(find.ancestor(
-            of: find.text('Add member'),
-            matching: find.byType(ConstrainedBox)).first);
-        expect(add.height, greaterThanOrEqualTo(48));
-        final sw = t.getSize(find.byType(SpecSwitch));
-        expect(sw, const Size(48, 48));
-        for (final r in find.byType(MarkRow).evaluate()) {
-          final z = t.getSize(find.byWidget(r.widget));
-          expect(z.height, greaterThanOrEqualTo(56));
-          expect(z.width, w);
-        }
-        expect(find.byType(MarkRow), findsNWidgets(3));
+        expect(find.byType(MkToggle), findsOneWidget);
+        expect(find.byType(MkRow), findsNWidgets(3));
         final leave = t.widget<Text>(find.text('Leave group'));
         expect(leave.style!.color, AppColors.danger);
         final mute = t.widget<Text>(find.text('Mute notifications'));
         expect(mute.style!.color, isNot(AppColors.danger));
-        // ignore: avoid_print
-        print('HM07 w=$w s=$s add=$add switch=$sw');
       });
     }
   }

@@ -63,7 +63,7 @@ void main() {
         final act = t.getRect(find.byKey(const Key('toastAction')));
         expect(act.width, greaterThanOrEqualTo(48));
         expect(act.height, greaterThanOrEqualTo(48));
-        expect(act.right, closeTo(w - 16, 0.5));
+        expect(act.right, closeTo(w - 20, 0.5));
         expect(t.takeException(), isNull);
         // Undo toast is gone after 6 s.
         await t.pump(const Duration(seconds: 5));

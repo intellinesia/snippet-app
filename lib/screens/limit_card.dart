@@ -51,20 +51,13 @@ class _LimitCardState extends State<LimitCard> {
   }
 
   Future<void> _pickProfile() async {
-    final p = await showModalBottomSheet<String>(
-      sheetAnimationStyle: sheetMotion,
-      context: context,
-      backgroundColor: AppColors.surface1,
-      builder: (ctx) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          for (final o in widget.options)
-            ListTile(
-              minTileHeight: 52,
-              title: Text(o, style: sans(15, color: AppColors.fg1)),
-              onTap: () => Navigator.pop(ctx, o),
-            ),
-        ]),
-      ),
+    final p = await showAppMenu<String>(
+      context,
+      title: 'Switch profile',
+      items: [
+        for (final o in widget.options)
+          appMenuItem(value: o, label: o, icon: 'cpu'),
+      ],
     );
     if (p != null && mounted) _act('switch', profile: p);
   }

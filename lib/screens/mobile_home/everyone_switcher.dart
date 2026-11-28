@@ -28,17 +28,16 @@ Future<void> showEveryoneSwitcher(
     context: context,
     isScrollControlled: true,
     useSafeArea: false,
-    backgroundColor: AppColors.surface1,
+    backgroundColor: Colors.transparent,
     barrierColor: Colors.black.withValues(alpha: dark ? 0.58 : 0.32),
-    shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-    clipBehavior: Clip.antiAlias,
     constraints:
         BoxConstraints(maxHeight: h - 100, maxWidth: double.infinity),
     sheetAnimationStyle: reduced
         ? AnimationStyle.noAnimation
         : sheetMotion,
-    builder: (ctx) => EveryoneSwitcher(
+    builder: (ctx) => AppSheetSurface(
+        expand: true,
+        child: EveryoneSwitcher(
       agents: agents,
       groups: groups,
       sessions: sessions,
@@ -54,7 +53,7 @@ Future<void> showEveryoneSwitcher(
         Navigator.of(ctx).pop();
         onOpenSession(s);
       },
-    ),
+    )),
   );
 }
 
@@ -165,16 +164,8 @@ class _EveryoneSwitcherState extends State<EveryoneSwitcher> {
     return Padding(
       padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),
       child: Column(children: [
-        Container(
-          margin: const EdgeInsets.only(top: 8),
-          width: 36,
-          height: 4,
-          decoration: BoxDecoration(
-              color: AppColors.surface3,
-              borderRadius: BorderRadius.circular(2)),
-        ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
           child: SizedBox(
             height: 44,
             child: TextField(
