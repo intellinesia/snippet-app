@@ -13,7 +13,10 @@ import '../models.dart';
 import '../tap_detector.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../motion_routes.dart' show pushApp;
 import 'agent_profile_panel.dart';
+import 'agent_records.dart' show openAgentDesk;
+import 'mobile_home/agent_board_phone.dart';
 import 'mobile_home/agent_context_phone.dart';
 import 'mobile_home/wake_reach_phone.dart';
 import 'mobile_home/agents_home.dart';
@@ -152,6 +155,25 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
               initialTab: tab,
               onOpenSession: widget.onOpenSession))));
 
+  void _openBoard() => unawaited(pushApp<void>(
+      context,
+      (_) => PhoneAgentBoardPage(
+          client: widget.client,
+          agentId: a.id,
+          agentName: _name,
+          onOpenSession: (id) => _openSessionId(id, _name))));
+
+  /// Through the app's own session page when the list knows the session.
+  void _openSessionId(String id, String title) {
+    final known = widget.sessions.where((s) => s.id == id).firstOrNull;
+    if (known != null) {
+      widget.onOpenSession(known);
+    } else {
+      openAgentDesk(context, widget.client, id.replaceFirst('inbox-', ''),
+          _name, sessionId: id, title: title);
+    }
+  }
+
   void _openWake() => unawaited(Navigator.of(context).push(MaterialPageRoute(
       builder: (_) =>
           PhoneWakePage(client: widget.client, owner: a.id, name: _name))));
@@ -255,7 +277,6 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
             : 'Default';
     final notes = _memory ?? 0;
     final wakes = _wakeCount;
-    final inbox = mine.where(sessionNeedsYou).length;
     final barH = an ? 64.0 : 56.0;
     // Board: the Message button sits 22 above the Android inset, the ask bar
     // 26 off the iPhone edge. Measured from the screen, so add back what the
@@ -287,16 +308,14 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
       padding: EdgeInsets.fromLTRB(an ? 16 : 20, an ? 14 : 16, an ? 16 : 20, 0),
       options: [
         const MkFilter('chat', 'Chat'),
-        MkFilter('inbox', 'Inbox', count: inbox == 0 ? null : inbox),
         const MkFilter('board', 'Board'),
         const MkFilter('desk', 'Desk'),
       ],
       selected: 'chat',
       onSelect: (v) => switch (v) {
         'chat' => setState(() => _chat = true),
-        'inbox' => widget.onAllSessions(),
-        'board' => _openContext(2),
-        _ => _openContext(0),
+        'board' => _openBoard(),
+        _ => _openSessionId('inbox-${a.id}', '$_name desk'),
       },
     );
 

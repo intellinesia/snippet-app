@@ -166,8 +166,9 @@ Widget agentRecordsBody(DaemonClient client, String agentId, String agentName,
             filterChips: filterChips);
 
 void openAgentDesk(BuildContext context, DaemonClient client, String agentId,
-        String agentName) =>
-    _openSession(context, client, 'inbox-$agentId', '$agentName desk');
+        String agentName, {String? sessionId, String? title}) =>
+    _openSession(context, client, sessionId ?? 'inbox-$agentId',
+        title ?? '$agentName desk');
 
 /// An agent's Actions: a full page on a phone. Desktop shows [AgentActions]
 /// in the shell's right panel instead.
