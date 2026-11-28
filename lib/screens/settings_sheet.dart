@@ -279,7 +279,6 @@ class _SettingsSheetState extends State<SettingsSheet> {
                 label: _label(r.page),
                 subtitle: settingsPageDescription(r.page),
                 icon: _phoneIcon[r.page] ?? r.icon ?? 'settings',
-                value: _values[r.page],
                 onTap: () => _open(r.page),
               ),
           ],
