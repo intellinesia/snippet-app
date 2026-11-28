@@ -302,15 +302,18 @@ class _ThreadCard extends StatelessWidget {
         ),
       );
     }
+    // The Show more row's 44 target supplies the bottom inset itself.
+    final tail =
+        body.trim().isNotEmpty && _previewIsLong(body.trim()) && foot.isEmpty;
     return Container(
       width: double.infinity,
-      margin: EdgeInsets.symmetric(vertical: kMobile ? 6 : 0),
       padding: kMobile
-          ? const EdgeInsets.all(14)
+          ? EdgeInsets.fromLTRB(14, 14, 14, tail ? 0 : 14)
           : EdgeInsets.symmetric(vertical: S.s8),
+      // The phone chat sheet is surface1, so cards sit one step up.
       decoration: kMobile
           ? BoxDecoration(
-              color: AppColors.surface1,
+              color: AppColors.surface2,
               borderRadius: BorderRadius.circular(12))
           : null,
       child: Column(
@@ -357,6 +360,9 @@ class _ThreadCard extends StatelessWidget {
   }
 }
 
+bool _previewIsLong(String body) =>
+    body.length > 110 || '\n'.allMatches(body).length > 1;
+
 /// Two plain lines; Show more swaps in the full markdown (blockquotes kept).
 class _PreviewBody extends StatefulWidget {
   const _PreviewBody({required this.body});
@@ -373,7 +379,7 @@ class _PreviewBodyState extends State<_PreviewBody> {
   Widget build(BuildContext context) {
     final body = widget.body.trim();
     final plain = plainPreview(body);
-    final long = body.length > 110 || '\n'.allMatches(body).length > 1;
+    final long = _previewIsLong(body);
     final style = sans(kMobile ? 13.5 : 12.5,
         height: kMobile ? 20 / 13.5 : 1.4,
         color: kMobile ? AppColors.fg2 : AppColors.fg1);
@@ -400,7 +406,7 @@ class _PreviewBodyState extends State<_PreviewBody> {
             onTap: () => setState(() => _open = !_open),
             child: HitArea(
               child: Padding(
-                padding: EdgeInsets.only(top: kMobile ? S.s4 : S.s2),
+                padding: EdgeInsets.only(top: kMobile ? 0 : S.s2),
                 child: Text(_open ? 'Show less' : 'Show more',
                     style: sans(kMobile ? 13 : 11.5,
                         weight: W.label, color: AppColors.fg2)),
@@ -1185,16 +1191,14 @@ class _LaneMessageCardState extends State<LaneMessageCard> {
             final t = formatEventTime(n.at);
             bodyChildren.add(Padding(
               padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: noteBody(n, open: _open)),
-                    if (t != null) ...[
-                      const SizedBox(width: 8),
-                      Text(t,
-                          style: sans(11.5, height: 18 / 11.5, color: faint)),
-                    ],
-                  ]),
+              child:
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(child: noteBody(n, open: _open)),
+                if (t != null) ...[
+                  const SizedBox(width: 8),
+                  Text(t, style: sans(11.5, height: 18 / 11.5, color: faint)),
+                ],
+              ]),
             ));
           }
         }
@@ -1610,10 +1614,8 @@ class _AgentBubble extends StatelessWidget {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        AppIcon(
-                            outbound ? 'arrow-up-right' : 'arrow-down-left',
-                            size: 10,
-                            color: AppColors.fg3),
+                        AppIcon(outbound ? 'arrow-up-right' : 'arrow-down-left',
+                            size: 10, color: AppColors.fg3),
                         const SizedBox(width: 3),
                         Text(outbound ? 'Sent' : 'Received',
                             style: sans(11,

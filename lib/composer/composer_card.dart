@@ -106,7 +106,7 @@ class _ComposerCardState extends State<ComposerCard> {
         highlight = _w.highlight;
     final pill = ComposerPillSurface(
       highlight: highlight,
-      child: LayoutBuilder(
+      child: _grow(LayoutBuilder(
         builder: (context, box) => ValueListenableBuilder<TextEditingValue>(
           valueListenable: text ?? ValueNotifier(TextEditingValue.empty),
           builder: (context, v, _) {
@@ -172,7 +172,7 @@ class _ComposerCardState extends State<ComposerCard> {
             );
           },
         ),
-      ),
+      )),
     );
     if (!_sendOutside) return pill;
     return Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -183,6 +183,17 @@ class _ComposerCardState extends State<ComposerCard> {
   }
 
   bool get _sendOutside => kMobile && kAndroidLook;
+
+  // Phone: each new line, and the drop to the two-row layout, eases in from
+  // the docked bottom edge instead of jumping.
+  Widget _grow(Widget child) => !kMobile
+      ? child
+      : AnimatedSize(
+          duration: Motion.fast,
+          curve: Motion.enter,
+          alignment: Alignment.bottomCenter,
+          child: child,
+        );
 }
 
 class ComposerIconButton extends StatelessWidget {
@@ -336,8 +347,10 @@ class ComposerSendButton extends StatelessWidget {
             child: Center(
               child: sending
                   ? Spinner(size: 16, color: ink)
-                  : AppIcon(stop ? 'stop' : (android ? 'send-right' : 'arrow-up'),
-                      size: stop ? 15 : (android ? 22 : 21), color: ink),
+                  : AppIcon(
+                      stop ? 'stop' : (android ? 'send-right' : 'arrow-up'),
+                      size: stop ? 15 : (android ? 22 : 21),
+                      color: ink),
             ),
           ),
         ),

@@ -139,12 +139,11 @@ class _TranscriptCardState extends State<TranscriptCard> {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: S.of(3)),
       child: Material(
-        color: AppColors.surface1,
+        // On the phone's surface1 chat sheet a surface1 card disappears.
+        color: kMobile ? AppColors.surface2 : AppColors.surface1,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(kMobile ? R.card : 8),
-          side: kMobile
-              ? BorderSide.none
-              : BorderSide(color: AppColors.border),
+          side: kMobile ? BorderSide.none : BorderSide(color: AppColors.border),
         ),
         clipBehavior: Clip.antiAlias,
         child: widget.onTap == null
