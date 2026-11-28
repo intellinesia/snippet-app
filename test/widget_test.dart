@@ -475,10 +475,10 @@ void main() {
   //      rendered regular and hierarchy came from size alone;
   //   2. palette values drifting below accessible contrast on the dark canvas.
 
-  test('type helpers honour the weight cap: 600 on phone, 500 on desktop', () {
+  test('type helpers honour the weight cap: 400 on phone, 500 on desktop', () {
     TestWidgetsFlutterBinding.ensureInitialized();
-    final cap = kMobile ? FontWeight.w600 : FontWeight.w500;
-    expect(sans(15, weight: FontWeight.w500).fontWeight, FontWeight.w500);
+    final cap = kMobile ? FontWeight.w400 : FontWeight.w500;
+    expect(sans(15, weight: FontWeight.w500).fontWeight, cap);
     expect(mono(13, weight: FontWeight.w600).fontWeight, cap);
     expect(sans(20, weight: FontWeight.w700).fontWeight, cap);
   });

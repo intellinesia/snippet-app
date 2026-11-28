@@ -86,7 +86,7 @@ TextStyle mkTime() => sans(12.5, color: AppColors.fg4, tabular: true);
 TextStyle mkAskProse({double size = 18.5}) => TextStyle(
       fontFamily: 'Geist',
       fontSize: size,
-      fontWeight: FontWeight.w500,
+      fontWeight: weightFor(FontWeight.w500),
       height: 1.38,
       letterSpacing: -0.01 * size,
       color: AppColors.fg1,

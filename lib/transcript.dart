@@ -270,7 +270,7 @@ class _ExploreGroupState extends State<_ExploreGroup> {
                 style: kMobile
                     ? TextStyle(color: AppColors.fg3)
                     : TextStyle(
-                        color: AppColors.fg2, fontWeight: FontWeight.w500)),
+                        color: AppColors.fg2, fontWeight: weightFor(FontWeight.w500))),
           ]),
         ),
         SpringExpand(

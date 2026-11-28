@@ -1224,7 +1224,7 @@ class _LaneMessageCardState extends State<LaneMessageCard> {
                       children: [
                           Text(name,
                               style: small.copyWith(
-                                  fontWeight: FontWeight.w500,
+                                  fontWeight: weightFor(FontWeight.w500),
                                   color: AppColors.fg1)),
                           const SizedBox(height: 2),
                           CardMarkdownBody(body: reply, collapsible: false),
@@ -1234,7 +1234,7 @@ class _LaneMessageCardState extends State<LaneMessageCard> {
                         TextSpan(
                             text: '$name  ',
                             style: TextStyle(
-                                fontWeight: FontWeight.w500,
+                                fontWeight: weightFor(FontWeight.w500),
                                 color: AppColors.fg1)),
                         TextSpan(text: _plain(reply)),
                       ]),
@@ -1466,7 +1466,7 @@ class _LaneMessageCardState extends State<LaneMessageCard> {
                     children: [
                         Text(name,
                             style: small.copyWith(
-                                fontWeight: FontWeight.w500,
+                                fontWeight: weightFor(FontWeight.w500),
                                 color: AppColors.fg1)),
                         CardMarkdownBody(body: reply, collapsible: false),
                       ])
@@ -1475,7 +1475,7 @@ class _LaneMessageCardState extends State<LaneMessageCard> {
                       TextSpan(
                           text: '$name ',
                           style: TextStyle(
-                              fontWeight: FontWeight.w500,
+                              fontWeight: weightFor(FontWeight.w500),
                               color: AppColors.fg1)),
                       TextSpan(text: _plain(reply)),
                     ]),

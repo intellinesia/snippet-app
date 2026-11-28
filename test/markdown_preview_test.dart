@@ -2,6 +2,7 @@ import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/markdown_preview.dart';
 import 'package:snippet/screens/agent_card.dart';
+import 'package:snippet/theme.dart';
 
 List<(String, TextStyle?)> _runs(InlineSpan span, [TextStyle? up]) {
   final out = <(String, TextStyle?)>[];
@@ -32,7 +33,8 @@ void main() {
     final text = runs.map((r) => r.$1).join();
     expect(text, 'Latest from @theo via scout, soon old snake_case');
     final byText = {for (final r in runs) r.$1: r.$2};
-    expect(byText['@theo']!.fontWeight, isNot(FontWeight.w400));
+    // The phone caps every weight at 400, so bold only differs on desktop.
+    expect(byText['@theo']!.fontWeight, weightFor(W.strong));
     expect(byText['scout']!.fontFamily, isNotNull);
     expect(byText['soon']!.fontStyle, FontStyle.italic);
     expect(byText['old']!.decoration, TextDecoration.lineThrough);
@@ -43,7 +45,7 @@ void main() {
     expect(runs.map((r) => r.$1).join(), 'Me (snippet): tests');
     final code = runs.firstWhere((r) => r.$1 == 'snippet').$2!;
     expect(code.fontFamily, isNotNull);
-    expect(code.fontWeight, isNot(FontWeight.w400));
+    expect(code.fontWeight, weightFor(W.strong));
   });
 
   test('status text keeps markdown for rendering', () {

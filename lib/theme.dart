@@ -1505,14 +1505,13 @@ const double kComposerGutter = 16;
 // ---------------------------------------------------------------------------
 // Typography — Inter for UI and body, Geist Mono for code and data.
 //
-// Two weights: 400 for prose, 500 for titles, row titles and controls. Nothing
-// renders heavier than 500.
+// Desktop: 400 for prose, 500 for titles, row titles and controls; nothing
+// heavier than 500. Phone: 400 for everything; size carries the hierarchy.
 // ---------------------------------------------------------------------------
 
 FontWeight _fontWeightFor(int value) {
-  // Desktop never goes heavier than 500.
-  final idx = ((value / 100).round() - 1)
-      .clamp(0, kMobile ? FontWeight.values.length - 1 : 4);
+  // Phone never goes heavier than 400, desktop never heavier than 500.
+  final idx = ((value / 100).round() - 1).clamp(0, kMobile ? 3 : 4);
   return FontWeight.values[idx];
 }
 
@@ -1529,10 +1528,8 @@ class W {
 }
 
 FontWeight weightFor(FontWeight w) {
-  // Phone board: 600 for large titles, header names and sheet titles.
-  final cap = kMobile
-      ? math.max(FontWeight.w600.value, W.strong.value)
-      : FontWeight.w500.value;
+  // The user's ruling: nothing on the phone renders heavier than 400.
+  final cap = kMobile ? FontWeight.w400.value : FontWeight.w500.value;
   return w.value > cap ? _fontWeightFor(cap) : w;
 }
 

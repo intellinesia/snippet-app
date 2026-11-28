@@ -91,9 +91,9 @@ void main() {
     const warningText = 'Near limit, resets 17:04';
     expect(find.text(warningText), findsOneWidget);
     final warning = tester.widget<Text>(find.text(warningText));
-    expect(warning.style?.fontWeight, FontWeight.w500);
+    expect(warning.style?.fontWeight, weightFor(FontWeight.w500));
     final meter = tester.widget<Text>(find.text('Claude 91%'));
-    expect(meter.style?.fontWeight, FontWeight.w500);
+    expect(meter.style?.fontWeight, weightFor(FontWeight.w500));
   });
 
   testWidgets(
@@ -105,7 +105,7 @@ void main() {
     );
     expect(find.text('1 of 2 hosts online'), findsOneWidget);
     final text = tester.widget<Text>(find.text('1 of 2 hosts online'));
-    expect(text.style?.fontWeight, FontWeight.w500);
+    expect(text.style?.fontWeight, weightFor(FontWeight.w500));
     expect(find.byKey(const ValueKey('shell-status-unplug-glyph')),
         findsOneWidget);
 

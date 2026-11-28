@@ -325,7 +325,7 @@ class _ToastCardState extends State<_ToastCard>
                           ),
                           child: Text(d.actionLabel!,
                               style:
-                                  style.copyWith(fontWeight: FontWeight.w500)),
+                                  style.copyWith(fontWeight: weightFor(FontWeight.w500))),
                         ),
                       ),
                   ]),

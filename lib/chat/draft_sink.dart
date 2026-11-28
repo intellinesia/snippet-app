@@ -57,7 +57,7 @@ class DraftActions extends StatelessWidget {
               child: Center(
                 child: Text(label,
                     style: TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w500, color: fg)),
+                        fontSize: 14, fontWeight: weightFor(FontWeight.w500), color: fg)),
               ),
             ),
           ),

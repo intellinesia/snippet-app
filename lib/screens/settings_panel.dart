@@ -3649,7 +3649,7 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
                                       style: TextStyle(
                                         fontFamily: font.family,
                                         fontSize: widget.mono ? 16 : 20,
-                                        fontWeight: FontWeight.w600,
+                                        fontWeight: weightFor(FontWeight.w600),
                                         color: AppColors.fg1,
                                         height: 1,
                                       ),
