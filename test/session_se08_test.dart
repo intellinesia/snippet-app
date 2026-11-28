@@ -44,9 +44,9 @@ void main() {
         for (final w2 in ['Lane a, Running', 'Lane b, Done', 'Lane c, Failed']) {
           final r = t.getRect(find.bySemanticsLabel(RegExp('^$w2')));
           expect(r.height, greaterThanOrEqualTo(56));
-          expect(r.width, w);
+          expect(r.width, w - 32);
         }
-        expect(find.text('Running'), findsOneWidget);
+        expect(find.text('Working'), findsOneWidget);
         expect(find.text('Failed'), findsOneWidget);
       });
 

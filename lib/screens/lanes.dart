@@ -19,7 +19,7 @@ import '../transcript.dart'
 import 'session.dart';
 import '../tap_detector.dart';
 import 'lanes_phone.dart';
-import 'spec_bar.dart';
+import '../mobile_kit.dart' show MkPage;
 
 /// A focused view of delegated work. The session owns the live state; this
 /// screen polls the getter so progress continues updating while it is open.
@@ -73,25 +73,30 @@ class _LanesScreenState extends State<LanesScreen> {
     Theme.of(context);
     final lanes = widget.liveLanes();
     _shown = lanes;
+    final back = widget.onClose ?? () => Navigator.pop(context);
+    if (kMobile) {
+      return LanesByAgent(
+        lanes: lanes,
+        liveLanes: widget.liveLanes,
+        client: widget.client,
+        sessionId: widget.sessionId,
+        sessionAgentId: widget.sessionAgentId,
+        sessionAgentName: widget.sessionAgentName,
+        onBack: back,
+      );
+    }
 
     return Scaffold(
       body: SafeArea(
         bottom: false,
         child: Column(children: [
-          if (kMobile)
-            SpecBar(
-              title: 'Lanes',
-              subtitle: lanesSubtitle(lanes),
-              onBack: widget.onClose ?? () => Navigator.pop(context),
-            )
-          else
-            // SnAppBar steps aside when a hosting panel already shows the title.
-            SnAppBar(
-              title: 'Lanes',
-              titleSize: 20,
-              compact: true,
-              onBack: widget.onClose ?? () => Navigator.pop(context),
-            ),
+          // SnAppBar steps aside when a hosting panel already shows the title.
+          SnAppBar(
+            title: 'Lanes',
+            titleSize: 20,
+            compact: true,
+            onBack: back,
+          ),
           Expanded(
             child: lanes.isEmpty
                 ? const EmptyState(
@@ -181,6 +186,7 @@ class LanesByAgent extends StatefulWidget {
     this.sessionId,
     this.sessionAgentId,
     this.sessionAgentName,
+    this.onBack,
   });
 
   final List<LaneInfo> lanes;
@@ -189,6 +195,9 @@ class LanesByAgent extends StatefulWidget {
   final String? sessionId;
   final String? sessionAgentId;
   final String? sessionAgentName;
+
+  /// Phone: render the whole kit page with this back action.
+  final VoidCallback? onBack;
 
   @override
   State<LanesByAgent> createState() => _LanesByAgentState();
@@ -223,11 +232,13 @@ class _LanesByAgentState extends State<LanesByAgent> {
         sessionAgentId: widget.sessionAgentId,
         sessionAgentName: widget.sessionAgentName,
         profiles: _profiles,
+        onBack: widget.onBack,
       );
 }
 
 class _AgentLanesView extends StatelessWidget {
   const _AgentLanesView({
+    this.onBack,
     required this.profiles,
     required this.lanes,
     this.liveLanes,
@@ -244,6 +255,7 @@ class _AgentLanesView extends StatelessWidget {
   final String? sessionAgentId;
   final String? sessionAgentName;
   final Map<String, InferenceProfile> profiles;
+  final VoidCallback? onBack;
 
   String get _ownId => sessionAgentId ?? '';
   String get _ownName =>
@@ -308,11 +320,12 @@ class _AgentLanesView extends StatelessWidget {
   Widget build(BuildContext context) {
     final groups = _groups();
     if (kMobile) {
-      return LanesListPhone(
-        groups: [for (final g in groups) (g.id, g.name, g.lanes)],
-        onOpen: (l) => openLaneView(context, l,
-            client: client, sessionId: sessionId, liveLanes: liveLanes),
-      );
+      final rows = [for (final g in groups) (g.id, g.name, g.lanes)];
+      void open(LaneInfo l) => openLaneView(context, l,
+          client: client, sessionId: sessionId, liveLanes: liveLanes);
+      return onBack != null
+          ? LanesPagePhone(groups: rows, onOpen: open, onBack: onBack!)
+          : LanesListPhone(groups: rows, onOpen: open);
     }
     final foot = _footnote(groups);
     return ListView(
@@ -580,23 +593,21 @@ void openLaneView(BuildContext context, LaneInfo lane,
   final daemon = client ?? DaemonScope.maybeOf(context);
   final live = liveLanes ?? () => [lane];
   final transcript = lane.transcript;
-  Widget screen([VoidCallback? onClose]) => !kMobile &&
-          daemon != null &&
-          transcript != null &&
-          transcript.isNotEmpty
-      ? LaneTranscriptScreen(
-          client: daemon,
-          laneId: lane.id,
-          liveLanes: live,
-          onClose: onClose,
-        )
-      : LaneDetailScreen(
-          laneId: lane.id,
-          liveLanes: live,
-          client: daemon,
-          sessionId: sessionId,
-          onClose: onClose,
-        );
+  Widget screen([VoidCallback? onClose]) =>
+      !kMobile && daemon != null && transcript != null && transcript.isNotEmpty
+          ? LaneTranscriptScreen(
+              client: daemon,
+              laneId: lane.id,
+              liveLanes: live,
+              onClose: onClose,
+            )
+          : LaneDetailScreen(
+              laneId: lane.id,
+              liveLanes: live,
+              client: daemon,
+              sessionId: sessionId,
+              onClose: onClose,
+            );
   if (!kMobile &&
       ShellPanelRoot.of(context) == null &&
       ShellPanelScope.maybeOf(context) != null) {
@@ -1093,43 +1104,38 @@ class _LaneDetailScreenState extends State<LaneDetailScreen> {
       final c = widget.client ?? DaemonScope.maybeOf(context);
       final session = widget.sessionId ?? lane.trimmedIn;
       final transcript = lane.transcript;
-      return Scaffold(
-        body: SafeArea(
-          bottom: false,
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            SpecBar(
-                title: lane.title.trim().isEmpty ? 'Lane' : lane.title.trim(),
-                subtitle: [laneAgentName(lane.agent ?? ''), laneElapsed(lane)]
-                    .where((e) => e.isNotEmpty)
-                    .join(' ')),
-            Expanded(
-              child: SingleChildScrollView(
-                child: LaneDetailPhone(
-                  lane: lane,
-                  onOpenTranscript:
-                      c != null && transcript != null && transcript.isNotEmpty
-                          ? () => Navigator.of(context).push(AppPageRoute<void>(
-                              builder: (_) => LaneTranscriptScreen(
-                                  client: c,
-                                  laneId: lane.id,
-                                  liveLanes: widget.liveLanes)))
-                          : null,
-                  onStop: c != null && session != null
-                      ? () async {
-                          try {
-                            await c.cancelLane(session, lane.id);
-                          } catch (e) {
-                            if (context.mounted) {
-                              toast(context, '$e', danger: true);
-                            }
+      return Material(
+        color: AppColors.bg,
+        child: MkPage(
+          title: lane.title.trim().isEmpty ? 'Lane' : lane.title.trim(),
+          onBack: widget.onClose ?? () => Navigator.of(context).maybePop(),
+          bottomClearance: false,
+          slivers: [
+            SliverToBoxAdapter(
+              child: LaneDetailPhone(
+                lane: lane,
+                onOpenTranscript:
+                    c != null && transcript != null && transcript.isNotEmpty
+                        ? () => Navigator.of(context).push(AppPageRoute<void>(
+                            builder: (_) => LaneTranscriptScreen(
+                                client: c,
+                                laneId: lane.id,
+                                liveLanes: widget.liveLanes)))
+                        : null,
+                onStop: c != null && session != null
+                    ? () async {
+                        try {
+                          await c.cancelLane(session, lane.id);
+                        } catch (e) {
+                          if (context.mounted) {
+                            toast(context, '$e', danger: true);
                           }
                         }
-                      : null,
-                ),
+                      }
+                    : null,
               ),
             ),
-          ]),
+          ],
         ),
       );
     }
@@ -1141,7 +1147,8 @@ class _LaneDetailScreenState extends State<LaneDetailScreen> {
                 title: 'Lane details',
                 titleSize: 14,
                 compact: true,
-                onBack: widget.onClose ?? () => Navigator.of(context).maybePop()),
+                onBack:
+                    widget.onClose ?? () => Navigator.of(context).maybePop()),
             Expanded(
                 child: lane == null
                     ? const EmptyState(
@@ -1240,7 +1247,8 @@ class LaneTranscriptScreen extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(13, weight: FontWeight.w600, color: AppColors.fg1),
+                  style:
+                      sans(13, weight: FontWeight.w600, color: AppColors.fg1),
                 ),
               ),
               if (onClose != null)
