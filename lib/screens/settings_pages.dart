@@ -135,8 +135,8 @@ String settingsPageIcon(SettingsPage page) =>
 /// (spec X2.2), plus each page's existing one-line description.
 const Map<SettingsPage, (String, List<String>)> _kSettingsMeta = {
   SettingsPage.general: (
-    'Machines this app connects to, and how sessions behave.',
-    ['machines', 'connection', 'notifications', 'approvals'],
+    'Machines this app connects to.',
+    ['machines', 'connection', 'notifications'],
   ),
   SettingsPage.appearance: (
     'Theme palette, accent colour, UI typeface and code font saved on this device.',

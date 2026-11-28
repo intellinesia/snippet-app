@@ -683,7 +683,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                               onTap: crumb.onBack,
                               child: Padding(
                                 padding:
-                                    const EdgeInsets.fromLTRB(4, 5, 7, 5),
+                                    const EdgeInsets.fromLTRB(0, 5, 7, 5),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [

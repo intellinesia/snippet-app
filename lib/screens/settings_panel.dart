@@ -1525,9 +1525,6 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
   bool _notif = false;
   bool _notifBusy = false;
   final Map<String, bool> _health = {};
-  // Per machine, read from that machine's own daemon; absent means unknown.
-  final Map<String, int> _agentCount = {};
-  final Map<String, bool> _manualBy = {};
 
   static const _plainPages = {
     SettingsPage.general,
@@ -1646,30 +1643,12 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
         if (mounted && _health[i.url] != ok) {
           setState(() => _health[i.url] = ok);
         }
-        if (ok) _loadMachineDetails(i.url, client);
       }).catchError((_) {
         if (mounted && _health[i.url] != false) {
           setState(() => _health[i.url] = false);
         }
       });
     }
-  }
-
-  Future<void> _loadMachineDetails(String url, DaemonClient client) async {
-    try {
-      final sessions = await client.sessions();
-      final agents = {
-        for (final s in sessions)
-          if (s.running && !s.settled)
-            if ((s.workerAgentId ?? s.agentId ?? '').isNotEmpty)
-              (s.workerAgentId ?? s.agentId)!
-      };
-      if (mounted) setState(() => _agentCount[url] = agents.length);
-    } catch (_) {}
-    try {
-      final c = await client.getConfig();
-      if (mounted) setState(() => _manualBy[url] = c.manualApproval);
-    } catch (_) {}
   }
 
   Future<void> _loadManual() async {
@@ -1802,8 +1781,8 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
   String _machinesSummary() {
     final online = _health.values.where((v) => v == true).length;
     return _health.isEmpty
-        ? 'Computers that run agents.'
-        : 'Computers that run agents. $online online.';
+        ? 'Computers running snippet serve.'
+        : 'Computers running snippet serve. $online online.';
   }
 
   String _pageTitle(SettingsPage page) => switch (page) {
@@ -1932,18 +1911,157 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
         ),
       );
 
-  Widget _machineTable() => SettingsGroup(
-        header: 'Connected machines',
-        footer:
-            'Approvals decide what an agent may run on that machine without asking you.',
+  Widget _manageMachineBtn(Instance i, {required bool canConnect}) => Builder(
+        builder: (anchor) => _machineGhostBtn(
+          'Manage',
+          () => _showMachineMenu(
+            context,
+            anchor: anchor,
+            instance: i,
+            connect: canConnect,
+            onSelect: () => widget.onSelect?.call(i),
+            onRename: () => _startRename(i),
+            onRemove: () => _confirmRemove(i),
+          ),
+        ),
+      );
+
+  Widget _activeMachineCard(Instance i) {
+    final health = _health[i.url];
+    final status = health == null
+        ? 'Checking'
+        : health
+            ? 'Online'
+            : 'Offline';
+    final name = i.label.isEmpty ? hostOf(i.url) : i.label;
+    final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.5;
+    final manage = _manageMachineBtn(i, canConnect: false);
+    Widget inner;
+    if (_removingUrl == i.url) {
+      inner = _removeStrip(i);
+    } else if (_renamingUrl == i.url) {
+      inner = SizedBox(
+        height: 36,
+        child: InlineEditField(
+          controller: _renameController,
+          hint: 'Machine name',
+          commitOnTapOutside: false,
+          showActions: true,
+          onSubmit: () => _commitRename(i),
+          onCancel: () => setState(() => _renamingUrl = null),
+        ),
+      );
+    } else {
+      inner = Row(
+        crossAxisAlignment:
+            largeText ? CrossAxisAlignment.start : CrossAxisAlignment.center,
         children: [
-          for (final i in _instances)
-            if (_removingUrl == i.url)
-              _removeStrip(i)
-            else
-              _machineTableRow(i),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.surface2,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.border),
+                ),
+                alignment: Alignment.center,
+                child: Icon(PhIcons.monitor, size: 16, color: AppColors.fg1),
+              ),
+              Positioned(
+                right: -2,
+                bottom: -2,
+                child: Container(
+                  width: 9,
+                  height: 9,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: health == true ? AppColors.diffAddFg : AppColors.fg4,
+                    border: Border.all(color: AppColors.bg, width: 2),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(name,
+                        style: sans(13.5,
+                            weight: FontWeight.w500, color: AppColors.fg1)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.diffAddBg,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text('Active',
+                          style: sans(11,
+                              weight: FontWeight.w500,
+                              color: AppColors.diffAddFg)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 2,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(hostOf(i.url),
+                        style: mono(11.5, color: AppColors.fg3)),
+                    Text('·', style: sans(11.5, color: AppColors.fg4)),
+                    Text(status,
+                        style: sans(11.5,
+                            color: health == true
+                                ? AppColors.diffAddFg
+                                : AppColors.fg3)),
+                  ],
+                ),
+                if (largeText) ...[
+                  const SizedBox(height: 6),
+                  manage,
+                ],
+              ],
+            ),
+          ),
+          if (!largeText) ...[
+            const SizedBox(width: 12),
+            manage,
+          ],
         ],
       );
+    }
+    return Padding(
+      padding: EdgeInsets.only(bottom: Grouped.sectionGap),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SettingsSectionLabel('Active machine'),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: AppColors.bg,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: inner,
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _machineTableRow(Instance i) {
     final isActive = i.url == widget.active?.url;
@@ -1969,14 +2087,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
         : health
             ? 'Online'
             : 'Offline';
-    final agents = _agentCount[i.url];
-    final manual = isActive ? (_manual ?? _manualBy[i.url]) : _manualBy[i.url];
     final canConnect = !isActive && widget.onSelect != null;
-    final approvals = manual == null
-        ? '\u2014'
-        : manual
-            ? 'Ask first'
-            : 'Auto';
     final name = i.label.isEmpty ? hostOf(i.url) : i.label;
     final actions = Wrap(
       spacing: 4,
@@ -1984,23 +2095,11 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         if (canConnect)
-          _machineGhostBtn('Switch', () => widget.onSelect?.call(i))
-        else
-          _machineGhostBtn('Rename', () => _startRename(i)),
-        Builder(
-          builder: (anchor) => _machineGhostBtn(
-            'Manage',
-            () => _showMachineMenu(
-              context,
-              anchor: anchor,
-              instance: i,
-              connect: canConnect,
-              onSelect: () => widget.onSelect?.call(i),
-              onRename: () => _startRename(i),
-              onRemove: () => _confirmRemove(i),
-            ),
-          ),
-        ),
+          Btn('Switch',
+              small: true,
+              variant: BtnVariant.secondary,
+              onTap: () => widget.onSelect?.call(i)),
+        _manageMachineBtn(i, canConnect: canConnect),
       ],
     );
     final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.5;
@@ -2013,8 +2112,8 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
           Padding(
             padding: EdgeInsets.only(top: largeText ? 6 : 0),
             child: Container(
-              width: 8,
-              height: 8,
+              width: 7,
+              height: 7,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: health == true ? AppColors.diffAddFg : AppColors.fg4,
@@ -2027,29 +2126,9 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(name,
-                        style: sans(13,
-                            weight: FontWeight.w500, color: AppColors.fg1)),
-                    if (isActive)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.diffAddBg,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text('Active',
-                            style: sans(11,
-                                weight: FontWeight.w500,
-                                color: AppColors.diffAddFg)),
-                      ),
-                  ],
-                ),
+                Text(name,
+                    style: sans(13,
+                        weight: FontWeight.w500, color: AppColors.fg1)),
                 const SizedBox(height: 3),
                 Wrap(
                   spacing: 6,
@@ -2064,16 +2143,6 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
                             color: health == true
                                 ? AppColors.diffAddFg
                                 : AppColors.fg3)),
-                    if (agents != null) ...[
-                      Text('·', style: sans(11.5, color: AppColors.fg4)),
-                      Text(agents == 1 ? '1 agent' : '$agents agents',
-                          style: sans(11.5, color: AppColors.fg3)),
-                    ],
-                    if (manual != null) ...[
-                      Text('·', style: sans(11.5, color: AppColors.fg4)),
-                      Text('Approvals: $approvals',
-                          style: sans(11.5, color: AppColors.fg3)),
-                    ],
                   ],
                 ),
                 if (largeText) ...[
@@ -2093,7 +2162,16 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
   }
 
   List<Widget> _v5General() {
-    final manual = _manual;
+    final activeUrl = widget.active?.url;
+    Instance? activeInst;
+    final others = <Instance>[];
+    for (final i in _instances) {
+      if (activeUrl != null && i.url == activeUrl && activeInst == null) {
+        activeInst = i;
+      } else {
+        others.add(i);
+      }
+    }
     return [
       if (_connecting)
         _ConnectMachinePanel(
@@ -2108,23 +2186,22 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
             sub: 'Run snippet serve on one and add its link.',
           ),
         ])
-      else if (_instances.isNotEmpty) _machineTable(),
-      SettingsGroup(
-        header: 'Sessions',
-        children: [
-          SettingsRow(
-            icon: 'shield',
-            label: 'Approvals',
-            sub: 'Applies to every session on this machine',
-            trailing: manual == null
-                ? null
-                : InlineSegmented<bool>(
-                    value: manual,
-                    options: const [(true, 'Ask'), (false, 'Yolo')],
-                    onChanged: _setManual),
+      else ...[
+        if (activeInst != null) _activeMachineCard(activeInst),
+        if (others.isNotEmpty)
+          SettingsGroup(
+            header: activeInst != null ? 'Other machines' : 'Connected machines',
+            footer:
+                'Switch changes which machine this app talks to. Removing a machine only forgets it here.',
+            children: [
+              for (final i in others)
+                if (_removingUrl == i.url)
+                  _removeStrip(i)
+                else
+                  _machineTableRow(i),
+            ],
           ),
-        ],
-      ),
+      ],
       if (kCanNotify)
         SettingsGroup(
           header: 'Notifications',

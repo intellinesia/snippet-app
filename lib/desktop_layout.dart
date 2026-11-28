@@ -259,39 +259,45 @@ class _SettingsNestedPageState extends State<SettingsNestedPage> {
   @override
   Widget build(BuildContext context) {
     Theme.of(context);
+    final inDialog = SettingsChromeScope.of(context) && !kMobile;
     final hasFooter = widget.footerLeft != null || widget.footerRight != null;
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (widget.identity != null) ...[
+          widget.identity!,
+          Container(
+            margin: const EdgeInsets.only(top: 16, bottom: 20),
+            height: 1,
+            color: AppColors.line,
+          ),
+        ],
+        ...widget.children,
+      ],
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(28, 20, 28, 28),
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 640),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (widget.identity != null) ...[
-                      widget.identity!,
-                      Container(
-                        margin: const EdgeInsets.only(top: 16, bottom: 20),
-                        height: 1,
-                        color: AppColors.line,
-                      ),
-                    ],
-                    ...widget.children,
-                  ],
-                ),
-              ),
-            ),
+            padding: inDialog
+                ? const EdgeInsets.fromLTRB(24, 20, 24, 28)
+                : const EdgeInsets.fromLTRB(32, 24, 32, 32),
+            child: inDialog
+                ? content
+                : Align(
+                    alignment: Alignment.topCenter,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 720),
+                      child: content,
+                    ),
+                  ),
           ),
         ),
         if (hasFooter)
           Container(
             height: 54,
-            padding: const EdgeInsets.symmetric(horizontal: 28),
+            padding: EdgeInsets.symmetric(horizontal: inDialog ? 24 : 32),
             decoration: BoxDecoration(
               color: AppColors.surface1,
               border: Border(top: BorderSide(color: AppColors.line)),

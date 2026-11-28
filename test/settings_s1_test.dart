@@ -360,14 +360,12 @@ void main() {
     final name = t.getRect(find.text('canvas-qa').last);
     final status = t.getRect(find.text('Offline'));
     expect(status.top, greaterThanOrEqualTo(name.bottom));
-    expect(find.text('Approvals: Auto'), findsOneWidget);
-    // The Ask/Yolo control wraps under its label and holds its text.
-    final yolo = t.getRect(find.text('Yolo'));
-    final seg = t.getRect(find
-        .ancestor(of: find.text('Yolo'), matching: find.byType(IntrinsicHeight))
-        .first);
-    expect(yolo.top >= seg.top && yolo.bottom <= seg.bottom, isTrue);
-    expect(yolo.top, greaterThan(t.getRect(find.text('Approvals').last).bottom));
+    expect(find.text('Active machine'), findsOneWidget);
+    expect(find.text('Manage'), findsOneWidget);
+    expect(find.text('Rename'), findsNothing);
+    expect(find.text('Approvals'), findsNothing);
+    expect(find.textContaining('Approvals:'), findsNothing);
+    expect(find.textContaining('agent'), findsNothing);
     // List names wrap rather than truncate; the list scrolls to its end.
     final label = t.widget<Text>(find.descendant(
         of: find.byKey(const Key('settings-row-models')),
