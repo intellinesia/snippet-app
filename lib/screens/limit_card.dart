@@ -52,6 +52,7 @@ class _LimitCardState extends State<LimitCard> {
 
   Future<void> _pickProfile() async {
     final p = await showModalBottomSheet<String>(
+      sheetAnimationStyle: sheetMotion,
       context: context,
       backgroundColor: AppColors.surface1,
       builder: (ctx) => SafeArea(

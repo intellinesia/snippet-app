@@ -13,7 +13,8 @@ import '../models.dart';
 import '../tap_detector.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import '../motion_routes.dart' show pushApp;
+import '../motion_routes.dart' show AppPageRoute, pushApp;
+import '../page_stack.dart' show PhonePageStack;
 import 'agent_profile_panel.dart';
 import 'agent_records.dart' show openAgentDesk;
 import 'mobile_home/agent_board_phone.dart';
@@ -147,7 +148,7 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
       ));
 
   void _openContext(int tab) =>
-      unawaited(Navigator.of(context).push(MaterialPageRoute(
+      unawaited(Navigator.of(context).push(AppPageRoute(
           builder: (_) => AgentContextPage(
               client: widget.client,
               agent: a,
@@ -174,11 +175,11 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
     }
   }
 
-  void _openWake() => unawaited(Navigator.of(context).push(MaterialPageRoute(
+  void _openWake() => unawaited(Navigator.of(context).push(AppPageRoute(
       builder: (_) =>
           PhoneWakePage(client: widget.client, owner: a.id, name: _name))));
 
-  void _openReach() => unawaited(Navigator.of(context).push(MaterialPageRoute(
+  void _openReach() => unawaited(Navigator.of(context).push(AppPageRoute(
       builder: (_) =>
           PhoneReachPage(client: widget.client, agentId: a.id, name: _name))));
 
@@ -223,19 +224,25 @@ class _PhoneAgentPageState extends State<PhoneAgentPage> {
     }
   }
 
+  // Chat pushes over the profile the way the platform pushes.
   @override
-  Widget build(BuildContext context) {
-    if (_chat) {
-      return StatusInset.reclaim(
-          context,
-          CoordinationAgentDetail(
-            key: const ValueKey('agent-detail'),
-            agent: a,
-            client: widget.client,
-            embedded: false,
-            onClose: () => setState(() => _chat = false),
-          ));
-    }
+  Widget build(BuildContext context) => PhonePageStack(
+        base: _profile(context),
+        page: _chat
+            ? StatusInset.reclaim(
+                context,
+                CoordinationAgentDetail(
+                  key: const ValueKey('agent-detail'),
+                  agent: a,
+                  client: widget.client,
+                  embedded: false,
+                  onClose: () => setState(() => _chat = false),
+                ))
+            : null,
+        onBack: () => setState(() => _chat = false),
+      );
+
+  Widget _profile(BuildContext context) {
     final an = kAndroidLook;
     final mq = MediaQuery.of(context);
     final mine = _mine;

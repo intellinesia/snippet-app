@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../mobile_kit.dart';
 import '../models.dart' show Instance;
 import '../motion_routes.dart' show AppPageRoute;
+import '../page_stack.dart' show PhonePageStack;
 import '../theme.dart';
 import '../widgets.dart';
 import 'settings_overlay.dart';
@@ -184,7 +185,6 @@ class _SettingsSheetState extends State<SettingsSheet> {
             _query.text.isEmpty &&
             !(kAndroidLook && _searchOpen)) ||
         (_page != null && widget.host.deepLink);
-    final still = reduceMotion(context);
     return PopScope(
       canPop: canPop,
       onPopInvokedWithResult: (didPop, _) {
@@ -197,13 +197,19 @@ class _SettingsSheetState extends State<SettingsSheet> {
         label: 'Settings',
         child: KeyedSubtree(
           key: const Key('settings-sheet'),
-          child: AnimatedSwitcher(
-            duration: Duration(milliseconds: still ? 120 : 200),
-            child: KeyedSubtree(
-              key: ValueKey(_page?.name ?? 'index'),
-              child: _page != null ? _pageView(_page!) : _indexView(),
-            ),
-          ),
+          // A page pushes over the index the way the platform pushes.
+          child: _page != null && widget.host.deepLink
+              ? _pageView(_page!)
+              : PhonePageStack(
+                  base: _indexView(),
+                  page: _page == null
+                      ? null
+                      : KeyedSubtree(
+                          key: ValueKey(_page!.name),
+                          child: _pageView(_page!),
+                        ),
+                  onBack: () => setState(() => _page = null),
+                ),
         ),
       ),
     );

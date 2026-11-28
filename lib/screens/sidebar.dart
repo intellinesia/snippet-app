@@ -406,9 +406,12 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         _prevHome = _currentHome;
         _currentHome = widget.mobileHome;
         _mountedHomes.add(_slot(_currentHome));
+        // Tabs: Material fade-through on Android, an instant switch on iOS.
         _homeAnim.duration = reduceMotion(context)
             ? const Duration(milliseconds: 150)
-            : Motion.fast;
+            : PlatformPageMotion.android
+                ? const Duration(milliseconds: 300)
+                : Duration.zero;
         _homeAnim.forward(from: 0.0);
       }
     }
@@ -542,7 +545,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     final homes = AnimatedBuilder(
       animation: _homeAnim,
       builder: (context, _) {
-        final curved = Motion.enter.transform(_homeAnim.value);
+        final curved = _homeAnim.value;
         return Stack(
           clipBehavior: Clip.none,
           fit: StackFit.expand,
@@ -561,6 +564,10 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     return homes;
   }
 
+  // Fade-through: 90 ms out, then 210 ms in with a 0.92 to 1 scale.
+  static const _fadeThroughOut = Interval(0.0, 0.3, curve: Easing.standard);
+  static const _fadeThroughIn = Interval(0.3, 1.0, curve: Easing.standard);
+
   Widget _homeLayer(
     MobileHome h, {
     required Widget body,
@@ -570,16 +577,17 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     required bool reduced,
   }) {
     final active = h == curr || (prev != null && h == prev);
-    var dx = 0.0;
+    var scale = 1.0;
     var opacity = 1.0;
     if (active && prev != null) {
-      final dir = curr.index > prev.index ? 1.0 : -1.0;
-      if (h == curr) {
-        opacity = curved;
-        if (!reduced) dx = dir * 8.0 * (1.0 - curved);
+      if (reduced) {
+        opacity = h == curr ? curved : 1.0 - curved;
+      } else if (h == curr) {
+        final t = _fadeThroughIn.transform(curved);
+        opacity = t;
+        scale = 0.92 + 0.08 * t;
       } else {
-        opacity = 1.0 - curved;
-        if (!reduced) dx = -dir * 8.0 * curved;
+        opacity = 1.0 - _fadeThroughOut.transform(curved);
       }
     }
     return KeyedSubtree(
@@ -588,8 +596,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         offstage: !active,
         child: IgnorePointer(
           ignoring: h != curr,
-          child: Transform.translate(
-            offset: Offset(dx, 0),
+          child: Transform.scale(
+            scale: scale,
             child: Opacity(
               opacity: opacity.clamp(0.0, 1.0),
               child: RepaintBoundary(child: body),

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../motion_routes.dart';
 import '../../phosphor_icons.dart';
 
 import '../../api.dart';
@@ -138,7 +139,7 @@ class _TaskSheetState extends State<TaskSheet> {
   void _openFull() {
     final nav = Navigator.of(context);
     widget.onClose();
-    nav.push(MaterialPageRoute<void>(
+    nav.push(AppPageRoute<void>(
       builder: (page) => Material(
         color: AppColors.bg,
         child: SafeArea(

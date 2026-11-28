@@ -14,6 +14,7 @@ Future<void> showToolOutputSheet(
   required String error,
 }) {
   return showModalBottomSheet<void>(
+    sheetAnimationStyle: sheetMotion,
     context: context,
     backgroundColor: Colors.transparent,
     builder: (_) => ToolOutputSheet(input: input, output: output, error: error),

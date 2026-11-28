@@ -949,6 +949,7 @@ class _CanvasScreenState extends State<CanvasScreen>
       return;
     }
     showModalBottomSheet<void>(
+      sheetAnimationStyle: sheetMotion,
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.surface1,
@@ -1284,6 +1285,7 @@ class _CanvasScreenState extends State<CanvasScreen>
 
   Future<void> _showPinComposerSheet(PendingPinAnchor anchor) async {
     await showModalBottomSheet<void>(
+      sheetAnimationStyle: sheetMotion,
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.surface1,
@@ -1333,6 +1335,7 @@ class _CanvasScreenState extends State<CanvasScreen>
 
   Future<void> _showPinsSheet() async {
     await showModalBottomSheet<void>(
+      sheetAnimationStyle: sheetMotion,
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.surface1,
@@ -1390,6 +1393,7 @@ class _CanvasScreenState extends State<CanvasScreen>
 
   Future<void> _showStepsSheet() async {
     await showModalBottomSheet<void>(
+      sheetAnimationStyle: sheetMotion,
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.surface1,

@@ -90,6 +90,9 @@ class _MobileShellState extends State<MobileShell>
   double _base = 0;
   double _raw = 0;
   double? _commitVelocity;
+  bool _opening = true;
+
+  bool get _android => PlatformPageMotion.android && !widget.missionPair;
 
   bool get _chatsVisible => widget.chatsOpen || !widget.hasActiveTab;
   double get _exitX => widget.missionPair ? 1.0 : -1.0;
@@ -103,7 +106,11 @@ class _MobileShellState extends State<MobileShell>
     final velocity = _commitVelocity;
     _commitVelocity = null;
     final reduced = reduceMotion(context);
-    if (reduced) {
+    _opening = to > _v.value;
+    if (_android && !reduced && velocity == null) {
+      _v.animateTo(to,
+          duration: PlatformPageMotion.duration, curve: Curves.linear);
+    } else if (reduced) {
       _v.animateTo(to,
           duration: const Duration(milliseconds: 150), curve: Curves.linear);
     } else {
@@ -237,7 +244,7 @@ class _MobileShellState extends State<MobileShell>
                 child: AnimatedBuilder(
                   animation: _v,
                   child: PageBackSwipe(
-                    enabled: !missionPair && canSwipeBack,
+                    enabled: !missionPair && canSwipeBack && !_android,
                     onStart: _dragStart,
                     onUpdate: (f) => _dragUpdate(f * width, width),
                     onEnd: (v, w) =>
@@ -263,6 +270,9 @@ class _MobileShellState extends State<MobileShell>
                   builder: (context, child) {
                     final vc = _v.value.clamp(0.0, 1.0);
                     Widget c = child!;
+                    if (_android && !reduced) {
+                      return PlatformPageMotion.page(vc, _opening, width, c);
+                    }
                     if (reduced || missionPair) {
                       c = FadeTransition(opacity: _vUnit, child: c);
                     }
@@ -286,7 +296,10 @@ class _MobileShellState extends State<MobileShell>
           ignoring: !chatsVisible,
           child: AnimatedBuilder(
             animation: _v,
-            builder: (context, child) => FractionalTranslation(
+            builder: (context, child) => _android && !reduced
+                ? PlatformPageMotion.base(
+                    _v.value.clamp(0.0, 1.0), _opening, width, child!)
+                : FractionalTranslation(
               translation: reduced
                   ? Offset.zero
                   : missionPair
@@ -317,7 +330,7 @@ class _MobileShellState extends State<MobileShell>
                     ),
                   ),
                 ),
-                if (!missionPair && !reduced)
+                if (!missionPair && !reduced && !_android)
                   Positioned.fill(
                     child: IgnorePointer(
                       child: AnimatedBuilder(

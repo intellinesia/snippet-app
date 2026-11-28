@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../motion_routes.dart';
 import '../ambient/ambient_model.dart';
 import '../ambient/live_caption.dart';
 import '../ambient/controller.dart';
@@ -253,7 +254,7 @@ class _MobileVoicePageState extends State<MobileVoicePage>
                   actions: [
                     if (widget.client != null)
                       BarIcon('sliders', 'Autonomy', () {
-                        Navigator.of(context).push(MaterialPageRoute(
+                        Navigator.of(context).push(AppPageRoute(
                             builder: (_) =>
                                 AutonomyPhonePage(client: widget.client!)));
                       }),

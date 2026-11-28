@@ -598,6 +598,7 @@ Future<T?> showMkSheet<T>(
 }) {
   final a = kAndroidLook;
   return showModalBottomSheet<T>(
+    sheetAnimationStyle: sheetMotion,
     context: context,
     isScrollControlled: scrollable,
     useSafeArea: true,

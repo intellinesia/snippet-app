@@ -10,7 +10,7 @@ import 'package:snippet/page_stack.dart';
 
 
 void main() {
-  group('AppPageRoute on Android', () {
+  group('AppPageRoute back swipe on iOS', () {
     Future<void> pushSecond(WidgetTester t, {bool disableAnimations = false}) async {
       await t.pumpWidget(MediaQuery(
         data: MediaQueryData(disableAnimations: disableAnimations),
@@ -40,7 +40,7 @@ void main() {
     }
 
     testWidgets('pops on an edge drag past half the width', (t) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
       // Release projects velocity and pops past half the width, as on a phone.
       t.view.devicePixelRatio = 1;
       t.view.physicalSize = const Size(390, 844);
@@ -66,7 +66,7 @@ void main() {
     });
 
     testWidgets('cancels edge drag below 1/3 threshold', (t) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
       try {
         await pushSecond(t);
         await t.pumpAndSettle();
@@ -86,7 +86,7 @@ void main() {
     });
 
     testWidgets('pops on fast fling from left edge', (t) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
       // Release projects velocity and pops past half the width, as on a phone.
       t.view.devicePixelRatio = 1;
       t.view.physicalSize = const Size(390, 844);
@@ -105,6 +105,79 @@ void main() {
       }
     });
 
+  });
+
+  group('Material 3 motion on Android', () {
+    testWidgets('AppPageRoute fades forward and leaves back to the system',
+        (t) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      t.view.devicePixelRatio = 1;
+      t.view.physicalSize = const Size(390, 844);
+      addTearDown(t.view.reset);
+      try {
+        late BuildContext ctx;
+        await t.pumpWidget(MaterialApp(
+          theme: buildAppTheme(),
+          home: Builder(builder: (c) {
+            ctx = c;
+            return const Scaffold(key: Key('page1'));
+          }),
+        ));
+        pushApp<void>(ctx, (_) => const Scaffold(key: Key('page2')));
+        await t.pump();
+        await t.pump(const Duration(milliseconds: 120));
+        final x = t.getTopLeft(find.byKey(const Key('page2'))).dx;
+        expect(x, greaterThan(0));
+        expect(x, lessThanOrEqualTo(390 * 0.25 + 1));
+        await t.pumpAndSettle();
+
+        // No in-app edge swipe: back is the system gesture.
+        await t.flingFrom(const Offset(8, 300), const Offset(200, 0), 1500);
+        await t.pumpAndSettle();
+        expect(find.byKey(const Key('page2')), findsOneWidget);
+
+        Navigator.of(ctx).pop();
+        await t.pumpAndSettle();
+        expect(find.byKey(const Key('page2')), findsNothing);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('PhonePageStack opens with a quarter-width fade-forward',
+        (t) async {
+      t.view.physicalSize = const Size(390, 844);
+      t.view.devicePixelRatio = 1;
+      addTearDown(t.view.reset);
+      var open = false;
+      late StateSetter set;
+      await t.pumpWidget(MaterialApp(
+        theme: buildAppTheme(),
+        home: StatefulBuilder(builder: (context, s) {
+          set = s;
+          return PhonePageStack(
+            base: const ColoredBox(key: Key('base'), color: Colors.red),
+            page: open
+                ? const ColoredBox(key: Key('page'), color: Colors.blue)
+                : null,
+          );
+        }),
+      ));
+      set(() => open = true);
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 120));
+      final x = t.getTopLeft(find.byKey(const Key('page'))).dx;
+      expect(x, greaterThan(0));
+      expect(x, lessThanOrEqualTo(390 * 0.25 + 1));
+      expect(t.getTopLeft(find.byKey(const Key('base'))).dx, lessThan(0));
+      await t.pumpAndSettle();
+      expect(t.getTopLeft(find.byKey(const Key('page'))).dx, closeTo(0, .5));
+
+      set(() => open = false);
+      await t.pumpAndSettle();
+      expect(find.byKey(const Key('page')), findsNothing);
+      expect(t.getTopLeft(find.byKey(const Key('base'))).dx, closeTo(0, .5));
+    }, variant: TargetPlatformVariant.only(TargetPlatform.android));
   });
 
   testWidgets('AppPageRoute on desktop does not enable edge pop swipe',
@@ -141,10 +214,10 @@ void main() {
     }
   });
 
-  group('MobileShell session slide & Android edge swipe', () {
+  group('MobileShell session slide and iOS back swipe', () {
     testWidgets('slides session in from right and swipes back past half',
         (t) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
       try {
         var chatsOpen = true;
         late StateSetter hostSetState;
@@ -263,7 +336,7 @@ void main() {
     expect(back, isFalse);
     expect(find.byKey(const Key('page')), findsNothing);
     expect(baseX(t), closeTo(0, .5));
-  });
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
   testWidgets('a slow short swipe springs back', (t) async {
     bool? back;
@@ -275,7 +348,7 @@ void main() {
     await t.pumpAndSettle();
     expect(back, isNull);
     expect(pageX(t), closeTo(0, .5));
-  });
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
   testWidgets('a quick flick goes back even when short', (t) async {
     bool? back;
@@ -285,7 +358,7 @@ void main() {
     await t.flingFrom(const Offset(150, 400), const Offset(60, 0), 1200);
     await t.pumpAndSettle();
     expect(back, isFalse);
-  });
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
   testWidgets('a horizontal scroller under the finger keeps its drag',
       (t) async {
@@ -317,6 +390,6 @@ void main() {
     await t.pumpAndSettle();
     expect(back, isNull);
     expect(pageX(t), closeTo(0, .5));
-  });
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 }
 

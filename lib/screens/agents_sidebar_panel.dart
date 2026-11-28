@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
+import '../motion_routes.dart';
 import '../api.dart';
 import '../chat/agent_cluster.dart';
 import '../crew_status.dart';
@@ -41,7 +42,7 @@ Future<bool?> showCreateAgentDialog(
   String? initialCharacter,
 }) =>
     kMobile
-        ? Navigator.of(context).push<bool>(MaterialPageRoute(
+        ? Navigator.of(context).push<bool>(AppPageRoute(
             builder: (_) => PhoneCreateAgentPage(client: client)))
         : showSidePopover<bool>(context,
             anchorContext: anchorContext,

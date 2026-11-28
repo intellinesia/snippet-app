@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../motion_routes.dart';
 import '../media_views.dart' show DaemonScope;
 import '../panel.dart';
 import '../platform.dart';
@@ -40,6 +41,6 @@ void openCanvas(
     return;
   }
   Navigator.of(c).push<void>(
-    MaterialPageRoute<void>(builder: (_) => screen(null)),
+    AppPageRoute<void>(builder: (_) => screen(null)),
   );
 }

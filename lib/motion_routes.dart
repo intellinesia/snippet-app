@@ -7,6 +7,7 @@ import 'package:flutter/rendering.dart';
 
 import 'chat_scene.dart';
 import 'gesture_physics.dart';
+import 'mobile_kit/tokens.dart' show kAndroidLook;
 import 'morph_sheet.dart' show AppSheetRoute;
 import 'platform.dart';
 import 'theme.dart';
@@ -63,7 +64,12 @@ class AppPageRoute<T> extends PageRoute<T> {
           snapToEnd: true,
           tolerance: const Tolerance(distance: 0.001, velocity: 0.01));
 
-  bool get _springs => kMobile && !_reducedMotion;
+  /// Android pages follow Material 3: fade-forward, predictive back.
+  static bool get _android => kMobile && kAndroidLook;
+  static const Duration _androidPage = Duration(
+      milliseconds: FadeForwardsPageTransitionsBuilder.kTransitionMilliseconds);
+
+  bool get _springs => kMobile && !_reducedMotion && !_android;
 
   // Finger velocity handed from a committed back swipe to the pop spring.
   double _popVelocity = 0;
@@ -88,13 +94,15 @@ class AppPageRoute<T> extends PageRoute<T> {
   @override
   Duration get transitionDuration {
     if (!kMobile) return Motion.page;
-    return _reducedMotion ? _reducedDuration : _phoneForward;
+    if (_reducedMotion) return _reducedDuration;
+    return _android ? _androidPage : _phoneForward;
   }
 
   @override
   Duration get reverseTransitionDuration {
     if (!kMobile) return Motion.close;
-    return _reducedMotion ? _reducedDuration : _phoneReverse;
+    if (_reducedMotion) return _reducedDuration;
+    return _android ? _androidPage : _phoneReverse;
   }
 
   @override
@@ -120,8 +128,11 @@ class AppPageRoute<T> extends PageRoute<T> {
   String get debugLabel => '${super.debugLabel}(${settings.name})';
 
   @override
-  DelegatedTransitionBuilder? get delegatedTransition =>
-      kMobile ? _delegatedTransition : null;
+  DelegatedTransitionBuilder? get delegatedTransition => !kMobile
+      ? null
+      : _android
+          ? const FadeForwardsPageTransitionsBuilder().delegatedTransition
+          : _delegatedTransition;
 
   static Widget? _delegatedTransition(
     BuildContext context,
@@ -196,6 +207,14 @@ class AppPageRoute<T> extends PageRoute<T> {
             secondaryAnimation,
             child,
           );
+    }
+    if (_android) {
+      if (reduceMotion(context)) {
+        return FadeTransition(opacity: animation, child: child);
+      }
+      // System back drives the predictive shrink; buttons get fade-forward.
+      return const PredictiveBackPageTransitionsBuilder()
+          .buildTransitions<T>(this, context, animation, secondaryAnimation, child);
     }
     final gesturedChild = _BackSwipeDetector<T>(
       enabledCallback: () => popGestureEnabled && backSwipe,
@@ -312,7 +331,7 @@ class _AppOutgoingTransitionState extends State<_AppOutgoingTransition> {
     end: const Offset(-0.30, 0.0),
   );
   static final Animatable<double> _scrimTween =
-      Tween<double>(begin: 0.0, end: 0.55);
+      Tween<double>(begin: 0.0, end: 0.10);
 
   CurvedAnimation? _curve;
   late Animation<Offset> _position;

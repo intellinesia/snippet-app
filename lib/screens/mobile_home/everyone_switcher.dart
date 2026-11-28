@@ -35,12 +35,9 @@ Future<void> showEveryoneSwitcher(
     clipBehavior: Clip.antiAlias,
     constraints:
         BoxConstraints(maxHeight: h - 100, maxWidth: double.infinity),
-    sheetAnimationStyle: AnimationStyle(
-      duration: Duration(milliseconds: reduced ? 1 : 200),
-      reverseDuration: Duration(milliseconds: reduced ? 1 : 200),
-      curve: Curves.easeOut,
-      reverseCurve: Curves.easeOut,
-    ),
+    sheetAnimationStyle: reduced
+        ? AnimationStyle.noAnimation
+        : sheetMotion,
     builder: (ctx) => EveryoneSwitcher(
       agents: agents,
       groups: groups,

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'motion_routes.dart';
 import 'api.dart';
 import 'call_prompt_card.dart';
 import 'call_tracking.dart';
@@ -285,7 +286,7 @@ class _NotificationPopoversState extends State<NotificationPopovers>
   void _showAll() {
     final nav = widget.navigatorKey?.currentState;
     if (nav == null) return;
-    nav.push(MaterialPageRoute<void>(
+    nav.push(AppPageRoute<void>(
       builder: (_) => NotificationListPage(
         items: _ordered,
         onOpen: (p) {

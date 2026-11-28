@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../motion_routes.dart';
 import '../toast_avoid.dart';
 import '../tap_detector.dart';
 import 'mobile_home/collapsing_root.dart';
@@ -37,7 +38,7 @@ void openArtifactsList(BuildContext c) {
     return;
   }
   Navigator.of(c).push<void>(
-    MaterialPageRoute<void>(builder: (_) => ArtifactsScreen(client: daemon)),
+    AppPageRoute<void>(builder: (_) => ArtifactsScreen(client: daemon)),
   );
 }
 

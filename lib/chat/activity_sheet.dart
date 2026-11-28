@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../motion_routes.dart';
 import '../api.dart' show DaemonClient;
 import '../media_views.dart' show DaemonScope, ImageThumb;
 import '../platform.dart';
@@ -817,7 +818,7 @@ class _DetailPage extends StatelessWidget {
   }
 
   void _openFull(BuildContext context, ToolStep step) {
-    Navigator.of(context).push(MaterialPageRoute<void>(
+    Navigator.of(context).push(AppPageRoute<void>(
       builder: (_) => Scaffold(
         backgroundColor: AppColors.bg,
         body: SafeArea(

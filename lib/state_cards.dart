@@ -86,6 +86,7 @@ class ToolErrorPanel extends StatelessWidget {
                   AskButton('Show all',
                       variant: AskButtonVariant.ghost,
                       onTap: () => showModalBottomSheet<void>(
+                            sheetAnimationStyle: sheetMotion,
                             context: context,
                             isScrollControlled: true,
                             backgroundColor: AppColors.surface1,
@@ -168,6 +169,7 @@ class ToolErrorPanel extends StatelessWidget {
                 button: true,
                 child: InkWell(
                   onTap: () => showModalBottomSheet<void>(
+                    sheetAnimationStyle: sheetMotion,
                     context: context,
                     isScrollControlled: true,
                     backgroundColor: AppColors.surface1,

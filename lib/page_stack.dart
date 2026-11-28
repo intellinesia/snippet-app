@@ -4,8 +4,44 @@ import 'package:flutter/services.dart';
 import 'chat_scene.dart' show ScenePageFill;
 import 'gesture_physics.dart';
 import 'glass.dart' show GlassTopFrame;
+import 'mobile_kit/tokens.dart' show kAndroidLook;
 import 'motion_routes.dart';
+import 'platform.dart';
 import 'theme.dart';
+
+/// Material 3 fade-forward for in-place pages on Android, matching what
+/// [AppPageRoute] gets from the platform builder: the new page slides in a
+/// quarter width and fades in, the old one slides a quarter back and fades.
+class PlatformPageMotion {
+  static bool get android => kMobile && kAndroidLook;
+  static const Duration duration = Duration(milliseconds: 450);
+  static const Curve _curve = Curves.easeInOutCubicEmphasized;
+  static const Interval _fadeIn = Interval(0.0, 0.75);
+  static const Interval _fadeOut = Interval(0.0, 0.25);
+
+  /// [p] is 0 with the page gone, 1 with it fully shown; [opening] says
+  /// which way it is heading.
+  static Widget page(double p, bool opening, double width, Widget child) {
+    final q = opening ? p : 1 - p;
+    final shift = opening ? 1 - _curve.transform(q) : _curve.transform(q);
+    final fade = opening ? _fadeIn.transform(q) : 1 - _fadeOut.transform(q);
+    return Transform.translate(
+      offset: Offset(0.25 * width * shift, 0),
+      child: Opacity(opacity: fade.clamp(0.0, 1.0), child: child),
+    );
+  }
+
+  /// The page underneath, at the same progress.
+  static Widget base(double p, bool opening, double width, Widget child) {
+    final q = opening ? p : 1 - p;
+    final shift = opening ? _curve.transform(q) : 1 - _curve.transform(q);
+    final fade = opening ? 1 - _fadeOut.transform(q) : _fadeIn.transform(q);
+    return Transform.translate(
+      offset: Offset(-0.25 * width * shift, 0),
+      child: Opacity(opacity: fade.clamp(0.0, 1.0), child: child),
+    );
+  }
+}
 
 /// A phone page over a base, moved exactly like [AppPageRoute] moves pages:
 /// page spring in and out, the base parallaxes and dims, and a back swipe
@@ -35,7 +71,7 @@ class PhonePageStack extends StatefulWidget {
 
   /// Outgoing base offset and dim at full cover, as in the motion spec.
   static const double parallax = 0.25;
-  static const double dim = 0.24;
+  static const double dim = 0.10;
 
   @override
   State<PhonePageStack> createState() => _PhonePageStackState();
@@ -47,6 +83,7 @@ class _PhonePageStackState extends State<PhonePageStack>
       vsync: this, value: widget.page == null ? 0.0 : 1.0);
   late Widget? _shown = widget.page;
   double? _commitVelocity;
+  bool _opening = true;
 
   @override
   void didUpdateWidget(PhonePageStack old) {
@@ -64,7 +101,11 @@ class _PhonePageStackState extends State<PhonePageStack>
 
   void _go(double to, double velocity) {
     final TickerFuture f;
-    if (reduceMotion(context)) {
+    _opening = to > _v.value;
+    if (PlatformPageMotion.android && !reduceMotion(context)) {
+      f = _v.animateTo(to,
+          duration: PlatformPageMotion.duration, curve: Curves.linear);
+    } else if (reduceMotion(context)) {
       f = _v.animateTo(to,
           duration: const Duration(milliseconds: 150), curve: Curves.linear);
     } else {
@@ -109,6 +150,33 @@ class _PhonePageStackState extends State<PhonePageStack>
     super.dispose();
   }
 
+  // System back is the gesture on Android; no in-app swipe.
+  Widget _android(double p, double w, Widget? shown, bool open) =>
+      Stack(clipBehavior: Clip.none, fit: StackFit.expand, children: [
+        if (p > 0 && p < 1) ColoredBox(color: AppColors.bg),
+        Offstage(
+          offstage: shown != null && p >= 1.0,
+          child: TickerMode(
+            enabled: p < 1.0,
+            child: IgnorePointer(
+              ignoring: open,
+              child: PlatformPageMotion.base(p, _opening, w, widget.base),
+            ),
+          ),
+        ),
+        if (shown != null)
+          IgnorePointer(
+            ignoring: !open,
+            child: PlatformPageMotion.page(
+                p,
+                _opening,
+                w,
+                RepaintBoundary(
+                  child: ScenePageFill(color: widget.pageColor, child: shown),
+                )),
+          ),
+      ]);
+
   @override
   Widget build(BuildContext context) {
     final reduced = reduceMotion(context);
@@ -120,6 +188,9 @@ class _PhonePageStackState extends State<PhonePageStack>
         animation: _v,
         builder: (context, _) {
           final p = _v.value.clamp(0.0, 1.0);
+          if (PlatformPageMotion.android && !reduced) {
+            return _android(p, w, shown, open);
+          }
           return Stack(clipBehavior: Clip.none, fit: StackFit.expand, children: [
             Offstage(
               offstage: shown != null && p >= 1.0,

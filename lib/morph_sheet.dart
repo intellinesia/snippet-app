@@ -78,13 +78,18 @@ class _MorphRoute<T> extends PopupRoute<T> {
   String? get barrierLabel => 'Close';
   @override
   Duration get transitionDuration =>
-      instant ? Duration.zero : const Duration(milliseconds: 200);
+      instant ? Duration.zero : SheetMotion.enter;
+  @override
+  Duration get reverseTransitionDuration =>
+      instant ? Duration.zero : SheetMotion.exit;
 
   @override
   Widget buildPage(BuildContext context, Animation<double> animation,
       Animation<double> secondaryAnimation) {
     final t = CurvedAnimation(
-        parent: animation, curve: Curves.easeOut, reverseCurve: Curves.easeOut);
+        parent: animation,
+        curve: SheetMotion.curve,
+        reverseCurve: SheetMotion.reverseCurve);
     final mq = MediaQuery.of(context);
     final bottom = math.max(mq.viewInsets.bottom, mq.padding.bottom) + S.s8;
     return AnimatedBuilder(
@@ -398,10 +403,10 @@ class AppSheetRoute<T> extends PopupRoute<T> {
   String? get barrierLabel => 'Close';
   @override
   Duration get transitionDuration =>
-      instant ? Duration.zero : const Duration(milliseconds: 200);
+      instant ? Duration.zero : SheetMotion.enter;
   @override
   Duration get reverseTransitionDuration =>
-      instant ? Duration.zero : const Duration(milliseconds: 200);
+      instant ? Duration.zero : SheetMotion.exit;
 
   @override
   bool didPop(T? result) {
@@ -485,8 +490,8 @@ class _SheetBodyState<T> extends State<_SheetBody<T>>
   late final _SheetScrollController _scroll;
   late final Animation<double> _curved = CurvedAnimation(
       parent: _route.animation!,
-      curve: Curves.easeOut,
-      reverseCurve: Curves.easeOut);
+      curve: SheetMotion.curve,
+      reverseCurve: SheetMotion.reverseCurve);
 
   // Laid-out heights: the lowest detent and the full height.
   double _base = 0;
@@ -632,8 +637,7 @@ class _SheetBodyState<T> extends State<_SheetBody<T>>
     if (_route.instant || reduceMotion(context)) {
       c.value = to;
     } else {
-      c.animateTo(to,
-          duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+      c.animateTo(to, duration: SheetMotion.settle, curve: SheetMotion.curve);
     }
   }
 

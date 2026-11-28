@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api.dart';
 import 'chat_scene.dart' show ChatScene;
+import 'mobile_kit/tokens.dart' show kAndroidLook;
 import 'platform.dart';
 export 'theme_models.dart';
 
@@ -1302,12 +1303,45 @@ ShapeDecoration avatarDecoration(double size,
         {required Color color, BorderSide side = BorderSide.none}) =>
     ShapeDecoration(color: color, shape: avatarBorder(size, side: side));
 
-AnimationStyle get sheetMotion => const AnimationStyle(
-      // Spec G: 200 ms ease-out open and close, no spring.
-      duration: Duration(milliseconds: 200),
-      reverseDuration: Duration(milliseconds: 200),
-      curve: Curves.easeOut,
-      reverseCurve: Curves.easeOut,
+/// Bottom sheet timing per platform: Material 3 emphasized curves on
+/// Android, a critically damped spring shape on iOS, the dialog timing on
+/// desktop.
+class SheetMotion {
+  static bool get _android => kMobile && kAndroidLook;
+
+  static Duration get enter => !kMobile
+      ? const Duration(milliseconds: 200)
+      : _android
+          ? const Duration(milliseconds: 400)
+          : const Duration(milliseconds: 500);
+  static Duration get exit => !kMobile
+      ? const Duration(milliseconds: 200)
+      : _android
+          ? const Duration(milliseconds: 200)
+          : const Duration(milliseconds: 320);
+
+  static const Curve _iosSpring = Cubic(0.32, 0.72, 0, 1);
+  static Curve get curve => !kMobile
+      ? Curves.easeOut
+      : _android
+          ? Easing.emphasizedDecelerate
+          : _iosSpring;
+  // Reverse runs from 1 to 0, so the exit curve is flipped into that frame.
+  static Curve get reverseCurve => !kMobile
+      ? Curves.easeOut
+      : _android
+          ? Easing.emphasizedAccelerate.flipped
+          : _iosSpring.flipped;
+
+  /// Moves inside an open sheet: detent changes, settling after a drag.
+  static const Duration settle = Duration(milliseconds: 300);
+}
+
+AnimationStyle get sheetMotion => AnimationStyle(
+      duration: SheetMotion.enter,
+      reverseDuration: SheetMotion.exit,
+      curve: SheetMotion.curve,
+      reverseCurve: SheetMotion.reverseCurve,
     );
 
 /// The only spacing values the app uses.
