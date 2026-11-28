@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../mobile_kit/cards.dart' show MkNotice;
+import '../mobile_kit.dart' show MkGroup, MkGroupRow, MkNotice, showMkSheet;
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -41,6 +41,32 @@ class ColdTab extends StatelessWidget {
     if (picked != null) onPick(picked);
   }
 
+  /// Phone: every resume choice in one sheet; the current mode is checked.
+  Future<void> _phoneSheet(BuildContext context, String? tokens) async {
+    Widget row(BuildContext c, String value, String label, String sub) =>
+        MkGroupRow(
+          key: ValueKey('cold-mode-$value'),
+          label: label,
+          subtitle: sub,
+          chevron: false,
+          trailing: value == mode
+              ? AppIcon('check', size: 20, color: AppColors.fg1)
+              : null,
+          onTap: () => Navigator.of(c).pop(value),
+        );
+    final picked = await showMkSheet<String>(
+      context,
+      title: 'Resume session',
+      builder: (c) => MkGroup(flush: true, children: [
+        row(c, 'lean', 'Lean', 'Summary and recent turns; quick and cheap'),
+        row(c, 'full', tokens == null ? 'Full' : 'Full · $tokens',
+            'Re-read the whole conversation'),
+        row(c, 'ask', 'Ask each time', 'Choose whenever the session is cold'),
+      ]),
+    );
+    if (picked != null && picked != mode) onPick(picked);
+  }
+
   @override
   Widget build(BuildContext context) {
     final tokens = resumeTokens == null ? null : '~${_tokens(resumeTokens!)}';
@@ -58,8 +84,9 @@ class ColdTab extends StatelessWidget {
         subtitle: tokens == null
             ? 'Choose how much context to restore'
             : 'Choose how much context to restore · $tokens',
-        action: mode == 'ask' ? 'Resume lean' : 'Change',
-        onAction: () => mode == 'ask' ? onPick('lean') : _changeMode(context),
+        action: mode == 'ask' ? 'Resume' : 'Change',
+        actionKey: const ValueKey('cold-resume'),
+        onAction: () => _phoneSheet(context, tokens),
         margin: const EdgeInsets.only(bottom: 8),
       );
     }

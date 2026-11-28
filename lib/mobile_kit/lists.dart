@@ -206,7 +206,9 @@ class MkGroup extends StatelessWidget {
       for (var i = 0; i < children.length; i++)
         _GroupIndex(last: i == children.length - 1, child: children[i]),
     ];
+    // Hug the rows so a group inside a sheet does not fill the screen.
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (header != null)
