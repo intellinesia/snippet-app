@@ -185,10 +185,6 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
       for (final a in all)
         if (a.state == CrewState.working) a
     ]..sort((a, b) => (a.since ?? nowS).compareTo(b.since ?? nowS));
-    final needsAgents = {
-      for (final a in all)
-        if (a.state == CrewState.needsYou) a.agent.id
-    };
     final recent = [
       for (final a in all)
         if (a.state == CrewState.standingBy) a
@@ -198,16 +194,6 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
         if (_pinned(a.agent)) a
     ];
 
-    // Group asks count only when the asker has no session ask of its own.
-    final withAsk = {for (final a in asks) a.agentId};
-    final askers = {
-      for (final id in needsAgents)
-        if (!withAsk.contains(id)) id
-    };
-    final groupAsks = [
-      for (final g in w.groups)
-        if (g.agentIds.any(askers.contains)) g
-    ];
     final pager = <AskCardData>[
       for (final a in asks)
         AskCardData(
@@ -217,9 +203,10 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
             text: askText(a).ask,
             onTap: () => w.onOpenSession(a.session),
             // Approvals answer in place; questions open the session to reply.
+            // Anything without an answer renders as a plain row.
             primary: a.kind == AskKind.approval && w.onDecide != null
                 ? 'Go ahead'
-                : (a.kind == AskKind.question ? 'Answer' : 'Open'),
+                : (a.kind == AskKind.question ? 'Answer' : null),
             secondary: a.kind == AskKind.approval && w.onDecide != null
                 ? 'Not yet'
                 : null,
@@ -229,17 +216,6 @@ class _QuietHomeScreenState extends State<QuietHomeScreen> {
             onSecondary: a.kind == AskKind.approval && w.onDecide != null
                 ? () => w.onDecide!(a.session, false)
                 : null),
-      for (final g in groupAsks)
-        AskCardData(
-            agentId: g.agentIds.firstOrNull ?? 'snippet',
-            name: g.title.isEmpty ? 'Group' : g.title,
-            time: relativeTime(
-                (groupActivityAt(g)?.millisecondsSinceEpoch ?? 0) ~/ 1000),
-            text: 'Waiting on ${[
-              for (final id in g.agentIds)
-                if (askers.contains(id)) (names[id] ?? id)
-            ].join(', ')}',
-            onTap: () => w.onOpenGroup?.call(g)),
     ];
 
     final dayStart = DateTime.now()
