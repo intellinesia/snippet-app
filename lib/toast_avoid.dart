@@ -45,6 +45,11 @@ class _ToastAvoidState extends State<ToastAvoid> {
     if (!mounted) return;
     final box = context.findRenderObject();
     if (box is! RenderBox || !box.attached || !box.hasSize) return;
+    // A bar under a pushed page or in a hidden tab is not on screen.
+    if (!_visible) {
+      ToastBands.report(_key, null);
+      return;
+    }
     final screen = MediaQuery.sizeOf(context).height;
     final top = box.localToGlobal(Offset.zero).dy;
     final bottom = top + box.size.height;
@@ -61,8 +66,13 @@ class _ToastAvoidState extends State<ToastAvoid> {
     super.dispose();
   }
 
+  bool _visible = true;
+
   @override
   Widget build(BuildContext context) {
+    // Both lookups subscribe, so covering or revealing the page re-measures.
+    _visible = (ModalRoute.of(context)?.isCurrent ?? true) &&
+        TickerMode.valuesOf(context).enabled;
     if (!_queued) {
       _queued = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => _measure());

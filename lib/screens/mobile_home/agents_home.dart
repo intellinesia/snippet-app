@@ -151,9 +151,11 @@ class HomeLabel extends StatelessWidget {
         header: true,
         child: Padding(
           // A 48 tall trailing target eats into the padding so the label keeps its place.
-          padding: EdgeInsets.fromLTRB(kAndroidLook ? 28 : kGutter,
+          padding: EdgeInsets.fromLTRB(
+              kAndroidLook ? 28 : kGutter,
               trailing == null ? top : (top - 15).clamp(0, top),
-              kAndroidLook ? 28 : kGutter, trailing == null ? 6 : 0),
+              kAndroidLook ? 28 : kGutter,
+              trailing == null ? 6 : 0),
           child: Row(children: [
             Expanded(
                 child: Text(text,
@@ -502,29 +504,92 @@ class AskPager extends StatelessWidget {
   final List<AskCardData> items;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Column(children: [
-          for (var i = 0; i < items.length; i++) ...[
-            if (i > 0) const SizedBox(height: 10),
+  Widget build(BuildContext context) {
+    // Asks with answers keep the answer card; a bare "open it" ask is a row,
+    // so a plain status never gets a full-width primary button.
+    final asks = [
+      for (var i = 0; i < items.length; i++)
+        if (items[i].primary != null || items[i].secondary != null) i
+    ];
+    final rows = [
+      for (var i = 0; i < items.length; i++)
+        if (items[i].primary == null && items[i].secondary == null) i
+    ];
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      for (final i in asks) ...[
+        if (i != asks.first) const SizedBox(height: 10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: KeyedSubtree(
+            key: ValueKey(i == 0 ? 'ask-card' : 'ask-card-$i'),
+            child: MkAskCard(
+              avatar: AgentMochi(items[i].agentId, size: 28),
+              who: items[i].name,
+              time: items[i].time,
+              question:
+                  items[i].text.isEmpty ? 'Waiting on you' : items[i].text,
+              primary: items[i].primary ?? 'Open',
+              secondary: items[i].secondary,
+              onPrimary: items[i].onPrimary ?? items[i].onTap,
+              onSecondary: items[i].onSecondary,
+              onOpen: items[i].onTap,
+            ),
+          ),
+        ),
+      ],
+      if (rows.isNotEmpty) ...[
+        if (asks.isNotEmpty) const SizedBox(height: 10),
+        MkGroup(children: [
+          for (final i in rows)
             KeyedSubtree(
               key: ValueKey(i == 0 ? 'ask-card' : 'ask-card-$i'),
-              child: MkAskCard(
-                avatar: AgentMochi(items[i].agentId, size: 28),
-                who: items[i].name,
-                time: items[i].time,
-                question:
-                    items[i].text.isEmpty ? 'Waiting on you' : items[i].text,
-                primary: items[i].primary ?? 'Open',
-                secondary: items[i].secondary,
-                onPrimary: items[i].onPrimary ?? items[i].onTap,
-                onSecondary: items[i].onSecondary,
-                onOpen: items[i].onTap,
+              child: MkGroupRow(
+                label: items[i].text.isEmpty ? 'Waiting on you' : items[i].text,
+                subtitle: '${items[i].name} · needs you',
+                leading: _NeedsAvatar(items[i].agentId),
+                chevron: false,
+                trailing: items[i].time.isEmpty
+                    ? null
+                    : Text(items[i].time,
+                        style: sans(13, color: AppColors.fg3)),
+                onTap: items[i].onTap,
               ),
             ),
-          ],
         ]),
-      );
+      ],
+    ]);
+  }
+}
+
+/// The asker's face with the amber needs-you dot.
+class _NeedsAvatar extends StatelessWidget {
+  const _NeedsAvatar(this.agentId);
+  final String agentId;
+
+  @override
+  Widget build(BuildContext context) {
+    final d = kAndroidLook ? 40.0 : 34.0;
+    return SizedBox(
+      width: d,
+      height: d,
+      child: Stack(clipBehavior: Clip.none, children: [
+        AgentMochi(agentId, size: d),
+        Positioned(
+          right: -1,
+          bottom: 0,
+          child: Container(
+            width: 11,
+            height: 11,
+            decoration: BoxDecoration(
+              color: AppColors.run,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.surface1, width: 2),
+            ),
+          ),
+        ),
+      ]),
+    );
+  }
 }
 
 /// GroupGlyph re-export keeps callers off the chat import.
