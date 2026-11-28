@@ -189,6 +189,7 @@ class MkTabBar extends StatelessWidget {
     required this.onCompose,
     this.onComposeLong,
     this.attention = const {},
+    this.badges = const {},
     this.composeIcon = 'edit',
     this.composeLabel = 'New',
     this.androidFab = true,
@@ -201,6 +202,9 @@ class MkTabBar extends StatelessWidget {
 
   /// Tab indexes with something waiting: an amber dot on the icon.
   final Set<int> attention;
+
+  /// Tab index to an amber count (the needs-you total on Agents).
+  final Map<int, int> badges;
   final String composeIcon;
   final String composeLabel;
 
@@ -239,7 +243,23 @@ class MkTabBar extends StatelessWidget {
               size: size,
               color: on ? AppColors.fg1 : AppColors.fg2,
               filled: on),
-          if (attention.contains(i))
+          if ((badges[i] ?? 0) > 0)
+            Positioned(
+              right: -10,
+              top: -5,
+              child: Container(
+                key: ValueKey('tab-badge-$i'),
+                constraints: const BoxConstraints(minWidth: 17),
+                height: 17,
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                    color: MK.amber, borderRadius: BorderRadius.circular(9)),
+                child: Text(badges[i]! > 99 ? '99+' : '${badges[i]}',
+                    style: sans(11, height: 1, color: MK.onPrimary)),
+              ),
+            )
+          else if (attention.contains(i))
             Positioned(
               right: -3,
               top: -1,

@@ -6,7 +6,7 @@ import 'package:snippet/canvas/canvas_screen.dart';
 import 'package:snippet/mochi.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/tap_detector.dart';
-import 'package:snippet/notification_banner.dart';
+import 'package:snippet/phone_heads_up.dart';
 import 'package:snippet/toast_avoid.dart';
 import 'package:snippet/notification_popovers.dart';
 import 'package:snippet/notification_sync.dart';
@@ -41,25 +41,22 @@ class _Daemon extends DaemonClient {
 }
 
 void main() {
-  final screens =
-      <String, (Widget Function(), Map<String, Finder> Function())>{
+  final screens = <String, (Widget Function(), Map<String, Finder> Function())>{
     'home': (
       () => ToastAvoid(
-              child: Container(
-                  constraints: const BoxConstraints(minHeight: 52),
-                  child: Row(children: [
-                    const Spacer(),
-                    Semantics(
-                        label: 'Search',
-                        child: IconButton(
-                            onPressed: () {},
-                            icon: const Icon(Icons.search))),
-                    Semantics(
-                        label: 'Settings',
-                        child: IconButton(
-                            onPressed: () {},
-                            icon: const Icon(Icons.settings))),
-                  ]))),
+          child: Container(
+              constraints: const BoxConstraints(minHeight: 52),
+              child: Row(children: [
+                const Spacer(),
+                Semantics(
+                    label: 'Search',
+                    child: IconButton(
+                        onPressed: () {}, icon: const Icon(Icons.search))),
+                Semantics(
+                    label: 'Settings',
+                    child: IconButton(
+                        onPressed: () {}, icon: const Icon(Icons.settings))),
+              ]))),
       () => {
             'Search': find.widgetWithIcon(IconButton, Icons.search),
             'Settings': find.widgetWithIcon(IconButton, Icons.settings),
@@ -138,8 +135,8 @@ void main() {
       () => CanvasScreen(
           client: EmptyCanvasClient(), title: 'Pricing board', onClose: () {}),
       () => {
-            'Pins': find.byWidgetPredicate((w) =>
-                w is Tooltip && (w.message ?? '').startsWith('Pins,')),
+            'Pins': find.byWidgetPredicate(
+                (w) => w is Tooltip && (w.message ?? '').startsWith('Pins,')),
             'BackFromCanvas': find.byWidgetPredicate((w) =>
                 w is Tooltip &&
                 (w.message ?? '').startsWith('Back from canvas')),
@@ -169,7 +166,7 @@ void main() {
     for (final scale in [1.0, 2.0, 3.0]) {
       // MobileBackBar's own text column overflows 4px at 3x, unrelated to toasts.
       if (e.key == 'back bar' && scale > 2) continue;
-      testWidgets('toast clears ${e.key} actions at ${scale}x', (tester) async {
+      testWidgets('heads-up floats over ${e.key} at ${scale}x', (tester) async {
         tester.view.devicePixelRatio = 1;
         tester.view.physicalSize = const Size(393, 852);
         addTearDown(tester.view.reset);
@@ -202,7 +199,10 @@ void main() {
         ));
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pump(const Duration(milliseconds: 600));
-        final toast = tester.getRect(find.byType(NotificationBanner));
+        final toast = tester.getRect(find.byType(PhoneHeadsUp));
+        // System-style heads-up: the very top, over the bars, x8.
+        expect(toast.left, 8);
+        expect(toast.top, 6);
         final out = <String>[];
         for (final target in e.value.$2().entries) {
           final els = target.value.evaluate().toList();
@@ -218,11 +218,6 @@ void main() {
           for (final el in els) {
             final r = tester.getRect(find.byElementPredicate((x) => x == el));
             out.add('${target.key}=$r');
-            // Banners float over content (NT-01); they must clear top bars.
-            if (r.top < 100) {
-              expect(toast.top, greaterThanOrEqualTo(r.bottom - 0.5),
-                  reason: '$toast vs ${target.key} $r');
-            }
           }
         }
         expect(out, isNotEmpty);
@@ -247,11 +242,12 @@ void main() {
       await tester.pumpWidget(MaterialApp(
         theme: buildAppTheme(),
         builder: (c, child) => MediaQuery(
-            data: MediaQuery.of(c)
-                .copyWith(textScaler: TextScaler.linear(scale)),
+            data:
+                MediaQuery.of(c).copyWith(textScaler: TextScaler.linear(scale)),
             child: child!),
-        home: Navigator(onGenerateRoute: (_) => MaterialPageRoute<void>(
-            builder: (_) => ArtifactsScreen(client: _Daemon()))),
+        home: Navigator(
+            onGenerateRoute: (_) => MaterialPageRoute<void>(
+                builder: (_) => ArtifactsScreen(client: _Daemon()))),
       ));
       await tester.pump(const Duration(milliseconds: 100));
       final title = tester.widget<Text>(find.text('Artifacts').first);

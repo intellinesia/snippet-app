@@ -1,5 +1,6 @@
 import '../mobile_kit.dart';
 import 'package:flutter/material.dart';
+import '../attention_state.dart' show phoneNeedsYou;
 import 'package:flutter/services.dart';
 
 import '../gesture_physics.dart';
@@ -300,15 +301,16 @@ class _MobileShellState extends State<MobileShell>
                 ? PlatformPageMotion.base(
                     _v.value.clamp(0.0, 1.0), _opening, width, child!)
                 : FractionalTranslation(
-              translation: reduced
-                  ? Offset.zero
-                  : missionPair
-                      ? Offset(_exitX * _v.value, 0)
-                      : Offset(
-                          -PhonePageStack.parallax * _v.value.clamp(0.0, 1.0),
-                          0),
-              child: child,
-            ),
+                    translation: reduced
+                        ? Offset.zero
+                        : missionPair
+                            ? Offset(_exitX * _v.value, 0)
+                            : Offset(
+                                -PhonePageStack.parallax *
+                                    _v.value.clamp(0.0, 1.0),
+                                0),
+                    child: child,
+                  ),
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -359,31 +361,34 @@ class _MobileShellState extends State<MobileShell>
       // body's bottom padding so lists still clear it.
       extendBody: true,
       bottomNavigationBar: showBar
-          ? MkTabBar(
-              // Agents is Home on the phone: faces first, then the lists.
-              tabs: [
-                for (final p in _tabPlaces) MkTab(p.label, p.icon),
-              ],
-              selected: switch (mobileHome) {
-                MobileHome.home => 0,
-                MobileHome.agents => 0,
-                MobileHome.chats => 1,
-                MobileHome.artifacts => 2,
-                MobileHome.tasks => 3,
-              },
-              onSelect: (i) {
-                final p = _tabPlaces[i];
-                onMobileHome(switch (p) {
-                  QuietPlace.sessions => MobileHome.chats,
-                  QuietPlace.artifacts => MobileHome.artifacts,
-                  QuietPlace.tasks => MobileHome.tasks,
-                  _ => MobileHome.home,
-                });
-              },
-              onCompose: widget.onNew!,
-              onComposeLong: widget.onNewLong,
-              androidFab: mobileHome != MobileHome.tasks,
-            )
+          ? ValueListenableBuilder<int>(
+              valueListenable: phoneNeedsYou,
+              builder: (_, needs, __) => MkTabBar(
+                    badges: {0: needs},
+                    // Agents is Home on the phone: faces first, then the lists.
+                    tabs: [
+                      for (final p in _tabPlaces) MkTab(p.label, p.icon),
+                    ],
+                    selected: switch (mobileHome) {
+                      MobileHome.home => 0,
+                      MobileHome.agents => 0,
+                      MobileHome.chats => 1,
+                      MobileHome.artifacts => 2,
+                      MobileHome.tasks => 3,
+                    },
+                    onSelect: (i) {
+                      final p = _tabPlaces[i];
+                      onMobileHome(switch (p) {
+                        QuietPlace.sessions => MobileHome.chats,
+                        QuietPlace.artifacts => MobileHome.artifacts,
+                        QuietPlace.tasks => MobileHome.tasks,
+                        _ => MobileHome.home,
+                      });
+                    },
+                    onCompose: widget.onNew!,
+                    onComposeLong: widget.onNewLong,
+                    androidFab: mobileHome != MobileHome.tasks,
+                  ))
           : null,
       body: Stack(children: [
         if (missionPair) ...[

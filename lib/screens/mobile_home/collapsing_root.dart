@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../phone_attention_bar.dart';
-import '../../platform.dart';
 import '../../glass.dart' show StatusInset;
 import '../../theme.dart';
 import '../../toast_avoid.dart';
@@ -135,14 +133,12 @@ class _CollapsingRootState extends State<CollapsingRoot> {
           ),
           bar,
         ]),
-        if (kMobile) const PhoneAttentionLayer(),
         Expanded(child: list),
       ]);
     }
     // iPhone at rest: no bar, the actions share the large title's row and the
     // list starts under the status bar. The bar only appears once collapsed.
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      if (kMobile) const PhoneAttentionLayer(),
       Expanded(
         child: Stack(children: [
           Positioned.fill(child: list),

@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart' hide testWidgets;
 import 'package:flutter_test/flutter_test.dart' as ft show testWidgets;
 import 'package:snippet/notification_banner.dart';
+import 'package:snippet/phone_heads_up.dart';
 import 'package:snippet/notification_popovers.dart';
 import 'package:snippet/notification_sync.dart';
 import 'package:snippet/theme.dart';
 import 'package:snippet/top_zone.dart';
-import 'package:snippet/widgets.dart' show AppIcon;
 
 void testWidgets(String name, Future<void> Function(WidgetTester) body) =>
     ft.testWidgets(name, (t) async {
@@ -70,67 +70,26 @@ void main() {
 
   for (final size in _sizes) {
     for (final scale in _scales) {
-      for (final bar in <double?>[null, 96 + 48]) {
-        testWidgets('NT-01 stack ${size.width.toInt()} x$scale bar=$bar',
-            (t) async {
-          _seed();
-          await _pump(t, size, scale, topBar: bar);
-          await t.pumpAndSettle();
-          final cards = find.byType(NotificationBanner);
-          expect(cards, findsNWidgets(3), reason: 'at most 3 visible');
-          final top = (bar ?? 96) + 8;
-          var y = top;
-          for (var i = 0; i < 3; i++) {
-            final r = t.getRect(cards.at(i));
-            expect(r.left, 16);
-            expect(r.width, size.width - 32);
-            expect(r.height, greaterThanOrEqualTo(72));
-            expect(r.top, closeTo(y, .01));
-            y = r.bottom + 8;
-          }
-          // Newest on top: the needs-you item was added last.
-          expect(
-              find.descendant(
-                  of: cards.first, matching: find.text('Needs you')),
-              findsOneWidget);
-          expect(
-              find.descendant(
-                  of: cards.first,
-                  matching: find.byWidgetPredicate(
-                      (w) => w is AppIcon && w.name == 'hand')),
-              findsOneWidget);
-          for (var i = 1; i < 3; i++) {
-            final amber = find.descendant(
-                of: cards.at(i),
-                matching: find.byWidgetPredicate((w) =>
-                    (w is AppIcon && w.color == AppColors.run) ||
-                    (w is Text && w.style?.color == AppColors.run)));
-            expect(amber, findsNothing, reason: 'information is neutral');
-          }
-          expect(
-              find.descendant(
-                  of: find.byType(NotificationPopovers),
-                  matching: find.byWidgetPredicate((w) =>
-                      w is DecoratedBox &&
-                      w.decoration is BoxDecoration &&
-                      (w.decoration as BoxDecoration).boxShadow != null)),
-              findsNothing);
-          final show = find.text('Show all 5');
-          final dismiss = find.text('Dismiss all');
-          expect(show, findsOneWidget);
-          expect(dismiss, findsOneWidget);
-          for (final f in [show, dismiss]) {
-            final target = find.ancestor(
-                of: f, matching: find.byType(ConstrainedBox)).first;
-            expect(t.getSize(target).height, greaterThanOrEqualTo(48));
-          }
-          expect(t.getTopLeft(show).dx, 16 + 0, skip: scale != 1 && false);
-          expect(t.getTopLeft(dismiss).dy, greaterThan(y - 8 - 1));
-          expect(t.takeException(), isNull);
-          await t.pumpWidget(const SizedBox());
-          await t.pump(const Duration(seconds: 31));
-        });
-      }
+      testWidgets('heads-up ${size.width.toInt()} x$scale', (t) async {
+        _seed();
+        await _pump(t, size, scale, topBar: 96 + 48);
+        await t.pumpAndSettle();
+        // One heads-up at a time, newest first, over the page bar.
+        final card = find.byType(PhoneHeadsUp);
+        expect(card, findsOneWidget);
+        expect(find.byType(NotificationBanner), findsNothing);
+        final r = t.getRect(card);
+        expect(r.left, 8);
+        expect(r.width, size.width - 16);
+        expect(r.top, closeTo(44 + 6, .01));
+        expect(find.text('Lead'), findsOneWidget);
+        expect(find.text('+4'), findsOneWidget);
+        expect(t.getSize(find.byKey(const ValueKey('heads-up-more'))).height,
+            greaterThanOrEqualTo(44));
+        expect(t.takeException(), isNull);
+        await t.pumpWidget(const SizedBox());
+        await t.pump(const Duration(seconds: 31));
+      });
     }
   }
 
@@ -144,21 +103,22 @@ void main() {
     await t.pumpWidget(const SizedBox());
   });
 
-  testWidgets('NT-01 lifetime: information 6 s, needs-you 30 s',
-      (t) async {
+  testWidgets('heads-up lifetime: information 5 s, needs-you 8 s', (t) async {
     foregroundNotifications.drain();
     foregroundNotifications
         .add({'kind': 'done', 'title': 'Info', 'session': 'a', 'url': 'u'});
-    foregroundNotifications.add(
-        {'kind': 'waiting', 'title': 'Ask', 'session': 'b', 'url': 'u'});
+    foregroundNotifications
+        .add({'kind': 'waiting', 'title': 'Ask', 'session': 'b', 'url': 'u'});
     await _pump(t, _sizes[1], 1);
-    await t.pump(const Duration(seconds: 5));
-    expect(find.text('Info'), findsOneWidget);
+    // The newest (the ask) shows first; the update waits behind it.
+    await t.pump(const Duration(seconds: 4));
+    expect(find.text('Ask'), findsOneWidget);
+    expect(find.text('Info'), findsNothing);
     await t.pump(const Duration(seconds: 2));
     await t.pumpAndSettle();
-    expect(find.text('Info'), findsNothing);
+    expect(find.text('Info'), findsNothing, reason: 'expired at 5 s');
     expect(find.text('Ask'), findsOneWidget);
-    await t.pump(const Duration(seconds: 24));
+    await t.pump(const Duration(seconds: 3));
     await t.pumpAndSettle();
     expect(find.text('Ask'), findsNothing);
     await t.pumpWidget(const SizedBox());

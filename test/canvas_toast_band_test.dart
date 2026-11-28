@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/canvas/canvas_screen.dart';
-import 'package:snippet/notification_banner.dart';
-import 'package:snippet/top_zone.dart';
+import 'package:snippet/phone_heads_up.dart';
 import 'package:snippet/notification_popovers.dart';
 import 'package:snippet/notification_sync.dart';
 import 'package:snippet/theme.dart';
@@ -21,15 +20,16 @@ void main() {
       final sem = tester.ensureSemantics();
       foregroundNotifications.drain();
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(SystemChannels.platform, (call) async => null);
+          .setMockMethodCallHandler(
+              SystemChannels.platform, (call) async => null);
       addTearDown(() => TestDefaultBinaryMessengerBinding
           .instance.defaultBinaryMessenger
           .setMockMethodCallHandler(SystemChannels.platform, null));
       await tester.pumpWidget(MaterialApp(
         theme: buildAppTheme(),
         builder: (c, child) => MediaQuery(
-            data: MediaQuery.of(c)
-                .copyWith(textScaler: TextScaler.linear(scale)),
+            data:
+                MediaQuery.of(c).copyWith(textScaler: TextScaler.linear(scale)),
             child: child!),
         home: NotificationPopovers(
             child: Scaffold(
@@ -43,15 +43,15 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pump(const Duration(milliseconds: 600));
       expect(find.byType(SnackBar), findsNothing);
-      // NT-01: notices are floating banners under the top bars, x16 wide.
-      final toast = tester.getRect(find.byType(NotificationBanner));
-      expect(toast.left, 16);
-      expect(toast.width, 393 - 32);
-      expect(toast.top, TopZone.floatTop(tester.element(find.byType(Scaffold).first)));
+      // Notices are one heads-up at the very top, x8 wide.
+      final toast = tester.getRect(find.byType(PhoneHeadsUp));
+      expect(toast.left, 8);
+      expect(toast.width, 393 - 16);
+      expect(toast.top, 6);
       // Auto-dismiss kept.
       await tester.pump(const Duration(seconds: 6));
       await tester.pumpAndSettle();
-      expect(find.byType(NotificationBanner), findsNothing);
+      expect(find.byType(PhoneHeadsUp), findsNothing);
       sem.dispose();
       debugDefaultTargetPlatformOverride = null;
     });

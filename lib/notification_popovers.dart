@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'phone_heads_up.dart';
 import 'package:flutter/services.dart';
 import 'motion_routes.dart';
 import 'api.dart';
@@ -54,8 +55,11 @@ class _NotificationPopoversState extends State<NotificationPopovers>
 
   /// Information banners leave after 6 s; a needs-you banner stays 30 s, then
   /// folds into the attention bar and does not return as a banner.
-  Duration _life(Map<String, dynamic> p) =>
-      Duration(seconds: needsYou(p) ? 30 : 6);
+  /// Phone heads-up: 5 s for updates, 8 s for asks; the Needs you section on
+  /// home keeps asks after that.
+  Duration _life(Map<String, dynamic> p) => kMobile
+      ? Duration(seconds: needsYou(p) ? 8 : 5)
+      : Duration(seconds: needsYou(p) ? 30 : 6);
 
   /// Newest first. Information kinds with an empty title show nothing.
   List<Map<String, dynamic>> get _ordered => [
@@ -340,37 +344,49 @@ class _NotificationPopoversState extends State<NotificationPopovers>
             child: const SizedBox.shrink(),
           );
     if (kMobile) {
-      final stack = call != null
+      // One heads-up at a time over the page bar, system style; newer ones
+      // replace it and the rest show as a count.
+      final head = items.firstOrNull;
+      final Widget top = call != null
           ? banner
-          : items.isEmpty
-              ? const SizedBox.shrink()
-              : MouseRegion(
-                  onEnter: (_) => _setHold(pointer: true),
-                  onExit: (_) => _setHold(pointer: false),
-                  child: Listener(
-                    onPointerDown: (_) => _setHold(pointer: true),
-                    onPointerUp: (_) => _setHold(pointer: false),
-                    onPointerCancel: (_) => _setHold(pointer: false),
-                    child: NotificationStack(
-                      items: items,
-                      onClearAll: _clearAll,
-                      onShowAll: _showAll,
-                      cardBuilder: (payload) => _card(payload, reducedMotion),
+          : AnimatedSwitcher(
+              duration: reducedMotion ? Duration.zero : Motion.open,
+              reverseDuration: reducedMotion ? Duration.zero : Motion.close,
+              switchInCurve: Motion.enter,
+              switchOutCurve: Motion.exit,
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                          begin: const Offset(0, -0.4), end: Offset.zero)
+                      .animate(animation),
+                  child: child,
+                ),
+              ),
+              child: head == null
+                  ? const SizedBox.shrink(key: ValueKey('none'))
+                  : Listener(
+                      key: ObjectKey(head),
+                      onPointerDown: (_) => _setHold(pointer: true),
+                      onPointerUp: (_) => _setHold(pointer: false),
+                      onPointerCancel: (_) => _setHold(pointer: false),
+                      child: PhoneHeadsUp(
+                        payload: head,
+                        more: items.length - 1,
+                        onOpen: () => _remove(head, open: true, feedback: true),
+                        onDismiss: () => _remove(head),
+                        onHold: (h) => _setHold(card: h),
+                        onMore: _showAll,
+                      ),
                     ),
-                  ),
-                );
-      // Banners float above the page: they never move content. The top edge
-      // is the lowest registered top bar plus 8 (TopZone).
+            );
       return Stack(children: [
         Positioned.fill(child: widget.child),
-        ValueListenableBuilder<double>(
-          valueListenable: TopZone.lowestBar,
-          builder: (context, _, __) => Positioned(
-            top: TopZone.floatTop(context),
-            left: 16,
-            right: 16,
-            child: stack,
-          ),
+        Positioned(
+          top: MediaQuery.paddingOf(context).top + 6,
+          left: 8,
+          right: 8,
+          child: top,
         ),
       ]);
     }
